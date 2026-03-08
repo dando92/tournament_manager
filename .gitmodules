@@ -1,0 +1,6 @@
+[submodule "tournament_manager_backend"]
+	path = tournament_manager_backend
+	url = https://github.com/dando92/tournament_manager_backend.git
+[submodule "tournament_manager_frontend"]
+	path = tournament_manager_frontend
+	url = https://github.com/dando92/tournament_manager_frontend.git
