@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
@@ -14,6 +15,7 @@ type DeleteConfirmButtonProps = {
   iconClassName?: string;
   disabled?: boolean;
   stopPropagation?: boolean;
+  children?: ReactNode;
 };
 
 export default function DeleteConfirmButton({
@@ -26,6 +28,7 @@ export default function DeleteConfirmButton({
   iconClassName,
   disabled = false,
   stopPropagation = false,
+  children,
 }: DeleteConfirmButtonProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +56,7 @@ export default function DeleteConfirmButton({
         className={`${btnTrash} ${className}`}
       >
         <FontAwesomeIcon icon={faTrash} className={iconClassName} />
+        {children}
       </button>
 
       <BaseModal open={open} onClose={() => setOpen(false)} title={confirmTitle} maxWidth="max-w-md">

@@ -99,6 +99,12 @@ export default function StandingModal({
 
   const isRegisteredScoreMode = selectedScoreId !== "";
   const selectedScore = scoreOptions.find((score) => score.id === Number(selectedScoreId));
+  const normalizedPercentage = percentage.trim().replace(",", ".");
+  const percentageIsValid =
+    /^\d+(?:\.\d{1,2})?$/.test(normalizedPercentage) &&
+    Number(normalizedPercentage) >= 0 &&
+    Number(normalizedPercentage) <= 100;
+  const canSave = isRegisteredScoreMode ? Boolean(selectedScore) : percentageIsValid;
 
   useEffect(() => {
     if (!selectedScore) return;
@@ -107,10 +113,12 @@ export default function StandingModal({
   }, [selectedScore]);
 
   function handleSave() {
+    if (!canSave) return;
+
     onSave(
       playerId,
       songId,
-      parseFloat(percentage.replace(",", ".")),
+      parseFloat(normalizedPercentage),
       0,
       isFailed,
       selectedScoreId ? Number(selectedScoreId) : undefined,
@@ -133,7 +141,7 @@ export default function StandingModal({
             >
               Cancel
             </button>
-            <button type="button" className={btnPrimary} onClick={handleSave}>
+            <button type="button" className={btnPrimary} onClick={handleSave} disabled={!canSave}>
               Save
             </button>
           </div>
@@ -171,9 +179,12 @@ export default function StandingModal({
               <label className="block text-sm font-medium text-gray-700">Percentage</label>
               <input
                 type="text"
+                inputMode="decimal"
                 value={percentage}
                 onChange={(e) => setPercentage(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm"
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm ${
+                  percentageIsValid ? "border-gray-300" : "border-red-300"
+                }`}
               />
             </div>
             <div className="flex items-center gap-2">

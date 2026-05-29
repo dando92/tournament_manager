@@ -111,8 +111,7 @@ export default function MatchTable({
         if (targetMatchId <= 0) {
           return [result.playerId, null] as const;
         }
-        const targetMatchName = allMatches.find((candidate) => candidate.id === targetMatchId)?.name ?? String(targetMatchId);
-        return [result.playerId, targetMatchName] as const;
+        return [result.playerId, targetMatchId] as const;
       }),
   );
 
@@ -121,7 +120,7 @@ export default function MatchTable({
   const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
 
   // colSpan for single-cell rows (PathRow, EditPathRow, empty message)
-  const totalCols = editMode ? 1 : Math.max(2, match.rounds.length + 2);
+  const totalCols = editMode ? 1 : Math.max(3, match.rounds.length + 3);
 
   return (
     <>
@@ -130,6 +129,7 @@ export default function MatchTable({
           {!editMode && match.rounds.length > 0 && (
             <thead>
               <tr className="bg-primary-dark text-white">
+                <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold w-[120px] sm:w-[160px]">Player</th>
                 {match.rounds.map((round, idx) => {
                   const roundHasStandings = (round.standings ?? []).length > 0;
@@ -213,24 +213,34 @@ export default function MatchTable({
               ));
             })}
 
-            {!editMode && sortedPlayers.map((player, i) => (
-              <MatchRow
-                key={player.id}
-                match={match}
-                player={player}
-                rank={i}
-                controls={canEditMatchContent}
-                scoreTable={scoreTable}
-                highlightRoute={routedPlayerIds.has(player.id)}
-                routeMatchName={routeByPlayerId.get(player.id) ?? null}
-                onDeletePlayer={(playerId) => {
-                  const entrantId = entrantIdByPlayerId.get(playerId);
-                  if (entrantId) onDeletePlayer(entrantId);
-                }}
-                onOpenAddStanding={onOpenAddStanding}
-                onOpenEditStanding={onOpenEditStanding}
-                onDeleteStanding={onDeleteStanding}
-              />
+            {!editMode && sortedPlayers.map((player) => (
+              (() => {
+                const routeTargetMatchId = routeByPlayerId.get(player.id) ?? null;
+                return (
+                  <MatchRow
+                    key={player.id}
+                    match={match}
+                    player={player}
+                    controls={canEditMatchContent}
+                    scoreTable={scoreTable}
+                    highlightRoute={routedPlayerIds.has(player.id)}
+                    isRouteSelected={routeTargetMatchId !== null && highlightedMatchId === routeTargetMatchId}
+                    routeTargetMatchId={routeTargetMatchId}
+                    canClearRouteHighlight={highlightedMatchId !== null}
+                    onToggleRouteHighlight={(targetMatchId) =>
+                      onHighlightMatch(highlightedMatchId === targetMatchId ? null : targetMatchId)
+                    }
+                    onClearRouteHighlight={() => onHighlightMatch(null)}
+                    onDeletePlayer={(playerId) => {
+                      const entrantId = entrantIdByPlayerId.get(playerId);
+                      if (entrantId) onDeletePlayer(entrantId);
+                    }}
+                    onOpenAddStanding={onOpenAddStanding}
+                    onOpenEditStanding={onOpenEditStanding}
+                    onDeleteStanding={onDeleteStanding}
+                  />
+                );
+              })()
             ))}
 
             {editMode && Array.from({ length: maxPlayersPerMatch }).map((_, i) => (

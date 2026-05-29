@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faStickyNote, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faStickyNote, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
@@ -18,7 +18,6 @@ type Props = {
   onEditRoutes?: () => void;
   onSaveRoutes?: () => void;
   onCancelRoutes?: () => void;
-  onToggleActive?: () => void;
 };
 
 export default function MatchHeader({
@@ -34,25 +33,14 @@ export default function MatchHeader({
   onEditRoutes,
   onSaveRoutes,
   onCancelRoutes,
-  onToggleActive,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const [mobileAddMenuOpen, setMobileAddMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
   const isMatchEnded = matchState === "Completed";
-  const stateButtonLabel = {
-    NotActive: "Click to activate",
-    Active: "Active",
-    Pending: "Commit match",
-    Completed: "Re-open match",
-  }[matchState];
-  const stateButtonClass = {
-    NotActive: "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100",
-    Active: "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
-    Pending: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
-    Completed: "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100",
-  }[matchState];
+  const canAddSong = (match.entrants?.length ?? 0) > 0;
 
   useEffect(() => {
     if (isRenaming) inputRef.current?.focus();
@@ -72,7 +60,7 @@ export default function MatchHeader({
   }
 
   return (
-    <div className="grid grid-cols-[auto_minmax(8rem,1fr)_auto] items-start gap-3 mb-3">
+    <div className="flex items-start justify-between gap-3 mb-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           {controls && isRenaming ? (
@@ -140,42 +128,67 @@ export default function MatchHeader({
         )}
       </div>
       {controls && (
-        <button
-          type="button"
-          onClick={onToggleActive}
-          className={`w-full rounded-md border px-3 py-1 text-center text-xs font-semibold transition-colors cursor-pointer ${stateButtonClass}`}
-        >
-          {stateButtonLabel}
-        </button>
-      )}
-      {controls && (
         <div className="flex items-center justify-end gap-3 shrink-0">
           {!isMatchEnded && (
             <>
               <button
                 onClick={onOpenAddPlayer}
                 title="Add player"
-                className="inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
+                className="hidden sm:inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
               >
-                <FontAwesomeIcon icon={faUserPlus} className="sm:hidden" />
-                <span className="hidden sm:inline-flex items-center gap-1">
-                  <FontAwesomeIcon icon={faUserPlus} />
-                  <span>Add player</span>
-                </span>
+                <FontAwesomeIcon icon={faUserPlus} />
+                <span>Add player</span>
               </button>
-              {(match.entrants?.length ?? 0) > 0 && (
+              {canAddSong && (
                 <button
                   onClick={onOpenAddSong}
                   title="Add song/round"
-                  className="inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
+                  className="hidden sm:inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
                 >
-                  <MusicPlusIcon className="sm:hidden" />
-                  <span className="hidden sm:inline-flex items-center gap-1">
-                    <MusicPlusIcon />
-                    <span>Add song</span>
-                  </span>
+                  <MusicPlusIcon />
+                  <span>Add song</span>
                 </button>
               )}
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileAddMenuOpen((value) => !value)}
+                  title="Add"
+                  className="inline-flex items-center justify-center text-green-700 hover:text-green-900"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+                {mobileAddMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMobileAddMenuOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded border border-gray-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileAddMenuOpen(false);
+                          onOpenAddPlayer();
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-green-700 hover:bg-gray-50 hover:text-green-900"
+                      >
+                        <FontAwesomeIcon icon={faUserPlus} />
+                        Add player
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canAddSong}
+                        onClick={() => {
+                          setMobileAddMenuOpen(false);
+                          onOpenAddSong();
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-green-700 hover:bg-gray-50 hover:text-green-900 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <MusicPlusIcon />
+                        Add song
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
           <DeleteConfirmButton
