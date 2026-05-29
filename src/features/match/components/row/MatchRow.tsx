@@ -14,7 +14,7 @@ type MatchRowProps = {
   player: Player;
   controls: boolean;
   scoreTable: Record<string, ScoreEntry>;
-  highlightRoute?: boolean;
+  hasRoute?: boolean;
   isRouteSelected?: boolean;
   routeTargetMatchId?: number | null;
   canClearRouteHighlight?: boolean;
@@ -40,7 +40,7 @@ export default function MatchRow({
   player,
   controls,
   scoreTable,
-  highlightRoute = false,
+  hasRoute = false,
   isRouteSelected = false,
   routeTargetMatchId = null,
   canClearRouteHighlight = false,
@@ -76,10 +76,8 @@ export default function MatchRow({
       className={`border-t transition-colors ${
         isRouteSelected
           ? "border-emerald-200 bg-emerald-100"
-          : highlightRoute
-            ? "border-emerald-100 bg-emerald-50/70"
-            : "border-gray-100 odd:bg-white even:bg-gray-50"
-      } ${canClickCompletedRow ? "cursor-pointer hover:bg-emerald-100" : ""}`}
+          : "border-gray-100 odd:bg-white even:bg-gray-50"
+      } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-emerald-50" : ""}`}
       onClick={() => {
         if (canToggleRoute && routeTargetMatchId) {
           onToggleRouteHighlight?.(routeTargetMatchId);
@@ -102,7 +100,7 @@ export default function MatchRow({
       <td className="px-3 py-2">
         <div className="flex items-center gap-2 relative">
           <div className="flex items-center gap-2 min-w-0">
-            <span className={`font-medium truncate ${highlightRoute ? "text-emerald-700" : "text-gray-800"}`}>{player.playerName}</span>
+            <span className={`font-medium truncate ${hasRoute ? "text-emerald-700" : "text-gray-800"}`}>{player.playerName}</span>
           </div>
         </div>
       </td>

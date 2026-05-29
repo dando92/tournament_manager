@@ -98,12 +98,6 @@ export default function MatchTable({
   const sortedMatchResults = [...(match.matchResult?.playerPoints ?? [])].sort(
     (a, b) => b.points - a.points || a.playerId - b.playerId,
   );
-  const routedPlayerIds = new Set(
-    sortedMatchResults
-      .map((result, index) => ({ result, targetMatchId: match.targetPaths?.[index] ?? 0 }))
-      .filter(({ targetMatchId }) => targetMatchId > 0)
-      .map(({ result }) => result.playerId),
-  );
   const routeByPlayerId = new Map(
     sortedMatchResults
       .map((result, index) => {
@@ -223,7 +217,7 @@ export default function MatchTable({
                     player={player}
                     controls={canEditMatchContent}
                     scoreTable={scoreTable}
-                    highlightRoute={routedPlayerIds.has(player.id)}
+                    hasRoute={routeTargetMatchId !== null}
                     isRouteSelected={routeTargetMatchId !== null && highlightedMatchId === routeTargetMatchId}
                     routeTargetMatchId={routeTargetMatchId}
                     canClearRouteHighlight={highlightedMatchId !== null}
