@@ -2,6 +2,7 @@ import { useReducer } from "react";
 import { initialState, matchesReducer } from "@/features/match/services/matches.reducer";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
+import { MatchState } from "@/features/match/types/Match";
 import { toast } from "react-toastify";
 
 export function useMatches(divisionId: number) {
@@ -234,27 +235,21 @@ export function useMatches(divisionId: number) {
     }
   }
 
-  async function activateMatch(matchId: number) {
+  async function updateMatchState(matchId: number, matchState: MatchState) {
     try {
-      await MatchesApi.activateMatch(matchId);
-      await list();
-      toast.success("Match activated.");
+      const item = await MatchesApi.updateMatchState(matchId, matchState);
+      dispatch({ type: "onRefreshMatch", payload: item });
+      const messages: Record<MatchState, string> = {
+        NotActive: "Match deactivated.",
+        Active: "Match activated.",
+        Pending: "Match re-opened.",
+        Completed: "Match completed.",
+      };
+      toast.success(messages[matchState]);
     } catch (error) {
-      toast.error("Error activating match.");
-      console.error("Error activating match:", error);
-      throw new Error("Unable to activate match.");
-    }
-  }
-
-  async function deactivateMatch(matchId: number) {
-    try {
-      await MatchesApi.deactivateMatch(matchId);
-      await list();
-      toast.success("Match deactivated.");
-    } catch (error) {
-      toast.error("Error deactivating match.");
-      console.error("Error deactivating match:", error);
-      throw new Error("Unable to deactivate match.");
+      toast.error("Error updating match state.");
+      console.error("Error updating match state:", error);
+      throw new Error("Unable to update match state.");
     }
   }
 
@@ -277,8 +272,7 @@ export function useMatches(divisionId: number) {
       editStandingFromMatch,
       deleteStandingsForPlayerFromMatch,
       updateMatchPaths,
-      activateMatch,
-      deactivateMatch,
+      updateMatchState,
     },
   };
 }

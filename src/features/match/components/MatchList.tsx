@@ -27,7 +27,7 @@ export default function MatchList({
   const matchListVersion = matchListVersions.get(division.id) ?? 0;
 
   const visibleMatches = state.matches.filter((match) => {
-    if (activeOnly && !match.isActive) return false;
+    if (activeOnly && !["Active", "Pending"].includes(match.state ?? "NotActive")) return false;
     if (phaseId !== undefined && match.phaseId !== phaseId) return false;
     return true;
   });
@@ -91,8 +91,7 @@ export default function MatchList({
                 actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail)
               }
               onUpdateMatchPaths={actions.updateMatchPaths}
-              onActivateMatch={actions.activateMatch}
-              onDeactivateMatch={actions.deactivateMatch}
+              onUpdateMatchState={actions.updateMatchState}
               onRefreshSelf={() => actions.refreshMatch(match.id)}
               match={match}
             />

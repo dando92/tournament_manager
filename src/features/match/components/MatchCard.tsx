@@ -1,4 +1,4 @@
-import { Match } from "@/features/match/types/Match";
+import { Match, MatchState } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
@@ -44,8 +44,7 @@ type MatchCardProps = {
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchPaths?: (matchId: number, targetPaths: number[]) => Promise<void>;
-  onActivateMatch?: (matchId: number) => Promise<void>;
-  onDeactivateMatch?: (matchId: number) => Promise<void>;
+  onUpdateMatchState?: (matchId: number, state: MatchState) => Promise<void>;
   onRefreshSelf?: () => void;
 };
 
@@ -93,8 +92,7 @@ export default function MatchCard({
   onDeleteStanding,
   onEditStanding,
   onUpdateMatchPaths,
-  onActivateMatch,
-  onDeactivateMatch,
+  onUpdateMatchState,
   onRefreshSelf,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
@@ -151,12 +149,18 @@ export default function MatchCard({
   }
 
   async function toggleCurrentMatch() {
-    if (!controls || match.matchResult) return;
-    if (match.isActive) {
-      await onDeactivateMatch?.(match.id);
-    } else {
-      await onActivateMatch?.(match.id);
-    }
+    if (!controls) return;
+
+    const nextStateByState: Record<MatchState, MatchState> = {
+      NotActive: "Active",
+      Active: "NotActive",
+      Pending: "Completed",
+      Completed: "Pending",
+    };
+    const currentState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
+    const nextState = nextStateByState[currentState];
+
+    await onUpdateMatchState?.(match.id, nextState);
   }
 
   return (

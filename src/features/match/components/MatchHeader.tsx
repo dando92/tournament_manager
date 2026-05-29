@@ -39,7 +39,20 @@ export default function MatchHeader({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const isMatchEnded = Boolean(match.matchResult);
+  const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
+  const isMatchEnded = matchState === "Completed";
+  const stateButtonLabel = {
+    NotActive: "Click to activate",
+    Active: "Active",
+    Pending: "Commit match",
+    Completed: "Re-open match",
+  }[matchState];
+  const stateButtonClass = {
+    NotActive: "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100",
+    Active: "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
+    Pending: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+    Completed: "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100",
+  }[matchState];
 
   useEffect(() => {
     if (isRenaming) inputRef.current?.focus();
@@ -130,14 +143,9 @@ export default function MatchHeader({
         <button
           type="button"
           onClick={onToggleActive}
-          disabled={isMatchEnded}
-          className={`w-full rounded-md border px-3 py-1 text-center text-xs font-semibold transition-colors ${
-            match.isActive
-              ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
-              : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-          } ${isMatchEnded ? "cursor-default opacity-80" : "cursor-pointer"}`}
+          className={`w-full rounded-md border px-3 py-1 text-center text-xs font-semibold transition-colors cursor-pointer ${stateButtonClass}`}
         >
-          {match.isActive ? "Active" : "Click to activate"}
+          {stateButtonLabel}
         </button>
       )}
       {controls && (

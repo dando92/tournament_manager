@@ -116,6 +116,7 @@ export default function MatchTable({
 
   const sourcePaths = match.sourcePaths ?? [];
   const hasContent = sortedPlayers.length > 0 || sourcePaths.length > 0 || sortedMatchResults.length > 0;
+  const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
 
   // colSpan for single-cell rows (PathRow, EditPathRow, empty message)
   const totalCols = editMode ? 1 : Math.max(2, match.rounds.length + 2);
@@ -152,7 +153,7 @@ export default function MatchTable({
                         <span className="hidden sm:inline truncate max-w-[110px]" title={round.song.title}>
                           {round.song.title}
                         </span>
-                        {controls && !roundHasStandings && (
+                        {canEditMatchContent && !roundHasStandings && (
                           <>
                             <DeleteConfirmButton
                               onConfirm={() => onDeleteSong(round.song.id)}
@@ -216,7 +217,7 @@ export default function MatchTable({
                 match={match}
                 player={player}
                 rank={i}
-                controls={controls}
+                controls={canEditMatchContent}
                 scoreTable={scoreTable}
                 highlightRoute={routedPlayerIds.has(player.id)}
                 routeMatchName={routeByPlayerId.get(player.id) ?? null}

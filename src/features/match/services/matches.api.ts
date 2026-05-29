@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Match } from "@/features/match/types/Match";
+import { Match, MatchState } from "@/features/match/types/Match";
 import {
   AddStandingToMatchRequest,
   CreateMatchRequest,
@@ -200,21 +200,13 @@ export async function updateMatchPaths(
   }
 }
 
-export async function activateMatch(matchId: number): Promise<void> {
+export async function updateMatchState(matchId: number, state: MatchState): Promise<Match> {
   try {
-    await axios.post(`matches/${matchId}/active`);
+    const response = await axios.put<Match>(`matches/${matchId}/state`, { state });
+    return response.data;
   } catch (error) {
-    console.error("Error activating match:", error);
-    throw new Error("Unable to activate match.");
-  }
-}
-
-export async function deactivateMatch(matchId: number): Promise<void> {
-  try {
-    await axios.delete(`matches/${matchId}/active`);
-  } catch (error) {
-    console.error("Error deactivating match:", error);
-    throw new Error("Unable to deactivate match.");
+    console.error("Error updating match state:", error);
+    throw new Error("Unable to update match state.");
   }
 }
 
