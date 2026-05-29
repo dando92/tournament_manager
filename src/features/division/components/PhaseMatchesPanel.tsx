@@ -1,6 +1,7 @@
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
+import { MatchState } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 type PhaseMatchesPanelProps = {
@@ -9,6 +10,7 @@ type PhaseMatchesPanelProps = {
   controls: boolean;
   tournamentId?: number;
   matchRefreshKey?: number;
+  matchStateFilter?: MatchState | "all";
   onDelete?: (phaseId: number) => Promise<void>;
 };
 
@@ -18,6 +20,7 @@ export default function PhaseMatchesPanel({
   controls,
   tournamentId,
   matchRefreshKey,
+  matchStateFilter = "all",
   onDelete,
 }: PhaseMatchesPanelProps) {
   const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
@@ -45,6 +48,7 @@ export default function PhaseMatchesPanel({
         controls={controls}
         tournamentId={tournamentId}
         matchUpdateSignal={matchRefreshKey}
+        matchStateFilter={matchStateFilter}
       />
     </div>
   );

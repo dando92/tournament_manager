@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
+import * as MatchesApi from "@/features/match/services/matches.api";
 import { btnPrimary } from "@/styles/buttonStyles";
+
+type ScoreOption = {
+  id: number;
+  percentage: number;
+  isFailed: boolean;
+};
 
 type StandingModalProps = {
   mode: "add" | "edit";
@@ -11,6 +18,7 @@ type StandingModalProps = {
   songId: number;
   initialPercentage?: number;
   initialScore?: number;
+  initialScoreId?: number;
   initialIsFailed?: boolean;
   onClose: () => void;
   onSave: (
@@ -19,6 +27,7 @@ type StandingModalProps = {
     percentage: number,
     score: number,
     isFailed: boolean,
+    scoreId?: number,
   ) => void;
 };
 
@@ -30,30 +39,81 @@ export default function StandingModal({
   playerId,
   songId,
   initialPercentage,
-  initialScore,
+  initialScoreId,
   initialIsFailed,
   onClose,
   onSave,
 }: StandingModalProps) {
   const [percentage, setPercentage] = useState("0");
-  const [score, setScore] = useState("0");
   const [isFailed, setIsFailed] = useState(false);
+  const [scoreOptions, setScoreOptions] = useState<ScoreOption[]>([]);
+  const [selectedScoreId, setSelectedScoreId] = useState("");
+  const [loadingScores, setLoadingScores] = useState(false);
 
   useEffect(() => {
     if (open) {
       setPercentage(initialPercentage !== undefined ? String(initialPercentage) : "0");
-      setScore(initialScore !== undefined ? String(initialScore) : "0");
       setIsFailed(initialIsFailed ?? false);
+      setSelectedScoreId(initialScoreId ? String(initialScoreId) : "");
     }
-  }, [open, initialPercentage, initialScore, initialIsFailed]);
+  }, [open, initialPercentage, initialScoreId, initialIsFailed]);
+
+  useEffect(() => {
+    if (!open) {
+      setScoreOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingScores(true);
+    MatchesApi.listScores(songId, playerId)
+      .then((scores) => {
+        if (cancelled) return;
+
+        const options = scores.map((score) => ({
+          id: score.id,
+          percentage: Number(score.percentage),
+          isFailed: score.isFailed,
+        }));
+        const hasInitialScore = initialScoreId ? options.some((score) => score.id === initialScoreId) : true;
+        if (!hasInitialScore && initialScoreId) {
+          options.unshift({
+            id: initialScoreId,
+            percentage: initialPercentage ?? 0,
+            isFailed: initialIsFailed ?? false,
+          });
+        }
+        setScoreOptions(options);
+      })
+      .catch(() => {
+        if (!cancelled) setScoreOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingScores(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, songId, playerId, initialScoreId, initialPercentage, initialIsFailed]);
+
+  const isRegisteredScoreMode = selectedScoreId !== "";
+  const selectedScore = scoreOptions.find((score) => score.id === Number(selectedScoreId));
+
+  useEffect(() => {
+    if (!selectedScore) return;
+    setPercentage(String(selectedScore.percentage));
+    setIsFailed(selectedScore.isFailed);
+  }, [selectedScore]);
 
   function handleSave() {
     onSave(
       playerId,
       songId,
       parseFloat(percentage.replace(",", ".")),
-      parseInt(score),
+      0,
       isFailed,
+      selectedScoreId ? Number(selectedScoreId) : undefined,
     );
     onClose();
   }
@@ -85,35 +145,51 @@ export default function StandingModal({
       </p>
       <div className="flex flex-col gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Points</label>
-          <input
-            type="text"
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
+          <label className="block text-sm font-medium text-gray-700">Registered score</label>
+          <select
+            value={selectedScoreId}
+            onChange={(event) => setSelectedScoreId(event.target.value)}
+            disabled={loadingScores}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm"
-          />
+          >
+            <option value="">Manual score</option>
+            {scoreOptions.map((score) => (
+              <option key={score.id} value={score.id}>
+                #{score.id} - {score.percentage.toFixed(2)}%{score.isFailed ? " failed" : ""}
+              </option>
+            ))}
+          </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Percentage</label>
-          <input
-            type="text"
-            value={percentage}
-            onChange={(e) => setPercentage(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="isFailed"
-            checked={isFailed}
-            onChange={(e) => setIsFailed(e.target.checked)}
-            className="rounded"
-          />
-          <label htmlFor="isFailed" className="text-sm font-medium text-gray-700">
-            Failed
-          </label>
-        </div>
+        {isRegisteredScoreMode && selectedScore ? (
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            Using score #{selectedScore.id}: {selectedScore.percentage.toFixed(2)}%
+            {selectedScore.isFailed ? " failed" : ""}. Manual fields are hidden while a registered score is selected.
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Percentage</label>
+              <input
+                type="text"
+                value={percentage}
+                onChange={(e) => setPercentage(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isFailed"
+                checked={isFailed}
+                onChange={(e) => setIsFailed(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="isFailed" className="text-sm font-medium text-gray-700">
+                Failed
+              </label>
+            </div>
+          </>
+        )}
       </div>
     </BaseModal>
   );

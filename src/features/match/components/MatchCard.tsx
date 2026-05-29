@@ -32,6 +32,7 @@ type MatchCardProps = {
     percentage: number,
     score: number,
     isFailed: boolean,
+    scoreId?: number,
   ) => void;
   onEditMatchNotes: (matchId: number, notes: string) => void;
   onRenameMatch?: (matchId: number, name: string) => void;
@@ -41,6 +42,7 @@ type MatchCardProps = {
     percentage: number,
     score: number,
     isFailed: boolean,
+    scoreId?: number,
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchPaths?: (matchId: number, targetPaths: number[]) => Promise<void>;
@@ -57,6 +59,7 @@ type StandingModalState = {
   songTitle: string;
   initialPercentage?: number;
   initialScore?: number;
+  initialScoreId?: number;
   initialIsFailed?: boolean;
 };
 
@@ -197,11 +200,11 @@ export default function MatchCard({
       <StandingModal
         {...standingModal}
         onClose={() => setStandingModal(closedModal)}
-        onSave={(playerId, songId, pct, score, isFailed) => {
+        onSave={(playerId, songId, pct, score, isFailed, scoreId) => {
           if (standingModal.mode === "add") {
-            onAddStandingToMatch(playerId, songId, pct, score, isFailed);
+            onAddStandingToMatch(playerId, songId, pct, score, isFailed, scoreId);
           } else {
-            onEditStanding(playerId, songId, pct, score, isFailed);
+            onEditStanding(playerId, songId, pct, score, isFailed, scoreId);
           }
         }}
       />
@@ -255,8 +258,8 @@ export default function MatchCard({
         onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
           setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
         }
-        onOpenEditStanding={(playerId, songId, playerName, songTitle, percentage, score, isFailed) =>
-          setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
+        onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
+          setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
         }
         onDeleteStanding={onDeleteStanding}
       />

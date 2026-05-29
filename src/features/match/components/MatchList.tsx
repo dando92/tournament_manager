@@ -3,6 +3,7 @@ import { Division } from "@/features/division/types/Division";
 import MatchCard from "@/features/match/components/MatchCard";
 import { useMatches } from "@/features/match/services/useMatches";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import { MatchState } from "@/features/match/types/Match";
 
 type MatchListProps = {
   division: Division;
@@ -10,7 +11,7 @@ type MatchListProps = {
   tournamentId?: number;
   matchUpdateSignal?: number;
   phaseId?: number;
-  activeOnly?: boolean;
+  matchStateFilter?: MatchState | "all";
 };
 
 export default function MatchList({
@@ -19,7 +20,7 @@ export default function MatchList({
   tournamentId,
   matchUpdateSignal,
   phaseId,
-  activeOnly = false,
+  matchStateFilter = "all",
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id);
   const { matchListVersions } = useTournamentUpdates();
@@ -27,7 +28,8 @@ export default function MatchList({
   const matchListVersion = matchListVersions.get(division.id) ?? 0;
 
   const visibleMatches = state.matches.filter((match) => {
-    if (activeOnly && !["Active", "Pending"].includes(match.state ?? "NotActive")) return false;
+    const matchState = match.state ?? "NotActive";
+    if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
     if (phaseId !== undefined && match.phaseId !== phaseId) return false;
     return true;
   });
@@ -84,11 +86,11 @@ export default function MatchList({
               onDeleteSongFromMatch={(songId) =>
                 actions.deleteSongFromMatch(match.id, songId)
               }
-              onAddStandingToMatch={(playerId, songId, pct, sc, fail) =>
-                actions.addStandingToMatch(match.id, playerId, songId, pct, sc, fail)
+              onAddStandingToMatch={(playerId, songId, pct, sc, fail, scoreId) =>
+                actions.addStandingToMatch(match.id, playerId, songId, pct, sc, fail, scoreId)
               }
-              onEditStanding={(playerId, songId, pct, sc, fail) =>
-                actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail)
+              onEditStanding={(playerId, songId, pct, sc, fail, scoreId) =>
+                actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
               }
               onUpdateMatchPaths={actions.updateMatchPaths}
               onUpdateMatchState={actions.updateMatchState}

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Match, MatchState } from "@/features/match/types/Match";
+import { Score } from "@/features/match/types/Standing";
 import {
   AddStandingToMatchRequest,
   CreateMatchRequest,
@@ -171,11 +172,12 @@ export async function editStandingInMatch(
   percentage: number,
   score: number,
   isFailed: boolean,
+  scoreId?: number,
 ): Promise<Match> {
   try {
     const response = await axios.put<Match>(
       `standings/matches/${matchId}`,
-      { songId, playerId, percentage, score, isFailed },
+      { songId, playerId, percentage, score, isFailed, scoreId },
     );
     return response.data;
   } catch (error) {
@@ -197,6 +199,18 @@ export async function updateMatchPaths(
   } catch (error) {
     console.error("Error updating match paths:", error);
     throw new Error("Unable to update match paths.");
+  }
+}
+
+export async function listScores(songId: number, playerId: number): Promise<Score[]> {
+  try {
+    const response = await axios.get<Score[]>("scores", {
+      params: { songId, playerId },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error listing scores:", error);
+    throw new Error("Unable to list scores.");
   }
 }
 

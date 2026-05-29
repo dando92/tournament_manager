@@ -29,6 +29,7 @@ export interface EditSongToMatchRequest {
 }
 
 export interface AddStandingToMatchRequest {
+  scoreId?: number;
   playerId: number;
   songId: number;
   percentage: number;

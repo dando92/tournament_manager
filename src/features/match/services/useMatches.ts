@@ -158,6 +158,7 @@ export function useMatches(divisionId: number) {
     percentage: number,
     score: number,
     isFailed: boolean,
+    scoreId?: number,
   ) {
     try {
       const item = await MatchesApi.addStandingToMatch(matchId, {
@@ -166,6 +167,7 @@ export function useMatches(divisionId: number) {
         percentage,
         score,
         isFailed,
+        scoreId,
       });
       dispatch({ type: "onAddStandingToMatch", payload: item });
     } catch (error) {
@@ -197,6 +199,7 @@ export function useMatches(divisionId: number) {
     percentage: number,
     score: number,
     isFailed: boolean,
+    scoreId?: number,
   ) {
     try {
       const item = await MatchesApi.editStandingInMatch(
@@ -206,6 +209,7 @@ export function useMatches(divisionId: number) {
         percentage,
         score,
         isFailed,
+        scoreId,
       );
       dispatch({ type: "onEditStandingFromMatch", payload: item });
     } catch (error) {

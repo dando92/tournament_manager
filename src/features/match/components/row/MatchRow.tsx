@@ -5,7 +5,7 @@ import { Match } from "@/features/match/types/Match";
 import { Player } from "@/features/player/types/Player";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
-type ScoreEntry = { score: number; percentage: number; isFailed: boolean };
+type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed: boolean };
 
 type MatchRowProps = {
   match: Match;
@@ -22,6 +22,7 @@ type MatchRowProps = {
     songId: number,
     playerName: string,
     songTitle: string,
+    scoreId: number,
     percentage: number,
     score: number,
     isFailed: boolean,
@@ -174,6 +175,7 @@ export default function MatchRow({
                           round.song.id,
                           player.playerName,
                           round.song.title,
+                          scoreData.scoreId,
                           scoreData.percentage,
                           scoreData.score,
                           scoreData.isFailed,

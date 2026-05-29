@@ -5,6 +5,7 @@ import {
   LiveMatchStateDto,
   scoreHubUrl,
 } from "@/features/live/services/useScoreHub";
+import { toast } from "react-toastify";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -28,11 +29,17 @@ type MatchUpdateMessage = {
   matchId: number;
 };
 
+type UiWarningMessage = {
+  tournamentId: number;
+  message: string;
+};
+
 type TournamentSocketMessage =
   | { event: "TournamentUpdate"; data: TournamentUpdateMessage }
   | { event: "DivisionUpdate"; data: DivisionUpdateMessage }
   | { event: "PhaseUpdate"; data: PhaseUpdateMessage }
-  | { event: "MatchUpdate"; data: MatchUpdateMessage };
+  | { event: "MatchUpdate"; data: MatchUpdateMessage }
+  | { event: "UiWarning"; data: UiWarningMessage };
 
 type LobbySocketMessage =
   | { event: "OnLobbyActive"; data: ActiveLobbyDto }
@@ -126,6 +133,9 @@ export function TournamentUpdatesProvider({
             pendingMatchIds.current.add(msg.data.matchId);
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
             debounceTimer.current = setTimeout(flushMatchUpdates, 50);
+            break;
+          case "UiWarning":
+            toast.warn(msg.data.message);
             break;
         }
       } catch {

@@ -8,7 +8,7 @@ import EditPathRow from "@/features/match/components/row/EditPathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { toOrdinal } from "@/shared/utils";
 
-type ScoreEntry = { score: number; percentage: number; isFailed: boolean };
+type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed: boolean };
 
 type MatchTableProps = {
   match: Match;
@@ -28,6 +28,7 @@ type MatchTableProps = {
     songId: number,
     playerName: string,
     songTitle: string,
+    scoreId: number,
     percentage: number,
     score: number,
     isFailed: boolean,
@@ -69,6 +70,7 @@ export default function MatchTable({
     (round.standings ?? []).forEach((standing) => {
       const key = `${standing.score.player.id}-${round.song.id}`;
       scoreTable[key] = {
+        scoreId: standing.score.id,
         score: standing.points,
         percentage: Number(standing.score.percentage),
         isFailed: standing.score.isFailed,
