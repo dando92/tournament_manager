@@ -67,7 +67,8 @@ export function useTournamentPage({
     phases: (division.phases ?? []).map((phase) => ({
       id: phase.id,
       name: phase.name,
-      matchCount: phase.matches?.length ?? 0,
+      matchCount: phase.matchCount ?? 0,
+      phaseGroups: phase.phaseGroups ?? [],
     })),
   }), []);
 
@@ -92,7 +93,12 @@ export function useTournamentPage({
         name: division.name,
         playersPerMatch: division.playersPerMatch ?? null,
         entrants: division.entrants,
-        phases: division.phases.map((phase) => ({ id: phase.id, name: phase.name, matchCount: phase.matchCount })),
+        phases: division.phases.map((phase) => ({
+          id: phase.id,
+          name: phase.name,
+          matchCount: phase.matchCount,
+          phaseGroups: phase.phaseGroups ?? [],
+        })),
       })),
     );
   }, [tournamentId]);
@@ -156,16 +162,11 @@ export function useTournamentPage({
     });
   }, [divisionDetailVersions, matchListVersions, refreshDivision]);
 
-  const handleGenerateBracket = useCallback(async (bracketType: string, playerPerMatch: number) => {
+  const handleGenerateBracket = useCallback(async (_bracketType: string, _playerPerMatch: number) => {
     if (!generateBracketDivisionId) return;
-    await axios.post(`bracket/divisions/${generateBracketDivisionId}/generate-bracket`, {
-      bracketType,
-      tournamentId,
-      playerPerMatch,
-    });
     await refreshDivision(generateBracketDivisionId);
     setGenerateBracketDivisionId(null);
-  }, [generateBracketDivisionId, refreshDivision, tournamentId]);
+  }, [generateBracketDivisionId, refreshDivision]);
 
   const handleCreateDivision = useCallback((name: string, playersPerMatch: number | null) => {
     axios.post<{ id: number; name: string; playersPerMatch: number | null }>("divisions", {
@@ -195,7 +196,12 @@ export function useTournamentPage({
         division.id === divisionId
           ? {
               ...division,
-              phases: [...division.phases, { id: response.data.id, name: response.data.name, matchCount: 0 }],
+              phases: [...division.phases, {
+                id: response.data.id,
+                name: response.data.name,
+                matchCount: 0,
+                phaseGroups: response.data.phaseGroups ?? [],
+              }],
             }
           : division,
       ),
@@ -213,11 +219,8 @@ export function useTournamentPage({
           ? {
               ...division,
               phases: division.phases.map((phase) =>
-                phase.id === request.phaseId
-                  ? {
-                      ...phase,
-                      matchCount: phase.matchCount + 1,
-                    }
+                phase.phaseGroups?.some((group) => group.id === request.phaseGroupId)
+                  ? { ...phase, matchCount: phase.matchCount + 1 }
                   : phase,
               ),
             }

@@ -10,7 +10,6 @@ type MatchListProps = {
   controls?: boolean;
   tournamentId?: number;
   matchUpdateSignal?: number;
-  phaseId?: number;
   phaseGroupId?: number;
   matchStateFilter?: MatchState | "all";
 };
@@ -20,7 +19,6 @@ export default function MatchList({
   controls = false,
   tournamentId,
   matchUpdateSignal,
-  phaseId,
   phaseGroupId,
   matchStateFilter = "all",
 }: MatchListProps) {
@@ -33,7 +31,6 @@ export default function MatchList({
     const matchState = match.state ?? "NotActive";
     if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
     if (phaseGroupId !== undefined && match.phaseGroupId !== phaseGroupId) return false;
-    if (phaseId !== undefined && match.phaseId !== phaseId) return false;
     return true;
   });
 

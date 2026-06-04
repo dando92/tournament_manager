@@ -70,7 +70,6 @@ export default function PhaseMatchesPanel({
         <MatchList
           key={`phase-${phase.id}`}
           division={division}
-          phaseId={phase.id}
           controls={controls}
           tournamentId={tournamentId}
           matchUpdateSignal={matchRefreshKey}

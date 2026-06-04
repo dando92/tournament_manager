@@ -16,7 +16,6 @@ export interface Entrant {
   id: number;
   name: string;
   type: EntrantType;
-  seedNum: number | null;
   status: EntrantStatus;
   participants: Participant[];
 }

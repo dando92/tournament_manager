@@ -1,5 +1,5 @@
 export interface CreateMatchRequest {
-  phaseId: number;
+  phaseGroupId: number;
   divisionId?: number; // only needed for song rolling
   name: string;
   subtitle: string;

@@ -48,7 +48,7 @@ export function useTournamentLayout({ context, state }: UseTournamentLayoutOptio
       await state.handleCreateMatch(request);
       if (request.divisionId) {
         navigate(
-          `/tournament/${tournamentId}/division/${request.divisionId}/phases/${request.phaseId}?refresh=${Date.now()}`,
+          `/tournament/${tournamentId}/division/${request.divisionId}/phases?refresh=${Date.now()}`,
         );
       }
     },

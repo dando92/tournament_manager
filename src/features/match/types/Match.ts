@@ -37,6 +37,5 @@ export interface Match {
   rounds: Round[];
   advancementRules: AdvancementRule[];
   matchResult?: MatchResult | null;
-  phaseId?: number;
-  phaseGroupId?: number | null;
+  phaseGroupId: number;
 }

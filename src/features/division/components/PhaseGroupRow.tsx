@@ -232,10 +232,9 @@ export default function PhaseGroupRow({
         </div>
       )}
       <MatchList
-        key={`phase-group-${phaseGroup.id}`}
-        division={division}
-        phaseId={phase.id}
-        phaseGroupId={phaseGroup.id}
+      key={`phase-group-${phaseGroup.id}`}
+      division={division}
+      phaseGroupId={phaseGroup.id}
         controls={controls}
         tournamentId={tournamentId}
         matchUpdateSignal={matchRefreshKey}

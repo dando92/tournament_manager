@@ -38,10 +38,13 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
           divisions={props.divisions}
           phases={props.phases}
           availablePhases={state.availablePhases}
+          availablePhaseGroups={state.availablePhaseGroups}
           selectedDivisionId={state.selectedDivisionId}
           selectedPhaseId={state.selectedPhaseId}
+          selectedPhaseGroupId={state.selectedPhaseGroupId}
           onDivisionChange={state.setSelectedDivisionId}
           onPhaseChange={state.setSelectedPhaseId}
+          onPhaseGroupChange={state.setSelectedPhaseGroupId}
         />
 
         <div className="w-full">
