@@ -6,7 +6,6 @@ type PlayersByNameListProps = {
   players: Participant[];
   canEdit: boolean;
   divisionParticipantIds: Set<number>;
-  seedPos: (participantId: number) => number | null;
   onRemove: (participantId: number) => void;
   totalParticipants: number;
 };
@@ -15,7 +14,6 @@ export default function PlayersByNameList({
   players,
   canEdit,
   divisionParticipantIds,
-  seedPos,
   onRemove,
   totalParticipants,
 }: PlayersByNameListProps) {
@@ -31,7 +29,6 @@ export default function PlayersByNameList({
     <div className="flex flex-col gap-1">
       {players.map((participant) => {
         const inDivision = divisionParticipantIds.has(participant.id);
-        const pos = inDivision ? seedPos(participant.id) : null;
 
         return (
           <div
@@ -39,11 +36,6 @@ export default function PlayersByNameList({
             className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded text-sm"
           >
             <div className="flex items-center gap-2">
-              {pos !== null ? (
-                <span className="text-xs font-bold text-primary-dark w-7 shrink-0">#{pos}</span>
-              ) : (
-                <span className="w-7 shrink-0" />
-              )}
               <span className={inDivision ? "" : "text-gray-400"}>{participant.player.playerName}</span>
             </div>
             {canEdit && inDivision && (

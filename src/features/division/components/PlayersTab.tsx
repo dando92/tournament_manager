@@ -1,7 +1,6 @@
 import { Division } from "@/features/division/types/Division";
 import PlayersByNameList from "@/features/division/components/PlayersByNameList";
 import PlayersSearchBar from "@/features/division/components/PlayersSearchBar";
-import PlayersSeedingList from "@/features/division/components/PlayersSeedingList";
 import PlayersTabHeader from "@/features/division/components/PlayersTabHeader";
 import PlayersWarning from "@/features/division/components/PlayersWarning";
 import { usePlayersTab } from "@/features/division/hooks/usePlayersTab";
@@ -27,38 +26,19 @@ export default function PlayersTab({ division, canEdit, onPlayersChanged }: Prop
 
       <PlayersTabHeader
         canEdit={canEdit}
-        ordering={state.ordering}
-        editingSeeding={state.editingSeeding}
-        savingSeeding={state.savingSeeding}
-        onOrderingChange={state.setOrdering}
-        onEditSeeding={state.enterSeedingEdit}
-        onDoneSeeding={state.exitSeedingEdit}
         onSelectParticipants={() => state.setShowSelectModal(true)}
       />
 
       <PlayersSearchBar value={state.search} onChange={state.setSearch} />
       <PlayersWarning warnings={[]} />
 
-      {state.ordering === "name" ? (
-        <PlayersByNameList
-          players={state.filteredAllAlpha}
-          canEdit={canEdit}
-          divisionParticipantIds={state.divisionParticipantIds}
-          seedPos={state.seedPos}
-          onRemove={state.handleRemove}
-          totalParticipants={state.filteredAllAlpha.length}
-        />
-      ) : (
-        <PlayersSeedingList
-          canEdit={canEdit}
-          editingSeeding={state.editingSeeding}
-          draftSeeding={state.draftSeeding}
-          seededPlayers={state.filteredSeededDiv}
-          seedPos={state.seedPos}
-          onDragEnd={state.handleDragEnd}
-          onRemove={state.handleRemove}
-        />
-      )}
+      <PlayersByNameList
+        players={state.filteredAllAlpha}
+        canEdit={canEdit}
+        divisionParticipantIds={state.divisionParticipantIds}
+        onRemove={state.handleRemove}
+        totalParticipants={state.filteredAllAlpha.length}
+      />
     </div>
   );
 }

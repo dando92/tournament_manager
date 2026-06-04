@@ -11,6 +11,7 @@ type MatchListProps = {
   tournamentId?: number;
   matchUpdateSignal?: number;
   phaseId?: number;
+  phaseGroupId?: number;
   matchStateFilter?: MatchState | "all";
 };
 
@@ -20,6 +21,7 @@ export default function MatchList({
   tournamentId,
   matchUpdateSignal,
   phaseId,
+  phaseGroupId,
   matchStateFilter = "all",
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id);
@@ -30,6 +32,7 @@ export default function MatchList({
   const visibleMatches = state.matches.filter((match) => {
     const matchState = match.state ?? "NotActive";
     if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
+    if (phaseGroupId !== undefined && match.phaseGroupId !== phaseGroupId) return false;
     if (phaseId !== undefined && match.phaseId !== phaseId) return false;
     return true;
   });

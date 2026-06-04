@@ -38,4 +38,5 @@ export interface Match {
   advancementRules: AdvancementRule[];
   matchResult?: MatchResult | null;
   phaseId?: number;
+  phaseGroupId?: number | null;
 }
