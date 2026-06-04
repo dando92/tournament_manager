@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Match, MatchState } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
 import { Score } from "@/features/match/types/Standing";
 import {
   AddStandingToMatchRequest,
@@ -186,19 +186,19 @@ export async function editStandingInMatch(
   }
 }
 
-export async function updateMatchPaths(
+export async function updateMatchAdvancementRules(
   matchId: number,
-  targetPaths: number[],
+  rules: MatchAdvancementRuleInput[],
 ): Promise<Match> {
   try {
     const response = await axios.put<Match>(
-      `matches/${matchId}/paths`,
-      { targetPaths },
+      `matches/${matchId}/advancement-rules`,
+      { rules },
     );
     return response.data;
   } catch (error) {
-    console.error("Error updating match paths:", error);
-    throw new Error("Unable to update match paths.");
+    console.error("Error updating match advancement rules:", error);
+    throw new Error("Unable to update match advancement rules.");
   }
 }
 

@@ -50,11 +50,6 @@ type onDeleteStandingFromMatch = {
   payload: Match;
 };
 
-type onUpdateMatchPaths = {
-  type: "onUpdateMatchPaths";
-  payload: Match;
-};
-
 type onRefreshMatch = {
   type: "onRefreshMatch";
   payload: Match;
@@ -71,5 +66,4 @@ export type MatchesActions =
   | onAddStandingToMatch
   | onEditStandingFromMatch
   | onDeleteStandingFromMatch
-  | onUpdateMatchPaths
   | onRefreshMatch;

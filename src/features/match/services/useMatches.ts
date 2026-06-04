@@ -2,7 +2,7 @@ import { useReducer } from "react";
 import { initialState, matchesReducer } from "@/features/match/services/matches.reducer";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
-import { MatchState } from "@/features/match/types/Match";
+import { MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
 import { toast } from "react-toastify";
 
 export function useMatches(divisionId: number) {
@@ -228,14 +228,14 @@ export function useMatches(divisionId: number) {
     }
   }
 
-  async function updateMatchPaths(matchId: number, targetPaths: number[]) {
+  async function updateMatchAdvancementRules(matchId: number, rules: MatchAdvancementRuleInput[]) {
     try {
-      await MatchesApi.updateMatchPaths(matchId, targetPaths);
+      await MatchesApi.updateMatchAdvancementRules(matchId, rules);
       await list();
     } catch (error) {
-      toast.error("Error updating match paths.");
-      console.error("Error updating match paths:", error);
-      throw new Error("Unable to update match paths.");
+      toast.error("Error updating match advancement rules.");
+      console.error("Error updating match advancement rules:", error);
+      throw new Error("Unable to update match advancement rules.");
     }
   }
 
@@ -275,7 +275,7 @@ export function useMatches(divisionId: number) {
       addStandingToMatch,
       editStandingFromMatch,
       deleteStandingsForPlayerFromMatch,
-      updateMatchPaths,
+      updateMatchAdvancementRules,
       updateMatchState,
     },
   };

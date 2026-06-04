@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Match } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import MatchRow from "@/features/match/components/row/MatchRow";
 import PathRow from "@/features/match/components/row/PathRow";
@@ -18,8 +18,8 @@ type MatchTableProps = {
   editMode: boolean;
   highlightedMatchId: number | null;
   onHighlightMatch: (id: number | null) => void;
-  pendingTargetPaths: (number | null)[];
-  onPendingTargetPathChange: (index: number, value: number | null) => void;
+  pendingAdvancementRules: (MatchAdvancementRuleInput | null)[];
+  onPendingAdvancementRuleChange: (index: number, value: MatchAdvancementRuleInput | null) => void;
   onDeleteSong: (songId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
   onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
@@ -44,8 +44,8 @@ export default function MatchTable({
   editMode,
   highlightedMatchId,
   onHighlightMatch,
-  pendingTargetPaths,
-  onPendingTargetPathChange,
+  pendingAdvancementRules,
+  onPendingAdvancementRuleChange,
   onDeleteSong,
   onDeletePlayer,
   onOpenAddStanding,
@@ -101,16 +101,21 @@ export default function MatchTable({
   const routeByPlayerId = new Map(
     sortedMatchResults
       .map((result, index) => {
-        const targetMatchId = match.targetPaths?.[index] ?? 0;
-        if (targetMatchId <= 0) {
+        const route = (match.advancementRules ?? []).find(
+          (rule) => rule.sourceKind === "match" && rule.sourceId === match.id && rule.sourcePlacement === index + 1,
+        );
+        if (!route || route.targetKind !== "match") {
           return [result.playerId, null] as const;
         }
-        return [result.playerId, targetMatchId] as const;
+        return [result.playerId, route.targetId] as const;
       }),
   );
 
-  const sourcePaths = match.sourcePaths ?? [];
-  const hasContent = sortedPlayers.length > 0 || sourcePaths.length > 0 || sortedMatchResults.length > 0;
+  const incomingRules = (match.advancementRules ?? []).filter(
+    (rule) => rule.targetKind === "match" && rule.targetId === match.id,
+  );
+  const sourceIds = Array.from(new Set(incomingRules.map((rule) => rule.sourceId)));
+  const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
   const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
 
   // colSpan for single-cell rows (PathRow, EditPathRow, empty message)
@@ -179,15 +184,13 @@ export default function MatchTable({
               </tr>
             )}
 
-            {!editMode && sourcePaths.flatMap((sourceId) => {
+            {!editMode && sourceIds.flatMap((sourceId) => {
               const sourceMatch = allMatches.find((m) => m.id === sourceId);
               const name = sourceMatch?.name ?? String(sourceId);
               const isSelected = highlightedMatchId === sourceId;
-              // Find ALL rank positions in sourceMatch.targetPaths that point to this match
-              const positions = (sourceMatch?.targetPaths ?? [])
-                .map((id, idx) => ({ id, idx }))
-                .filter(({ id }) => id === match.id)
-                .map(({ idx }) => idx + 1);
+              const positions = incomingRules
+                .filter((rule) => rule.sourceId === sourceId)
+                .map((rule) => rule.sourcePlacement);
 
               // Fallback: if no positions found, still show one row
               const rows = positions.length > 0 ? positions : [1];
@@ -243,8 +246,8 @@ export default function MatchTable({
                 index={i}
                 allMatches={allMatches}
                 currentMatchId={match.id}
-                value={pendingTargetPaths[i] ?? null}
-                onChange={(value) => onPendingTargetPathChange(i, value)}
+                value={pendingAdvancementRules[i] ?? null}
+                onChange={(value) => onPendingAdvancementRuleChange(i, value)}
                 onHighlightMatch={onHighlightMatch}
               />
             ))}
