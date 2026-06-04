@@ -13,6 +13,7 @@ type PhaseMatchesPanelProps = {
   matchRefreshKey?: number;
   matchStateFilter?: MatchState | "all";
   onDelete?: (phaseId: number) => Promise<void>;
+  onChanged?: () => Promise<void>;
 };
 
 export default function PhaseMatchesPanel({
@@ -23,6 +24,7 @@ export default function PhaseMatchesPanel({
   matchRefreshKey,
   matchStateFilter = "all",
   onDelete,
+  onChanged,
 }: PhaseMatchesPanelProps) {
   const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
   const phaseGroups = phase.phaseGroups ?? [];
@@ -60,6 +62,7 @@ export default function PhaseMatchesPanel({
               defaultExpanded={hideSingleGroupChrome}
               hiddenChrome={hideSingleGroupChrome}
               onDeletePhase={onDelete}
+              onChanged={onChanged}
             />
           ))}
         </div>

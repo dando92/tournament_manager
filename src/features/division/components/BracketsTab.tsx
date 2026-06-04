@@ -55,6 +55,7 @@ export default function BracketsTab({
           matchRefreshKey={matchRefreshKey}
           matchStateFilter={matchStateFilter}
           onDelete={state.handleDeletePhase}
+          onChanged={onDivisionChanged}
         />
       ) : (
         <MatchList
