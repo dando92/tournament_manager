@@ -92,7 +92,7 @@ export default function MatchList({
               onEditStanding={(playerId, songId, pct, sc, fail, scoreId) =>
                 actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
               }
-              onUpdateMatchPaths={actions.updateMatchPaths}
+              onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
               onUpdateMatchState={actions.updateMatchState}
               onRefreshSelf={() => actions.refreshMatch(match.id)}
               match={match}

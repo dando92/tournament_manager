@@ -73,11 +73,6 @@ export function matchesReducer(state: MatchesState, action: MatchesActions) {
         ...state,
         matches: mergeUpdatedMatch(state.matches, payload),
       };
-    case "onUpdateMatchPaths":
-      return {
-        ...state,
-        matches: mergeUpdatedMatch(state.matches, payload),
-      };
     case "onRefreshMatch":
       return {
         ...state,

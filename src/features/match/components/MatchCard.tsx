@@ -1,4 +1,4 @@
-import { Match, MatchState } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
@@ -7,6 +7,7 @@ import StandingModal from "@/features/match/modals/StandingModal";
 import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchTable from "@/features/match/components/MatchTable";
+import MatchFooter from "@/features/match/components/MatchFooter";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 
 type MatchCardProps = {
@@ -45,7 +46,7 @@ type MatchCardProps = {
     scoreId?: number,
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
-  onUpdateMatchPaths?: (matchId: number, targetPaths: number[]) => Promise<void>;
+  onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchState?: (matchId: number, state: MatchState) => Promise<void>;
   onRefreshSelf?: () => void;
 };
@@ -94,7 +95,7 @@ export default function MatchCard({
   onRenameMatch,
   onDeleteStanding,
   onEditStanding,
-  onUpdateMatchPaths,
+  onUpdateMatchAdvancementRules,
   onUpdateMatchState,
   onRefreshSelf,
 }: MatchCardProps) {
@@ -104,7 +105,7 @@ export default function MatchCard({
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [pendingTargetPaths, setPendingTargetPaths] = useState<(number | null)[]>([]);
+  const [pendingAdvancementRules, setPendingAdvancementRules] = useState<(MatchAdvancementRuleInput | null)[]>([]);
 
   const onMatchUpdatedRef = useRef(onMatchUpdated);
   useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
@@ -126,42 +127,34 @@ export default function MatchCard({
   const maxPlayersPerMatch = division.playersPerMatch ?? 2;
   const isHighlighted = match.id === highlightedMatchId;
   const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
-  const stateButtonLabel = {
-    NotActive: "Click to activate",
-    Active: "Active",
-    Pending: "Commit match",
-    Completed: "Re-open match",
-  }[matchState];
-  const stateButtonClass = {
-    NotActive: "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100",
-    Active: "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
-    Pending: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
-    Completed: "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100",
-  }[matchState];
 
   function enterEditMode() {
-    const existing = match.targetPaths ?? [];
     const initial: (number | null)[] = Array.from({ length: maxPlayersPerMatch }, (_, i) => {
-      const id = existing[i];
-      return id && id > 0 ? id : null;
+      const rule = (match.advancementRules ?? []).find(
+        (candidate) => candidate.sourceKind === "match" && candidate.sourceId === match.id && candidate.sourcePlacement === i + 1,
+      );
+      return rule ? rule.targetId : null;
     });
-    setPendingTargetPaths(initial);
+    setPendingAdvancementRules(initial.map((targetId, index) => targetId
+      ? { sourcePlacement: index + 1, targetId, targetSlot: index + 1 }
+      : null,
+    ));
     setEditMode(true);
   }
 
   function cancelEditMode() {
     setEditMode(false);
-    setPendingTargetPaths([]);
+    setPendingAdvancementRules([]);
   }
 
   async function saveEditMode() {
-    const newTargetPaths = pendingTargetPaths.map(v => v ?? 0);
-    if (onUpdateMatchPaths) {
-      await onUpdateMatchPaths(match.id, newTargetPaths);
+    const rules = pendingAdvancementRules.filter((rule): rule is MatchAdvancementRuleInput => Boolean(rule));
+    if (onUpdateMatchAdvancementRules) {
+      await onUpdateMatchAdvancementRules(match.id, rules);
     }
     onMatchUpdatedRef.current();
     setEditMode(false);
-    setPendingTargetPaths([]);
+    setPendingAdvancementRules([]);
   }
 
   async function toggleCurrentMatch() {
@@ -237,10 +230,10 @@ export default function MatchCard({
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
         onRenameMatch={onRenameMatch}
         editMode={editMode}
-        canEditRoutes={controls}
-        onEditRoutes={enterEditMode}
-        onSaveRoutes={saveEditMode}
-        onCancelRoutes={cancelEditMode}
+        canEditAdvancementRules={controls}
+        onEditAdvancementRules={enterEditMode}
+        onSaveAdvancementRules={saveEditMode}
+        onCancelAdvancementRules={cancelEditMode}
       />
 
       <MatchTable
@@ -251,9 +244,9 @@ export default function MatchCard({
         editMode={editMode}
         highlightedMatchId={highlightedMatchId}
         onHighlightMatch={onHighlightMatch}
-        pendingTargetPaths={pendingTargetPaths}
-        onPendingTargetPathChange={(index, value) => {
-          setPendingTargetPaths((prev) => {
+        pendingAdvancementRules={pendingAdvancementRules}
+        onPendingAdvancementRuleChange={(index, value) => {
+          setPendingAdvancementRules((prev) => {
             const next = [...prev];
             next[index] = value;
             return next;
@@ -276,14 +269,8 @@ export default function MatchCard({
         onDeleteStanding={onDeleteStanding}
       />
 
-      {controls && (
-        <button
-          type="button"
-          onClick={toggleCurrentMatch}
-          className={`mt-2 w-full rounded-md border px-3 py-2 text-center text-xs font-semibold transition-colors cursor-pointer ${stateButtonClass}`}
-        >
-          {stateButtonLabel}
-        </button>
+      {controls && !editMode && (
+        <MatchFooter state={matchState} onToggleState={toggleCurrentMatch} />
       )}
     </div>
   );

@@ -14,10 +14,10 @@ type Props = {
   onOpenAddPlayer: () => void;
   onRenameMatch?: (matchId: number, name: string) => void;
   editMode?: boolean;
-  canEditRoutes?: boolean;
-  onEditRoutes?: () => void;
-  onSaveRoutes?: () => void;
-  onCancelRoutes?: () => void;
+  canEditAdvancementRules?: boolean;
+  onEditAdvancementRules?: () => void;
+  onSaveAdvancementRules?: () => void;
+  onCancelAdvancementRules?: () => void;
 };
 
 export default function MatchHeader({
@@ -29,10 +29,10 @@ export default function MatchHeader({
   onOpenAddPlayer,
   onRenameMatch,
   editMode = false,
-  canEditRoutes = false,
-  onEditRoutes,
-  onSaveRoutes,
-  onCancelRoutes,
+  canEditAdvancementRules = false,
+  onEditAdvancementRules,
+  onSaveAdvancementRules,
+  onCancelAdvancementRules,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -101,24 +101,24 @@ export default function MatchHeader({
             editMode ? (
               <>
                 <button
-                  onClick={onSaveRoutes}
+                  onClick={onSaveAdvancementRules}
                   className="text-xs text-white bg-green-600 hover:bg-green-700 font-medium rounded px-2 py-0.5 transition-colors"
                 >
                   Save
                 </button>
                 <button
-                  onClick={onCancelRoutes}
+                  onClick={onCancelAdvancementRules}
                   className="text-xs text-gray-600 hover:text-gray-800 font-medium border border-gray-200 rounded px-2 py-0.5 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
               </>
-            ) : canEditRoutes ? (
+            ) : canEditAdvancementRules ? (
               <button
-                onClick={onEditRoutes}
+                onClick={onEditAdvancementRules}
                 className="text-xs text-primary-dark font-medium border border-primary-dark/30 rounded px-2 py-0.5 hover:bg-primary-dark/10 transition-colors"
               >
-                Edit routes
+                Edit advancement rules
               </button>
             ) : null
           )}
