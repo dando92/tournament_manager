@@ -1,19 +1,22 @@
 import { useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faChevronDown, faChevronRight, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faChevronDown, faChevronRight, faDice, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
 import { MatchState } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import {
-  generatePhaseGroupBracket,
+  deletePhaseGroup,
   updatePhaseGroupAdvancementRules,
   updatePhaseGroupSeeding,
 } from "@/features/division/services/phase-groups.api";
 import { btnSecondary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
+import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
+import { CreateMatchRequest } from "@/features/match/types/match-requests";
+import * as MatchesApi from "@/features/match/services/matches.api";
 
 type PhaseGroupRowProps = {
   phase: Phase;
@@ -24,8 +27,6 @@ type PhaseGroupRowProps = {
   matchRefreshKey?: number;
   matchStateFilter?: MatchState | "all";
   defaultExpanded?: boolean;
-  hiddenChrome?: boolean;
-  onDeletePhase?: (phaseId: number) => Promise<void>;
   onChanged?: () => Promise<void>;
 };
 
@@ -40,8 +41,6 @@ export default function PhaseGroupRow({
   matchRefreshKey,
   matchStateFilter = "all",
   defaultExpanded = false,
-  hiddenChrome = false,
-  onDeletePhase,
   onChanged,
 }: PhaseGroupRowProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -49,6 +48,7 @@ export default function PhaseGroupRow({
   const [editingAdvancement, setEditingAdvancement] = useState(false);
   const [draftEntrantIds, setDraftEntrantIds] = useState<number[]>([]);
   const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
+  const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const entrants = useMemo(
     () =>
@@ -127,17 +127,15 @@ export default function PhaseGroupRow({
     }
   };
 
-  const handleGenerateBracket = async () => {
-    setSaving(true);
-    try {
-      await generatePhaseGroupBracket(phaseGroup.id, phaseGroup.bracketType ?? "SingleElimination", division.playersPerMatch ?? 2);
-      await onChanged?.();
-      toast.success("Phase group bracket generated.");
-    } catch {
-      toast.error("Error generating phase group bracket.");
-    } finally {
-      setSaving(false);
-    }
+  const handleDeletePhaseGroup = async () => {
+    await deletePhaseGroup(phaseGroup.id);
+    await onChanged?.();
+  };
+
+  const handleCreateMatch = async (request: CreateMatchRequest) => {
+    await MatchesApi.create(request);
+    await onChanged?.();
+    toast.success("Match created.");
   };
 
   const content = (
@@ -243,10 +241,6 @@ export default function PhaseGroupRow({
     </>
   );
 
-  if (hiddenChrome) {
-    return content;
-  }
-
   return (
     <div className="border border-gray-200 rounded-md bg-white overflow-hidden">
       <button
@@ -286,19 +280,30 @@ export default function PhaseGroupRow({
           <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-2">
             <button className={`${btnSecondary} text-xs`} onClick={beginSeedingEdit} disabled={saving}>Seeding</button>
             <button className={`${btnSecondary} text-xs`} onClick={beginAdvancementEdit} disabled={saving}>Advancement</button>
-            <button className={`${btnSecondary} text-xs`} onClick={handleGenerateBracket} disabled={saving}>Generate</button>
-            {onDeletePhase && (
+            <button className={`${btnSecondary} flex items-center gap-1.5 text-xs`} onClick={() => setCreateMatchOpen(true)} disabled={saving}>
+              <FontAwesomeIcon icon={faDice} />
+              <span>Match</span>
+            </button>
             <DeleteConfirmButton
-              title="Delete phase"
-              onConfirm={() => onDeletePhase(phase.id)}
+              title="Delete phase group"
+              onConfirm={handleDeletePhaseGroup}
               className="text-sm"
-              confirmMessage={`Delete phase "${phase.name}"?`}
+              confirmMessage={`Delete phase group "${phaseGroup.name}"?`}
             />
-            )}
           </div>
         )}
       </button>
       {expanded && <div className="px-4 pb-4 border-t border-gray-100">{content}</div>}
+      <CreateMatchModal
+        open={createMatchOpen}
+        onClose={() => setCreateMatchOpen(false)}
+        onCreate={handleCreateMatch}
+        divisionId={division.id}
+        phaseId={phase.id}
+        phaseGroupId={phaseGroup.id}
+        phases={[{ ...phase, phaseGroups: [phaseGroup] }]}
+        tournamentId={tournamentId}
+      />
     </div>
   );
 }

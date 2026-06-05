@@ -4,8 +4,6 @@ import axios from "axios";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
-import * as MatchesApi from "@/features/match/services/matches.api";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { TournamentOverview } from "@/features/tournament/types/TournamentOverview";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 import { Division } from "@/features/division/types/Division";
@@ -16,29 +14,37 @@ type UseTournamentPageOptions = {
   canControl: boolean;
 };
 
+export type GenerateBracketRequest = {
+  divisionId: number;
+  phaseName?: string;
+  bracketType: string;
+  playerPerMatch: number;
+};
+
+export type GenerateBracketResult = {
+  divisionId: number;
+  phaseId: number;
+  phaseGroupId: number;
+};
+
 export type TournamentPageState = {
   divisions: TournamentDivisionOption[];
   tournamentName: string;
   syncstartUrl: string;
   createDivisionOpen: boolean;
-  selectDivisionOpen: boolean;
   createPhaseOpen: boolean;
-  createMatchOpen: boolean;
-  generateBracketDivisionId: number | null;
-  bracketTypes: string[];
+  generateBracketOpen: boolean;
   createMenuOpen: boolean;
+  bracketTypes: string[];
   setCreateDivisionOpen: Dispatch<SetStateAction<boolean>>;
-  setSelectDivisionOpen: Dispatch<SetStateAction<boolean>>;
   setCreatePhaseOpen: Dispatch<SetStateAction<boolean>>;
-  setCreateMatchOpen: Dispatch<SetStateAction<boolean>>;
-  setGenerateBracketDivisionId: Dispatch<SetStateAction<number | null>>;
+  setGenerateBracketOpen: Dispatch<SetStateAction<boolean>>;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
   setSyncstartUrl: Dispatch<SetStateAction<string>>;
   refreshDivisions: () => Promise<void>;
   handleCreateDivision: (name: string, playersPerMatch: number | null) => void;
   handleCreatePhase: (name: string, divisionId: number) => Promise<void>;
-  handleCreateMatch: (request: CreateMatchRequest) => Promise<void>;
-  handleGenerateBracket: (bracketType: string, playerPerMatch: number) => Promise<void>;
+  handleGenerateBracket: (request: GenerateBracketRequest) => Promise<GenerateBracketResult>;
 };
 
 export function useTournamentPage({
@@ -50,12 +56,10 @@ export function useTournamentPage({
   const [tournamentName, setTournamentName] = useState("");
   const [syncstartUrl, setSyncstartUrl] = useState("");
   const [createDivisionOpen, setCreateDivisionOpen] = useState(false);
-  const [selectDivisionOpen, setSelectDivisionOpen] = useState(false);
   const [createPhaseOpen, setCreatePhaseOpen] = useState(false);
-  const [createMatchOpen, setCreateMatchOpen] = useState(false);
-  const [generateBracketDivisionId, setGenerateBracketDivisionId] = useState<number | null>(null);
-  const [bracketTypes, setBracketTypes] = useState<string[]>([]);
+  const [generateBracketOpen, setGenerateBracketOpen] = useState(false);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [bracketTypes, setBracketTypes] = useState<string[]>([]);
   const previousDivisionDetailVersions = useRef<ReadonlyMap<number, number>>(new Map());
   const previousMatchListVersions = useRef<ReadonlyMap<number, number>>(new Map());
 
@@ -126,16 +130,16 @@ export function useTournamentPage({
   }, [refreshDivisions, tournamentId]);
 
   useEffect(() => {
-    if (!canControl) return;
-    axios.get<string[]>("bracket/bracket-types")
-      .then((r) => setBracketTypes(r.data))
-      .catch(() => {});
-  }, [canControl]);
-
-  useEffect(() => {
     if (tournamentVersion === 0) return;
     refreshDivisions().catch(() => {});
   }, [refreshDivisions, tournamentVersion]);
+
+  useEffect(() => {
+    if (!canControl) return;
+    axios.get<string[]>("bracket/bracket-types")
+      .then((response) => setBracketTypes(response.data))
+      .catch(() => {});
+  }, [canControl]);
 
   useEffect(() => {
     const changedDivisionIds = new Set<number>();
@@ -161,12 +165,6 @@ export function useTournamentPage({
       refreshDivision(divisionId).catch(() => {});
     });
   }, [divisionDetailVersions, matchListVersions, refreshDivision]);
-
-  const handleGenerateBracket = useCallback(async (_bracketType: string, _playerPerMatch: number) => {
-    if (!generateBracketDivisionId) return;
-    await refreshDivision(generateBracketDivisionId);
-    setGenerateBracketDivisionId(null);
-  }, [generateBracketDivisionId, refreshDivision]);
 
   const handleCreateDivision = useCallback((name: string, playersPerMatch: number | null) => {
     axios.post<{ id: number; name: string; playersPerMatch: number | null }>("divisions", {
@@ -208,49 +206,41 @@ export function useTournamentPage({
     );
   }, []);
 
-  const handleCreateMatch = useCallback(async (request: CreateMatchRequest) => {
-    await MatchesApi.create(request);
-    const divisionId = request.divisionId;
-    if (!divisionId) return;
-
-    setDivisions((prev) =>
-      prev.map((division) =>
-        division.id === divisionId
-          ? {
-              ...division,
-              phases: division.phases.map((phase) =>
-                phase.phaseGroups?.some((group) => group.id === request.phaseGroupId)
-                  ? { ...phase, matchCount: phase.matchCount + 1 }
-                  : phase,
-              ),
-            }
-          : division,
-      ),
+  const handleGenerateBracket = useCallback(async (request: GenerateBracketRequest): Promise<GenerateBracketResult> => {
+    const response = await axios.post<{ phaseId: number; phaseGroupId: number }>(
+      `divisions/${request.divisionId}/generate-bracket`,
+      {
+        phaseName: request.phaseName,
+        bracketType: request.bracketType,
+        playerPerMatch: request.playerPerMatch,
+      },
     );
-  }, []);
+    await refreshDivision(request.divisionId);
+    setGenerateBracketOpen(false);
+    return {
+      divisionId: request.divisionId,
+      phaseId: response.data.phaseId,
+      phaseGroupId: response.data.phaseGroupId,
+    };
+  }, [refreshDivision]);
 
   return {
     divisions,
     tournamentName,
     syncstartUrl,
     createDivisionOpen,
-    selectDivisionOpen,
     createPhaseOpen,
-    createMatchOpen,
-    generateBracketDivisionId,
-    bracketTypes,
+    generateBracketOpen,
     createMenuOpen,
+    bracketTypes,
     setCreateDivisionOpen,
-    setSelectDivisionOpen,
     setCreatePhaseOpen,
-    setCreateMatchOpen,
-    setGenerateBracketDivisionId,
+    setGenerateBracketOpen,
     setCreateMenuOpen,
     setSyncstartUrl,
     refreshDivisions,
     handleCreateDivision,
     handleCreatePhase,
-    handleCreateMatch,
     handleGenerateBracket,
   };
 }

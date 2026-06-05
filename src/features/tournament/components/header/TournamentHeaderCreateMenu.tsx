@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
   faDiagramProject,
-  faDice,
   faLink,
   faLayerGroup,
   faPlus,
@@ -16,11 +15,9 @@ type Props = {
   setOpen: Dispatch<SetStateAction<boolean>>;
   showCreateDivision: boolean;
   hasDivisions: boolean;
-  hasPhases: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
-  onCreateMatch: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
@@ -29,11 +26,9 @@ export default function TournamentHeaderCreateMenu({
   setOpen,
   showCreateDivision,
   hasDivisions,
-  hasPhases,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
-  onCreateMatch,
   onOpenParticipantsManageModal,
 }: Props) {
   return (
@@ -97,18 +92,6 @@ export default function TournamentHeaderCreateMenu({
             >
               <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
               Phase
-            </button>
-            <button
-              type="button"
-              disabled={!hasPhases}
-              onClick={() => {
-                setOpen(false);
-                onCreateMatch();
-              }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <FontAwesomeIcon icon={faDice} className="text-primary-dark" />
-              Match
             </button>
           </div>
         </>

@@ -11,6 +11,7 @@ type UseCreateMatchModalOptions = {
   onClose: () => void;
   onCreate: (request: CreateMatchRequest) => void;
   phaseId?: number;
+  phaseGroupId?: number;
   phases?: MatchPhaseOption[];
   divisionId?: number;
   divisions?: TournamentDivisionOption[];
@@ -22,6 +23,7 @@ export function useCreateMatchModal({
   onClose,
   onCreate,
   phaseId,
+  phaseGroupId,
   phases,
   divisionId,
   divisions,
@@ -60,7 +62,7 @@ export function useCreateMatchModal({
     () => availablePhases.find((phase) => phase.id === resolvedPhaseId)?.phaseGroups ?? [],
     [availablePhases, resolvedPhaseId],
   );
-  const resolvedPhaseGroupId = selectedPhaseGroupId ?? availablePhaseGroups[0]?.id ?? null;
+  const resolvedPhaseGroupId = phaseGroupId ?? selectedPhaseGroupId ?? availablePhaseGroups[0]?.id ?? null;
 
   useEffect(() => {
     if (!open) return;
@@ -73,26 +75,30 @@ export function useCreateMatchModal({
     setSelectedDivisionId(initialDivisionId);
     const nextPhaseId = phaseId ?? initialPhases[0]?.id ?? null;
     setSelectedPhaseId(nextPhaseId);
-    setSelectedPhaseGroupId(initialPhases.find((phase) => phase.id === nextPhaseId)?.phaseGroups?.[0]?.id ?? null);
+    setSelectedPhaseGroupId(phaseGroupId ?? initialPhases.find((phase) => phase.id === nextPhaseId)?.phaseGroups?.[0]?.id ?? null);
     setSelectedEntrants([]);
     setSelectedSongs([]);
     setSelectedSongDifficulties([]);
     setDifficultyInput("");
     setSongAddType("roll");
-  }, [divisionId, divisions, open, phaseId, phases]);
+  }, [divisionId, divisions, open, phaseGroupId, phaseId, phases]);
 
   useEffect(() => {
     if (!open || divisionId || phaseId) return;
     const nextPhases = divisions?.find((division) => division.id === selectedDivisionId)?.phases ?? [];
     setSelectedPhaseId(nextPhases[0]?.id ?? null);
-    setSelectedPhaseGroupId(nextPhases[0]?.phaseGroups?.[0]?.id ?? null);
-  }, [divisionId, divisions, open, phaseId, selectedDivisionId]);
+    setSelectedPhaseGroupId(phaseGroupId ?? nextPhases[0]?.phaseGroups?.[0]?.id ?? null);
+  }, [divisionId, divisions, open, phaseGroupId, phaseId, selectedDivisionId]);
 
   useEffect(() => {
     if (!open) return;
+    if (phaseGroupId) {
+      setSelectedPhaseGroupId(phaseGroupId);
+      return;
+    }
     if (selectedPhaseGroupId && availablePhaseGroups.some((group) => group.id === selectedPhaseGroupId)) return;
     setSelectedPhaseGroupId(availablePhaseGroups[0]?.id ?? null);
-  }, [availablePhaseGroups, open, selectedPhaseGroupId]);
+  }, [availablePhaseGroups, open, phaseGroupId, selectedPhaseGroupId]);
 
   useEffect(() => {
     if (!open || !resolvedDivisionId) return;

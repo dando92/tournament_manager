@@ -22,11 +22,9 @@ type TournamentPageHeaderProps = {
   createMenuOpen: boolean;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
   hasDivisions: boolean;
-  hasPhases: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
-  onCreateMatch: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
@@ -47,11 +45,9 @@ export default function TournamentPageHeader({
   createMenuOpen,
   setCreateMenuOpen,
   hasDivisions,
-  hasPhases,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
-  onCreateMatch,
   onOpenParticipantsManageModal,
 }: TournamentPageHeaderProps) {
   return (
@@ -69,11 +65,9 @@ export default function TournamentPageHeader({
               setOpen={setCreateMenuOpen}
               showCreateDivision={isOverviewPage}
               hasDivisions={hasDivisions}
-              hasPhases={hasPhases}
               onCreateDivision={onCreateDivision}
               onGenerateBracket={onGenerateBracket}
               onCreatePhase={onCreatePhase}
-              onCreateMatch={onCreateMatch}
               onOpenParticipantsManageModal={onOpenParticipantsManageModal}
             />
           )}

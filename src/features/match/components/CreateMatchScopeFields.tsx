@@ -6,6 +6,7 @@ import { TournamentDivisionOption } from "@/features/tournament/types/Tournament
 type CreateMatchScopeFieldsProps = {
   divisionId?: number;
   phaseId?: number;
+  phaseGroupId?: number;
   divisions?: TournamentDivisionOption[];
   phases?: MatchPhaseOption[];
   availablePhases: MatchPhaseOption[];
@@ -21,6 +22,7 @@ type CreateMatchScopeFieldsProps = {
 export default function CreateMatchScopeFields({
   divisionId,
   phaseId,
+  phaseGroupId,
   divisions,
   phases,
   availablePhases,
@@ -88,7 +90,7 @@ export default function CreateMatchScopeFields({
           />
         </div>
       )}
-      {availablePhaseGroups.length > 0 && (
+      {!phaseGroupId && availablePhaseGroups.length > 0 && (
         <div className="w-full">
           <h3>Phase group</h3>
           <Select

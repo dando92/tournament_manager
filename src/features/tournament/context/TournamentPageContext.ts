@@ -8,7 +8,6 @@ export type TournamentPageContextValue = {
   tournamentId: number;
   tournamentName: string;
   currentDivisionId?: number;
-  currentPhaseId: number;
   syncstartUrl: string;
   songsVersion: number;
   divisions: TournamentDivisionOption[];
@@ -18,8 +17,6 @@ export type TournamentPageContextValue = {
   refreshSongs: () => void;
   openCreateDivision: () => void;
   openCreatePhase: () => void;
-  openCreateMatch: () => void;
-  openGenerateBracketPicker: () => void;
   participantsManageModal: ParticipantsManageModal;
   setParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
