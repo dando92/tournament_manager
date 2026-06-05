@@ -16,6 +16,14 @@ export async function updatePhaseGroupSeeding(phaseGroupId: number, entrantIds: 
   await axios.patch(`phase-groups/${phaseGroupId}/entrants/seeding`, { entrantIds });
 }
 
+export async function addEntrantToPhaseGroup(phaseGroupId: number, entrantId: number): Promise<void> {
+  await axios.post(`phase-groups/${phaseGroupId}/entrants/${entrantId}`);
+}
+
+export async function removeEntrantFromPhaseGroup(phaseGroupId: number, entrantId: number): Promise<void> {
+  await axios.delete(`phase-groups/${phaseGroupId}/entrants/${entrantId}`);
+}
+
 export async function updatePhaseGroupAdvancementRules(
   phaseGroupId: number,
   rules: PhaseGroupAdvancementRuleInput[],

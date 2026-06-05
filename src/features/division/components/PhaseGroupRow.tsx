@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faChevronDown, faChevronRight, faDice, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faChevronDown, faChevronRight, faDice } from "@fortawesome/free-solid-svg-icons";
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
@@ -10,7 +9,6 @@ import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import {
   deletePhaseGroup,
   updatePhaseGroupAdvancementRules,
-  updatePhaseGroupSeeding,
 } from "@/features/division/services/phase-groups.api";
 import { btnSecondary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
@@ -44,9 +42,7 @@ export default function PhaseGroupRow({
   onChanged,
 }: PhaseGroupRowProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [editingSeeding, setEditingSeeding] = useState(false);
   const [editingAdvancement, setEditingAdvancement] = useState(false);
-  const [draftEntrantIds, setDraftEntrantIds] = useState<number[]>([]);
   const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,35 +64,6 @@ export default function PhaseGroupRow({
         .filter((candidateGroup) => candidateGroup.id !== phaseGroup.id),
     [division.phases, phaseGroup.id],
   );
-
-  const beginSeedingEdit = () => {
-    setDraftEntrantIds(entrants.map((entry) => entry.entrant.id));
-    setEditingSeeding(true);
-  };
-
-  const handleSeedDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    setDraftEntrantIds((current) => {
-      const next = [...current];
-      const [moved] = next.splice(result.source.index, 1);
-      next.splice(result.destination!.index, 0, moved);
-      return next;
-    });
-  };
-
-  const saveSeeding = async () => {
-    setSaving(true);
-    try {
-      await updatePhaseGroupSeeding(phaseGroup.id, draftEntrantIds);
-      setEditingSeeding(false);
-      await onChanged?.();
-      toast.success("Phase group seeding updated.");
-    } catch {
-      toast.error("Error updating phase group seeding.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const beginAdvancementEdit = () => {
     const existing = (phaseGroup.advancementRules ?? [])
@@ -140,47 +107,6 @@ export default function PhaseGroupRow({
 
   const content = (
     <>
-      {editingSeeding && (
-        <div className="mt-4 rounded border border-gray-200 bg-gray-50 p-3">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h5 className="text-sm font-semibold text-gray-700">Phase group seeding</h5>
-            <div className="flex items-center gap-2">
-              <button className={`${btnSecondary} text-xs`} onClick={() => setEditingSeeding(false)} disabled={saving}>Cancel</button>
-              <button className={`${btnSecondary} text-xs`} onClick={saveSeeding} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
-            </div>
-          </div>
-          <DragDropContext onDragEnd={handleSeedDragEnd}>
-            <Droppable droppableId={`phase-group-${phaseGroup.id}-seeding`}>
-              {(provided) => (
-                <div className="flex flex-col gap-1" ref={provided.innerRef} {...provided.droppableProps}>
-                  {draftEntrantIds.map((entrantId, index) => {
-                    const entry = entrants.find((candidate) => candidate.entrant.id === entrantId);
-                    if (!entry) return null;
-                    return (
-                      <Draggable key={entrantId} draggableId={String(entrantId)} index={index}>
-                        {(drag) => (
-                          <div
-                            ref={drag.innerRef}
-                            {...drag.draggableProps}
-                            className="flex items-center gap-3 rounded border border-gray-200 bg-white px-3 py-2 text-sm"
-                          >
-                            <span className="w-8 text-xs font-bold text-primary-dark">#{index + 1}</span>
-                            <span className="flex-1">{entry.entrant.name}</span>
-                            <span {...drag.dragHandleProps} className="cursor-grab text-gray-400">
-                              <FontAwesomeIcon icon={faGripVertical} />
-                            </span>
-                          </div>
-                        )}
-                      </Draggable>
-                    );
-                  })}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-        </div>
-      )}
       {editingAdvancement && (
         <div className="mt-4 rounded border border-gray-200 bg-gray-50 p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -278,7 +204,6 @@ export default function PhaseGroupRow({
         </div>
         {controls && (
           <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-2">
-            <button className={`${btnSecondary} text-xs`} onClick={beginSeedingEdit} disabled={saving}>Seeding</button>
             <button className={`${btnSecondary} text-xs`} onClick={beginAdvancementEdit} disabled={saving}>Advancement</button>
             <button className={`${btnSecondary} flex items-center gap-1.5 text-xs`} onClick={() => setCreateMatchOpen(true)} disabled={saving}>
               <FontAwesomeIcon icon={faDice} />

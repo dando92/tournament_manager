@@ -18,7 +18,6 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
   );
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
-  const [showSelectModal, setShowSelectModal] = useState(false);
 
   useEffect(() => {
     listAvailableParticipantsForDivision(division.id).then(setAvailableParticipants).catch(() => {});
@@ -34,20 +33,13 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
   );
   const lowerSearch = search.toLowerCase();
 
-  const filteredAvailableParticipants = useMemo(
+  const filteredAllParticipants = useMemo(
     () =>
-      availableParticipants
+      [...divisionParticipants, ...availableParticipants]
+        .filter((participant, index, participants) => participants.findIndex((candidate) => candidate.id === participant.id) === index)
         .filter((participant) => participant.player.playerName.toLowerCase().includes(lowerSearch))
         .sort((a, b) => a.player.playerName.localeCompare(b.player.playerName)),
-    [availableParticipants, lowerSearch],
-  );
-
-  const filteredAllAlpha = useMemo(
-    () =>
-      [...divisionParticipants]
-        .filter((participant) => participant.player.playerName.toLowerCase().includes(lowerSearch))
-        .sort((a, b) => a.player.playerName.localeCompare(b.player.playerName)),
-    [divisionParticipants, lowerSearch],
+    [availableParticipants, divisionParticipants, lowerSearch],
   );
 
   const handleAdd = async (participant: Participant) => {
@@ -79,12 +71,9 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
 
   return {
     search,
-    showSelectModal,
     divisionParticipantIds,
-    filteredAvailableParticipants,
-    filteredAllAlpha,
+    filteredAllParticipants,
     setSearch,
-    setShowSelectModal,
     handleAdd,
     handleRemove,
   };
