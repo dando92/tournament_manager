@@ -126,15 +126,18 @@ export function TournamentUpdatesProvider({
             break;
           case "DivisionUpdate":
             setDivisionDetailVersions((prev) => incrementVersion(prev, msg.data.divisionId));
+            queryClient.invalidateQueries({ queryKey: ["division-summary", msg.data.divisionId] });
             break;
           case "PhaseUpdate":
             setDivisionDetailVersions((prev) => incrementVersion(prev, msg.data.divisionId));
             setMatchListVersions((prev) => incrementVersion(prev, msg.data.divisionId));
             queryClient.invalidateQueries({ queryKey: ["matches"] });
+            queryClient.invalidateQueries({ queryKey: ["division-summary", msg.data.divisionId] });
             break;
           case "MatchUpdate":
             pendingMatchIds.current.add(msg.data.matchId);
             queryClient.invalidateQueries({ queryKey: ["matches"] });
+            queryClient.invalidateQueries({ queryKey: ["division-summary", msg.data.divisionId] });
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
             debounceTimer.current = setTimeout(flushMatchUpdates, 50);
             break;
