@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowDownAZ } from "@fortawesome/free-solid-svg-icons";
 import { Division } from "@/features/division/types/Division";
 import EntrantMembershipRow from "@/features/division/components/EntrantMembershipRow";
 import PlayersByNameList from "@/features/division/components/PlayersByNameList";
 import PlayersSearchBar from "@/features/division/components/PlayersSearchBar";
 import PlayersWarning from "@/features/division/components/PlayersWarning";
 import { usePlayersTab } from "@/features/division/hooks/usePlayersTab";
-import { Entrant } from "@/features/entrant/types/Entrant";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import {
   addEntrantToPhaseGroup,
+  listPhaseDivisionEntrants,
+  listPhaseGroupEntrants,
   removeEntrantFromPhaseGroup,
   updatePhaseGroupSeeding,
 } from "@/features/division/services/phase-groups.api";
@@ -23,34 +27,61 @@ type Props = {
 
 type EntrantScope = "division" | number;
 
+type PhaseGroupScopeOption = {
+  phaseId: number;
+  phaseGroup: PhaseGroup;
+};
+
 export default function PlayersTab({ division, canEdit, onPlayersChanged }: Props) {
-  const state = usePlayersTab({ division, onPlayersChanged });
-  const phaseGroups = useMemo(
-    () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
+  const [orderByName, setOrderByName] = useState(false);
+  const state = usePlayersTab({ division, orderByName, onPlayersChanged });
+  const phaseGroupOptions = useMemo(
+    () =>
+      (division.phases ?? []).flatMap((phase) =>
+        (phase.phaseGroups ?? []).map((phaseGroup) => ({ phaseId: phase.id, phaseGroup })),
+      ),
     [division.phases],
   );
   const [selectedScope, setSelectedScope] = useState<EntrantScope>("division");
   const selectedPhaseGroup =
     typeof selectedScope === "number"
-      ? phaseGroups.find((phaseGroup) => phaseGroup.id === selectedScope) ?? null
+      ? phaseGroupOptions.find((option) => option.phaseGroup.id === selectedScope) ?? null
       : null;
 
   return (
     <div className="flex flex-col gap-4 w-full">
       <EntrantScopeSelector
-        phaseGroups={phaseGroups}
+        phaseGroups={phaseGroupOptions}
         selectedScope={selectedScope}
         onSelect={setSelectedScope}
       />
 
-      <PlayersSearchBar value={state.search} onChange={state.setSearch} />
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <PlayersSearchBar value={state.search} onChange={state.setSearch} />
+        </div>
+        <button
+          type="button"
+          onClick={() => setOrderByName((current) => !current)}
+          className={`flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-medium transition-colors ${
+            orderByName
+              ? "border-primary-dark bg-primary-dark/10 text-primary-dark"
+              : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+          }`}
+          title={orderByName ? "Use default order" : "Order by name"}
+        >
+          <FontAwesomeIcon icon={faArrowDownAZ} />
+          {orderByName ? "Name order" : "Default order"}
+        </button>
+      </div>
       <PlayersWarning warnings={[]} />
 
       {selectedPhaseGroup ? (
         <PhaseGroupEntrantsPanel
-          phaseGroup={selectedPhaseGroup}
-          divisionEntrants={division.entrants ?? []}
+          phaseId={selectedPhaseGroup.phaseId}
+          phaseGroup={selectedPhaseGroup.phaseGroup}
           search={state.search}
+          orderByName={orderByName}
           canEdit={canEdit}
           onChanged={onPlayersChanged}
         />
@@ -69,7 +100,7 @@ export default function PlayersTab({ division, canEdit, onPlayersChanged }: Prop
 }
 
 type EntrantScopeSelectorProps = {
-  phaseGroups: PhaseGroup[];
+  phaseGroups: PhaseGroupScopeOption[];
   selectedScope: EntrantScope;
   onSelect: (scope: EntrantScope) => void;
 };
@@ -83,7 +114,7 @@ function EntrantScopeSelector({ phaseGroups, selectedScope, onSelect }: EntrantS
           selected={selectedScope === "division"}
           onClick={() => onSelect("division")}
         />
-        {phaseGroups.map((phaseGroup) => (
+        {phaseGroups.map(({ phaseGroup }) => (
           <EntrantScopeButton
             key={phaseGroup.id}
             label={`${phaseGroup.name} entrants`}
@@ -119,61 +150,96 @@ function EntrantScopeButton({ label, selected, onClick }: EntrantScopeButtonProp
 }
 
 type PhaseGroupEntrantsPanelProps = {
+  phaseId: number;
   phaseGroup: PhaseGroup;
-  divisionEntrants: Entrant[];
   search: string;
+  orderByName: boolean;
   canEdit: boolean;
   onChanged: () => void | Promise<void>;
 };
 
 function PhaseGroupEntrantsPanel({
+  phaseId,
   phaseGroup,
-  divisionEntrants,
   search,
+  orderByName,
   canEdit,
   onChanged,
 }: PhaseGroupEntrantsPanelProps) {
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [editingSeeding, setEditingSeeding] = useState(false);
+  const divisionEntrantsQueryKey = useMemo(() => ["phase-division-entrants", phaseId] as const, [phaseId]);
+  const phaseGroupEntrantsQueryKey = useMemo(
+    () => ["phase-group-entrants", phaseGroup.id] as const,
+    [phaseGroup.id],
+  );
+  const divisionEntrantsQuery = useQuery({
+    queryKey: divisionEntrantsQueryKey,
+    queryFn: () => listPhaseDivisionEntrants(phaseId),
+  });
+  const phaseGroupEntrantsQuery = useQuery({
+    queryKey: phaseGroupEntrantsQueryKey,
+    queryFn: () => listPhaseGroupEntrants(phaseGroup.id),
+  });
+  const divisionEntrants = divisionEntrantsQuery.data ?? [];
   const lowerSearch = search.toLowerCase();
-  const activeDivisionEntrants = useMemo(
-    () =>
-      [...(divisionEntrants ?? [])]
-        .filter((entrant) => entrant.status === "active")
-        .sort((left, right) => left.name.localeCompare(right.name)),
+  const divisionEntrantsInDbOrder = useMemo(
+    () => [...(divisionEntrants ?? [])],
     [divisionEntrants],
   );
   const phaseGroupEntrants = useMemo(
     () =>
-      [...(phaseGroup.entrants ?? [])].sort(
+      [...(phaseGroupEntrantsQuery.data ?? [])].sort(
         (left, right) =>
           (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER) ||
           left.entrant.name.localeCompare(right.entrant.name),
       ),
-    [phaseGroup.entrants],
+    [phaseGroupEntrantsQuery.data],
   );
   const [draftEntrantIds, setDraftEntrantIds] = useState<number[]>(() =>
     phaseGroupEntrants.map((entry) => entry.entrant.id),
   );
   const assignedEntrantIds = useMemo(
-    () => new Set((phaseGroup.entrants ?? []).map((entry) => entry.entrant.id)),
-    [phaseGroup.entrants],
+    () => new Set(phaseGroupEntrants.map((entry) => entry.entrant.id)),
+    [phaseGroupEntrants],
   );
   const phaseGroupEntrantsByEntrantId = useMemo(
     () => new Map(phaseGroupEntrants.map((entry, index) => [entry.entrant.id, { entry, seedNumber: index + 1 }])),
     [phaseGroupEntrants],
   );
   const unassignedDivisionEntrants = useMemo(
-    () => activeDivisionEntrants.filter((entrant) => !assignedEntrantIds.has(entrant.id)),
-    [activeDivisionEntrants, assignedEntrantIds],
+    () => divisionEntrantsInDbOrder.filter((entrant) => !assignedEntrantIds.has(entrant.id)),
+    [divisionEntrantsInDbOrder, assignedEntrantIds],
+  );
+  const displayedEntrantsByName = useMemo(
+    () =>
+      [
+        ...phaseGroupEntrants.map((entry) => ({ kind: "assigned" as const, entry })),
+        ...unassignedDivisionEntrants.map((entrant) => ({ kind: "unassigned" as const, entrant })),
+      ]
+        .filter((item) =>
+          item.kind === "assigned"
+            ? item.entry.entrant.name.toLowerCase().includes(lowerSearch)
+            : item.entrant.name.toLowerCase().includes(lowerSearch),
+        )
+        .sort((left, right) => {
+          const leftName = left.kind === "assigned" ? left.entry.entrant.name : left.entrant.name;
+          const rightName = right.kind === "assigned" ? right.entry.entrant.name : right.entrant.name;
+          return leftName.localeCompare(rightName);
+        }),
+    [lowerSearch, phaseGroupEntrants, unassignedDivisionEntrants],
   );
   const displayedUnassignedEntrants = useMemo(
-    () => unassignedDivisionEntrants.filter((entrant) => entrant.name.toLowerCase().includes(lowerSearch)),
-    [lowerSearch, unassignedDivisionEntrants],
+    () => {
+      const entrants = unassignedDivisionEntrants.filter((entrant) => entrant.name.toLowerCase().includes(lowerSearch));
+      return orderByName ? entrants.sort((left, right) => left.name.localeCompare(right.name)) : entrants;
+    },
+    [lowerSearch, orderByName, unassignedDivisionEntrants],
   );
   const displayedAssignedEntrants = useMemo(
-    () => phaseGroupEntrants.filter((entry) => entry.entrant.name.toLowerCase().includes(lowerSearch)),
-    [lowerSearch, phaseGroupEntrants],
+    () => orderByName ? [] : phaseGroupEntrants.filter((entry) => entry.entrant.name.toLowerCase().includes(lowerSearch)),
+    [lowerSearch, orderByName, phaseGroupEntrants],
   );
   const displayedDraftAssignedEntrants = useMemo(
     () =>
@@ -219,6 +285,7 @@ function PhaseGroupEntrantsPanel({
     try {
       await updatePhaseGroupSeeding(phaseGroup.id, draftEntrantIds);
       setEditingSeeding(false);
+      await refreshEntrants();
       await onChanged();
       toast.success("Phase group seeding updated.");
     } catch {
@@ -233,10 +300,18 @@ function PhaseGroupEntrantsPanel({
     setEditingSeeding(false);
   };
 
+  const refreshEntrants = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: divisionEntrantsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: phaseGroupEntrantsQueryKey }),
+    ]);
+  };
+
   const handleAddEntrant = async (entrantId: number) => {
     setSaving(true);
     try {
       await addEntrantToPhaseGroup(phaseGroup.id, entrantId);
+      await refreshEntrants();
       await onChanged();
       toast.success("Entrant added to phase group.");
     } catch {
@@ -250,6 +325,7 @@ function PhaseGroupEntrantsPanel({
     setSaving(true);
     try {
       await removeEntrantFromPhaseGroup(phaseGroup.id, entrantId);
+      await refreshEntrants();
       await onChanged();
       toast.success("Entrant removed from phase group.");
     } catch {
@@ -296,7 +372,42 @@ function PhaseGroupEntrantsPanel({
       )}
 
       <div className="flex flex-col gap-1">
-        {displayedAssignedEntrants.length === 0 && displayedUnassignedEntrants.length === 0 ? (
+        {divisionEntrantsQuery.isLoading || phaseGroupEntrantsQuery.isLoading ? (
+          <p className="text-sm text-gray-400 italic">Loading entrants...</p>
+        ) : divisionEntrantsQuery.isError || phaseGroupEntrantsQuery.isError ? (
+          <p className="text-sm text-red-500 italic">Could not load entrants.</p>
+        ) : orderByName && displayedEntrantsByName.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No division entrants match your search.</p>
+        ) : orderByName ? (
+          <>
+            {displayedEntrantsByName.map((item) => {
+              if (item.kind === "unassigned") {
+                return (
+                  <EntrantMembershipRow
+                    key={item.entrant.id}
+                    name={item.entrant.name}
+                    present={false}
+                    canEdit={canEdit}
+                    saving={saving}
+                    onAdd={() => handleAddEntrant(item.entrant.id)}
+                  />
+                );
+              }
+              const metadata = phaseGroupEntrantsByEntrantId.get(item.entry.entrant.id);
+              return (
+                <EntrantMembershipRow
+                  key={item.entry.entrant.id}
+                  name={item.entry.entrant.name}
+                  present
+                  canEdit={canEdit}
+                  saving={saving}
+                  seedNumber={metadata?.seedNumber ?? null}
+                  onRemove={() => handleRemoveEntrant(item.entry.entrant.id)}
+                />
+              );
+            })}
+          </>
+        ) : !orderByName && displayedAssignedEntrants.length === 0 && displayedUnassignedEntrants.length === 0 ? (
           <p className="text-sm text-gray-400 italic">No division entrants match your search.</p>
         ) : editingSeeding ? (
           <DragDropContext onDragEnd={handleDragEnd}>

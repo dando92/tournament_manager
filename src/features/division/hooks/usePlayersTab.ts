@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Division } from "@/features/division/types/Division";
 import { Participant } from "@/features/entrant/types/Entrant";
 import {
@@ -9,19 +9,25 @@ import {
 
 type UsePlayersTabOptions = {
   division: Division;
+  orderByName: boolean;
   onPlayersChanged: () => void;
 };
 
-export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptions) {
+export function usePlayersTab({ division, orderByName, onPlayersChanged }: UsePlayersTabOptions) {
   const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(
     (division.entrants ?? []).flatMap((entrant) => entrant.participants ?? []).filter(Boolean),
   );
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    listAvailableParticipantsForDivision(division.id).then(setAvailableParticipants).catch(() => {});
+  const loadAvailableParticipants = useCallback(async () => {
+    const participants = await listAvailableParticipantsForDivision(division.id);
+    setAvailableParticipants(participants);
   }, [division.id]);
+
+  useEffect(() => {
+    loadAvailableParticipants().catch(() => {});
+  }, [loadAvailableParticipants]);
 
   useEffect(() => {
     setDivisionParticipants((division.entrants ?? []).flatMap((entrant) => entrant.participants ?? []).filter(Boolean));
@@ -34,12 +40,16 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
   const lowerSearch = search.toLowerCase();
 
   const filteredAllParticipants = useMemo(
-    () =>
-      [...divisionParticipants, ...availableParticipants]
+    () => {
+      const participants = [...divisionParticipants, ...availableParticipants]
         .filter((participant, index, participants) => participants.findIndex((candidate) => candidate.id === participant.id) === index)
-        .filter((participant) => participant.player.playerName.toLowerCase().includes(lowerSearch))
-        .sort((a, b) => a.player.playerName.localeCompare(b.player.playerName)),
-    [availableParticipants, divisionParticipants, lowerSearch],
+        .filter((participant) => participant.player.playerName.toLowerCase().includes(lowerSearch));
+
+      return orderByName
+        ? participants.sort((a, b) => a.player.playerName.localeCompare(b.player.playerName))
+        : participants;
+    },
+    [availableParticipants, divisionParticipants, lowerSearch, orderByName],
   );
 
   const handleAdd = async (participant: Participant) => {
@@ -48,10 +58,11 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
 
     try {
       await addParticipantToDivision(division.id, participant.id);
+      await loadAvailableParticipants();
       onPlayersChanged();
     } catch {
       setDivisionParticipants((prev) => prev.filter((entry) => entry.id !== participant.id));
-      setAvailableParticipants((prev) => [...prev, participant].sort((a, b) => a.player.playerName.localeCompare(b.player.playerName)));
+      setAvailableParticipants((prev) => [...prev, participant]);
     }
   };
 
@@ -60,9 +71,8 @@ export function usePlayersTab({ division, onPlayersChanged }: UsePlayersTabOptio
     try {
       await removeParticipantFromDivision(division.id, participantId);
       setDivisionParticipants((prev) => prev.filter((participant) => participant.id !== participantId));
-      if (participant) {
-        setAvailableParticipants((prev) => [...prev, participant].sort((a, b) => a.player.playerName.localeCompare(b.player.playerName)));
-      }
+      if (participant) setAvailableParticipants((prev) => [...prev, participant]);
+      await loadAvailableParticipants();
       onPlayersChanged();
     } catch {
       // handled by axios interceptor

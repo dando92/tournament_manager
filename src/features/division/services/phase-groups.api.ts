@@ -1,5 +1,6 @@
 import axios from "axios";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { Entrant } from "@/features/entrant/types/Entrant";
+import { PhaseGroup, PhaseGroupEntrant } from "@/features/division/types/Phase";
 
 type CreatePhaseGroupRequest = {
   name: string;
@@ -14,6 +15,16 @@ export async function createPhaseGroup(phaseId: number, request: CreatePhaseGrou
 
 export async function getPhaseGroup(phaseGroupId: number): Promise<PhaseGroup> {
   const response = await axios.get<PhaseGroup>(`phase-groups/${phaseGroupId}`);
+  return response.data;
+}
+
+export async function listPhaseDivisionEntrants(phaseId: number): Promise<Entrant[]> {
+  const response = await axios.get<Entrant[]>(`phases/${phaseId}/entrants`);
+  return response.data;
+}
+
+export async function listPhaseGroupEntrants(phaseGroupId: number): Promise<PhaseGroupEntrant[]> {
+  const response = await axios.get<PhaseGroupEntrant[]>(`phase-groups/${phaseGroupId}/entrants`);
   return response.data;
 }
 
