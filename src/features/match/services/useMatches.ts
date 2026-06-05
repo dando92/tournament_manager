@@ -3,6 +3,7 @@ import { initialState, matchesReducer } from "@/features/match/services/matches.
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
+import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { toast } from "react-toastify";
 
 export function useMatches(divisionId: number) {
@@ -230,7 +231,7 @@ export function useMatches(divisionId: number) {
 
   async function updateMatchAdvancementRules(matchId: number, rules: MatchAdvancementRuleInput[]) {
     try {
-      await MatchesApi.updateMatchAdvancementRules(matchId, rules);
+      await updateAdvancementRulesForSource("match", matchId, rules);
       await list();
     } catch (error) {
       toast.error("Error updating match advancement rules.");

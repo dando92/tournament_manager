@@ -24,7 +24,8 @@ export interface AdvancementRule {
   targetSlot: number;
 }
 
-export type MatchAdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetId" | "targetSlot">;
+export type AdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetKind" | "targetId" | "targetSlot">;
+export type MatchAdvancementRuleInput = AdvancementRuleInput;
 
 export interface Match {
   id: number;

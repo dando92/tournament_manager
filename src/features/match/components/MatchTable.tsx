@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
+import { Match } from "@/features/match/types/Match";
+import { Division } from "@/features/division/types/Division";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import MatchRow from "@/features/match/components/row/MatchRow";
 import PathRow from "@/features/match/components/row/PathRow";
-import EditPathRow from "@/features/match/components/row/EditPathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { toOrdinal } from "@/shared/utils";
 
@@ -12,14 +12,11 @@ type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed
 
 type MatchTableProps = {
   match: Match;
+  division: Division;
   allMatches: Match[];
-  maxPlayersPerMatch: number;
   controls: boolean;
-  editMode: boolean;
   highlightedMatchId: number | null;
   onHighlightMatch: (id: number | null) => void;
-  pendingAdvancementRules: (MatchAdvancementRuleInput | null)[];
-  onPendingAdvancementRuleChange: (index: number, value: MatchAdvancementRuleInput | null) => void;
   onDeleteSong: (songId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
   onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
@@ -38,14 +35,11 @@ type MatchTableProps = {
 
 export default function MatchTable({
   match,
+  division,
   allMatches,
-  maxPlayersPerMatch,
   controls,
-  editMode,
   highlightedMatchId,
   onHighlightMatch,
-  pendingAdvancementRules,
-  onPendingAdvancementRuleChange,
   onDeleteSong,
   onDeletePlayer,
   onOpenAddStanding,
@@ -114,18 +108,17 @@ export default function MatchTable({
   const incomingRules = (match.advancementRules ?? []).filter(
     (rule) => rule.targetKind === "match" && rule.targetId === match.id,
   );
-  const sourceIds = Array.from(new Set(incomingRules.map((rule) => rule.sourceId)));
+  const sourceKeys = Array.from(new Set(incomingRules.map((rule) => `${rule.sourceKind}:${rule.sourceId}`)));
   const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
   const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
 
-  // colSpan for single-cell rows (PathRow, EditPathRow, empty message)
-  const totalCols = editMode ? 1 : Math.max(3, match.rounds.length + 3);
+  const totalCols = Math.max(3, match.rounds.length + 3);
 
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="w-full text-sm border-collapse">
-          {!editMode && match.rounds.length > 0 && (
+          {match.rounds.length > 0 && (
             <thead>
               <tr className="bg-primary-dark text-white">
                 <th className="px-2 py-2.5 w-8" />
@@ -176,7 +169,7 @@ export default function MatchTable({
           )}
 
           <tbody>
-            {!hasContent && !editMode && (
+            {!hasContent && (
               <tr>
                 <td colSpan={totalCols} className="px-3 py-6 text-center text-gray-400 text-sm">
                   No match data available
@@ -184,18 +177,25 @@ export default function MatchTable({
               </tr>
             )}
 
-            {!editMode && sourceIds.flatMap((sourceId) => {
-              const sourceMatch = allMatches.find((m) => m.id === sourceId);
-              const name = sourceMatch?.name ?? String(sourceId);
-              const isSelected = highlightedMatchId === sourceId;
+            {sourceKeys.flatMap((sourceKey) => {
+              const [sourceKind, rawSourceId] = sourceKey.split(":");
+              const sourceId = Number(rawSourceId);
+              const sourceMatch = sourceKind === "match" ? allMatches.find((m) => m.id === sourceId) : null;
+              const sourcePhaseGroup = sourceKind === "phase_group"
+                ? (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []).find((phaseGroup) => phaseGroup.id === sourceId) ?? null
+                : null;
+              const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? String(sourceId);
+              const isSelected = sourceKind === "match" && highlightedMatchId === sourceId;
               const positions = incomingRules
-                .filter((rule) => rule.sourceId === sourceId)
+                .filter((rule) => rule.sourceKind === sourceKind && rule.sourceId === sourceId)
                 .map((rule) => rule.sourcePlacement);
 
               // Fallback: if no positions found, still show one row
               const rows = positions.length > 0 ? positions : [1];
 
-              const isSourceComplete = Boolean(sourceMatch?.matchResult);
+              const isSourceComplete = sourceKind === "match"
+                ? Boolean(sourceMatch?.matchResult)
+                : sourcePhaseGroup?.state === "completed";
               if (isSourceComplete) return [];
 
               return rows.map((pos) => (
@@ -205,12 +205,14 @@ export default function MatchTable({
                   sourceMatchName={name}
                   colSpan={totalCols}
                   isSelected={isSelected}
-                  onToggle={() => onHighlightMatch(isSelected ? null : sourceId)}
+                  onToggle={() => {
+                    if (sourceKind === "match") onHighlightMatch(isSelected ? null : sourceId);
+                  }}
                 />
               ));
             })}
 
-            {!editMode && sortedPlayers.map((player) => (
+            {sortedPlayers.map((player) => (
               (() => {
                 const routeTargetMatchId = routeByPlayerId.get(player.id) ?? null;
                 return (
@@ -240,17 +242,6 @@ export default function MatchTable({
               })()
             ))}
 
-            {editMode && Array.from({ length: maxPlayersPerMatch }).map((_, i) => (
-              <EditPathRow
-                key={i}
-                index={i}
-                allMatches={allMatches}
-                currentMatchId={match.id}
-                value={pendingAdvancementRules[i] ?? null}
-                onChange={(value) => onPendingAdvancementRuleChange(i, value)}
-                onHighlightMatch={onHighlightMatch}
-              />
-            ))}
           </tbody>
         </table>
       </div>

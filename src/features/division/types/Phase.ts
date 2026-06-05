@@ -1,6 +1,6 @@
 import { Match } from "@/features/match/types/Match";
 import { Entrant } from "@/features/entrant/types/Entrant";
-import { AdvancementRule } from "@/features/match/types/Match";
+import { AdvancementRule, AdvancementRuleInput } from "@/features/match/types/Match";
 
 export type PhaseGroupState = "pending" | "active" | "completed";
 
@@ -23,7 +23,7 @@ export interface PhaseGroup {
   advancementRules?: AdvancementRule[];
 }
 
-export type PhaseGroupAdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetId" | "targetSlot">;
+export type PhaseGroupAdvancementRuleInput = AdvancementRuleInput;
 
 export interface Phase {
   id: number;

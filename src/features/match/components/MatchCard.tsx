@@ -9,6 +9,7 @@ import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 
 type MatchCardProps = {
   division: Division;
@@ -105,7 +106,7 @@ export default function MatchCard({
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [pendingAdvancementRules, setPendingAdvancementRules] = useState<(MatchAdvancementRuleInput | null)[]>([]);
+  const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
 
   const onMatchUpdatedRef = useRef(onMatchUpdated);
   useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
@@ -124,21 +125,20 @@ export default function MatchCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatedMatchIds]);
 
-  const maxPlayersPerMatch = division.playersPerMatch ?? 2;
   const isHighlighted = match.id === highlightedMatchId;
   const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
 
   function enterEditMode() {
-    const initial: (number | null)[] = Array.from({ length: maxPlayersPerMatch }, (_, i) => {
-      const rule = (match.advancementRules ?? []).find(
-        (candidate) => candidate.sourceKind === "match" && candidate.sourceId === match.id && candidate.sourcePlacement === i + 1,
-      );
-      return rule ? rule.targetId : null;
-    });
-    setPendingAdvancementRules(initial.map((targetId, index) => targetId
-      ? { sourcePlacement: index + 1, targetId, targetSlot: index + 1 }
-      : null,
-    ));
+    setPendingAdvancementRules(
+      (match.advancementRules ?? [])
+        .filter((rule) => rule.sourceKind === "match" && rule.sourceId === match.id)
+        .map((rule) => ({
+          sourcePlacement: rule.sourcePlacement,
+          targetKind: rule.targetKind,
+          targetId: rule.targetId,
+          targetSlot: rule.targetSlot,
+        })),
+    );
     setEditMode(true);
   }
 
@@ -148,9 +148,8 @@ export default function MatchCard({
   }
 
   async function saveEditMode() {
-    const rules = pendingAdvancementRules.filter((rule): rule is MatchAdvancementRuleInput => Boolean(rule));
     if (onUpdateMatchAdvancementRules) {
-      await onUpdateMatchAdvancementRules(match.id, rules);
+      await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
     }
     onMatchUpdatedRef.current();
     setEditMode(false);
@@ -229,45 +228,48 @@ export default function MatchCard({
         onOpenAddSong={() => setAddSongToMatchModalOpen(true)}
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
         onRenameMatch={onRenameMatch}
-        editMode={editMode}
-        canEditAdvancementRules={controls}
+        canEditAdvancementRules={controls && !editMode}
         onEditAdvancementRules={enterEditMode}
-        onSaveAdvancementRules={saveEditMode}
-        onCancelAdvancementRules={cancelEditMode}
       />
 
-      <MatchTable
-        match={match}
-        allMatches={allMatches}
-        maxPlayersPerMatch={maxPlayersPerMatch}
-        controls={controls}
-        editMode={editMode}
-        highlightedMatchId={highlightedMatchId}
-        onHighlightMatch={onHighlightMatch}
-        pendingAdvancementRules={pendingAdvancementRules}
-        onPendingAdvancementRuleChange={(index, value) => {
-          setPendingAdvancementRules((prev) => {
-            const next = [...prev];
-            next[index] = value;
-            return next;
-          });
-        }}
-        onDeleteSong={onDeleteSongFromMatch}
-        onDeletePlayer={(entrantId) =>
-          onAddPlayersToMatch(
-            (match.entrants ?? [])
-              .filter((entrant) => entrant.id !== entrantId)
-              .map((entrant) => entrant.id),
-          )
-        }
-        onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
-          setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
-        }
-        onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
-          setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
-        }
-        onDeleteStanding={onDeleteStanding}
-      />
+      {editMode && (
+        <AdvancementRulesEditor
+          sourceKind="match"
+          sourceId={match.id}
+          rules={pendingAdvancementRules}
+          division={division}
+          allMatches={allMatches}
+          onChange={setPendingAdvancementRules}
+          onSave={saveEditMode}
+          onCancel={cancelEditMode}
+        />
+      )}
+
+      {!editMode && (
+        <MatchTable
+          match={match}
+          division={division}
+          allMatches={allMatches}
+          controls={controls}
+          highlightedMatchId={highlightedMatchId}
+          onHighlightMatch={onHighlightMatch}
+          onDeleteSong={onDeleteSongFromMatch}
+          onDeletePlayer={(entrantId) =>
+            onAddPlayersToMatch(
+              (match.entrants ?? [])
+                .filter((entrant) => entrant.id !== entrantId)
+                .map((entrant) => entrant.id),
+            )
+          }
+          onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
+            setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
+          }
+          onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
+            setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
+          }
+          onDeleteStanding={onDeleteStanding}
+        />
+      )}
 
       {controls && !editMode && (
         <MatchFooter state={matchState} onToggleState={toggleCurrentMatch} />

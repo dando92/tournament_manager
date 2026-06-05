@@ -1,5 +1,5 @@
 import axios from "axios";
-import { PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/types/Phase";
 
 type CreatePhaseGroupRequest = {
   name: string;
@@ -27,14 +27,6 @@ export async function addEntrantToPhaseGroup(phaseGroupId: number, entrantId: nu
 
 export async function removeEntrantFromPhaseGroup(phaseGroupId: number, entrantId: number): Promise<void> {
   await axios.delete(`phase-groups/${phaseGroupId}/entrants/${entrantId}`);
-}
-
-export async function updatePhaseGroupAdvancementRules(
-  phaseGroupId: number,
-  rules: PhaseGroupAdvancementRuleInput[],
-): Promise<PhaseGroup> {
-  const response = await axios.put<PhaseGroup>(`phase-groups/${phaseGroupId}/advancement-rules`, { rules });
-  return response.data;
 }
 
 export async function deletePhaseGroup(phaseGroupId: number): Promise<void> {

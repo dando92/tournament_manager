@@ -56,7 +56,7 @@ export default function MatchList({
               key={match.id}
               controls={controls}
               division={division}
-              allMatches={visibleMatches}
+              allMatches={state.matches}
               tournamentId={tournamentId}
               matchUpdateSignal={matchUpdateSignal}
               highlightedMatchId={highlightedMatchId}

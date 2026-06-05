@@ -5,16 +5,18 @@ import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
 import { MatchState } from "@/features/match/types/Match";
+import { Match } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import {
   deletePhaseGroup,
-  updatePhaseGroupAdvancementRules,
 } from "@/features/division/services/phase-groups.api";
 import { btnSecondary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
 import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import * as MatchesApi from "@/features/match/services/matches.api";
+import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
+import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 
 type PhaseGroupRowProps = {
   phase: Phase;
@@ -46,6 +48,7 @@ export default function PhaseGroupRow({
   const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
   const entrants = useMemo(
     () =>
       [...(phaseGroup.entrants ?? [])].sort((left, right) => {
@@ -57,33 +60,28 @@ export default function PhaseGroupRow({
   );
   const previewEntrants = entrants.slice(0, entrantPreviewLimit);
   const hiddenCount = Math.max(0, entrants.length - previewEntrants.length);
-  const targetPhaseGroups = useMemo(
-    () =>
-      (division.phases ?? [])
-        .flatMap((candidatePhase) => candidatePhase.phaseGroups ?? [])
-        .filter((candidateGroup) => candidateGroup.id !== phaseGroup.id),
-    [division.phases, phaseGroup.id],
-  );
-
-  const beginAdvancementEdit = () => {
+  const beginAdvancementEdit = async () => {
     const existing = (phaseGroup.advancementRules ?? [])
-      .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id && rule.targetKind === "phase_group")
+      .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id)
       .map((rule) => ({
         sourcePlacement: rule.sourcePlacement,
+        targetKind: rule.targetKind,
         targetId: rule.targetId,
         targetSlot: rule.targetSlot,
       }));
-    setDraftRules(existing.length > 0 ? existing : [{ sourcePlacement: 1, targetId: targetPhaseGroups[0]?.id ?? 0, targetSlot: 1 }]);
+    setDraftRules(existing);
     setEditingAdvancement(true);
+    try {
+      setAllMatches(await MatchesApi.listByDivision(division.id));
+    } catch {
+      setAllMatches([]);
+    }
   };
 
   const saveAdvancementRules = async () => {
     setSaving(true);
     try {
-      await updatePhaseGroupAdvancementRules(
-        phaseGroup.id,
-        draftRules.filter((rule) => rule.targetId > 0 && rule.sourcePlacement > 0 && rule.targetSlot > 0),
-      );
+      await updateAdvancementRulesForSource("phase_group", phaseGroup.id, draftRules);
       setEditingAdvancement(false);
       await onChanged?.();
       toast.success("Phase group advancement rules updated.");
@@ -106,65 +104,15 @@ export default function PhaseGroupRow({
   };
 
   const content = (
-    <>
-      {editingAdvancement && (
-        <div className="mt-4 rounded border border-gray-200 bg-gray-50 p-3">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h5 className="text-sm font-semibold text-gray-700">Phase group advancement rules</h5>
-            <div className="flex items-center gap-2">
-              <button className={`${btnSecondary} text-xs`} onClick={() => setDraftRules((current) => [...current, { sourcePlacement: current.length + 1, targetId: targetPhaseGroups[0]?.id ?? 0, targetSlot: current.length + 1 }])}>
-                Add rule
-              </button>
-              <button className={`${btnSecondary} text-xs`} onClick={() => setEditingAdvancement(false)} disabled={saving}>Cancel</button>
-              <button className={`${btnSecondary} text-xs`} onClick={saveAdvancementRules} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {draftRules.map((rule, index) => (
-              <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[90px_1fr_90px_36px]">
-                <input
-                  type="number"
-                  min={1}
-                  value={rule.sourcePlacement}
-                  onChange={(event) => setDraftRules((current) => current.map((candidate, i) => i === index ? { ...candidate, sourcePlacement: Number(event.target.value) } : candidate))}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
-                  aria-label="Source placement"
-                />
-                <select
-                  value={rule.targetId}
-                  onChange={(event) => setDraftRules((current) => current.map((candidate, i) => i === index ? { ...candidate, targetId: Number(event.target.value) } : candidate))}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
-                  aria-label="Target phase group"
-                >
-                  <option value={0}>Select target group</option>
-                  {targetPhaseGroups.map((targetGroup) => (
-                    <option key={targetGroup.id} value={targetGroup.id}>{targetGroup.name}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  value={rule.targetSlot}
-                  onChange={(event) => setDraftRules((current) => current.map((candidate, i) => i === index ? { ...candidate, targetSlot: Number(event.target.value) } : candidate))}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
-                  aria-label="Target slot"
-                />
-                <button className="text-sm text-red-500" onClick={() => setDraftRules((current) => current.filter((_, i) => i !== index))}>x</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <MatchList
+    <MatchList
       key={`phase-group-${phaseGroup.id}`}
       division={division}
       phaseGroupId={phaseGroup.id}
-        controls={controls}
-        tournamentId={tournamentId}
-        matchUpdateSignal={matchRefreshKey}
-        matchStateFilter={matchStateFilter}
-      />
-    </>
+      controls={controls}
+      tournamentId={tournamentId}
+      matchUpdateSignal={matchRefreshKey}
+      matchStateFilter={matchStateFilter}
+    />
   );
 
   return (
@@ -204,7 +152,7 @@ export default function PhaseGroupRow({
         </div>
         {controls && (
           <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-2">
-            <button className={`${btnSecondary} text-xs`} onClick={beginAdvancementEdit} disabled={saving}>Advancement</button>
+            <button className={`${btnSecondary} text-xs`} onClick={beginAdvancementEdit} disabled={saving}>Edit advancement rules</button>
             <button className={`${btnSecondary} flex items-center gap-1.5 text-xs`} onClick={() => setCreateMatchOpen(true)} disabled={saving}>
               <FontAwesomeIcon icon={faDice} />
               <span>Match</span>
@@ -218,7 +166,22 @@ export default function PhaseGroupRow({
           </div>
         )}
       </button>
-      {expanded && <div className="px-4 pb-4 border-t border-gray-100">{content}</div>}
+      {editingAdvancement && (
+        <div className="px-4 pb-4 border-t border-gray-100">
+          <AdvancementRulesEditor
+            sourceKind="phase_group"
+            sourceId={phaseGroup.id}
+            rules={draftRules}
+            division={division}
+            allMatches={allMatches}
+            saving={saving}
+            onChange={setDraftRules}
+            onSave={saveAdvancementRules}
+            onCancel={() => setEditingAdvancement(false)}
+          />
+        </div>
+      )}
+      {expanded && !editingAdvancement && <div className="px-4 pb-4 border-t border-gray-100">{content}</div>}
       <CreateMatchModal
         open={createMatchOpen}
         onClose={() => setCreateMatchOpen(false)}
