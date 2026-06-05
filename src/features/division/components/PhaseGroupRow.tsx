@@ -4,7 +4,7 @@ import { faChevronDown, faChevronRight, faDice } from "@fortawesome/free-solid-s
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
-import { MatchState } from "@/features/match/types/Match";
+import { MatchHighlight, MatchState } from "@/features/match/types/Match";
 import { Match } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import {
@@ -26,6 +26,8 @@ type PhaseGroupRowProps = {
   tournamentId?: number;
   matchRefreshKey?: number;
   matchStateFilter?: MatchState | "all";
+  highlight: MatchHighlight;
+  onHighlight: (highlight: MatchHighlight) => void;
   defaultExpanded?: boolean;
   onChanged?: () => Promise<void>;
 };
@@ -52,6 +54,18 @@ function formatBracketType(bracketType: string | null | undefined): string | nul
   }
 }
 
+function phaseGroupStateClass(state: PhaseGroup["state"]): string {
+  switch (state) {
+    case "active":
+      return "bg-green-50 text-green-800";
+    case "completed":
+      return "bg-blue-50 text-blue-800";
+    case "pending":
+    default:
+      return "bg-gray-100 text-gray-600";
+  }
+}
+
 export default function PhaseGroupRow({
   phase,
   phaseGroup,
@@ -60,6 +74,8 @@ export default function PhaseGroupRow({
   tournamentId,
   matchRefreshKey,
   matchStateFilter = "all",
+  highlight,
+  onHighlight,
   defaultExpanded = false,
   onChanged,
 }: PhaseGroupRowProps) {
@@ -70,6 +86,8 @@ export default function PhaseGroupRow({
   const [saving, setSaving] = useState(false);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
+  const isHighlighted = highlight.phaseGroupId === phaseGroup.id;
+
   const beginAdvancementEdit = async () => {
     const existing = (phaseGroup.advancementRules ?? [])
       .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id)
@@ -122,11 +140,17 @@ export default function PhaseGroupRow({
       tournamentId={tournamentId}
       matchUpdateSignal={matchRefreshKey}
       matchStateFilter={matchStateFilter}
+      highlight={highlight}
+      onHighlight={onHighlight}
     />
   );
 
   return (
-    <div className="border border-gray-200 rounded-md bg-white overflow-hidden">
+    <div className={`border rounded-md bg-white overflow-hidden transition-shadow ${
+      isHighlighted
+        ? "border-green-400 ring-2 ring-green-300 shadow-green-100 shadow-lg"
+        : "border-gray-200"
+    }`}>
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
@@ -136,7 +160,9 @@ export default function PhaseGroupRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{phaseGroup.name}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{phaseGroup.state}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${phaseGroupStateClass(phaseGroup.state)}`}>
+              {phaseGroup.state}
+            </span>
             {bracketTypeLabel && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{bracketTypeLabel}</span>
             )}

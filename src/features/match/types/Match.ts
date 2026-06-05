@@ -27,6 +27,11 @@ export interface AdvancementRule {
 export type AdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetKind" | "targetId" | "targetSlot">;
 export type MatchAdvancementRuleInput = AdvancementRuleInput;
 
+export type MatchHighlight = {
+  matchId: number | null;
+  phaseGroupId: number | null;
+};
+
 export interface Match {
   id: number;
   name: string;

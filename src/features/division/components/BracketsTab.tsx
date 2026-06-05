@@ -1,7 +1,7 @@
 import PhaseMatchesPanel from "@/features/division/components/PhaseMatchesPanel";
 import PhaseSelector from "@/features/division/components/PhaseSelector";
 import { Division } from "@/features/division/types/Division";
-import { MatchState } from "@/features/match/types/Match";
+import { MatchHighlight, MatchState } from "@/features/match/types/Match";
 import { useBracketsTab } from "@/features/division/hooks/useBracketsTab";
 import { useState } from "react";
 
@@ -22,6 +22,7 @@ export default function BracketsTab({
 }: BracketsTabProps) {
   const state = useBracketsTab({ division, onDivisionChanged });
   const [matchStateFilter, setMatchStateFilter] = useState<MatchState | "all">("all");
+  const [highlight, setHighlight] = useState<MatchHighlight>({ matchId: null, phaseGroupId: null });
 
   return (
     <div className="flex flex-col gap-4">
@@ -47,6 +48,8 @@ export default function BracketsTab({
                 tournamentId={tournamentId}
                 matchRefreshKey={matchRefreshKey}
                 matchStateFilter={matchStateFilter}
+                highlight={highlight}
+                onHighlight={setHighlight}
                 autoExpandSinglePhaseGroup={false}
                 onDelete={state.handleDeletePhase}
                 onChanged={onDivisionChanged}
@@ -62,6 +65,8 @@ export default function BracketsTab({
           tournamentId={tournamentId}
           matchRefreshKey={matchRefreshKey}
           matchStateFilter={matchStateFilter}
+          highlight={highlight}
+          onHighlight={setHighlight}
           onDelete={state.handleDeletePhase}
           onChanged={onDivisionChanged}
         />

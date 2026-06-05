@@ -2,7 +2,7 @@ import MatchList from "@/features/match/components/MatchList";
 import PhaseGroupRow from "@/features/division/components/PhaseGroupRow";
 import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
-import { MatchState } from "@/features/match/types/Match";
+import { MatchHighlight, MatchState } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 type PhaseMatchesPanelProps = {
@@ -12,6 +12,8 @@ type PhaseMatchesPanelProps = {
   tournamentId?: number;
   matchRefreshKey?: number;
   matchStateFilter?: MatchState | "all";
+  highlight: MatchHighlight;
+  onHighlight: (highlight: MatchHighlight) => void;
   autoExpandSinglePhaseGroup?: boolean;
   onDelete?: (phaseId: number) => Promise<void>;
   onChanged?: () => Promise<void>;
@@ -24,6 +26,8 @@ export default function PhaseMatchesPanel({
   tournamentId,
   matchRefreshKey,
   matchStateFilter = "all",
+  highlight,
+  onHighlight,
   autoExpandSinglePhaseGroup = false,
   onDelete,
   onChanged,
@@ -63,6 +67,8 @@ export default function PhaseMatchesPanel({
               tournamentId={tournamentId}
               matchRefreshKey={matchRefreshKey}
               matchStateFilter={matchStateFilter}
+              highlight={highlight}
+              onHighlight={onHighlight}
               defaultExpanded={expandSingleGroup}
               onChanged={onChanged}
             />
@@ -76,6 +82,8 @@ export default function PhaseMatchesPanel({
           tournamentId={tournamentId}
           matchUpdateSignal={matchRefreshKey}
           matchStateFilter={matchStateFilter}
+          highlight={highlight}
+          onHighlight={onHighlight}
         />
       )}
     </div>

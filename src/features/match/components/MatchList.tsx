@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Division } from "@/features/division/types/Division";
 import MatchCard from "@/features/match/components/MatchCard";
 import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
-import { MatchState } from "@/features/match/types/Match";
+import { Match, MatchHighlight, MatchState } from "@/features/match/types/Match";
 
 type MatchListProps = {
   division: Division;
@@ -12,6 +12,8 @@ type MatchListProps = {
   matchUpdateSignal?: number;
   phaseGroupId?: number;
   matchStateFilter?: MatchState | "all";
+  highlight: MatchHighlight;
+  onHighlight: (highlight: MatchHighlight) => void;
 };
 
 export default function MatchList({
@@ -21,9 +23,16 @@ export default function MatchList({
   matchUpdateSignal,
   phaseGroupId,
   matchStateFilter = "all",
+  highlight,
+  onHighlight,
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id, phaseGroupId);
-  const [highlightedMatchId, setHighlightedMatchId] = useState<number | null>(null);
+  const [divisionMatches, setDivisionMatches] = useState<Match[] | null>(null);
+
+  const allMatches = useMemo(
+    () => (phaseGroupId !== undefined ? divisionMatches ?? state.matches : state.matches),
+    [divisionMatches, phaseGroupId, state.matches],
+  );
 
   const visibleMatches = state.matches.filter((match) => {
     const matchState = match.state ?? "NotActive";
@@ -34,8 +43,26 @@ export default function MatchList({
   useEffect(() => {
     if (!matchUpdateSignal) return;
     actions.list();
+    if (phaseGroupId !== undefined) {
+      MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchUpdateSignal]);
+
+  useEffect(() => {
+    if (phaseGroupId === undefined) {
+      setDivisionMatches(null);
+      return;
+    }
+    MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => setDivisionMatches(null));
+  }, [division.id, phaseGroupId]);
+
+  const refreshMatches = () => {
+    actions.list();
+    if (phaseGroupId !== undefined) {
+      MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => {});
+    }
+  };
 
   return (
     <div className="mt-4">
@@ -48,16 +75,16 @@ export default function MatchList({
               key={match.id}
               controls={controls}
               division={division}
-              allMatches={state.matches}
+              allMatches={allMatches}
               loadAdvancementTargets={phaseGroupId !== undefined ? () => MatchesApi.listByDivision(division.id) : undefined}
               tournamentId={tournamentId}
               matchUpdateSignal={matchUpdateSignal}
-              highlightedMatchId={highlightedMatchId}
-              onHighlightMatch={setHighlightedMatchId}
+              highlight={highlight}
+              onHighlight={onHighlight}
               onDeleteStanding={(playerId, songId) =>
                 actions.deleteStandingsForPlayerFromMatch(match.id, playerId, songId)
               }
-              onMatchUpdated={actions.list}
+              onMatchUpdated={refreshMatches}
               onEditMatchNotes={actions.editMatchNotes}
               onRenameMatch={actions.renameMatch}
               onDeleteMatch={actions.deleteMatch}

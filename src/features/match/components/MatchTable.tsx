@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Match } from "@/features/match/types/Match";
+import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import MatchRow from "@/features/match/components/row/MatchRow";
@@ -15,8 +15,8 @@ type MatchTableProps = {
   division: Division;
   allMatches: Match[];
   controls: boolean;
-  highlightedMatchId: number | null;
-  onHighlightMatch: (id: number | null) => void;
+  highlight: MatchHighlight;
+  onHighlight: (highlight: MatchHighlight) => void;
   onDeleteSong: (songId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
   onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
@@ -38,8 +38,8 @@ export default function MatchTable({
   division,
   allMatches,
   controls,
-  highlightedMatchId,
-  onHighlightMatch,
+  highlight,
+  onHighlight,
   onDeleteSong,
   onDeletePlayer,
   onOpenAddStanding,
@@ -113,6 +113,20 @@ export default function MatchTable({
   const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
 
   const totalCols = Math.max(3, match.rounds.length + 3);
+  const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
+  const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Phase group ${phaseGroupId}`;
+  const getHighlightForTarget = (targetKind: AdvancementCompetitionKind, targetId: number): MatchHighlight => {
+    if (targetKind === "match") {
+      const targetMatch = allMatches.find((candidate) => candidate.id === targetId);
+      return { matchId: targetId, phaseGroupId: targetMatch?.phaseGroupId ?? null };
+    }
+    return { matchId: null, phaseGroupId: targetId };
+  };
+  const isHighlightSelected = (target: MatchHighlight) =>
+    highlight.matchId === target.matchId && highlight.phaseGroupId === target.phaseGroupId;
+  const toggleHighlight = (target: MatchHighlight) => {
+    onHighlight(isHighlightSelected(target) ? { matchId: null, phaseGroupId: null } : target);
+  };
 
   return (
     <>
@@ -179,35 +193,37 @@ export default function MatchTable({
 
             {sourceKeys.flatMap((sourceKey) => {
               const [sourceKind, rawSourceId] = sourceKey.split(":");
+              const typedSourceKind = sourceKind as AdvancementCompetitionKind;
               const sourceId = Number(rawSourceId);
-              const sourceMatch = sourceKind === "match" ? allMatches.find((m) => m.id === sourceId) : null;
-              const sourcePhaseGroup = sourceKind === "phase_group"
-                ? (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []).find((phaseGroup) => phaseGroup.id === sourceId) ?? null
+              const sourceMatch = typedSourceKind === "match" ? allMatches.find((m) => m.id === sourceId) : null;
+              const sourcePhaseGroup = typedSourceKind === "phase_group"
+                ? phaseGroups.find((phaseGroup) => phaseGroup.id === sourceId) ?? null
                 : null;
-              const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? String(sourceId);
-              const isSelected = sourceKind === "match" && highlightedMatchId === sourceId;
+              const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? (
+                typedSourceKind === "match" ? `Match ${sourceId}` : `Phase group ${sourceId}`
+              );
+              const sourceHighlight = getHighlightForTarget(typedSourceKind, sourceId);
+              const isSelected = isHighlightSelected(sourceHighlight);
               const positions = incomingRules
-                .filter((rule) => rule.sourceKind === sourceKind && rule.sourceId === sourceId)
+                .filter((rule) => rule.sourceKind === typedSourceKind && rule.sourceId === sourceId)
                 .map((rule) => rule.sourcePlacement);
 
               // Fallback: if no positions found, still show one row
               const rows = positions.length > 0 ? positions : [1];
 
-              const isSourceComplete = sourceKind === "match"
+              const isSourceComplete = typedSourceKind === "match"
                 ? Boolean(sourceMatch?.matchResult)
                 : sourcePhaseGroup?.state === "completed";
               if (isSourceComplete) return [];
 
               return rows.map((pos) => (
                 <PathRow
-                  key={`${sourceId}-${pos}`}
+                  key={`${typedSourceKind}-${sourceId}-${pos}`}
                   ordinalLabel={toOrdinal(pos)}
                   sourceMatchName={name}
                   colSpan={totalCols}
                   isSelected={isSelected}
-                  onToggle={() => {
-                    if (sourceKind === "match") onHighlightMatch(isSelected ? null : sourceId);
-                  }}
+                  onToggle={() => toggleHighlight(sourceHighlight)}
                 />
               ));
             })}
@@ -215,6 +231,10 @@ export default function MatchTable({
             {sortedPlayers.map((player) => (
               (() => {
                 const routeTargetMatchId = routeByPlayerId.get(player.id) ?? null;
+                const routeTargetMatch = routeTargetMatchId ? allMatches.find((candidate) => candidate.id === routeTargetMatchId) : null;
+                const routeTargetHighlight: MatchHighlight | null = routeTargetMatchId
+                  ? { matchId: routeTargetMatchId, phaseGroupId: routeTargetMatch?.phaseGroupId ?? null }
+                  : null;
                 return (
                   <MatchRow
                     key={player.id}
@@ -223,13 +243,14 @@ export default function MatchTable({
                     controls={canEditMatchContent}
                     scoreTable={scoreTable}
                     hasRoute={routeTargetMatchId !== null}
-                    isRouteSelected={routeTargetMatchId !== null && highlightedMatchId === routeTargetMatchId}
+                    isRouteSelected={routeTargetHighlight !== null && isHighlightSelected(routeTargetHighlight)}
                     routeTargetMatchId={routeTargetMatchId}
-                    canClearRouteHighlight={highlightedMatchId !== null}
-                    onToggleRouteHighlight={(targetMatchId) =>
-                      onHighlightMatch(highlightedMatchId === targetMatchId ? null : targetMatchId)
-                    }
-                    onClearRouteHighlight={() => onHighlightMatch(null)}
+                    routeTargetLabel={routeTargetMatch ? `${getPhaseGroupName(routeTargetMatch.phaseGroupId)} / ${routeTargetMatch.name}` : undefined}
+                    canClearRouteHighlight={highlight.matchId !== null || highlight.phaseGroupId !== null}
+                    onToggleRouteHighlight={() => {
+                      if (routeTargetHighlight) toggleHighlight(routeTargetHighlight);
+                    }}
+                    onClearRouteHighlight={() => onHighlight({ matchId: null, phaseGroupId: null })}
                     onDeletePlayer={(playerId) => {
                       const entrantId = entrantIdByPlayerId.get(playerId);
                       if (entrantId) onDeletePlayer(entrantId);

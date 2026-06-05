@@ -1,4 +1,4 @@
-import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput, MatchHighlight, MatchState } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
@@ -19,8 +19,8 @@ type MatchCardProps = {
   controls?: boolean;
   tournamentId?: number;
   matchUpdateSignal?: number;
-  highlightedMatchId?: number | null;
-  onHighlightMatch?: (id: number | null) => void;
+  highlight?: MatchHighlight;
+  onHighlight?: (highlight: MatchHighlight) => void;
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
@@ -83,8 +83,8 @@ export default function MatchCard({
   controls = false,
   tournamentId,
   matchUpdateSignal,
-  highlightedMatchId = null,
-  onHighlightMatch = () => {},
+  highlight = { matchId: null, phaseGroupId: null },
+  onHighlight = () => {},
   onMatchUpdated,
   onDeleteMatch,
   onAddPlayersToMatch,
@@ -128,7 +128,7 @@ export default function MatchCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatedMatchIds]);
 
-  const isHighlighted = match.id === highlightedMatchId;
+  const isHighlighted = match.id === highlight.matchId;
   const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
 
   function enterEditMode() {
@@ -260,8 +260,8 @@ export default function MatchCard({
           division={division}
           allMatches={allMatches}
           controls={controls}
-          highlightedMatchId={highlightedMatchId}
-          onHighlightMatch={onHighlightMatch}
+          highlight={highlight}
+          onHighlight={onHighlight}
           onDeleteSong={onDeleteSongFromMatch}
           onDeletePlayer={(entrantId) =>
             onAddPlayersToMatch(
