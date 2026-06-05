@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faChevronDown, faChevronRight, faDice } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faChevronRight, faDice } from "@fortawesome/free-solid-svg-icons";
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
@@ -30,8 +30,6 @@ type PhaseGroupRowProps = {
   onChanged?: () => Promise<void>;
 };
 
-const entrantPreviewLimit = 8;
-
 export default function PhaseGroupRow({
   phase,
   phaseGroup,
@@ -49,17 +47,6 @@ export default function PhaseGroupRow({
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
-  const entrants = useMemo(
-    () =>
-      [...(phaseGroup.entrants ?? [])].sort((left, right) => {
-        const leftAdvanced = left.status === "advanced" ? 0 : 1;
-        const rightAdvanced = right.status === "advanced" ? 0 : 1;
-        return leftAdvanced - rightAdvanced || (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER);
-      }),
-    [phaseGroup.entrants],
-  );
-  const previewEntrants = entrants.slice(0, entrantPreviewLimit);
-  const hiddenCount = Math.max(0, entrants.length - previewEntrants.length);
   const beginAdvancementEdit = async () => {
     const existing = (phaseGroup.advancementRules ?? [])
       .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id)
@@ -130,24 +117,6 @@ export default function PhaseGroupRow({
             <span className="text-xs text-gray-400">
               {phaseGroup.matchCount} match{phaseGroup.matchCount !== 1 ? "es" : ""}
             </span>
-          </div>
-          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-            {previewEntrants.length === 0 ? (
-              <span className="text-xs text-gray-400">No entrants assigned</span>
-            ) : (
-              previewEntrants.map((phaseGroupEntrant) => (
-                <span
-                  key={phaseGroupEntrant.id}
-                  className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
-                >
-                  {phaseGroupEntrant.status === "advanced" && (
-                    <FontAwesomeIcon icon={faArrowRight} className="text-emerald-600" />
-                  )}
-                  {phaseGroupEntrant.entrant.name}
-                </span>
-              ))
-            )}
-            {hiddenCount > 0 && <span className="text-xs text-gray-400">+{hiddenCount} more</span>}
           </div>
         </div>
         {controls && (
