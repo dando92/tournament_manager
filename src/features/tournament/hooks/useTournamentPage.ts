@@ -6,7 +6,6 @@ import { addRecentTournament } from "@/features/tournament/services/recentTourna
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 import { TournamentOverview } from "@/features/tournament/types/TournamentOverview";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
-import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
 import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 
@@ -67,32 +66,7 @@ export function useTournamentPage({
   const [bracketTypes, setBracketTypes] = useState<string[]>([]);
   const previousDivisionDetailVersions = useRef<ReadonlyMap<number, number>>(new Map());
   const previousMatchListVersions = useRef<ReadonlyMap<number, number>>(new Map());
-
-  const toDivisionOption = useCallback((division: Division): TournamentDivisionOption => ({
-    id: division.id,
-    name: division.name,
-    playersPerMatch: division.playersPerMatch ?? null,
-    entrants: division.entrants ?? [],
-    phases: (division.phases ?? []).map((phase) => ({
-      id: phase.id,
-      name: phase.name,
-      matchCount: phase.matchCount ?? 0,
-      phaseGroups: phase.phaseGroups ?? [],
-    })),
-  }), []);
-
-  const mergeDivisionOption = useCallback((nextDivision: TournamentDivisionOption) => {
-    setDivisions((prev) => {
-      const index = prev.findIndex((division) => division.id === nextDivision.id);
-      if (index === -1) {
-        return [...prev, nextDivision];
-      }
-
-      const next = [...prev];
-      next[index] = nextDivision;
-      return next;
-    });
-  }, []);
+  const overviewRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshDivisions = useCallback(async () => {
     const response = await axios.get<TournamentOverview>(`tournaments/${tournamentId}/overview`);
@@ -112,10 +86,9 @@ export function useTournamentPage({
     );
   }, [tournamentId]);
 
-  const refreshDivision = useCallback(async (divisionId: number) => {
-    const response = await axios.get<Division>(`divisions/${divisionId}`);
-    mergeDivisionOption(toDivisionOption(response.data));
-  }, [mergeDivisionOption, toDivisionOption]);
+  const refreshDivision = useCallback(async (_divisionId: number) => {
+    await refreshDivisions();
+  }, [refreshDivisions]);
 
   useEffect(() => {
     axios
@@ -130,6 +103,7 @@ export function useTournamentPage({
 
     refreshDivisions().catch(() => {});
     return () => {
+      if (overviewRefreshTimer.current) clearTimeout(overviewRefreshTimer.current);
       document.title = "Tournament Manager";
     };
   }, [refreshDivisions, tournamentId]);
@@ -166,10 +140,11 @@ export function useTournamentPage({
 
     if (changedDivisionIds.size === 0) return;
 
-    changedDivisionIds.forEach((divisionId) => {
-      refreshDivision(divisionId).catch(() => {});
-    });
-  }, [divisionDetailVersions, matchListVersions, refreshDivision]);
+    if (overviewRefreshTimer.current) clearTimeout(overviewRefreshTimer.current);
+    overviewRefreshTimer.current = setTimeout(() => {
+      refreshDivisions().catch(() => {});
+    }, 100);
+  }, [divisionDetailVersions, matchListVersions, refreshDivisions]);
 
   const handleCreateDivision = useCallback((name: string, playersPerMatch: number | null) => {
     axios.post<{ id: number; name: string; playersPerMatch: number | null }>("divisions", {

@@ -75,7 +75,6 @@ export default function TournamentPageHeader({
               onGenerateBracket={onGenerateBracket}
               onCreatePhase={onCreatePhase}
               onCreatePhaseGroup={onCreatePhaseGroup}
-              onOpenParticipantsManageModal={onOpenParticipantsManageModal}
             />
           )}
           {isSongsPage && (
