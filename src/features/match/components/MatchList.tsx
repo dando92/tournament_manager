@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Division } from "@/features/division/types/Division";
 import MatchCard from "@/features/match/components/MatchCard";
 import { useMatches } from "@/features/match/services/useMatches";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import * as MatchesApi from "@/features/match/services/matches.api";
 import { MatchState } from "@/features/match/types/Match";
 
 type MatchListProps = {
@@ -22,28 +22,20 @@ export default function MatchList({
   phaseGroupId,
   matchStateFilter = "all",
 }: MatchListProps) {
-  const { state, actions } = useMatches(division.id);
-  const { matchListVersions } = useTournamentUpdates();
+  const { state, actions } = useMatches(division.id, phaseGroupId);
   const [highlightedMatchId, setHighlightedMatchId] = useState<number | null>(null);
-  const matchListVersion = matchListVersions.get(division.id) ?? 0;
 
   const visibleMatches = state.matches.filter((match) => {
     const matchState = match.state ?? "NotActive";
     if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
-    if (phaseGroupId !== undefined && match.phaseGroupId !== phaseGroupId) return false;
     return true;
   });
 
   useEffect(() => {
+    if (!matchUpdateSignal) return;
     actions.list();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [division.id, matchUpdateSignal]);
-
-  useEffect(() => {
-    if (matchListVersion === 0) return;
-    actions.list();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchListVersion]);
+  }, [matchUpdateSignal]);
 
   return (
     <div className="mt-4">
@@ -57,6 +49,7 @@ export default function MatchList({
               controls={controls}
               division={division}
               allMatches={state.matches}
+              loadAdvancementTargets={phaseGroupId !== undefined ? () => MatchesApi.listByDivision(division.id) : undefined}
               tournamentId={tournamentId}
               matchUpdateSignal={matchUpdateSignal}
               highlightedMatchId={highlightedMatchId}

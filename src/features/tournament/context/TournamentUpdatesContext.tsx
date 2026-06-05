@@ -1,4 +1,5 @@
 import { ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ActiveLobbyDto,
   LobbyStateDto,
@@ -90,6 +91,7 @@ export function TournamentUpdatesProvider({
   tournamentId: number;
   children: ReactNode;
 }) {
+  const queryClient = useQueryClient();
   const [tournamentVersion, setTournamentVersion] = useState(0);
   const [divisionDetailVersions, setDivisionDetailVersions] = useState<ReadonlyMap<number, number>>(new Map());
   const [matchListVersions, setMatchListVersions] = useState<ReadonlyMap<number, number>>(new Map());
@@ -128,9 +130,11 @@ export function TournamentUpdatesProvider({
           case "PhaseUpdate":
             setDivisionDetailVersions((prev) => incrementVersion(prev, msg.data.divisionId));
             setMatchListVersions((prev) => incrementVersion(prev, msg.data.divisionId));
+            queryClient.invalidateQueries({ queryKey: ["matches"] });
             break;
           case "MatchUpdate":
             pendingMatchIds.current.add(msg.data.matchId);
+            queryClient.invalidateQueries({ queryKey: ["matches"] });
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
             debounceTimer.current = setTimeout(flushMatchUpdates, 50);
             break;
@@ -147,7 +151,7 @@ export function TournamentUpdatesProvider({
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       ws.close();
     };
-  }, [tournamentId]);
+  }, [queryClient, tournamentId]);
 
   useEffect(() => {
     const ws = new WebSocket(scoreHubUrl());

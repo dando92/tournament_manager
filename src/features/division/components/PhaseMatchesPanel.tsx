@@ -24,7 +24,7 @@ export default function PhaseMatchesPanel({
   tournamentId,
   matchRefreshKey,
   matchStateFilter = "all",
-  autoExpandSinglePhaseGroup = true,
+  autoExpandSinglePhaseGroup = false,
   onDelete,
   onChanged,
 }: PhaseMatchesPanelProps) {

@@ -15,6 +15,7 @@ type MatchCardProps = {
   division: Division;
   match: Match;
   allMatches: Match[];
+  loadAdvancementTargets?: () => Promise<Match[]>;
   controls?: boolean;
   tournamentId?: number;
   matchUpdateSignal?: number;
@@ -78,6 +79,7 @@ export default function MatchCard({
   division,
   match,
   allMatches,
+  loadAdvancementTargets,
   controls = false,
   tournamentId,
   matchUpdateSignal,
@@ -107,6 +109,7 @@ export default function MatchCard({
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
+  const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
 
   const onMatchUpdatedRef = useRef(onMatchUpdated);
   useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
@@ -139,12 +142,17 @@ export default function MatchCard({
           targetSlot: rule.targetSlot,
         })),
     );
+    setAdvancementTargetMatches(allMatches);
     setEditMode(true);
+    loadAdvancementTargets?.()
+      .then(setAdvancementTargetMatches)
+      .catch(() => setAdvancementTargetMatches(allMatches));
   }
 
   function cancelEditMode() {
     setEditMode(false);
     setPendingAdvancementRules([]);
+    setAdvancementTargetMatches(null);
   }
 
   async function saveEditMode() {
@@ -154,6 +162,7 @@ export default function MatchCard({
     onMatchUpdatedRef.current();
     setEditMode(false);
     setPendingAdvancementRules([]);
+    setAdvancementTargetMatches(null);
   }
 
   async function toggleCurrentMatch() {
@@ -238,7 +247,7 @@ export default function MatchCard({
           sourceId={match.id}
           rules={pendingAdvancementRules}
           division={division}
-          allMatches={allMatches}
+          allMatches={advancementTargetMatches ?? allMatches}
           onChange={setPendingAdvancementRules}
           onSave={saveEditMode}
           onCancel={cancelEditMode}

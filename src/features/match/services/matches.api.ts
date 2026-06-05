@@ -16,6 +16,16 @@ export async function listByDivision(divisionId: number): Promise<Match[]> {
   }
 }
 
+export async function listByPhaseGroup(phaseGroupId: number): Promise<Match[]> {
+  try {
+    const response = await axios.get<Match[]>(`matches/phase-group/${phaseGroupId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error listing matches by phase group:", error);
+    throw new Error("Unable to list matches by phase group.");
+  }
+}
+
 export async function create(request: CreateMatchRequest): Promise<Match> {
   try {
     const response = await axios.post<Match>("matches", {
