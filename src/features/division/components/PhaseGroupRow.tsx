@@ -30,6 +30,28 @@ type PhaseGroupRowProps = {
   onChanged?: () => Promise<void>;
 };
 
+function formatBracketType(bracketType: string | null | undefined): string | null {
+  switch (bracketType) {
+    case "SingleElimination":
+    case "SINGLE_ELIMINATION":
+      return "Single elimination";
+    case "DoubleElimination":
+    case "DOUBLE_ELIMINATION":
+      return "Double elimination";
+    case "RoundRobin":
+    case "ROUND_ROBIN":
+      return "Round robin";
+    case "Swiss":
+    case "SWISS":
+      return "Swiss";
+    case "CustomSchedule":
+    case "CUSTOM_SCHEDULE":
+      return "Custom schedule";
+    default:
+      return bracketType ?? null;
+  }
+}
+
 export default function PhaseGroupRow({
   phase,
   phaseGroup,
@@ -47,6 +69,7 @@ export default function PhaseGroupRow({
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
   const beginAdvancementEdit = async () => {
     const existing = (phaseGroup.advancementRules ?? [])
       .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id)
@@ -114,6 +137,9 @@ export default function PhaseGroupRow({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{phaseGroup.name}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{phaseGroup.state}</span>
+            {bracketTypeLabel && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{bracketTypeLabel}</span>
+            )}
             <span className="text-xs text-gray-400">
               {phaseGroup.matchCount} match{phaseGroup.matchCount !== 1 ? "es" : ""}
             </span>
