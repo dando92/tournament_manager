@@ -12,6 +12,11 @@ export async function createPhaseGroup(phaseId: number, request: CreatePhaseGrou
   return response.data;
 }
 
+export async function getPhaseGroup(phaseGroupId: number): Promise<PhaseGroup> {
+  const response = await axios.get<PhaseGroup>(`phase-groups/${phaseGroupId}`);
+  return response.data;
+}
+
 export async function updatePhaseGroupSeeding(phaseGroupId: number, entrantIds: number[]): Promise<void> {
   await axios.patch(`phase-groups/${phaseGroupId}/entrants/seeding`, { entrantIds });
 }

@@ -11,7 +11,7 @@ export function useAddEditSongToMatchModal({
   open,
   tournamentId,
 }: UseAddEditSongToMatchModalOptions) {
-  const [songAddType, setSongAddType] = useState<"title" | "roll">("roll");
+  const [songAddType, setSongAddType] = useState<"title" | "roll">("title");
   const [difficultyInput, setDifficultyInput] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
   const [songGroups, setSongGroups] = useState<string[]>([]);
@@ -26,6 +26,7 @@ export function useAddEditSongToMatchModal({
       setSongGroups([...new Set(response.data.map((song) => song.group))]);
       setSelectedGroupName(response.data[0]?.group ?? "");
     });
+    setSongAddType("title");
     setSelectedSongs([]);
   }, [open, tournamentId]);
 

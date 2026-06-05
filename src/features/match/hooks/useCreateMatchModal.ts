@@ -5,6 +5,7 @@ import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { getPhaseGroup } from "@/features/division/services/phase-groups.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -40,7 +41,7 @@ export function useCreateMatchModal({
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [selectedEntrants, setSelectedEntrants] = useState<Entrant[]>([]);
-  const [songAddType, setSongAddType] = useState<"title" | "roll">("roll");
+  const [songAddType, setSongAddType] = useState<"title" | "roll">("title");
   const [selectedSongDifficulties, setSelectedSongDifficulties] = useState<string[]>([]);
   const [difficultyInput, setDifficultyInput] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
@@ -80,7 +81,7 @@ export function useCreateMatchModal({
     setSelectedSongs([]);
     setSelectedSongDifficulties([]);
     setDifficultyInput("");
-    setSongAddType("roll");
+    setSongAddType("title");
   }, [divisionId, divisions, open, phaseGroupId, phaseId, phases]);
 
   useEffect(() => {
@@ -101,11 +102,39 @@ export function useCreateMatchModal({
   }, [availablePhaseGroups, open, phaseGroupId, selectedPhaseGroupId]);
 
   useEffect(() => {
-    if (!open || !resolvedDivisionId) return;
-    axios.get<Entrant[]>(`divisions/${resolvedDivisionId}/entrants`).then((response) => {
-      setEntrants(response.data.filter((entrant) => entrant.status === "active" && entrant.type === "player"));
-    });
-  }, [open, resolvedDivisionId]);
+    if (!open || !resolvedPhaseGroupId) {
+      setEntrants([]);
+      return;
+    }
+
+    let cancelled = false;
+    getPhaseGroup(resolvedPhaseGroupId)
+      .then((phaseGroup) => {
+        if (cancelled) return;
+        const phaseGroupEntrants = [...(phaseGroup.entrants ?? [])]
+          .filter((entry) => entry.status !== "withdrawn" && entry.status !== "dq")
+          .sort(
+            (left, right) =>
+              (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER) ||
+              left.entrant.name.localeCompare(right.entrant.name),
+          )
+          .map((entry) => entry.entrant)
+          .filter((entrant) => entrant.status === "active" && entrant.type === "player");
+        setEntrants(phaseGroupEntrants);
+      })
+      .catch(() => {
+        if (!cancelled) setEntrants([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, resolvedPhaseGroupId]);
+
+  useEffect(() => {
+    const entrantIds = new Set(entrants.map((entrant) => entrant.id));
+    setSelectedEntrants((current) => current.filter((entrant) => entrantIds.has(entrant.id)));
+  }, [entrants]);
 
   useEffect(() => {
     if (!open) return;
