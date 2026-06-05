@@ -47,6 +47,7 @@ export default function BracketsTab({
                 tournamentId={tournamentId}
                 matchRefreshKey={matchRefreshKey}
                 matchStateFilter={matchStateFilter}
+                autoExpandSinglePhaseGroup={false}
                 onDelete={state.handleDeletePhase}
                 onChanged={onDivisionChanged}
               />

@@ -16,6 +16,7 @@ type PhaseMatchesPanelProps = {
   tournamentId?: number;
   matchRefreshKey?: number;
   matchStateFilter?: MatchState | "all";
+  autoExpandSinglePhaseGroup?: boolean;
   onDelete?: (phaseId: number) => Promise<void>;
   onChanged?: () => Promise<void>;
 };
@@ -27,13 +28,14 @@ export default function PhaseMatchesPanel({
   tournamentId,
   matchRefreshKey,
   matchStateFilter = "all",
+  autoExpandSinglePhaseGroup = true,
   onDelete,
   onChanged,
 }: PhaseMatchesPanelProps) {
   const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
   const phaseGroups = phase.phaseGroups ?? [];
   const shouldUsePhaseGroups = phaseGroups.length > 0;
-  const expandSingleGroup = phaseGroups.length === 1;
+  const expandSingleGroup = autoExpandSinglePhaseGroup && phaseGroups.length === 1;
   const nextGroupNumber =
     Math.max(
       0,
