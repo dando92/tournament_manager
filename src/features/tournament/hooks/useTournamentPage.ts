@@ -8,6 +8,7 @@ import { TournamentOverview } from "@/features/tournament/types/TournamentOvervi
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
+import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 
 type UseTournamentPageOptions = {
   tournamentId: number;
@@ -33,17 +34,20 @@ export type TournamentPageState = {
   syncstartUrl: string;
   createDivisionOpen: boolean;
   createPhaseOpen: boolean;
+  createPhaseGroupOpen: boolean;
   generateBracketOpen: boolean;
   createMenuOpen: boolean;
   bracketTypes: string[];
   setCreateDivisionOpen: Dispatch<SetStateAction<boolean>>;
   setCreatePhaseOpen: Dispatch<SetStateAction<boolean>>;
+  setCreatePhaseGroupOpen: Dispatch<SetStateAction<boolean>>;
   setGenerateBracketOpen: Dispatch<SetStateAction<boolean>>;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
   setSyncstartUrl: Dispatch<SetStateAction<string>>;
   refreshDivisions: () => Promise<void>;
   handleCreateDivision: (name: string, playersPerMatch: number | null) => void;
   handleCreatePhase: (name: string, divisionId: number) => Promise<void>;
+  handleCreatePhaseGroup: (name: string, phaseId: number) => Promise<{ divisionId: number; phaseId: number }>;
   handleGenerateBracket: (request: GenerateBracketRequest) => Promise<GenerateBracketResult>;
 };
 
@@ -57,6 +61,7 @@ export function useTournamentPage({
   const [syncstartUrl, setSyncstartUrl] = useState("");
   const [createDivisionOpen, setCreateDivisionOpen] = useState(false);
   const [createPhaseOpen, setCreatePhaseOpen] = useState(false);
+  const [createPhaseGroupOpen, setCreatePhaseGroupOpen] = useState(false);
   const [generateBracketOpen, setGenerateBracketOpen] = useState(false);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [bracketTypes, setBracketTypes] = useState<string[]>([]);
@@ -206,6 +211,18 @@ export function useTournamentPage({
     );
   }, []);
 
+  const handleCreatePhaseGroup = useCallback(async (name: string, phaseId: number) => {
+    const phaseDivision = divisions.find((division) => division.phases.some((phase) => phase.id === phaseId));
+    await createPhaseGroup(phaseId, { name });
+    if (phaseDivision) {
+      await refreshDivision(phaseDivision.id);
+    }
+    return {
+      divisionId: phaseDivision?.id ?? 0,
+      phaseId,
+    };
+  }, [divisions, refreshDivision]);
+
   const handleGenerateBracket = useCallback(async (request: GenerateBracketRequest): Promise<GenerateBracketResult> => {
     const response = await axios.post<{ phaseId: number; phaseGroupId: number }>(
       `divisions/${request.divisionId}/generate-bracket`,
@@ -230,17 +247,20 @@ export function useTournamentPage({
     syncstartUrl,
     createDivisionOpen,
     createPhaseOpen,
+    createPhaseGroupOpen,
     generateBracketOpen,
     createMenuOpen,
     bracketTypes,
     setCreateDivisionOpen,
     setCreatePhaseOpen,
+    setCreatePhaseGroupOpen,
     setGenerateBracketOpen,
     setCreateMenuOpen,
     setSyncstartUrl,
     refreshDivisions,
     handleCreateDivision,
     handleCreatePhase,
+    handleCreatePhaseGroup,
     handleGenerateBracket,
   };
 }

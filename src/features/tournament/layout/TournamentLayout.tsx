@@ -11,8 +11,20 @@ type TournamentLayoutProps = {
 };
 
 export default function TournamentLayout({ context, state }: TournamentLayoutProps) {
-  const { isOverviewPage, isLobbiesPage, isParticipantsPage, isSongsPage, isDivisionPhasesPage, currentDivisionId, headerSubtitle, handleCreatePhase, handleGenerateBracket } =
-    useTournamentLayout({ context, state });
+  const {
+    isOverviewPage,
+    isLobbiesPage,
+    isParticipantsPage,
+    isSongsPage,
+    isDivisionPhasesPage,
+    currentDivisionId,
+    currentPhaseId,
+    headerSubtitle,
+    handleCreatePhase,
+    handleCreatePhaseGroup,
+    handleGenerateBracket,
+  } = useTournamentLayout({ context, state });
+  const currentDivision = state.divisions.find((division) => division.id === currentDivisionId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -20,7 +32,9 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         context={context}
         state={state}
         currentDivisionId={currentDivisionId}
+        currentPhaseId={currentPhaseId}
         onCreatePhase={handleCreatePhase}
+        onCreatePhaseGroup={handleCreatePhaseGroup}
         onGenerateBracket={handleGenerateBracket}
       />
 
@@ -41,9 +55,11 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         createMenuOpen={state.createMenuOpen}
         setCreateMenuOpen={state.setCreateMenuOpen}
         hasDivisions={state.divisions.length > 0}
+        hasCurrentDivisionPhases={(currentDivision?.phases.length ?? 0) > 0}
         onCreateDivision={() => state.setCreateDivisionOpen(true)}
         onGenerateBracket={() => state.setGenerateBracketOpen(true)}
         onCreatePhase={() => state.setCreatePhaseOpen(true)}
+        onCreatePhaseGroup={() => state.setCreatePhaseGroupOpen(true)}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 

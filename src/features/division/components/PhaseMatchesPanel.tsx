@@ -4,10 +4,6 @@ import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
 import { MatchState } from "@/features/match/types/Match";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
-import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { toast } from "react-toastify";
 
 type PhaseMatchesPanelProps = {
   phase: Phase;
@@ -36,24 +32,6 @@ export default function PhaseMatchesPanel({
   const phaseGroups = phase.phaseGroups ?? [];
   const shouldUsePhaseGroups = phaseGroups.length > 0;
   const expandSingleGroup = autoExpandSinglePhaseGroup && phaseGroups.length === 1;
-  const nextGroupNumber =
-    Math.max(
-      0,
-      ...phaseGroups.map((phaseGroup) => Number(phaseGroup.displayIdentifier)).filter(Number.isFinite),
-    ) + 1;
-
-  const handleCreatePhaseGroup = async () => {
-    try {
-      await createPhaseGroup(phase.id, {
-        name: `Group ${nextGroupNumber}`,
-        displayIdentifier: String(nextGroupNumber),
-      });
-      await onChanged?.();
-      toast.success("Phase group created.");
-    } catch {
-      toast.error("Error creating phase group.");
-    }
-  };
 
   return (
     <div>
@@ -62,24 +40,14 @@ export default function PhaseMatchesPanel({
         <span className="text-xs text-gray-400">
           {matchCount} match{matchCount !== 1 ? "es" : ""}
         </span>
-        {controls && (
+        {controls && onDelete && (
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCreatePhaseGroup}
-              className="inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-              <span>Phase group</span>
-            </button>
-            {onDelete && (
-              <DeleteConfirmButton
-                title="Delete phase"
-                onConfirm={() => onDelete(phase.id)}
-                className="text-sm"
-                confirmMessage={`Delete phase "${phase.name}"?`}
-              />
-            )}
+            <DeleteConfirmButton
+              title="Delete phase"
+              onConfirm={() => onDelete(phase.id)}
+              className="text-sm"
+              confirmMessage={`Delete phase "${phase.name}"?`}
+            />
           </div>
         )}
       </div>

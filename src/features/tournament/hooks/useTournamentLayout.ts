@@ -15,6 +15,7 @@ export function useTournamentLayout({ context, state }: UseTournamentLayoutOptio
   const divisionPhasesMatch = useMatch("/tournament/:tournamentId/division/:divisionId/phases");
   const divisionPhaseMatch = useMatch("/tournament/:tournamentId/division/:divisionId/phases/:phaseId");
   const { tournamentId, currentDivisionId } = context;
+  const currentPhaseId = divisionPhaseMatch?.params.phaseId ? Number(divisionPhaseMatch.params.phaseId) : undefined;
 
   const routeState = useMemo(() => {
     const overviewPath = `/tournament/${tournamentId}/overview`;
@@ -28,9 +29,10 @@ export function useTournamentLayout({ context, state }: UseTournamentLayoutOptio
       isSongsPage: location.pathname === songsPath,
       isDivisionPhasesPage: Boolean(divisionPhasesMatch || divisionPhaseMatch),
       currentDivisionId,
+      currentPhaseId: currentPhaseId && Number.isFinite(currentPhaseId) ? currentPhaseId : undefined,
       headerSubtitle: getTournamentHeaderSubtitle(location.pathname, tournamentId),
     };
-  }, [currentDivisionId, divisionPhaseMatch, divisionPhasesMatch, location.pathname, tournamentId]);
+  }, [currentDivisionId, currentPhaseId, divisionPhaseMatch, divisionPhasesMatch, location.pathname, tournamentId]);
 
   const handleCreatePhase = useCallback(
     async (name: string, divisionId: number) => {
@@ -48,9 +50,19 @@ export function useTournamentLayout({ context, state }: UseTournamentLayoutOptio
     [navigate, state, tournamentId],
   );
 
+  const handleCreatePhaseGroup = useCallback(
+    async (name: string, phaseId: number) => {
+      const result = await state.handleCreatePhaseGroup(name, phaseId);
+      if (!result.divisionId) return;
+      navigate(`/tournament/${tournamentId}/division/${result.divisionId}/phases/${result.phaseId}?refresh=${Date.now()}`);
+    },
+    [navigate, state, tournamentId],
+  );
+
   return {
     ...routeState,
     handleCreatePhase,
+    handleCreatePhaseGroup,
     handleGenerateBracket,
   };
 }

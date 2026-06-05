@@ -14,10 +14,13 @@ type Props = {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   showCreateDivision: boolean;
+  showCreatePhaseGroup: boolean;
   hasDivisions: boolean;
+  hasCurrentDivisionPhases: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
+  onCreatePhaseGroup: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
@@ -25,10 +28,13 @@ export default function TournamentHeaderCreateMenu({
   open,
   setOpen,
   showCreateDivision,
+  showCreatePhaseGroup,
   hasDivisions,
+  hasCurrentDivisionPhases,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
+  onCreatePhaseGroup,
   onOpenParticipantsManageModal,
 }: Props) {
   return (
@@ -93,6 +99,20 @@ export default function TournamentHeaderCreateMenu({
               <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
               Phase
             </button>
+            {showCreatePhaseGroup && (
+              <button
+                type="button"
+                disabled={!hasCurrentDivisionPhases}
+                onClick={() => {
+                  setOpen(false);
+                  onCreatePhaseGroup();
+                }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
+                Phase group
+              </button>
+            )}
           </div>
         </>
       )}
