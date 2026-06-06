@@ -5,6 +5,7 @@ import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { Tournament } from "@/features/tournament/types/Tournament";
 import { getPhaseGroup } from "@/features/division/services/phase-groups.api";
 
 type UseCreateMatchModalOptions = {
@@ -149,11 +150,18 @@ export function useCreateMatchModal({
 
   useEffect(() => {
     if (!open) return;
-    axios.get<string[]>("matches/scoring-systems").then((response) => {
-      setScoringSystems(response.data);
-      setScoringSystem(response.data[0] ?? "");
+    const scoringSystemsRequest = axios.get<string[]>("matches/scoring-systems");
+    const tournamentRequest = tournamentId
+      ? axios.get<Tournament>(`tournaments/${tournamentId}`)
+      : Promise.resolve(null);
+
+    Promise.all([scoringSystemsRequest, tournamentRequest]).then(([scoringSystemsResponse, tournamentResponse]) => {
+      const systems = scoringSystemsResponse.data;
+      const defaultScoringSystem = tournamentResponse?.data.defaultScoringSystem;
+      setScoringSystems(systems);
+      setScoringSystem(defaultScoringSystem && systems.includes(defaultScoringSystem) ? defaultScoringSystem : systems[0] ?? "");
     });
-  }, [open]);
+  }, [open, tournamentId]);
 
   const addDifficulty = () => {
     if (!difficultyInput) return;

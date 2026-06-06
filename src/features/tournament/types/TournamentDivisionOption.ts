@@ -11,7 +11,6 @@ export interface TournamentDivisionOptionPhase {
 export interface TournamentDivisionOption {
   id: number;
   name: string;
-  playersPerMatch: number | null;
   entrants: Entrant[];
   phases: TournamentDivisionOptionPhase[];
 }

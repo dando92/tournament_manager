@@ -6,5 +6,4 @@ export interface Division {
   name: string;
   phases: Phase[];
   entrants: Entrant[];
-  playersPerMatch: number | null;
 }

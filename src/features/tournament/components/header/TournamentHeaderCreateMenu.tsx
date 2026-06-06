@@ -17,6 +17,7 @@ type Props = {
   showCreatePhaseGroup: boolean;
   hasDivisions: boolean;
   hasCurrentDivisionPhases: boolean;
+  hasStartggApiKey: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
@@ -31,6 +32,7 @@ export default function TournamentHeaderCreateMenu({
   showCreatePhaseGroup,
   hasDivisions,
   hasCurrentDivisionPhases,
+  hasStartggApiKey,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
@@ -66,11 +68,14 @@ export default function TournamentHeaderCreateMenu({
             )}
             <button
               type="button"
+              disabled={!hasStartggApiKey}
+              title={hasStartggApiKey ? undefined : "Configure the start.gg API key before importing"}
               onClick={() => {
+                if (!hasStartggApiKey) return;
                 setOpen(false);
                 onOpenParticipantsManageModal("startgg");
               }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
               Import from start.gg

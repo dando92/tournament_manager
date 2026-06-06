@@ -31,6 +31,7 @@ export type TournamentPageState = {
   divisions: TournamentDivisionOption[];
   tournamentName: string;
   syncstartUrl: string;
+  hasStartggApiKey: boolean;
   createDivisionOpen: boolean;
   createPhaseOpen: boolean;
   createPhaseGroupOpen: boolean;
@@ -42,9 +43,11 @@ export type TournamentPageState = {
   setCreatePhaseGroupOpen: Dispatch<SetStateAction<boolean>>;
   setGenerateBracketOpen: Dispatch<SetStateAction<boolean>>;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
+  setTournamentName: Dispatch<SetStateAction<string>>;
   setSyncstartUrl: Dispatch<SetStateAction<string>>;
+  setHasStartggApiKey: Dispatch<SetStateAction<boolean>>;
   refreshDivisions: () => Promise<void>;
-  handleCreateDivision: (name: string, playersPerMatch: number | null) => void;
+  handleCreateDivision: (name: string) => void;
   handleCreatePhase: (name: string, divisionId: number) => Promise<void>;
   handleCreatePhaseGroup: (name: string, phaseId: number) => Promise<{ divisionId: number; phaseId: number }>;
   handleGenerateBracket: (request: GenerateBracketRequest) => Promise<GenerateBracketResult>;
@@ -58,6 +61,7 @@ export function useTournamentPage({
   const [divisions, setDivisions] = useState<TournamentDivisionOption[]>([]);
   const [tournamentName, setTournamentName] = useState("");
   const [syncstartUrl, setSyncstartUrl] = useState("");
+  const [hasStartggApiKey, setHasStartggApiKey] = useState(false);
   const [createDivisionOpen, setCreateDivisionOpen] = useState(false);
   const [createPhaseOpen, setCreatePhaseOpen] = useState(false);
   const [createPhaseGroupOpen, setCreatePhaseGroupOpen] = useState(false);
@@ -74,7 +78,6 @@ export function useTournamentPage({
       response.data.divisions.map((division) => ({
         id: division.id,
         name: division.name,
-        playersPerMatch: division.playersPerMatch ?? null,
         entrants: division.entrants,
         phases: division.phases.map((phase) => ({
           id: phase.id,
@@ -101,12 +104,19 @@ export function useTournamentPage({
       })
       .catch(() => {});
 
+    if (canControl) {
+      axios
+        .get<{ hasStartggApiKey: boolean }>(`tournaments/${tournamentId}/startgg/api-key-status`)
+        .then((response) => setHasStartggApiKey(response.data.hasStartggApiKey))
+        .catch(() => setHasStartggApiKey(false));
+    }
+
     refreshDivisions().catch(() => {});
     return () => {
       if (overviewRefreshTimer.current) clearTimeout(overviewRefreshTimer.current);
       document.title = "Tournament Manager";
     };
-  }, [refreshDivisions, tournamentId]);
+  }, [canControl, refreshDivisions, tournamentId]);
 
   useEffect(() => {
     if (tournamentVersion === 0) return;
@@ -146,11 +156,10 @@ export function useTournamentPage({
     }, 100);
   }, [divisionDetailVersions, matchListVersions, refreshDivisions]);
 
-  const handleCreateDivision = useCallback((name: string, playersPerMatch: number | null) => {
-    axios.post<{ id: number; name: string; playersPerMatch: number | null }>("divisions", {
+  const handleCreateDivision = useCallback((name: string) => {
+    axios.post<{ id: number; name: string }>("divisions", {
       tournamentId,
       name,
-      playersPerMatch,
     })
       .then((r) => {
         setDivisions((prev) => [
@@ -158,7 +167,6 @@ export function useTournamentPage({
           {
             id: r.data.id,
             name: r.data.name,
-            playersPerMatch: r.data.playersPerMatch ?? null,
             entrants: [],
             phases: [],
           },
@@ -220,6 +228,7 @@ export function useTournamentPage({
     divisions,
     tournamentName,
     syncstartUrl,
+    hasStartggApiKey,
     createDivisionOpen,
     createPhaseOpen,
     createPhaseGroupOpen,
@@ -231,7 +240,9 @@ export function useTournamentPage({
     setCreatePhaseGroupOpen,
     setGenerateBracketOpen,
     setCreateMenuOpen,
+    setTournamentName,
     setSyncstartUrl,
+    setHasStartggApiKey,
     refreshDivisions,
     handleCreateDivision,
     handleCreatePhase,

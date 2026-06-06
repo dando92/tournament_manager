@@ -48,14 +48,13 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         isParticipantsPage={isParticipantsPage}
         isLobbiesPage={isLobbiesPage}
         isDivisionPhasesPage={isDivisionPhasesPage}
-        syncstartUrl={context.syncstartUrl}
-        setSyncstartUrl={context.setSyncstartUrl}
         songsVersion={context.songsVersion}
         refreshSongs={context.refreshSongs}
         createMenuOpen={state.createMenuOpen}
         setCreateMenuOpen={state.setCreateMenuOpen}
         hasDivisions={state.divisions.length > 0}
         hasCurrentDivisionPhases={(currentDivision?.phases.length ?? 0) > 0}
+        hasStartggApiKey={context.hasStartggApiKey}
         onCreateDivision={() => state.setCreateDivisionOpen(true)}
         onGenerateBracket={() => state.setGenerateBracketOpen(true)}
         onCreatePhase={() => state.setCreatePhaseOpen(true)}

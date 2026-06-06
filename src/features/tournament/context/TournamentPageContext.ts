@@ -9,10 +9,13 @@ export type TournamentPageContextValue = {
   tournamentName: string;
   currentDivisionId?: number;
   syncstartUrl: string;
+  hasStartggApiKey: boolean;
   songsVersion: number;
   divisions: TournamentDivisionOption[];
   controls: boolean;
+  setTournamentName: Dispatch<SetStateAction<string>>;
   setSyncstartUrl: Dispatch<SetStateAction<string>>;
+  setHasStartggApiKey: Dispatch<SetStateAction<boolean>>;
   refreshDivisions: () => Promise<void>;
   refreshSongs: () => void;
   openCreateDivision: () => void;

@@ -15,14 +15,13 @@ type TournamentPageHeaderProps = {
   isParticipantsPage: boolean;
   isLobbiesPage: boolean;
   isDivisionPhasesPage: boolean;
-  syncstartUrl: string;
-  setSyncstartUrl: Dispatch<SetStateAction<string>>;
   songsVersion: number;
   refreshSongs: () => void;
   createMenuOpen: boolean;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
   hasDivisions: boolean;
   hasCurrentDivisionPhases: boolean;
+  hasStartggApiKey: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
@@ -40,14 +39,13 @@ export default function TournamentPageHeader({
   isParticipantsPage,
   isLobbiesPage,
   isDivisionPhasesPage,
-  syncstartUrl,
-  setSyncstartUrl,
   songsVersion,
   refreshSongs,
   createMenuOpen,
   setCreateMenuOpen,
   hasDivisions,
   hasCurrentDivisionPhases,
+  hasStartggApiKey,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
@@ -71,6 +69,7 @@ export default function TournamentPageHeader({
               showCreatePhaseGroup={isDivisionPhasesPage}
               hasDivisions={hasDivisions}
               hasCurrentDivisionPhases={hasCurrentDivisionPhases}
+              hasStartggApiKey={hasStartggApiKey}
               onCreateDivision={onCreateDivision}
               onGenerateBracket={onGenerateBracket}
               onCreatePhase={onCreatePhase}
@@ -91,8 +90,6 @@ export default function TournamentPageHeader({
           {isLobbiesPage && (
             <TournamentHeaderLobbyManageMenu
               tournamentId={tournamentId}
-              syncstartUrl={syncstartUrl}
-              setSyncstartUrl={setSyncstartUrl}
             />
           )}
         </div>

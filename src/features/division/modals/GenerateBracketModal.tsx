@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
@@ -27,25 +27,15 @@ export default function GenerateBracketModal({
   const [bracketType, setBracketType] = useState(bracketTypes[0] ?? "");
   const [playerPerMatch, setPlayerPerMatch] = useState(2);
   const [generating, setGenerating] = useState(false);
-  const selectedDivision = useMemo(
-    () => divisions.find((division) => division.id === divisionId),
-    [divisionId, divisions],
-  );
 
   useEffect(() => {
     if (!open) return;
     const nextDivisionId = currentDivisionId ?? divisions[0]?.id ?? 0;
-    const nextDivision = divisions.find((division) => division.id === nextDivisionId);
     setDivisionId(nextDivisionId);
     setPhaseName("");
     setBracketType(bracketTypes[0] ?? "");
-    setPlayerPerMatch(nextDivision?.playersPerMatch ?? 2);
+    setPlayerPerMatch(2);
   }, [bracketTypes, currentDivisionId, divisions, open]);
-
-  useEffect(() => {
-    if (!selectedDivision) return;
-    setPlayerPerMatch(selectedDivision.playersPerMatch ?? 2);
-  }, [selectedDivision]);
 
   const handleGenerate = async () => {
     if (!divisionId || !bracketType) return;
