@@ -21,6 +21,7 @@ type MatchCardProps = {
   matchUpdateSignal?: number;
   highlight?: MatchHighlight;
   onHighlight?: (highlight: MatchHighlight) => void;
+  enablePathRowHighlight?: boolean;
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
@@ -85,6 +86,7 @@ export default function MatchCard({
   matchUpdateSignal,
   highlight = { matchId: null, phaseGroupId: null },
   onHighlight = () => {},
+  enablePathRowHighlight = false,
   onMatchUpdated,
   onDeleteMatch,
   onAddPlayersToMatch,
@@ -262,6 +264,7 @@ export default function MatchCard({
           controls={controls}
           highlight={highlight}
           onHighlight={onHighlight}
+          enablePathRowHighlight={enablePathRowHighlight}
           onDeleteSong={onDeleteSongFromMatch}
           onDeletePlayer={(entrantId) =>
             onAddPlayersToMatch(

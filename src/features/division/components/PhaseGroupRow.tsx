@@ -141,6 +141,7 @@ export default function PhaseGroupRow({
       key={`phase-group-${phaseGroup.id}`}
       division={division}
       phaseGroupId={phaseGroup.id}
+      phaseGroup={phaseGroup}
       controls={controls}
       tournamentId={tournamentId}
       matchUpdateSignal={matchRefreshKey}

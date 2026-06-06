@@ -17,6 +17,7 @@ type MatchTableProps = {
   controls: boolean;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
+  enablePathRowHighlight?: boolean;
   onDeleteSong: (songId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
   onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
@@ -40,6 +41,7 @@ export default function MatchTable({
   controls,
   highlight,
   onHighlight,
+  enablePathRowHighlight = false,
   onDeleteSong,
   onDeletePlayer,
   onOpenAddStanding,
@@ -202,8 +204,6 @@ export default function MatchTable({
               const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? (
                 typedSourceKind === "match" ? `Match ${sourceId}` : `Phase group ${sourceId}`
               );
-              const sourceHighlight = getHighlightForTarget(typedSourceKind, sourceId);
-              const isSelected = isHighlightSelected(sourceHighlight);
               const positions = incomingRules
                 .filter((rule) => rule.sourceKind === typedSourceKind && rule.sourceId === sourceId)
                 .map((rule) => rule.sourcePlacement);
@@ -215,6 +215,8 @@ export default function MatchTable({
                 ? Boolean(sourceMatch?.matchResult)
                 : sourcePhaseGroup?.state === "completed";
               if (isSourceComplete) return [];
+              const sourceHighlight = getHighlightForTarget(typedSourceKind, sourceId);
+              const isSelected = isHighlightSelected(sourceHighlight);
 
               return rows.map((pos) => (
                 <PathRow
@@ -222,8 +224,8 @@ export default function MatchTable({
                   ordinalLabel={toOrdinal(pos)}
                   sourceMatchName={name}
                   colSpan={totalCols}
-                  isSelected={isSelected}
-                  onToggle={() => toggleHighlight(sourceHighlight)}
+                  isSelected={enablePathRowHighlight && isSelected}
+                  onToggle={enablePathRowHighlight ? () => toggleHighlight(sourceHighlight) : undefined}
                 />
               ));
             })}
@@ -242,11 +244,11 @@ export default function MatchTable({
                     player={player}
                     controls={canEditMatchContent}
                     scoreTable={scoreTable}
-                    hasRoute={routeTargetMatchId !== null}
-                    isRouteSelected={routeTargetHighlight !== null && isHighlightSelected(routeTargetHighlight)}
-                    routeTargetMatchId={routeTargetMatchId}
-                    routeTargetLabel={routeTargetMatch ? `${getPhaseGroupName(routeTargetMatch.phaseGroupId)} / ${routeTargetMatch.name}` : undefined}
-                    canClearRouteHighlight={highlight.matchId !== null || highlight.phaseGroupId !== null}
+                    hasRoute={enablePathRowHighlight && routeTargetMatchId !== null}
+                    isRouteSelected={enablePathRowHighlight && routeTargetHighlight !== null && isHighlightSelected(routeTargetHighlight)}
+                    routeTargetMatchId={enablePathRowHighlight ? routeTargetMatchId : null}
+                    routeTargetLabel={enablePathRowHighlight && routeTargetMatch ? `${getPhaseGroupName(routeTargetMatch.phaseGroupId)} / ${routeTargetMatch.name}` : undefined}
+                    canClearRouteHighlight={enablePathRowHighlight && (highlight.matchId !== null || highlight.phaseGroupId !== null)}
                     onToggleRouteHighlight={() => {
                       if (routeTargetHighlight) toggleHighlight(routeTargetHighlight);
                     }}

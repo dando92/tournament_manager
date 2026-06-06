@@ -2,15 +2,21 @@ type PathRowProps = {
   ordinalLabel: string;
   sourceMatchName: string;
   colSpan: number;
-  isSelected: boolean;
-  onToggle: () => void;
+  isSelected?: boolean;
+  onToggle?: () => void;
 };
 
-export default function PathRow({ ordinalLabel, sourceMatchName, colSpan, isSelected, onToggle }: PathRowProps) {
+export default function PathRow({ ordinalLabel, sourceMatchName, colSpan, isSelected = false, onToggle }: PathRowProps) {
+  const canToggle = Boolean(onToggle);
+
   return (
     <tr
-      className={`border-t border-gray-100 cursor-pointer transition-colors ${
-        isSelected ? "bg-green-50" : "hover:bg-gray-50"
+      className={`border-t border-gray-100 transition-colors ${
+        isSelected
+          ? "bg-green-50"
+          : canToggle
+            ? "cursor-pointer hover:bg-gray-50"
+            : ""
       }`}
       onClick={onToggle}
     >
