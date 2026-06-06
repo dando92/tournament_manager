@@ -4,7 +4,7 @@ import { useTournamentPageContext } from "@/features/tournament/context/Tourname
 import { useTournamentOverviewPage } from "@/features/tournament/hooks/useTournamentOverviewPage";
 
 export default function TournamentOverviewPage() {
-  const { divisions, tournamentId, controls, refreshDivisions, setParticipantsManageModal } = useTournamentPageContext();
+  const { divisions, tournamentId, controls, refreshDivisions } = useTournamentPageContext();
   const { summary, handleDeleteDivision, handleSelectDivision } =
     useTournamentOverviewPage({
       divisions,
@@ -24,7 +24,6 @@ export default function TournamentOverviewPage() {
         controls={controls}
         onSelectDivision={handleSelectDivision}
         onDeleteDivision={handleDeleteDivision}
-        onImportStartgg={() => setParticipantsManageModal("startgg")}
       />
     </div>
   );

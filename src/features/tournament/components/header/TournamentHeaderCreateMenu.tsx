@@ -3,10 +3,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
   faDiagramProject,
+  faLink,
   faLayerGroup,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { btnPrimary } from "@/styles/buttonStyles";
+import { ParticipantsManageModal } from "@/features/tournament/context/TournamentPageContext";
 
 type Props = {
   open: boolean;
@@ -19,6 +21,7 @@ type Props = {
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
   onCreatePhaseGroup: () => void;
+  onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
 export default function TournamentHeaderCreateMenu({
@@ -32,6 +35,7 @@ export default function TournamentHeaderCreateMenu({
   onGenerateBracket,
   onCreatePhase,
   onCreatePhaseGroup,
+  onOpenParticipantsManageModal,
 }: Props) {
   return (
     <div className="relative">
@@ -60,6 +64,17 @@ export default function TournamentHeaderCreateMenu({
                 New division
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenParticipantsManageModal("startgg");
+              }}
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
+              Import from start.gg
+            </button>
             <button
               type="button"
               disabled={!hasDivisions}
