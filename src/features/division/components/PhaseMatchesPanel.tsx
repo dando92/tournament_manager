@@ -3,7 +3,6 @@ import PhaseGroupRow from "@/features/division/components/PhaseGroupRow";
 import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
 import { MatchHighlight, MatchState } from "@/features/match/types/Match";
-import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 type PhaseMatchesPanelProps = {
   phase: Phase;
@@ -15,7 +14,6 @@ type PhaseMatchesPanelProps = {
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   autoExpandSinglePhaseGroup?: boolean;
-  onDelete?: (phaseId: number) => Promise<void>;
   onChanged?: () => Promise<void>;
 };
 
@@ -29,7 +27,6 @@ export default function PhaseMatchesPanel({
   highlight,
   onHighlight,
   autoExpandSinglePhaseGroup = false,
-  onDelete,
   onChanged,
 }: PhaseMatchesPanelProps) {
   const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
@@ -44,16 +41,6 @@ export default function PhaseMatchesPanel({
         <span className="text-xs text-gray-400">
           {matchCount} match{matchCount !== 1 ? "es" : ""}
         </span>
-        {controls && onDelete && (
-          <div className="ml-auto flex items-center gap-2">
-            <DeleteConfirmButton
-              title="Delete phase"
-              onConfirm={() => onDelete(phase.id)}
-              className="text-sm"
-              confirmMessage={`Delete phase "${phase.name}"?`}
-            />
-          </div>
-        )}
       </div>
       {shouldUsePhaseGroups ? (
         <div className="flex flex-col gap-3">

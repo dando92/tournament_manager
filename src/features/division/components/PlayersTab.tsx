@@ -29,6 +29,7 @@ type EntrantScope = "division" | number;
 
 type PhaseGroupScopeOption = {
   phaseId: number;
+  phaseName: string;
   phaseGroup: PhaseGroup;
 };
 
@@ -38,7 +39,7 @@ export default function PlayersTab({ division, canEdit, onPlayersChanged }: Prop
   const phaseGroupOptions = useMemo(
     () =>
       (division.phases ?? []).flatMap((phase) =>
-        (phase.phaseGroups ?? []).map((phaseGroup) => ({ phaseId: phase.id, phaseGroup })),
+        (phase.phaseGroups ?? []).map((phaseGroup) => ({ phaseId: phase.id, phaseName: phase.name, phaseGroup })),
       ),
     [division.phases],
   );
@@ -114,10 +115,10 @@ function EntrantScopeSelector({ phaseGroups, selectedScope, onSelect }: EntrantS
           selected={selectedScope === "division"}
           onClick={() => onSelect("division")}
         />
-        {phaseGroups.map(({ phaseGroup }) => (
+        {phaseGroups.map(({ phaseName, phaseGroup }) => (
           <EntrantScopeButton
             key={phaseGroup.id}
-            label={`${phaseGroup.name} entrants`}
+            label={`${phaseName}/${phaseGroup.name}`}
             selected={selectedScope === phaseGroup.id}
             onClick={() => onSelect(phaseGroup.id)}
           />

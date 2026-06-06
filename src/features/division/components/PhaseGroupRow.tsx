@@ -1,22 +1,21 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronRight, faDice } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
 import { MatchHighlight, MatchState } from "@/features/match/types/Match";
 import { Match } from "@/features/match/types/Match";
-import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import {
   deletePhaseGroup,
 } from "@/features/division/services/phase-groups.api";
-import { btnSecondary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
 import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
+import PhaseGroupActionsMenu from "@/features/division/components/PhaseGroupActionsMenu";
 
 type PhaseGroupRowProps = {
   phase: Phase;
@@ -83,6 +82,7 @@ export default function PhaseGroupRow({
   const [editingAdvancement, setEditingAdvancement] = useState(false);
   const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
@@ -121,8 +121,13 @@ export default function PhaseGroupRow({
   };
 
   const handleDeletePhaseGroup = async () => {
-    await deletePhaseGroup(phaseGroup.id);
-    await onChanged?.();
+    setDeleting(true);
+    try {
+      await deletePhaseGroup(phaseGroup.id);
+      await onChanged?.();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleCreateMatch = async (request: CreateMatchRequest) => {
@@ -146,47 +151,44 @@ export default function PhaseGroupRow({
   );
 
   return (
-    <div className={`border rounded-md bg-white overflow-hidden transition-shadow ${
+    <div className={`border rounded-md bg-white overflow-visible transition-shadow ${
       isHighlighted
         ? "border-green-400 ring-2 ring-green-300 shadow-green-100 shadow-lg"
         : "border-gray-200"
     }`}>
-      <button
-        type="button"
-        onClick={() => setExpanded((current) => !current)}
-        className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
-      >
-        <FontAwesomeIcon icon={expanded ? faChevronDown : faChevronRight} className="text-gray-500 w-3 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">{phaseGroup.name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${phaseGroupStateClass(phaseGroup.state)}`}>
-              {phaseGroup.state}
-            </span>
-            {bracketTypeLabel && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{bracketTypeLabel}</span>
-            )}
-            <span className="text-xs text-gray-400">
-              {phaseGroup.matchCount} match{phaseGroup.matchCount !== 1 ? "es" : ""}
-            </span>
+      <div className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="min-w-0 flex flex-1 items-center gap-3 text-left"
+        >
+          <FontAwesomeIcon icon={expanded ? faChevronDown : faChevronRight} className="text-gray-500 w-3 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-gray-800">{phaseGroup.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${phaseGroupStateClass(phaseGroup.state)}`}>
+                {phaseGroup.state}
+              </span>
+              {bracketTypeLabel && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{bracketTypeLabel}</span>
+              )}
+              <span className="text-xs text-gray-400">
+                {phaseGroup.matchCount} match{phaseGroup.matchCount !== 1 ? "es" : ""}
+              </span>
+            </div>
           </div>
-        </div>
+        </button>
         {controls && (
-          <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-2">
-            <button className={`${btnSecondary} text-xs`} onClick={beginAdvancementEdit} disabled={saving}>Edit advancement rules</button>
-            <button className={`${btnSecondary} flex items-center gap-1.5 text-xs`} onClick={() => setCreateMatchOpen(true)} disabled={saving}>
-              <FontAwesomeIcon icon={faDice} />
-              <span>Match</span>
-            </button>
-            <DeleteConfirmButton
-              title="Delete phase group"
-              onConfirm={handleDeletePhaseGroup}
-              className="text-sm"
-              confirmMessage={`Delete phase group "${phaseGroup.name}"?`}
-            />
-          </div>
+          <PhaseGroupActionsMenu
+            phaseGroupName={phaseGroup.name}
+            disabled={saving || deleting}
+            deleting={deleting}
+            onCreateMatch={() => setCreateMatchOpen(true)}
+            onEditAdvancementRules={() => beginAdvancementEdit()}
+            onDeletePhaseGroup={handleDeletePhaseGroup}
+          />
         )}
-      </button>
+      </div>
       {editingAdvancement && (
         <div className="px-4 pb-4 border-t border-gray-100">
           <AdvancementRulesEditor
