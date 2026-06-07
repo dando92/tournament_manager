@@ -11,7 +11,7 @@ export interface MatchResult {
   playerPoints: MatchResultPlayerPoints[];
 }
 
-export type MatchState = "NotActive" | "Active" | "Pending" | "Completed";
+export type MatchCommitState = "Disabled" | "Pending" | "Completed";
 export type AdvancementCompetitionKind = "match" | "phase_group";
 
 export interface AdvancementRule {
@@ -24,7 +24,13 @@ export interface AdvancementRule {
   targetSlot: number;
 }
 
-export type MatchAdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetId" | "targetSlot">;
+export type AdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetKind" | "targetId" | "targetSlot">;
+export type MatchAdvancementRuleInput = AdvancementRuleInput;
+
+export type MatchHighlight = {
+  matchId: number | null;
+  phaseGroupId: number | null;
+};
 
 export interface Match {
   id: number;
@@ -32,10 +38,10 @@ export interface Match {
   subtitle: string;
   notes: string;
   scoringSystem: string;
-  state: MatchState;
+  active: boolean;
   entrants: Entrant[];
   rounds: Round[];
   advancementRules: AdvancementRule[];
   matchResult?: MatchResult | null;
-  phaseId?: number;
+  phaseGroupId: number;
 }

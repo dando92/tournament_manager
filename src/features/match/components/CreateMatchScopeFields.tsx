@@ -6,25 +6,33 @@ import { TournamentDivisionOption } from "@/features/tournament/types/Tournament
 type CreateMatchScopeFieldsProps = {
   divisionId?: number;
   phaseId?: number;
+  phaseGroupId?: number;
   divisions?: TournamentDivisionOption[];
   phases?: MatchPhaseOption[];
   availablePhases: MatchPhaseOption[];
+  availablePhaseGroups: Array<{ id: number; name: string }>;
   selectedDivisionId: number | null;
   selectedPhaseId: number | null;
+  selectedPhaseGroupId: number | null;
   onDivisionChange: (divisionId: number | null) => void;
   onPhaseChange: (phaseId: number | null) => void;
+  onPhaseGroupChange: (phaseGroupId: number | null) => void;
 };
 
 export default function CreateMatchScopeFields({
   divisionId,
   phaseId,
+  phaseGroupId,
   divisions,
   phases,
   availablePhases,
+  availablePhaseGroups,
   selectedDivisionId,
   selectedPhaseId,
+  selectedPhaseGroupId,
   onDivisionChange,
   onPhaseChange,
+  onPhaseGroupChange,
 }: CreateMatchScopeFieldsProps) {
   return (
     <>
@@ -77,6 +85,25 @@ export default function CreateMatchScopeFields({
                 : null
             }
             onChange={(selected) => onPhaseChange(selected?.value ?? null)}
+            menuPortalTarget={document.body}
+            styles={selectPortalStyles}
+          />
+        </div>
+      )}
+      {!phaseGroupId && availablePhaseGroups.length > 0 && (
+        <div className="w-full">
+          <h3>Phase group</h3>
+          <Select
+            options={availablePhaseGroups.map((group) => ({ value: group.id, label: group.name }))}
+            value={
+              selectedPhaseGroupId
+                ? {
+                    value: selectedPhaseGroupId,
+                    label: availablePhaseGroups.find((group) => group.id === selectedPhaseGroupId)?.name ?? "",
+                  }
+                : null
+            }
+            onChange={(selected) => onPhaseGroupChange(selected?.value ?? null)}
             menuPortalTarget={document.body}
             styles={selectPortalStyles}
           />

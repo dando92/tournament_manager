@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faDatabase, faFileImport, faLink, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faDatabase, faFileImport, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import { ParticipantsManageModal } from "@/features/tournament/context/TournamentPageContext";
 import { btnPrimary } from "@/styles/buttonStyles";
@@ -49,14 +49,6 @@ export default function TournamentHeaderParticipantsManageMenu({ onOpen }: Props
             >
               <FontAwesomeIcon icon={faFileImport} className="text-primary-dark" />
               Import names
-            </button>
-            <button
-              type="button"
-              onClick={() => openModal("startgg")}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
-              Import from start.gg
             </button>
           </div>
         </>

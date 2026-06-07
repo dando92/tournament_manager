@@ -14,6 +14,7 @@ type CreateMatchModalProps = {
   onClose: () => void;
   onCreate: (request: CreateMatchRequest) => void;
   phaseId?: number;
+  phaseGroupId?: number;
   phases?: MatchPhaseOption[];
   divisionId?: number;
   divisions?: TournamentDivisionOption[];
@@ -35,13 +36,17 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
         <CreateMatchScopeFields
           divisionId={props.divisionId}
           phaseId={props.phaseId}
+          phaseGroupId={props.phaseGroupId}
           divisions={props.divisions}
           phases={props.phases}
           availablePhases={state.availablePhases}
+          availablePhaseGroups={state.availablePhaseGroups}
           selectedDivisionId={state.selectedDivisionId}
           selectedPhaseId={state.selectedPhaseId}
+          selectedPhaseGroupId={state.selectedPhaseGroupId}
           onDivisionChange={state.setSelectedDivisionId}
           onPhaseChange={state.setSelectedPhaseId}
+          onPhaseGroupChange={state.setSelectedPhaseGroupId}
         />
 
         <div className="w-full">

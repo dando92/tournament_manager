@@ -1,28 +1,20 @@
-import type { Dispatch, SetStateAction } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faLink, faPlug, faSatelliteDish } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faPlug, faSatelliteDish } from "@fortawesome/free-solid-svg-icons";
 import { btnPrimary } from "@/styles/buttonStyles";
 import { useTournamentHeaderLobbyManageMenu } from "@/features/tournament/hooks/useTournamentHeaderLobbyManageMenu";
 import HeaderActionModal from "./HeaderActionModal";
 
 type Props = {
   tournamentId: number;
-  syncstartUrl: string;
-  setSyncstartUrl: Dispatch<SetStateAction<string>>;
 };
 
 export default function TournamentHeaderLobbyManageMenu({
   tournamentId,
-  syncstartUrl,
-  setSyncstartUrl,
 }: Props) {
   const {
     menuOpen,
-    urlModalOpen,
     createLobbyModalOpen,
     connectLobbyModalOpen,
-    syncstartDraft,
-    savingUrl,
     creatingLobby,
     connectingLobby,
     createLobbyName,
@@ -30,10 +22,8 @@ export default function TournamentHeaderLobbyManageMenu({
     connectLobbyName,
     connectLobbyCode,
     connectLobbyPassword,
-    setUrlModalOpen,
     setCreateLobbyModalOpen,
     setConnectLobbyModalOpen,
-    setSyncstartDraft,
     setCreateLobbyName,
     setCreateLobbyPassword,
     setConnectLobbyName,
@@ -41,44 +31,16 @@ export default function TournamentHeaderLobbyManageMenu({
     setConnectLobbyPassword,
     toggleMenu,
     closeMenu,
-    openUrlModal,
     openCreateLobbyModal,
     openConnectLobbyModal,
-    handleSaveUrl,
     handleCreateLobby,
     handleConnectLobby,
   } = useTournamentHeaderLobbyManageMenu({
     tournamentId,
-    syncstartUrl,
-    setSyncstartUrl,
   });
 
   return (
     <>
-      <HeaderActionModal
-        open={urlModalOpen}
-        onClose={() => setUrlModalOpen(false)}
-        title="Set lobby url"
-        description="Configure the SyncStart websocket endpoint used for lobby management."
-        confirmLabel="Save"
-        loading={savingUrl}
-        onConfirm={() => {
-          handleSaveUrl().catch(() => {});
-        }}
-      >
-        <input
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          placeholder="ws://syncservice.groovestats.com:1337"
-          value={syncstartDraft}
-          onChange={(event) => setSyncstartDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handleSaveUrl().catch(() => {});
-            }
-          }}
-        />
-      </HeaderActionModal>
-
       <HeaderActionModal
         open={createLobbyModalOpen}
         onClose={() => setCreateLobbyModalOpen(false)}
@@ -160,14 +122,6 @@ export default function TournamentHeaderLobbyManageMenu({
           <>
             <div className="fixed inset-0 z-10" onClick={closeMenu} />
             <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded shadow-lg border border-gray-200 min-w-[190px]">
-              <button
-                type="button"
-                onClick={openUrlModal}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
-                Set lobby url
-              </button>
               <button
                 type="button"
                 onClick={openCreateLobbyModal}

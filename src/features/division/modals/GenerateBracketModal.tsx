@@ -1,53 +1,74 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnPrimary } from "@/styles/buttonStyles";
+import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { GenerateBracketRequest } from "@/features/tournament/hooks/useTournamentPage";
 
 type Props = {
   open: boolean;
-  onClose: () => void;
+  divisions: TournamentDivisionOption[];
+  currentDivisionId?: number;
   bracketTypes: string[];
-  onGenerate: (bracketType: string, playerPerMatch: number) => Promise<void>;
+  onClose: () => void;
+  onGenerate: (request: GenerateBracketRequest) => Promise<void>;
 };
 
 export default function GenerateBracketModal({
   open,
-  onClose,
+  divisions,
+  currentDivisionId,
   bracketTypes,
+  onClose,
   onGenerate,
 }: Props) {
-  const [selectedBracketType, setSelectedBracketType] = useState("");
+  const initialDivisionId = currentDivisionId ?? divisions[0]?.id ?? 0;
+  const [divisionId, setDivisionId] = useState(initialDivisionId);
+  const [phaseName, setPhaseName] = useState("");
+  const [bracketType, setBracketType] = useState(bracketTypes[0] ?? "");
   const [playerPerMatch, setPlayerPerMatch] = useState(2);
   const [generating, setGenerating] = useState(false);
 
-  async function handleGenerate() {
-    if (!selectedBracketType) {
-      onClose();
-      return;
-    }
+  useEffect(() => {
+    if (!open) return;
+    const nextDivisionId = currentDivisionId ?? divisions[0]?.id ?? 0;
+    setDivisionId(nextDivisionId);
+    setPhaseName("");
+    setBracketType(bracketTypes[0] ?? "");
+    setPlayerPerMatch(2);
+  }, [bracketTypes, currentDivisionId, divisions, open]);
+
+  const handleGenerate = async () => {
+    if (!divisionId || !bracketType) return;
     setGenerating(true);
     try {
-      await onGenerate(selectedBracketType, playerPerMatch);
+      await onGenerate({
+        divisionId,
+        phaseName: phaseName.trim() || undefined,
+        bracketType,
+        playerPerMatch,
+      });
       onClose();
     } finally {
       setGenerating(false);
     }
-  }
+  };
 
   return (
     <BaseModal
       open={open}
       onClose={onClose}
-      title="Generate Bracket"
+      title="Generate bracket"
       maxWidth="max-w-md"
       footer={
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm rounded border hover:bg-gray-50">
+          <button type="button" onClick={onClose} className={`${btnSecondary} text-sm`}>
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleGenerate}
-            disabled={generating}
-            className={`text-sm ${btnPrimary}`}
+            disabled={generating || !divisionId || !bracketType}
+            className={`${btnPrimary} text-sm disabled:cursor-not-allowed`}
           >
             {generating ? "Generating..." : "Generate"}
           </button>
@@ -55,30 +76,54 @@ export default function GenerateBracketModal({
       }
     >
       <div className="flex flex-col gap-4">
+        {!currentDivisionId && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Division</label>
+            <select
+              className="border rounded px-2 py-2 text-sm w-full"
+              value={divisionId}
+              onChange={(event) => setDivisionId(Number(event.target.value))}
+            >
+              {divisions.map((division) => (
+                <option key={division.id} value={division.id}>
+                  {division.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-medium mb-1">Phase name</label>
+          <input
+            type="text"
+            value={phaseName}
+            onChange={(event) => setPhaseName(event.target.value)}
+            placeholder="Bracket"
+            className="border rounded px-2 py-2 text-sm w-full"
+          />
+        </div>
         <div>
           <label className="block text-sm font-medium mb-1">Bracket type</label>
           <select
-            className="border rounded px-2 py-1 text-sm w-full"
-            value={selectedBracketType}
-            onChange={(e) => setSelectedBracketType(e.target.value)}
+            className="border rounded px-2 py-2 text-sm w-full"
+            value={bracketType}
+            onChange={(event) => setBracketType(event.target.value)}
           >
-            <option value="">None</option>
-            {bracketTypes.map((bt) => (
-              <option key={bt} value={bt}>
-                {bt === "Manual" ? "First phase only" : bt}
+            {bracketTypes.map((candidate) => (
+              <option key={candidate} value={candidate}>
+                {candidate === "Manual" ? "First phase only" : candidate}
               </option>
             ))}
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Players per match</label>
           <input
             type="number"
             min={2}
             value={playerPerMatch}
-            onChange={(e) => setPlayerPerMatch(Number(e.target.value))}
-            className="border rounded px-2 py-1 text-sm w-full"
+            onChange={(event) => setPlayerPerMatch(Number(event.target.value))}
+            className="border rounded px-2 py-2 text-sm w-full"
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 export interface CreateMatchRequest {
-  phaseId: number;
+  phaseGroupId: number;
   divisionId?: number; // only needed for song rolling
   name: string;
   subtitle: string;
@@ -35,4 +35,9 @@ export interface AddStandingToMatchRequest {
   percentage: number;
   score: number;
   isFailed: boolean;
+}
+
+export interface MatchPlayerPointsRequest {
+  playerId: number;
+  points: number;
 }

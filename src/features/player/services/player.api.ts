@@ -2,10 +2,6 @@ import axios from "axios";
 import { Entrant } from "@/features/entrant/types/Entrant";
 import { Player } from "@/features/player/types/Player";
 
-export async function updateDivisionSeeding(divisionId: number, entrantIds: number[]): Promise<void> {
-  await axios.patch(`divisions/${divisionId}/entrant-seeding`, { entrantIds });
-}
-
 export async function getAllPlayers(): Promise<Player[]> {
   const response = await axios.get<Player[]>("players");
   return response.data;

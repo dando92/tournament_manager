@@ -4,7 +4,7 @@ import OkModal from "@/shared/components/ui/OkModal";
 type CreateDivisionModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreate: (name: string, playersPerMatch: number | null) => void;
+  onCreate: (name: string) => void;
 };
 
 export default function CreateDivisionModal({
@@ -13,18 +13,15 @@ export default function CreateDivisionModal({
   onCreate,
 }: CreateDivisionModalProps) {
   const [name, setName] = useState("");
-  const [playersPerMatch, setPlayersPerMatch] = useState("2");
 
   useEffect(() => {
     if (!open) return;
     setName("");
-    setPlayersPerMatch("2");
   }, [open]);
 
   const onSubmit = () => {
-    const parsedPlayersPerMatch = Number(playersPerMatch);
-    if (!name.trim() || !Number.isFinite(parsedPlayersPerMatch) || parsedPlayersPerMatch < 1) return;
-    onCreate(name.trim(), parsedPlayersPerMatch);
+    if (!name.trim()) return;
+    onCreate(name.trim());
     onClose();
   };
 
@@ -46,18 +43,6 @@ export default function CreateDivisionModal({
             onChange={(e) => setName(e.target.value)}
             placeholder="Division name"
             autoFocus
-            onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
-          />
-        </div>
-        <div>
-          <h3 className="mb-1">Players per match</h3>
-          <input
-            className="w-full border border-gray-300 px-2 py-2 rounded-lg"
-            type="number"
-            min={1}
-            value={playersPerMatch}
-            onChange={(e) => setPlayersPerMatch(e.target.value)}
-            placeholder="Players per match"
             onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
           />
         </div>

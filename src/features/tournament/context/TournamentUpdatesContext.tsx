@@ -1,4 +1,5 @@
 import { ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ActiveLobbyDto,
   LobbyStateDto,
@@ -22,10 +23,18 @@ type PhaseUpdateMessage = {
   phaseId: number;
 };
 
+type PhaseGroupUpdateMessage = {
+  tournamentId: number;
+  divisionId: number;
+  phaseId: number;
+  phaseGroupId: number;
+};
+
 type MatchUpdateMessage = {
   tournamentId: number;
   divisionId: number;
   phaseId: number;
+  phaseGroupId: number;
   matchId: number;
 };
 
@@ -38,6 +47,7 @@ type TournamentSocketMessage =
   | { event: "TournamentUpdate"; data: TournamentUpdateMessage }
   | { event: "DivisionUpdate"; data: DivisionUpdateMessage }
   | { event: "PhaseUpdate"; data: PhaseUpdateMessage }
+  | { event: "PhaseGroupUpdate"; data: PhaseGroupUpdateMessage }
   | { event: "MatchUpdate"; data: MatchUpdateMessage }
   | { event: "UiWarning"; data: UiWarningMessage };
 
@@ -83,6 +93,8 @@ function incrementVersion(map: ReadonlyMap<number, number>, id: number): Map<num
   return next;
 }
 
+const UI_UPDATE_INVALIDATION_DEBOUNCE_MS = 150;
+
 export function TournamentUpdatesProvider({
   tournamentId,
   children,
@@ -90,6 +102,7 @@ export function TournamentUpdatesProvider({
   tournamentId: number;
   children: ReactNode;
 }) {
+  const queryClient = useQueryClient();
   const [tournamentVersion, setTournamentVersion] = useState(0);
   const [divisionDetailVersions, setDivisionDetailVersions] = useState<ReadonlyMap<number, number>>(new Map());
   const [matchListVersions, setMatchListVersions] = useState<ReadonlyMap<number, number>>(new Map());
@@ -99,15 +112,72 @@ export function TournamentUpdatesProvider({
   const [liveLobbyDisplayStates, setLiveLobbyDisplayStates] = useState<ReadonlyMap<string, LobbyStateDto>>(new Map());
   const [liveMatchStates, setLiveMatchStates] = useState<ReadonlyMap<string, LiveMatchStateDto>>(new Map());
   const pendingMatchIds = useRef<Set<number>>(new Set());
+  const pendingPhaseGroupIds = useRef<Set<number>>(new Set());
+  const pendingDivisionDetailIds = useRef<Set<number>>(new Set());
+  const pendingMatchListDivisionIds = useRef<Set<number>>(new Set());
+  const pendingDivisionMatchIds = useRef<Set<number>>(new Set());
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket(uiUpdateHubUrl());
 
-    function flushMatchUpdates() {
-      const flush = new Set(pendingMatchIds.current);
+    function scheduleInvalidationFlush() {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(flushInvalidations, UI_UPDATE_INVALIDATION_DEBOUNCE_MS);
+    }
+
+    function flushInvalidations() {
+      const matchIds = new Set(pendingMatchIds.current);
+      const phaseGroupIds = new Set(pendingPhaseGroupIds.current);
+      const divisionDetailIds = new Set(pendingDivisionDetailIds.current);
+      const matchListDivisionIds = new Set(pendingMatchListDivisionIds.current);
+      const divisionMatchIds = new Set(pendingDivisionMatchIds.current);
+
       pendingMatchIds.current = new Set();
-      setUpdatedMatchIds(flush);
+      pendingPhaseGroupIds.current = new Set();
+      pendingDivisionDetailIds.current = new Set();
+      pendingMatchListDivisionIds.current = new Set();
+      pendingDivisionMatchIds.current = new Set();
+      debounceTimer.current = null;
+
+      if (divisionDetailIds.size > 0) {
+        setDivisionDetailVersions((prev) => {
+          let next = new Map(prev);
+          divisionDetailIds.forEach((divisionId) => {
+            next = incrementVersion(next, divisionId);
+            queryClient.invalidateQueries({ queryKey: ["division-summary", divisionId] });
+          });
+          return next;
+        });
+      }
+
+      if (matchListDivisionIds.size > 0) {
+        setMatchListVersions((prev) => {
+          let next = new Map(prev);
+          matchListDivisionIds.forEach((divisionId) => {
+            next = incrementVersion(next, divisionId);
+          });
+          return next;
+        });
+      }
+
+      phaseGroupIds.forEach((phaseGroupId) => {
+        queryClient.invalidateQueries({
+          queryKey: ["matches", "phase-group", phaseGroupId],
+          exact: true,
+        });
+      });
+
+      divisionMatchIds.forEach((divisionId) => {
+        queryClient.invalidateQueries({
+          queryKey: ["matches", "division", divisionId],
+          exact: true,
+        });
+      });
+
+      if (matchIds.size > 0) {
+        setUpdatedMatchIds(matchIds);
+      }
     }
 
     ws.onmessage = (event) => {
@@ -123,16 +193,28 @@ export function TournamentUpdatesProvider({
             setTournamentVersion((value) => value + 1);
             break;
           case "DivisionUpdate":
-            setDivisionDetailVersions((prev) => incrementVersion(prev, msg.data.divisionId));
+            pendingDivisionDetailIds.current.add(msg.data.divisionId);
+            scheduleInvalidationFlush();
             break;
           case "PhaseUpdate":
-            setDivisionDetailVersions((prev) => incrementVersion(prev, msg.data.divisionId));
-            setMatchListVersions((prev) => incrementVersion(prev, msg.data.divisionId));
+            pendingDivisionDetailIds.current.add(msg.data.divisionId);
+            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
+            scheduleInvalidationFlush();
+            break;
+          case "PhaseGroupUpdate":
+            pendingPhaseGroupIds.current.add(msg.data.phaseGroupId);
+            pendingDivisionMatchIds.current.add(msg.data.divisionId);
+            pendingDivisionDetailIds.current.add(msg.data.divisionId);
+            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
+            scheduleInvalidationFlush();
             break;
           case "MatchUpdate":
             pendingMatchIds.current.add(msg.data.matchId);
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-            debounceTimer.current = setTimeout(flushMatchUpdates, 50);
+            pendingPhaseGroupIds.current.add(msg.data.phaseGroupId);
+            pendingDivisionMatchIds.current.add(msg.data.divisionId);
+            pendingDivisionDetailIds.current.add(msg.data.divisionId);
+            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
+            scheduleInvalidationFlush();
             break;
           case "UiWarning":
             toast.warn(msg.data.message);
@@ -147,7 +229,7 @@ export function TournamentUpdatesProvider({
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       ws.close();
     };
-  }, [tournamentId]);
+  }, [queryClient, tournamentId]);
 
   useEffect(() => {
     const ws = new WebSocket(scoreHubUrl());

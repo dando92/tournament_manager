@@ -1,105 +1,140 @@
-import { useEffect, useState } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Division } from "@/features/division/types/Division";
+import { PhaseGroup } from "@/features/division/types/Phase";
+import EliminationMatchesView from "@/features/match/components/bracket/EliminationMatchesView";
 import MatchCard from "@/features/match/components/MatchCard";
+import RawMatchCardsView from "@/features/match/components/RawMatchCardsView";
+import RoundRobinMatchesView from "@/features/match/components/round-robin/RoundRobinMatchesView";
 import { useMatches } from "@/features/match/services/useMatches";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
-import { MatchState } from "@/features/match/types/Match";
+import * as MatchesApi from "@/features/match/services/matches.api";
+import { Match, MatchHighlight } from "@/features/match/types/Match";
+import { useQueryClient } from "@tanstack/react-query";
 
 type MatchListProps = {
   division: Division;
   controls?: boolean;
   tournamentId?: number;
-  matchUpdateSignal?: number;
-  phaseId?: number;
-  matchStateFilter?: MatchState | "all";
+  phaseGroupId?: number;
+  phaseGroup?: PhaseGroup;
+  highlight: MatchHighlight;
+  onHighlight: (highlight: MatchHighlight) => void;
 };
 
 export default function MatchList({
   division,
   controls = false,
   tournamentId,
-  matchUpdateSignal,
-  phaseId,
-  matchStateFilter = "all",
+  phaseGroupId,
+  phaseGroup,
+  highlight,
+  onHighlight,
 }: MatchListProps) {
-  const { state, actions } = useMatches(division.id);
-  const { matchListVersions } = useTournamentUpdates();
-  const [highlightedMatchId, setHighlightedMatchId] = useState<number | null>(null);
-  const matchListVersion = matchListVersions.get(division.id) ?? 0;
+  const { state, actions } = useMatches(division.id, phaseGroupId);
+  const queryClient = useQueryClient();
+  const allMatches = state.matches;
 
-  const visibleMatches = state.matches.filter((match) => {
-    const matchState = match.state ?? "NotActive";
-    if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
-    if (phaseId !== undefined && match.phaseId !== phaseId) return false;
-    return true;
-  });
+  const phaseGroups = useMemo(
+    () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
+    [division.phases],
+  );
+  const bracketType = phaseGroup?.bracketType ?? phaseGroups.find((candidate) => candidate.id === phaseGroupId)?.bracketType ?? null;
+  const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType);
+  const usesRoundRobinTable = phaseGroupId !== undefined && isRoundRobinBracket(bracketType);
 
-  useEffect(() => {
+  const refreshMatches = () => {
     actions.list();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [division.id, matchUpdateSignal]);
+  };
 
-  useEffect(() => {
-    if (matchListVersion === 0) return;
-    actions.list();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchListVersion]);
+  const renderMatchCard = (match: Match, enablePathRowHighlight = false): ReactNode => (
+    <MatchCard
+      key={match.id}
+      controls={controls}
+      division={division}
+      allMatches={allMatches}
+      loadAdvancementTargets={
+        phaseGroupId !== undefined
+          ? () => queryClient.fetchQuery({
+              queryKey: ["matches", "division", division.id],
+              queryFn: () => MatchesApi.listByDivision(division.id),
+            })
+          : undefined
+      }
+      tournamentId={tournamentId}
+      highlight={highlight}
+      onHighlight={onHighlight}
+      enablePathRowHighlight={enablePathRowHighlight}
+      onDeleteStanding={(playerId, songId) =>
+        actions.deleteStandingsForPlayerFromMatch(match.id, playerId, songId)
+      }
+      onMatchUpdated={refreshMatches}
+      onEditMatchNotes={actions.editMatchNotes}
+      onRenameMatch={actions.renameMatch}
+      onDeleteMatch={actions.deleteMatch}
+      onAddPlayersToMatch={(entrantIds) =>
+        actions.updateMatchEntrants(match.id, entrantIds)
+      }
+      onAddSongToMatchByRoll={(group, level) =>
+        actions.addSongToMatchByRoll(match.id, division.id, group, level)
+      }
+      onAddSongToMatchBySongId={(songId) =>
+        actions.addSongToMatchBySongId(match.id, songId)
+      }
+      onEditSongToMatchByRoll={(group, level, editSongId) =>
+        actions.editSongToMatchByRoll(match.id, editSongId, division.id, group, level)
+      }
+      onEditSongToMatchBySongId={(songId, editSongId) =>
+        actions.editSongToMatchBySongId(match.id, editSongId, songId)
+      }
+      onDeleteSongFromMatch={(songId) =>
+        actions.deleteSongFromMatch(match.id, songId)
+      }
+      onAddStandingToMatch={(playerId, songId, pct, sc, fail, scoreId) =>
+        actions.addStandingToMatch(match.id, playerId, songId, pct, sc, fail, scoreId)
+      }
+      onEditStanding={(playerId, songId, pct, sc, fail, scoreId) =>
+        actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
+      }
+      onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
+      onUpdateMatchActive={actions.updateMatchActive}
+      onCommitMatchResult={actions.commitMatchResult}
+      onReopenMatchResult={actions.reopenMatchResult}
+      match={match}
+    />
+  );
 
   return (
     <div className="mt-4">
-      {visibleMatches.length === 0 ? (
+      {state.matches.length === 0 ? (
         <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
+      ) : usesRoundRobinTable ? (
+        <RoundRobinMatchesView
+          matches={state.matches}
+          phaseGroup={phaseGroup}
+          renderMatchCard={(match) => renderMatchCard(match, true)}
+        />
+      ) : usesBracketTree ? (
+        <EliminationMatchesView
+          matches={state.matches}
+          phaseGroups={phaseGroups}
+          renderMatchCard={renderMatchCard}
+        />
       ) : (
-        <div>
-          {[...visibleMatches].sort((a, b) => a.id - b.id).map((match) => (
-            <MatchCard
-              key={match.id}
-              controls={controls}
-              division={division}
-              allMatches={visibleMatches}
-              tournamentId={tournamentId}
-              matchUpdateSignal={matchUpdateSignal}
-              highlightedMatchId={highlightedMatchId}
-              onHighlightMatch={setHighlightedMatchId}
-              onDeleteStanding={(playerId, songId) =>
-                actions.deleteStandingsForPlayerFromMatch(match.id, playerId, songId)
-              }
-              onMatchUpdated={actions.list}
-              onEditMatchNotes={actions.editMatchNotes}
-              onRenameMatch={actions.renameMatch}
-              onDeleteMatch={actions.deleteMatch}
-              onAddPlayersToMatch={(entrantIds) =>
-                actions.updateMatchEntrants(match.id, entrantIds)
-              }
-              onAddSongToMatchByRoll={(group, level) =>
-                actions.addSongToMatchByRoll(match.id, division.id, group, level)
-              }
-              onAddSongToMatchBySongId={(songId) =>
-                actions.addSongToMatchBySongId(match.id, songId)
-              }
-              onEditSongToMatchByRoll={(group, level, editSongId) =>
-                actions.editSongToMatchByRoll(match.id, editSongId, division.id, group, level)
-              }
-              onEditSongToMatchBySongId={(songId, editSongId) =>
-                actions.editSongToMatchBySongId(match.id, editSongId, songId)
-              }
-              onDeleteSongFromMatch={(songId) =>
-                actions.deleteSongFromMatch(match.id, songId)
-              }
-              onAddStandingToMatch={(playerId, songId, pct, sc, fail, scoreId) =>
-                actions.addStandingToMatch(match.id, playerId, songId, pct, sc, fail, scoreId)
-              }
-              onEditStanding={(playerId, songId, pct, sc, fail, scoreId) =>
-                actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
-              }
-              onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
-              onUpdateMatchState={actions.updateMatchState}
-              onRefreshSelf={() => actions.refreshMatch(match.id)}
-              match={match}
-            />
-          ))}
-        </div>
+        <RawMatchCardsView
+          matches={state.matches}
+          renderMatchCard={(match) => renderMatchCard(match, true)}
+        />
       )}
     </div>
   );
+}
+
+function isEliminationBracket(bracketType: string | null | undefined): boolean {
+  return bracketType === "SingleElimination"
+    || bracketType === "SINGLE_ELIMINATION"
+    || bracketType === "DoubleElimination"
+    || bracketType === "DOUBLE_ELIMINATION";
+}
+
+function isRoundRobinBracket(bracketType: string | null | undefined): boolean {
+  return bracketType === "RoundRobin" || bracketType === "ROUND_ROBIN";
 }

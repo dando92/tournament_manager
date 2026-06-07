@@ -1,21 +1,19 @@
 import CreateDivisionModal from "@/features/division/modals/CreateDivisionModal";
 import CreatePhaseModal from "@/features/division/modals/CreatePhaseModal";
+import CreatePhaseGroupModal from "@/features/division/modals/CreatePhaseGroupModal";
 import GenerateBracketModal from "@/features/division/modals/GenerateBracketModal";
-import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
-import SelectDivisionForBracketModal from "@/features/tournament/components/SelectDivisionForBracketModal";
 import StartggImportModal from "@/features/tournament/modals/StartggImportModal";
 import { TournamentPageContextValue } from "@/features/tournament/context/TournamentPageContext";
-import { TournamentPageState } from "@/features/tournament/hooks/useTournamentPage";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
+import { GenerateBracketRequest, TournamentPageState } from "@/features/tournament/hooks/useTournamentPage";
 
 type TournamentManagementModalsProps = {
   context: TournamentPageContextValue;
   state: TournamentPageState;
   currentDivisionId?: number;
-  currentPhaseId: number;
+  currentPhaseId?: number;
   onCreatePhase: (name: string, divisionId: number) => Promise<void>;
-  onCreateMatch: (request: CreateMatchRequest) => Promise<void>;
-  onGenerateBracket: (bracketType: string, playerPerMatch: number) => Promise<void>;
+  onCreatePhaseGroup: (name: string, phaseId: number) => Promise<void>;
+  onGenerateBracket: (request: GenerateBracketRequest) => Promise<void>;
 };
 
 export default function TournamentManagementModals({
@@ -24,12 +22,10 @@ export default function TournamentManagementModals({
   currentDivisionId,
   currentPhaseId,
   onCreatePhase,
-  onCreateMatch,
+  onCreatePhaseGroup,
   onGenerateBracket,
 }: TournamentManagementModalsProps) {
-  const currentDivision = currentDivisionId
-    ? state.divisions.find((division) => division.id === currentDivisionId)
-    : undefined;
+  const currentDivision = state.divisions.find((division) => division.id === currentDivisionId);
 
   return (
     <>
@@ -45,28 +41,18 @@ export default function TournamentManagementModals({
         divisionId={currentDivisionId}
         onCreate={onCreatePhase}
       />
-      <CreateMatchModal
-        open={state.createMatchOpen}
-        onClose={() => state.setCreateMatchOpen(false)}
-        onCreate={onCreateMatch}
-        divisionId={currentDivisionId}
-        phaseId={currentPhaseId > 0 ? currentPhaseId : undefined}
-        phases={currentDivision?.phases}
-        divisions={state.divisions}
-        tournamentId={context.tournamentId}
-      />
-      <SelectDivisionForBracketModal
-        open={state.selectDivisionOpen}
-        divisions={state.divisions}
-        onClose={() => state.setSelectDivisionOpen(false)}
-        onSelect={(divisionId) => {
-          state.setSelectDivisionOpen(false);
-          state.setGenerateBracketDivisionId(divisionId);
-        }}
+      <CreatePhaseGroupModal
+        open={state.createPhaseGroupOpen}
+        onClose={() => state.setCreatePhaseGroupOpen(false)}
+        phases={(currentDivision?.phases ?? []).map((phase) => ({ id: phase.id, name: phase.name }))}
+        phaseId={currentPhaseId}
+        onCreate={onCreatePhaseGroup}
       />
       <GenerateBracketModal
-        open={state.generateBracketDivisionId !== null}
-        onClose={() => state.setGenerateBracketDivisionId(null)}
+        open={state.generateBracketOpen}
+        onClose={() => state.setGenerateBracketOpen(false)}
+        divisions={state.divisions}
+        currentDivisionId={currentDivisionId}
         bracketTypes={state.bracketTypes}
         onGenerate={onGenerateBracket}
       />

@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
   faDiagramProject,
-  faDice,
   faLink,
   faLayerGroup,
   faPlus,
@@ -15,12 +14,14 @@ type Props = {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   showCreateDivision: boolean;
+  showCreatePhaseGroup: boolean;
   hasDivisions: boolean;
-  hasPhases: boolean;
+  hasCurrentDivisionPhases: boolean;
+  hasStartggApiKey: boolean;
   onCreateDivision: () => void;
   onGenerateBracket: () => void;
   onCreatePhase: () => void;
-  onCreateMatch: () => void;
+  onCreatePhaseGroup: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
@@ -28,12 +29,14 @@ export default function TournamentHeaderCreateMenu({
   open,
   setOpen,
   showCreateDivision,
+  showCreatePhaseGroup,
   hasDivisions,
-  hasPhases,
+  hasCurrentDivisionPhases,
+  hasStartggApiKey,
   onCreateDivision,
   onGenerateBracket,
   onCreatePhase,
-  onCreateMatch,
+  onCreatePhaseGroup,
   onOpenParticipantsManageModal,
 }: Props) {
   return (
@@ -65,11 +68,14 @@ export default function TournamentHeaderCreateMenu({
             )}
             <button
               type="button"
+              disabled={!hasStartggApiKey}
+              title={hasStartggApiKey ? undefined : "Configure the start.gg API key before importing"}
               onClick={() => {
+                if (!hasStartggApiKey) return;
                 setOpen(false);
                 onOpenParticipantsManageModal("startgg");
               }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
               Import from start.gg
@@ -98,18 +104,20 @@ export default function TournamentHeaderCreateMenu({
               <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
               Phase
             </button>
-            <button
-              type="button"
-              disabled={!hasPhases}
-              onClick={() => {
-                setOpen(false);
-                onCreateMatch();
-              }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <FontAwesomeIcon icon={faDice} className="text-primary-dark" />
-              Match
-            </button>
+            {showCreatePhaseGroup && (
+              <button
+                type="button"
+                disabled={!hasCurrentDivisionPhases}
+                onClick={() => {
+                  setOpen(false);
+                  onCreatePhaseGroup();
+                }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
+                Phase group
+              </button>
+            )}
           </div>
         </>
       )}

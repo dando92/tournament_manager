@@ -5,6 +5,7 @@ export const TOURNAMENT_TABS = [
   { key: "lobbies", label: "Lobbies" },
   { key: "live", label: "Live" },
   { key: "stats", label: "Stats" },
+  { key: "configuration", label: "Configuration" },
 ] as const;
 
 export type TournamentTabKey = (typeof TOURNAMENT_TABS)[number]["key"];

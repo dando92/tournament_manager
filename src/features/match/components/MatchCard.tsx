@@ -1,24 +1,28 @@
-import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import StandingModal from "@/features/match/modals/StandingModal";
 import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
+import { getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
+import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
 type MatchCardProps = {
   division: Division;
   match: Match;
   allMatches: Match[];
+  loadAdvancementTargets?: () => Promise<Match[]>;
   controls?: boolean;
   tournamentId?: number;
-  matchUpdateSignal?: number;
-  highlightedMatchId?: number | null;
-  onHighlightMatch?: (id: number | null) => void;
+  highlight?: MatchHighlight;
+  onHighlight?: (highlight: MatchHighlight) => void;
+  enablePathRowHighlight?: boolean;
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
@@ -47,8 +51,9 @@ type MatchCardProps = {
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
-  onUpdateMatchState?: (matchId: number, state: MatchState) => Promise<void>;
-  onRefreshSelf?: () => void;
+  onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
+  onCommitMatchResult?: (matchId: number, playerPoints?: MatchPlayerPointsRequest[]) => Promise<void>;
+  onReopenMatchResult?: (matchId: number) => Promise<void>;
 };
 
 type StandingModalState = {
@@ -77,11 +82,12 @@ export default function MatchCard({
   division,
   match,
   allMatches,
+  loadAdvancementTargets,
   controls = false,
   tournamentId,
-  matchUpdateSignal,
-  highlightedMatchId = null,
-  onHighlightMatch = () => {},
+  highlight = { matchId: null, phaseGroupId: null },
+  onHighlight = () => {},
+  enablePathRowHighlight = false,
   onMatchUpdated,
   onDeleteMatch,
   onAddPlayersToMatch,
@@ -96,8 +102,9 @@ export default function MatchCard({
   onDeleteStanding,
   onEditStanding,
   onUpdateMatchAdvancementRules,
-  onUpdateMatchState,
-  onRefreshSelf,
+  onUpdateMatchActive,
+  onCommitMatchResult,
+  onReopenMatchResult,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
   const [addPlayersToMatchModalOpen, setAddPlayersToMatchModalOpen] = useState(false);
@@ -105,71 +112,79 @@ export default function MatchCard({
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [pendingAdvancementRules, setPendingAdvancementRules] = useState<(MatchAdvancementRuleInput | null)[]>([]);
-
-  const onMatchUpdatedRef = useRef(onMatchUpdated);
-  useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
-
-  useEffect(() => {
-    if (!matchUpdateSignal) return;
-    onMatchUpdatedRef.current();
-  }, [matchUpdateSignal]);
+  const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
+  const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
+  const [manualPoints, setManualPoints] = useState<Record<number, number>>({});
 
   const cardRef = useRef<HTMLDivElement>(null);
-  const { updatedMatchIds } = useTournamentUpdates();
-  const onRefreshSelfRef = useRef(onRefreshSelf);
-  useEffect(() => { onRefreshSelfRef.current = onRefreshSelf; });
-  useEffect(() => {
-    if (updatedMatchIds.has(match.id)) onRefreshSelfRef.current?.();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updatedMatchIds]);
 
-  const maxPlayersPerMatch = division.playersPerMatch ?? 2;
-  const isHighlighted = match.id === highlightedMatchId;
-  const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
+  const isHighlighted = match.id === highlight.matchId;
+  const commitState = getMatchCommitState(match, manualPoints);
+  const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
 
   function enterEditMode() {
-    const initial: (number | null)[] = Array.from({ length: maxPlayersPerMatch }, (_, i) => {
-      const rule = (match.advancementRules ?? []).find(
-        (candidate) => candidate.sourceKind === "match" && candidate.sourceId === match.id && candidate.sourcePlacement === i + 1,
-      );
-      return rule ? rule.targetId : null;
-    });
-    setPendingAdvancementRules(initial.map((targetId, index) => targetId
-      ? { sourcePlacement: index + 1, targetId, targetSlot: index + 1 }
-      : null,
-    ));
+    setPendingAdvancementRules(
+      (match.advancementRules ?? [])
+        .filter((rule) => rule.sourceKind === "match" && rule.sourceId === match.id)
+        .map((rule) => ({
+          sourcePlacement: rule.sourcePlacement,
+          targetKind: rule.targetKind,
+          targetId: rule.targetId,
+          targetSlot: rule.targetSlot,
+        })),
+    );
+    setAdvancementTargetMatches(allMatches);
     setEditMode(true);
+    loadAdvancementTargets?.()
+      .then(setAdvancementTargetMatches)
+      .catch(() => setAdvancementTargetMatches(allMatches));
   }
 
   function cancelEditMode() {
     setEditMode(false);
     setPendingAdvancementRules([]);
+    setAdvancementTargetMatches(null);
   }
 
   async function saveEditMode() {
-    const rules = pendingAdvancementRules.filter((rule): rule is MatchAdvancementRuleInput => Boolean(rule));
     if (onUpdateMatchAdvancementRules) {
-      await onUpdateMatchAdvancementRules(match.id, rules);
+      await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
     }
-    onMatchUpdatedRef.current();
+    onMatchUpdated();
     setEditMode(false);
     setPendingAdvancementRules([]);
+    setAdvancementTargetMatches(null);
   }
 
-  async function toggleCurrentMatch() {
+  function openAddSong() {
+    if (match.matchResult) return;
+    if (match.rounds.length === 0 && hasManualDraftPoints) {
+      const confirmed = window.confirm("Manual points will be reset before adding songs. Continue?");
+      if (!confirmed) return;
+      setManualPoints({});
+    }
+    setAddSongToMatchModalOpen(true);
+  }
+
+  async function toggleActive() {
     if (!controls) return;
+    await onUpdateMatchActive?.(match.id, !match.active);
+  }
 
-    const nextStateByState: Record<MatchState, MatchState> = {
-      NotActive: "Active",
-      Active: "NotActive",
-      Pending: "Completed",
-      Completed: "Pending",
-    };
-    const currentState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
-    const nextState = nextStateByState[currentState];
+  async function commitOrReopenMatch() {
+    if (!controls || commitState === "Disabled") return;
 
-    await onUpdateMatchState?.(match.id, nextState);
+    if (commitState === "Completed") {
+      await onReopenMatchResult?.(match.id);
+      setManualPoints({});
+      return;
+    }
+
+    const playerPoints = match.rounds.length === 0
+      ? entrantPlayers(match.entrants).map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
+      : undefined;
+    await onCommitMatchResult?.(match.id, playerPoints);
+    setManualPoints({});
   }
 
   return (
@@ -226,51 +241,65 @@ export default function MatchCard({
         controls={controls}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
-        onOpenAddSong={() => setAddSongToMatchModalOpen(true)}
+        onOpenAddSong={openAddSong}
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
         onRenameMatch={onRenameMatch}
-        editMode={editMode}
-        canEditAdvancementRules={controls}
+        canEditAdvancementRules={controls && !editMode}
         onEditAdvancementRules={enterEditMode}
-        onSaveAdvancementRules={saveEditMode}
-        onCancelAdvancementRules={cancelEditMode}
       />
 
-      <MatchTable
-        match={match}
-        allMatches={allMatches}
-        maxPlayersPerMatch={maxPlayersPerMatch}
-        controls={controls}
-        editMode={editMode}
-        highlightedMatchId={highlightedMatchId}
-        onHighlightMatch={onHighlightMatch}
-        pendingAdvancementRules={pendingAdvancementRules}
-        onPendingAdvancementRuleChange={(index, value) => {
-          setPendingAdvancementRules((prev) => {
-            const next = [...prev];
-            next[index] = value;
-            return next;
-          });
-        }}
-        onDeleteSong={onDeleteSongFromMatch}
-        onDeletePlayer={(entrantId) =>
-          onAddPlayersToMatch(
-            (match.entrants ?? [])
-              .filter((entrant) => entrant.id !== entrantId)
-              .map((entrant) => entrant.id),
-          )
-        }
-        onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
-          setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
-        }
-        onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
-          setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
-        }
-        onDeleteStanding={onDeleteStanding}
-      />
+      {editMode && (
+        <AdvancementRulesEditor
+          sourceKind="match"
+          sourceId={match.id}
+          rules={pendingAdvancementRules}
+          division={division}
+          allMatches={advancementTargetMatches ?? allMatches}
+          onChange={setPendingAdvancementRules}
+          onSave={saveEditMode}
+          onCancel={cancelEditMode}
+        />
+      )}
+
+      {!editMode && (
+        <MatchTable
+          match={match}
+          division={division}
+          allMatches={allMatches}
+          controls={controls}
+          highlight={highlight}
+          onHighlight={onHighlight}
+          enablePathRowHighlight={enablePathRowHighlight}
+          onDeleteSong={onDeleteSongFromMatch}
+          onDeletePlayer={(entrantId) =>
+            onAddPlayersToMatch(
+              (match.entrants ?? [])
+                .filter((entrant) => entrant.id !== entrantId)
+                .map((entrant) => entrant.id),
+            )
+          }
+          onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
+            setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
+          }
+          onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
+            setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
+          }
+          onDeleteStanding={onDeleteStanding}
+          manualPoints={manualPoints}
+          onManualPointsChange={(playerId, points) =>
+            setManualPoints((current) => ({ ...current, [playerId]: points }))
+          }
+        />
+      )}
 
       {controls && !editMode && (
-        <MatchFooter state={matchState} onToggleState={toggleCurrentMatch} />
+        <MatchFooter
+          active={match.active}
+          activeDisabled={Boolean(match.matchResult && !match.active)}
+          commitState={commitState}
+          onToggleActive={toggleActive}
+          onCommitOrReopen={commitOrReopenMatch}
+        />
       )}
     </div>
   );

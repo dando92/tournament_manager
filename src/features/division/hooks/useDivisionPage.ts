@@ -1,35 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Division } from "@/features/division/types/Division";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 
 type UseDivisionPageResult = {
   division: Division | null;
   refreshDivision: () => Promise<void>;
 };
 
-export function useDivisionPage(tournamentId: number, divisionId: number): UseDivisionPageResult {
-  const { divisionDetailVersions, matchListVersions } = useTournamentUpdates();
-  const [division, setDivision] = useState<Division | null>(null);
-  const divisionDetailVersion = divisionDetailVersions.get(divisionId) ?? 0;
-  const matchListVersion = matchListVersions.get(divisionId) ?? 0;
+export function useDivisionPage(_tournamentId: number, divisionId: number): UseDivisionPageResult {
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ["division-summary", divisionId] as const, [divisionId]);
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const response = await axios.get<Division>(`divisions/${divisionId}/summary`);
+      return response.data;
+    },
+  });
 
   const refreshDivision = useCallback(async () => {
-    const response = await axios.get<Division>(`divisions/${divisionId}/summary`);
-    setDivision(response.data);
-  }, [divisionId]);
-
-  useEffect(() => {
-    refreshDivision().catch(() => {});
-  }, [location.search, refreshDivision]);
-
-  useEffect(() => {
-    if (divisionDetailVersion === 0 && matchListVersion === 0) return;
-    refreshDivision().catch(() => {});
-  }, [divisionDetailVersion, matchListVersion, refreshDivision, tournamentId]);
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
-    division,
+    division: query.data ?? null,
     refreshDivision,
   };
 }

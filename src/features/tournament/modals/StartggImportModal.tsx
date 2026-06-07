@@ -1,15 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
-import { Tournament } from "@/features/tournament/types/Tournament";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
 import {
   importStartggEvent,
-  importTournamentStartggEvent,
   previewStartggImport,
-  previewTournamentStartggImport,
 } from "@/features/tournament/services/startgg.api";
 import { StartggImportPreviewResponse } from "@/features/tournament/types/StartggImport";
 
@@ -63,10 +58,7 @@ export default function StartggImportModal({
   fixedTournamentName,
   onImported,
 }: Props) {
-  const { canEditTournament, isAdmin } = usePermissions();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [eventSlug, setEventSlug] = useState("");
-  const [selectedTournamentId, setSelectedTournamentId] = useState<number | "">("");
   const [preview, setPreview] = useState<StartggImportPreviewResponse | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -75,40 +67,20 @@ export default function StartggImportModal({
     if (!open) {
       setPreview(null);
       setEventSlug("");
-      setSelectedTournamentId(fixedTournamentId ?? "");
       return;
-    }
-
-    setSelectedTournamentId(fixedTournamentId ?? "");
-
-    if (!fixedTournamentId) {
-      axios.get<Tournament[]>("tournaments/public")
-        .then((response) => setTournaments(response.data))
-        .catch(() => {
-          setTournaments([]);
-        });
     }
   }, [fixedTournamentId, open]);
 
   useEffect(() => {
     setPreview(null);
-  }, [eventSlug, selectedTournamentId]);
-
-  const availableTournaments = useMemo(
-    () => tournaments.filter((tournament) => isAdmin || canEditTournament(tournament.id)),
-    [canEditTournament, isAdmin, tournaments],
-  );
-
-  const resolvedTournamentId = fixedTournamentId ?? (selectedTournamentId === "" ? null : Number(selectedTournamentId));
+  }, [eventSlug]);
 
   async function handlePreview() {
-    if (!eventSlug.trim()) return;
+    if (!eventSlug.trim() || !fixedTournamentId) return;
 
     setLoadingPreview(true);
     try {
-      const response = resolvedTournamentId
-        ? await previewTournamentStartggImport(resolvedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" })
-        : await previewStartggImport({ eventSlug: eventSlug.trim(), mode: "create-division" });
+      const response = await previewStartggImport(fixedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" });
       setPreview(response);
     } catch {
       toast.error("Failed to preview start.gg import.");
@@ -118,17 +90,11 @@ export default function StartggImportModal({
   }
 
   async function handleImport() {
-    if (!eventSlug.trim() || !resolvedTournamentId) return;
+    if (!eventSlug.trim() || !fixedTournamentId) return;
 
     setSubmitting(true);
     try {
-      const response = fixedTournamentId
-        ? await importTournamentStartggEvent(fixedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" })
-        : await importStartggEvent({
-            eventSlug: eventSlug.trim(),
-            targetTournamentId: resolvedTournamentId,
-            mode: "create-division",
-          });
+      const response = await importStartggEvent(fixedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" });
       toast.success("start.gg import completed.");
       await onImported?.({ tournamentId: response.tournamentId, divisionId: response.divisionId });
       onClose();
@@ -151,7 +117,7 @@ export default function StartggImportModal({
         <button
           type="button"
           onClick={handleImport}
-          disabled={submitting || !preview || !resolvedTournamentId}
+          disabled={submitting || !preview || !fixedTournamentId}
           className={`${btnPrimary} text-sm`}
         >
           {submitting ? "Importing..." : "Confirm import"}
@@ -177,32 +143,11 @@ export default function StartggImportModal({
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-gray-800">Target tournament</label>
-            {fixedTournamentId ? (
-              <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                {fixedTournamentName ?? `Tournament #${fixedTournamentId}`}
-              </div>
-            ) : (
-              <select
-                value={selectedTournamentId}
-                onChange={(event) => setSelectedTournamentId(event.target.value ? Number(event.target.value) : "")}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-dark/30"
-              >
-                <option value="">Select a tournament</option>
-                {availableTournaments.map((tournament) => (
-                  <option key={tournament.id} value={tournament.id}>
-                    {tournament.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {fixedTournamentName ?? `Tournament #${fixedTournamentId}`}
+            </div>
           </div>
         </div>
-
-        {!fixedTournamentId && availableTournaments.length === 0 && (
-          <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            No editable tournaments are available for import.
-          </p>
-        )}
 
         {preview && (
           <div className="flex flex-col gap-4">

@@ -1,12 +1,11 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Participant } from "@/features/entrant/types/Entrant";
+import EntrantMembershipRow from "@/features/division/components/EntrantMembershipRow";
 
 type PlayersByNameListProps = {
   players: Participant[];
   canEdit: boolean;
   divisionParticipantIds: Set<number>;
-  seedPos: (participantId: number) => number | null;
+  onAdd: (participant: Participant) => void;
   onRemove: (participantId: number) => void;
   totalParticipants: number;
 };
@@ -15,7 +14,7 @@ export default function PlayersByNameList({
   players,
   canEdit,
   divisionParticipantIds,
-  seedPos,
+  onAdd,
   onRemove,
   totalParticipants,
 }: PlayersByNameListProps) {
@@ -31,31 +30,16 @@ export default function PlayersByNameList({
     <div className="flex flex-col gap-1">
       {players.map((participant) => {
         const inDivision = divisionParticipantIds.has(participant.id);
-        const pos = inDivision ? seedPos(participant.id) : null;
 
         return (
-          <div
+          <EntrantMembershipRow
             key={participant.id}
-            className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded text-sm"
-          >
-            <div className="flex items-center gap-2">
-              {pos !== null ? (
-                <span className="text-xs font-bold text-primary-dark w-7 shrink-0">#{pos}</span>
-              ) : (
-                <span className="w-7 shrink-0" />
-              )}
-              <span className={inDivision ? "" : "text-gray-400"}>{participant.player.playerName}</span>
-            </div>
-            {canEdit && inDivision && (
-                <button
-                  onClick={() => onRemove(participant.id)}
-                  className="text-red-500 hover:text-red-700 ml-2"
-                  title="Remove entrant"
-                >
-                  <FontAwesomeIcon icon={faMinus} />
-                </button>
-            )}
-          </div>
+            name={participant.player.playerName}
+            present={inDivision}
+            canEdit={canEdit}
+            onAdd={() => onAdd(participant)}
+            onRemove={() => onRemove(participant.id)}
+          />
         );
       })}
     </div>

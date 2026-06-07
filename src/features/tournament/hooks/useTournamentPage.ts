@@ -4,41 +4,53 @@ import axios from "axios";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
-import * as MatchesApi from "@/features/match/services/matches.api";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { TournamentOverview } from "@/features/tournament/types/TournamentOverview";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
-import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
+import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 
 type UseTournamentPageOptions = {
   tournamentId: number;
   canControl: boolean;
 };
 
+export type GenerateBracketRequest = {
+  divisionId: number;
+  phaseName?: string;
+  bracketType: string;
+  playerPerMatch: number;
+};
+
+export type GenerateBracketResult = {
+  divisionId: number;
+  phaseId: number;
+  phaseGroupId: number;
+};
+
 export type TournamentPageState = {
   divisions: TournamentDivisionOption[];
   tournamentName: string;
   syncstartUrl: string;
+  hasStartggApiKey: boolean;
   createDivisionOpen: boolean;
-  selectDivisionOpen: boolean;
   createPhaseOpen: boolean;
-  createMatchOpen: boolean;
-  generateBracketDivisionId: number | null;
-  bracketTypes: string[];
+  createPhaseGroupOpen: boolean;
+  generateBracketOpen: boolean;
   createMenuOpen: boolean;
+  bracketTypes: string[];
   setCreateDivisionOpen: Dispatch<SetStateAction<boolean>>;
-  setSelectDivisionOpen: Dispatch<SetStateAction<boolean>>;
   setCreatePhaseOpen: Dispatch<SetStateAction<boolean>>;
-  setCreateMatchOpen: Dispatch<SetStateAction<boolean>>;
-  setGenerateBracketDivisionId: Dispatch<SetStateAction<number | null>>;
+  setCreatePhaseGroupOpen: Dispatch<SetStateAction<boolean>>;
+  setGenerateBracketOpen: Dispatch<SetStateAction<boolean>>;
   setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
+  setTournamentName: Dispatch<SetStateAction<string>>;
   setSyncstartUrl: Dispatch<SetStateAction<string>>;
+  setHasStartggApiKey: Dispatch<SetStateAction<boolean>>;
   refreshDivisions: () => Promise<void>;
-  handleCreateDivision: (name: string, playersPerMatch: number | null) => void;
+  handleCreateDivision: (name: string) => void;
   handleCreatePhase: (name: string, divisionId: number) => Promise<void>;
-  handleCreateMatch: (request: CreateMatchRequest) => Promise<void>;
-  handleGenerateBracket: (bracketType: string, playerPerMatch: number) => Promise<void>;
+  handleCreatePhaseGroup: (name: string, phaseId: number) => Promise<{ divisionId: number; phaseId: number }>;
+  handleGenerateBracket: (request: GenerateBracketRequest) => Promise<GenerateBracketResult>;
 };
 
 export function useTournamentPage({
@@ -49,40 +61,16 @@ export function useTournamentPage({
   const [divisions, setDivisions] = useState<TournamentDivisionOption[]>([]);
   const [tournamentName, setTournamentName] = useState("");
   const [syncstartUrl, setSyncstartUrl] = useState("");
+  const [hasStartggApiKey, setHasStartggApiKey] = useState(false);
   const [createDivisionOpen, setCreateDivisionOpen] = useState(false);
-  const [selectDivisionOpen, setSelectDivisionOpen] = useState(false);
   const [createPhaseOpen, setCreatePhaseOpen] = useState(false);
-  const [createMatchOpen, setCreateMatchOpen] = useState(false);
-  const [generateBracketDivisionId, setGenerateBracketDivisionId] = useState<number | null>(null);
-  const [bracketTypes, setBracketTypes] = useState<string[]>([]);
+  const [createPhaseGroupOpen, setCreatePhaseGroupOpen] = useState(false);
+  const [generateBracketOpen, setGenerateBracketOpen] = useState(false);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [bracketTypes, setBracketTypes] = useState<string[]>([]);
   const previousDivisionDetailVersions = useRef<ReadonlyMap<number, number>>(new Map());
   const previousMatchListVersions = useRef<ReadonlyMap<number, number>>(new Map());
-
-  const toDivisionOption = useCallback((division: Division): TournamentDivisionOption => ({
-    id: division.id,
-    name: division.name,
-    playersPerMatch: division.playersPerMatch ?? null,
-    entrants: division.entrants ?? [],
-    phases: (division.phases ?? []).map((phase) => ({
-      id: phase.id,
-      name: phase.name,
-      matchCount: phase.matches?.length ?? 0,
-    })),
-  }), []);
-
-  const mergeDivisionOption = useCallback((nextDivision: TournamentDivisionOption) => {
-    setDivisions((prev) => {
-      const index = prev.findIndex((division) => division.id === nextDivision.id);
-      if (index === -1) {
-        return [...prev, nextDivision];
-      }
-
-      const next = [...prev];
-      next[index] = nextDivision;
-      return next;
-    });
-  }, []);
+  const overviewRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshDivisions = useCallback(async () => {
     const response = await axios.get<TournamentOverview>(`tournaments/${tournamentId}/overview`);
@@ -90,17 +78,20 @@ export function useTournamentPage({
       response.data.divisions.map((division) => ({
         id: division.id,
         name: division.name,
-        playersPerMatch: division.playersPerMatch ?? null,
         entrants: division.entrants,
-        phases: division.phases.map((phase) => ({ id: phase.id, name: phase.name, matchCount: phase.matchCount })),
+        phases: division.phases.map((phase) => ({
+          id: phase.id,
+          name: phase.name,
+          matchCount: phase.matchCount,
+          phaseGroups: phase.phaseGroups ?? [],
+        })),
       })),
     );
   }, [tournamentId]);
 
-  const refreshDivision = useCallback(async (divisionId: number) => {
-    const response = await axios.get<Division>(`divisions/${divisionId}`);
-    mergeDivisionOption(toDivisionOption(response.data));
-  }, [mergeDivisionOption, toDivisionOption]);
+  const refreshDivision = useCallback(async (_divisionId: number) => {
+    await refreshDivisions();
+  }, [refreshDivisions]);
 
   useEffect(() => {
     axios
@@ -113,23 +104,31 @@ export function useTournamentPage({
       })
       .catch(() => {});
 
+    if (canControl) {
+      axios
+        .get<{ hasStartggApiKey: boolean }>(`tournaments/${tournamentId}/startgg/api-key-status`)
+        .then((response) => setHasStartggApiKey(response.data.hasStartggApiKey))
+        .catch(() => setHasStartggApiKey(false));
+    }
+
     refreshDivisions().catch(() => {});
     return () => {
+      if (overviewRefreshTimer.current) clearTimeout(overviewRefreshTimer.current);
       document.title = "Tournament Manager";
     };
-  }, [refreshDivisions, tournamentId]);
-
-  useEffect(() => {
-    if (!canControl) return;
-    axios.get<string[]>("bracket/bracket-types")
-      .then((r) => setBracketTypes(r.data))
-      .catch(() => {});
-  }, [canControl]);
+  }, [canControl, refreshDivisions, tournamentId]);
 
   useEffect(() => {
     if (tournamentVersion === 0) return;
     refreshDivisions().catch(() => {});
   }, [refreshDivisions, tournamentVersion]);
+
+  useEffect(() => {
+    if (!canControl) return;
+    axios.get<string[]>("bracket/bracket-types")
+      .then((response) => setBracketTypes(response.data))
+      .catch(() => {});
+  }, [canControl]);
 
   useEffect(() => {
     const changedDivisionIds = new Set<number>();
@@ -151,27 +150,16 @@ export function useTournamentPage({
 
     if (changedDivisionIds.size === 0) return;
 
-    changedDivisionIds.forEach((divisionId) => {
-      refreshDivision(divisionId).catch(() => {});
-    });
-  }, [divisionDetailVersions, matchListVersions, refreshDivision]);
+    if (overviewRefreshTimer.current) clearTimeout(overviewRefreshTimer.current);
+    overviewRefreshTimer.current = setTimeout(() => {
+      refreshDivisions().catch(() => {});
+    }, 100);
+  }, [divisionDetailVersions, matchListVersions, refreshDivisions]);
 
-  const handleGenerateBracket = useCallback(async (bracketType: string, playerPerMatch: number) => {
-    if (!generateBracketDivisionId) return;
-    await axios.post(`bracket/divisions/${generateBracketDivisionId}/generate-bracket`, {
-      bracketType,
-      tournamentId,
-      playerPerMatch,
-    });
-    await refreshDivision(generateBracketDivisionId);
-    setGenerateBracketDivisionId(null);
-  }, [generateBracketDivisionId, refreshDivision, tournamentId]);
-
-  const handleCreateDivision = useCallback((name: string, playersPerMatch: number | null) => {
-    axios.post<{ id: number; name: string; playersPerMatch: number | null }>("divisions", {
+  const handleCreateDivision = useCallback((name: string) => {
+    axios.post<{ id: number; name: string }>("divisions", {
       tournamentId,
       name,
-      playersPerMatch,
     })
       .then((r) => {
         setDivisions((prev) => [
@@ -179,7 +167,6 @@ export function useTournamentPage({
           {
             id: r.data.id,
             name: r.data.name,
-            playersPerMatch: r.data.playersPerMatch ?? null,
             entrants: [],
             phases: [],
           },
@@ -195,59 +182,71 @@ export function useTournamentPage({
         division.id === divisionId
           ? {
               ...division,
-              phases: [...division.phases, { id: response.data.id, name: response.data.name, matchCount: 0 }],
+              phases: [...division.phases, {
+                id: response.data.id,
+                name: response.data.name,
+                matchCount: 0,
+                phaseGroups: response.data.phaseGroups ?? [],
+              }],
             }
           : division,
       ),
     );
   }, []);
 
-  const handleCreateMatch = useCallback(async (request: CreateMatchRequest) => {
-    await MatchesApi.create(request);
-    const divisionId = request.divisionId;
-    if (!divisionId) return;
+  const handleCreatePhaseGroup = useCallback(async (name: string, phaseId: number) => {
+    const phaseDivision = divisions.find((division) => division.phases.some((phase) => phase.id === phaseId));
+    await createPhaseGroup(phaseId, { name });
+    if (phaseDivision) {
+      await refreshDivision(phaseDivision.id);
+    }
+    return {
+      divisionId: phaseDivision?.id ?? 0,
+      phaseId,
+    };
+  }, [divisions, refreshDivision]);
 
-    setDivisions((prev) =>
-      prev.map((division) =>
-        division.id === divisionId
-          ? {
-              ...division,
-              phases: division.phases.map((phase) =>
-                phase.id === request.phaseId
-                  ? {
-                      ...phase,
-                      matchCount: phase.matchCount + 1,
-                    }
-                  : phase,
-              ),
-            }
-          : division,
-      ),
+  const handleGenerateBracket = useCallback(async (request: GenerateBracketRequest): Promise<GenerateBracketResult> => {
+    const response = await axios.post<{ phaseId: number; phaseGroupId: number }>(
+      `divisions/${request.divisionId}/generate-bracket`,
+      {
+        phaseName: request.phaseName,
+        bracketType: request.bracketType,
+        playerPerMatch: request.playerPerMatch,
+      },
     );
-  }, []);
+    await refreshDivision(request.divisionId);
+    setGenerateBracketOpen(false);
+    return {
+      divisionId: request.divisionId,
+      phaseId: response.data.phaseId,
+      phaseGroupId: response.data.phaseGroupId,
+    };
+  }, [refreshDivision]);
 
   return {
     divisions,
     tournamentName,
     syncstartUrl,
+    hasStartggApiKey,
     createDivisionOpen,
-    selectDivisionOpen,
     createPhaseOpen,
-    createMatchOpen,
-    generateBracketDivisionId,
-    bracketTypes,
+    createPhaseGroupOpen,
+    generateBracketOpen,
     createMenuOpen,
+    bracketTypes,
     setCreateDivisionOpen,
-    setSelectDivisionOpen,
     setCreatePhaseOpen,
-    setCreateMatchOpen,
-    setGenerateBracketDivisionId,
+    setCreatePhaseGroupOpen,
+    setGenerateBracketOpen,
     setCreateMenuOpen,
+    setTournamentName,
     setSyncstartUrl,
+    setHasStartggApiKey,
     refreshDivisions,
     handleCreateDivision,
     handleCreatePhase,
-    handleCreateMatch,
+    handleCreatePhaseGroup,
     handleGenerateBracket,
   };
 }

@@ -17,8 +17,9 @@ type MatchRowProps = {
   hasRoute?: boolean;
   isRouteSelected?: boolean;
   routeTargetMatchId?: number | null;
+  routeTargetLabel?: string;
   canClearRouteHighlight?: boolean;
-  onToggleRouteHighlight?: (matchId: number) => void;
+  onToggleRouteHighlight?: () => void;
   onClearRouteHighlight?: () => void;
   onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
   onDeletePlayer?: (playerId: number) => void;
@@ -43,6 +44,7 @@ export default function MatchRow({
   hasRoute = false,
   isRouteSelected = false,
   routeTargetMatchId = null,
+  routeTargetLabel,
   canClearRouteHighlight = false,
   onToggleRouteHighlight,
   onClearRouteHighlight,
@@ -80,7 +82,7 @@ export default function MatchRow({
       } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-emerald-50" : ""}`}
       onClick={() => {
         if (canToggleRoute && routeTargetMatchId) {
-          onToggleRouteHighlight?.(routeTargetMatchId);
+          onToggleRouteHighlight?.();
           return;
         }
         if (canClearRouteHighlight) onClearRouteHighlight?.();
@@ -100,7 +102,12 @@ export default function MatchRow({
       <td className="px-3 py-2">
         <div className="flex items-center gap-2 relative">
           <div className="flex items-center gap-2 min-w-0">
-            <span className={`font-medium truncate ${hasRoute ? "text-emerald-700" : "text-gray-800"}`}>{player.playerName}</span>
+            <span
+              className={`font-medium truncate ${hasRoute ? "text-emerald-700" : "text-gray-800"}`}
+              title={routeTargetLabel}
+            >
+              {player.playerName}
+            </span>
           </div>
         </div>
       </td>

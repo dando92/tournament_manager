@@ -14,6 +14,7 @@ import TournamentSongsPage from "@/features/tournament/pages/TournamentSongsPage
 import TournamentLobbiesPage from "@/features/tournament/pages/TournamentLobbiesPage";
 import TournamentLivePage from "@/features/tournament/pages/TournamentLivePage";
 import TournamentStatsPage from "@/features/tournament/pages/TournamentStatsPage";
+import TournamentConfigurationPage from "@/features/tournament/pages/TournamentConfigurationPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import AccountInfoPage from "@/pages/AccountInfoPage";
@@ -64,6 +65,7 @@ export default function AppRouter() {
               <Route path="lobbies" element={<TournamentLobbiesPage />} />
               <Route path="live" element={<TournamentLivePage />} />
               <Route path="stats" element={<TournamentStatsPage />} />
+              <Route path="configuration" element={<TournamentConfigurationPage />} />
               <Route path="division/:divisionId" element={<DivisionPage />}>
                 <Route index element={<Navigate to="phases" replace />} />
                 <Route path="phases" element={<DivisionPhasesPage />} />

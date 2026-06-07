@@ -5,12 +5,15 @@ import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { Tournament } from "@/features/tournament/types/Tournament";
+import { getPhaseGroup } from "@/features/division/services/phase-groups.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
   onClose: () => void;
   onCreate: (request: CreateMatchRequest) => void;
   phaseId?: number;
+  phaseGroupId?: number;
   phases?: MatchPhaseOption[];
   divisionId?: number;
   divisions?: TournamentDivisionOption[];
@@ -22,6 +25,7 @@ export function useCreateMatchModal({
   onClose,
   onCreate,
   phaseId,
+  phaseGroupId,
   phases,
   divisionId,
   divisions,
@@ -31,13 +35,14 @@ export function useCreateMatchModal({
     divisionId ?? divisions?.[0]?.id ?? null,
   );
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
+  const [selectedPhaseGroupId, setSelectedPhaseGroupId] = useState<number | null>(null);
   const [entrants, setEntrants] = useState<Entrant[]>([]);
   const [scoringSystems, setScoringSystems] = useState<string[]>([]);
   const [scoringSystem, setScoringSystem] = useState("");
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [selectedEntrants, setSelectedEntrants] = useState<Entrant[]>([]);
-  const [songAddType, setSongAddType] = useState<"title" | "roll">("roll");
+  const [songAddType, setSongAddType] = useState<"title" | "roll">("title");
   const [selectedSongDifficulties, setSelectedSongDifficulties] = useState<string[]>([]);
   const [difficultyInput, setDifficultyInput] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
@@ -55,6 +60,11 @@ export function useCreateMatchModal({
 
   const resolvedPhaseId = phaseId ?? selectedPhaseId;
   const resolvedDivisionId = divisionId ?? selectedDivisionId;
+  const availablePhaseGroups = useMemo(
+    () => availablePhases.find((phase) => phase.id === resolvedPhaseId)?.phaseGroups ?? [],
+    [availablePhases, resolvedPhaseId],
+  );
+  const resolvedPhaseGroupId = phaseGroupId ?? selectedPhaseGroupId ?? availablePhaseGroups[0]?.id ?? null;
 
   useEffect(() => {
     if (!open) return;
@@ -65,26 +75,67 @@ export function useCreateMatchModal({
       : divisions?.find((division) => division.id === initialDivisionId)?.phases ?? [];
 
     setSelectedDivisionId(initialDivisionId);
-    setSelectedPhaseId(phaseId ?? initialPhases[0]?.id ?? null);
+    const nextPhaseId = phaseId ?? initialPhases[0]?.id ?? null;
+    setSelectedPhaseId(nextPhaseId);
+    setSelectedPhaseGroupId(phaseGroupId ?? initialPhases.find((phase) => phase.id === nextPhaseId)?.phaseGroups?.[0]?.id ?? null);
     setSelectedEntrants([]);
     setSelectedSongs([]);
     setSelectedSongDifficulties([]);
     setDifficultyInput("");
-    setSongAddType("roll");
-  }, [divisionId, divisions, open, phaseId, phases]);
+    setSongAddType("title");
+  }, [divisionId, divisions, open, phaseGroupId, phaseId, phases]);
 
   useEffect(() => {
     if (!open || divisionId || phaseId) return;
     const nextPhases = divisions?.find((division) => division.id === selectedDivisionId)?.phases ?? [];
     setSelectedPhaseId(nextPhases[0]?.id ?? null);
-  }, [divisionId, divisions, open, phaseId, selectedDivisionId]);
+    setSelectedPhaseGroupId(phaseGroupId ?? nextPhases[0]?.phaseGroups?.[0]?.id ?? null);
+  }, [divisionId, divisions, open, phaseGroupId, phaseId, selectedDivisionId]);
 
   useEffect(() => {
-    if (!open || !resolvedDivisionId) return;
-    axios.get<Entrant[]>(`divisions/${resolvedDivisionId}/entrants`).then((response) => {
-      setEntrants(response.data.filter((entrant) => entrant.status === "active" && entrant.type === "player"));
-    });
-  }, [open, resolvedDivisionId]);
+    if (!open) return;
+    if (phaseGroupId) {
+      setSelectedPhaseGroupId(phaseGroupId);
+      return;
+    }
+    if (selectedPhaseGroupId && availablePhaseGroups.some((group) => group.id === selectedPhaseGroupId)) return;
+    setSelectedPhaseGroupId(availablePhaseGroups[0]?.id ?? null);
+  }, [availablePhaseGroups, open, phaseGroupId, selectedPhaseGroupId]);
+
+  useEffect(() => {
+    if (!open || !resolvedPhaseGroupId) {
+      setEntrants([]);
+      return;
+    }
+
+    let cancelled = false;
+    getPhaseGroup(resolvedPhaseGroupId)
+      .then((phaseGroup) => {
+        if (cancelled) return;
+        const phaseGroupEntrants = [...(phaseGroup.entrants ?? [])]
+          .filter((entry) => entry.status !== "withdrawn" && entry.status !== "dq")
+          .sort(
+            (left, right) =>
+              (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER) ||
+              left.entrant.name.localeCompare(right.entrant.name),
+          )
+          .map((entry) => entry.entrant)
+          .filter((entrant) => entrant.status === "active" && entrant.type === "player");
+        setEntrants(phaseGroupEntrants);
+      })
+      .catch(() => {
+        if (!cancelled) setEntrants([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, resolvedPhaseGroupId]);
+
+  useEffect(() => {
+    const entrantIds = new Set(entrants.map((entrant) => entrant.id));
+    setSelectedEntrants((current) => current.filter((entrant) => entrantIds.has(entrant.id)));
+  }, [entrants]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,11 +150,18 @@ export function useCreateMatchModal({
 
   useEffect(() => {
     if (!open) return;
-    axios.get<string[]>("matches/scoring-systems").then((response) => {
-      setScoringSystems(response.data);
-      setScoringSystem(response.data[0] ?? "");
+    const scoringSystemsRequest = axios.get<string[]>("matches/scoring-systems");
+    const tournamentRequest = tournamentId
+      ? axios.get<Tournament>(`tournaments/${tournamentId}`)
+      : Promise.resolve(null);
+
+    Promise.all([scoringSystemsRequest, tournamentRequest]).then(([scoringSystemsResponse, tournamentResponse]) => {
+      const systems = scoringSystemsResponse.data;
+      const defaultScoringSystem = tournamentResponse?.data.defaultScoringSystem;
+      setScoringSystems(systems);
+      setScoringSystem(defaultScoringSystem && systems.includes(defaultScoringSystem) ? defaultScoringSystem : systems[0] ?? "");
     });
-  }, [open]);
+  }, [open, tournamentId]);
 
   const addDifficulty = () => {
     if (!difficultyInput) return;
@@ -116,10 +174,10 @@ export function useCreateMatchModal({
   };
 
   const handleSubmit = () => {
-    if (!resolvedPhaseId || !resolvedDivisionId) return;
+    if (!resolvedPhaseGroupId || !resolvedDivisionId) return;
 
     const baseRequest = {
-      phaseId: resolvedPhaseId,
+      phaseGroupId: resolvedPhaseGroupId,
       divisionId: resolvedDivisionId,
       name,
       subtitle,
@@ -150,6 +208,7 @@ export function useCreateMatchModal({
     scoringSystems,
     selectedDivisionId,
     selectedPhaseId,
+    selectedPhaseGroupId,
     selectedEntrants,
     selectedSongs,
     selectedSongDifficulties,
@@ -160,8 +219,10 @@ export function useCreateMatchModal({
     subtitle,
     songAddType,
     availablePhases,
+    availablePhaseGroups,
     setSelectedDivisionId,
     setSelectedPhaseId,
+    setSelectedPhaseGroupId,
     setSelectedEntrants,
     setSelectedSongs,
     setSelectedGroupName,

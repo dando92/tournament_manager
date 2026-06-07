@@ -6,20 +6,6 @@ import {
 } from "@/features/tournament/types/StartggImport";
 
 export async function previewStartggImport(
-  payload: StartggImportPreviewRequest,
-): Promise<StartggImportPreviewResponse> {
-  const response = await axios.post<StartggImportPreviewResponse>("integrations/startgg/import-preview", payload);
-  return response.data;
-}
-
-export async function importStartggEvent(
-  payload: Required<Pick<StartggImportPreviewRequest, "eventSlug">> & { targetTournamentId: number; mode?: string },
-): Promise<StartggImportResponse> {
-  const response = await axios.post<StartggImportResponse>("integrations/startgg/import", payload);
-  return response.data;
-}
-
-export async function previewTournamentStartggImport(
   tournamentId: number,
   payload: Omit<StartggImportPreviewRequest, "targetTournamentId">,
 ): Promise<StartggImportPreviewResponse> {
@@ -27,7 +13,7 @@ export async function previewTournamentStartggImport(
   return response.data;
 }
 
-export async function importTournamentStartggEvent(
+export async function importStartggEvent(
   tournamentId: number,
   payload: Omit<StartggImportPreviewRequest, "targetTournamentId">,
 ): Promise<StartggImportResponse> {

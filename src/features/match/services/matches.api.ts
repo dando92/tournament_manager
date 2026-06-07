@@ -1,9 +1,10 @@
 import axios from "axios";
-import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
+import { Match } from "@/features/match/types/Match";
 import { Score } from "@/features/match/types/Standing";
 import {
   AddStandingToMatchRequest,
   CreateMatchRequest,
+  MatchPlayerPointsRequest,
 } from "@/features/match/types/match-requests";
 
 export async function listByDivision(divisionId: number): Promise<Match[]> {
@@ -16,6 +17,16 @@ export async function listByDivision(divisionId: number): Promise<Match[]> {
   }
 }
 
+export async function listByPhaseGroup(phaseGroupId: number): Promise<Match[]> {
+  try {
+    const response = await axios.get<Match[]>(`matches/phase-group/${phaseGroupId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error listing matches by phase group:", error);
+    throw new Error("Unable to list matches by phase group.");
+  }
+}
+
 export async function create(request: CreateMatchRequest): Promise<Match> {
   try {
     const response = await axios.post<Match>("matches", {
@@ -24,7 +35,7 @@ export async function create(request: CreateMatchRequest): Promise<Match> {
       notes: request.notes,
       entrantIds: request.entrantIds,
       scoringSystem: request.scoringSystem,
-      phaseId: request.phaseId,
+      phaseGroupId: request.phaseGroupId,
       divisionId: request.divisionId,
       group: request.group,
       levels: request.levels,
@@ -186,22 +197,6 @@ export async function editStandingInMatch(
   }
 }
 
-export async function updateMatchAdvancementRules(
-  matchId: number,
-  rules: MatchAdvancementRuleInput[],
-): Promise<Match> {
-  try {
-    const response = await axios.put<Match>(
-      `matches/${matchId}/advancement-rules`,
-      { rules },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating match advancement rules:", error);
-    throw new Error("Unable to update match advancement rules.");
-  }
-}
-
 export async function listScores(songId: number, playerId: number): Promise<Score[]> {
   try {
     const response = await axios.get<Score[]>("scores", {
@@ -214,13 +209,33 @@ export async function listScores(songId: number, playerId: number): Promise<Scor
   }
 }
 
-export async function updateMatchState(matchId: number, state: MatchState): Promise<Match> {
+export async function updateMatchActive(matchId: number, active: boolean): Promise<Match> {
   try {
-    const response = await axios.put<Match>(`matches/${matchId}/state`, { state });
+    const response = await axios.put<Match>(`matches/${matchId}/active`, { active });
     return response.data;
   } catch (error) {
-    console.error("Error updating match state:", error);
-    throw new Error("Unable to update match state.");
+    console.error("Error updating match active state:", error);
+    throw new Error("Unable to update match active state.");
+  }
+}
+
+export async function commitMatchResult(matchId: number, playerPoints?: MatchPlayerPointsRequest[]): Promise<Match> {
+  try {
+    const response = await axios.put<Match>(`matches/${matchId}/result`, { playerPoints });
+    return response.data;
+  } catch (error) {
+    console.error("Error committing match result:", error);
+    throw new Error("Unable to commit match result.");
+  }
+}
+
+export async function reopenMatchResult(matchId: number): Promise<Match> {
+  try {
+    const response = await axios.delete<Match>(`matches/${matchId}/result`);
+    return response.data;
+  } catch (error) {
+    console.error("Error re-opening match result:", error);
+    throw new Error("Unable to re-open match result.");
   }
 }
 
