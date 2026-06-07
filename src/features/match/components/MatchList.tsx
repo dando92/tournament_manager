@@ -4,6 +4,7 @@ import { PhaseGroup } from "@/features/division/types/Phase";
 import EliminationMatchesView from "@/features/match/components/bracket/EliminationMatchesView";
 import MatchCard from "@/features/match/components/MatchCard";
 import RawMatchCardsView from "@/features/match/components/RawMatchCardsView";
+import RoundRobinMatchesView from "@/features/match/components/round-robin/RoundRobinMatchesView";
 import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
@@ -47,6 +48,7 @@ export default function MatchList({
   );
   const bracketType = phaseGroup?.bracketType ?? phaseGroups.find((candidate) => candidate.id === phaseGroupId)?.bracketType ?? null;
   const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType);
+  const usesRoundRobinTable = phaseGroupId !== undefined && isRoundRobinBracket(bracketType);
 
   useEffect(() => {
     if (!matchUpdateSignal) return;
@@ -128,6 +130,12 @@ export default function MatchList({
     <div className="mt-4">
       {state.matches.length === 0 ? (
         <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
+      ) : usesRoundRobinTable ? (
+        <RoundRobinMatchesView
+          matches={state.matches}
+          phaseGroup={phaseGroup}
+          renderMatchCard={(match) => renderMatchCard(match, true)}
+        />
       ) : usesBracketTree ? (
         <EliminationMatchesView
           matches={state.matches}
@@ -149,4 +157,8 @@ function isEliminationBracket(bracketType: string | null | undefined): boolean {
     || bracketType === "SINGLE_ELIMINATION"
     || bracketType === "DoubleElimination"
     || bracketType === "DOUBLE_ELIMINATION";
+}
+
+function isRoundRobinBracket(bracketType: string | null | undefined): boolean {
+  return bracketType === "RoundRobin" || bracketType === "ROUND_ROBIN";
 }
