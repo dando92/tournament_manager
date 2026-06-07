@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Division } from "@/features/division/types/Division";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import EliminationMatchesView from "@/features/match/components/bracket/EliminationMatchesView";
@@ -8,12 +8,12 @@ import RoundRobinMatchesView from "@/features/match/components/round-robin/Round
 import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
+import { useQueryClient } from "@tanstack/react-query";
 
 type MatchListProps = {
   division: Division;
   controls?: boolean;
   tournamentId?: number;
-  matchUpdateSignal?: number;
   phaseGroupId?: number;
   phaseGroup?: PhaseGroup;
   highlight: MatchHighlight;
@@ -24,23 +24,14 @@ export default function MatchList({
   division,
   controls = false,
   tournamentId,
-  matchUpdateSignal,
   phaseGroupId,
   phaseGroup,
   highlight,
   onHighlight,
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id, phaseGroupId);
-  const [divisionMatches, setDivisionMatches] = useState<Match[] | null>(null);
-
-  const allMatches = useMemo(() => {
-    if (phaseGroupId === undefined) return state.matches;
-    if (!divisionMatches) return state.matches;
-
-    const matchesById = new Map(divisionMatches.map((match) => [match.id, match]));
-    state.matches.forEach((match) => matchesById.set(match.id, match));
-    return Array.from(matchesById.values());
-  }, [divisionMatches, phaseGroupId, state.matches]);
+  const queryClient = useQueryClient();
+  const allMatches = state.matches;
 
   const phaseGroups = useMemo(
     () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
@@ -50,28 +41,8 @@ export default function MatchList({
   const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType);
   const usesRoundRobinTable = phaseGroupId !== undefined && isRoundRobinBracket(bracketType);
 
-  useEffect(() => {
-    if (!matchUpdateSignal) return;
-    actions.list();
-    if (phaseGroupId !== undefined) {
-      MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchUpdateSignal]);
-
-  useEffect(() => {
-    if (phaseGroupId === undefined) {
-      setDivisionMatches(null);
-      return;
-    }
-    MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => setDivisionMatches(null));
-  }, [division.id, phaseGroupId]);
-
   const refreshMatches = () => {
     actions.list();
-    if (phaseGroupId !== undefined) {
-      MatchesApi.listByDivision(division.id).then(setDivisionMatches).catch(() => {});
-    }
   };
 
   const renderMatchCard = (match: Match, enablePathRowHighlight = false): ReactNode => (
@@ -80,9 +51,15 @@ export default function MatchList({
       controls={controls}
       division={division}
       allMatches={allMatches}
-      loadAdvancementTargets={phaseGroupId !== undefined ? () => MatchesApi.listByDivision(division.id) : undefined}
+      loadAdvancementTargets={
+        phaseGroupId !== undefined
+          ? () => queryClient.fetchQuery({
+              queryKey: ["matches", "division", division.id],
+              queryFn: () => MatchesApi.listByDivision(division.id),
+            })
+          : undefined
+      }
       tournamentId={tournamentId}
-      matchUpdateSignal={matchUpdateSignal}
       highlight={highlight}
       onHighlight={onHighlight}
       enablePathRowHighlight={enablePathRowHighlight}
@@ -121,7 +98,6 @@ export default function MatchList({
       onUpdateMatchActive={actions.updateMatchActive}
       onCommitMatchResult={actions.commitMatchResult}
       onReopenMatchResult={actions.reopenMatchResult}
-      onRefreshSelf={() => actions.refreshMatch(match.id)}
       match={match}
     />
   );

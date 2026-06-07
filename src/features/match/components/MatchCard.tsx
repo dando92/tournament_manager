@@ -2,13 +2,12 @@ import { Match, MatchAdvancementRuleInput, MatchHighlight } from "@/features/mat
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import StandingModal from "@/features/match/modals/StandingModal";
 import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { getMatchCommitState } from "@/features/match/utils/matchStatus";
 import { MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
@@ -21,7 +20,6 @@ type MatchCardProps = {
   loadAdvancementTargets?: () => Promise<Match[]>;
   controls?: boolean;
   tournamentId?: number;
-  matchUpdateSignal?: number;
   highlight?: MatchHighlight;
   onHighlight?: (highlight: MatchHighlight) => void;
   enablePathRowHighlight?: boolean;
@@ -56,7 +54,6 @@ type MatchCardProps = {
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
   onCommitMatchResult?: (matchId: number, playerPoints?: MatchPlayerPointsRequest[]) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
-  onRefreshSelf?: () => void;
 };
 
 type StandingModalState = {
@@ -88,7 +85,6 @@ export default function MatchCard({
   loadAdvancementTargets,
   controls = false,
   tournamentId,
-  matchUpdateSignal,
   highlight = { matchId: null, phaseGroupId: null },
   onHighlight = () => {},
   enablePathRowHighlight = false,
@@ -109,7 +105,6 @@ export default function MatchCard({
   onUpdateMatchActive,
   onCommitMatchResult,
   onReopenMatchResult,
-  onRefreshSelf,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
   const [addPlayersToMatchModalOpen, setAddPlayersToMatchModalOpen] = useState(false);
@@ -121,22 +116,7 @@ export default function MatchCard({
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
   const [manualPoints, setManualPoints] = useState<Record<number, number>>({});
 
-  const onMatchUpdatedRef = useRef(onMatchUpdated);
-  useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
-
-  useEffect(() => {
-    if (!matchUpdateSignal) return;
-    onMatchUpdatedRef.current();
-  }, [matchUpdateSignal]);
-
   const cardRef = useRef<HTMLDivElement>(null);
-  const { updatedMatchIds } = useTournamentUpdates();
-  const onRefreshSelfRef = useRef(onRefreshSelf);
-  useEffect(() => { onRefreshSelfRef.current = onRefreshSelf; });
-  useEffect(() => {
-    if (updatedMatchIds.has(match.id)) onRefreshSelfRef.current?.();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updatedMatchIds]);
 
   const isHighlighted = match.id === highlight.matchId;
   const commitState = getMatchCommitState(match, manualPoints);
@@ -170,7 +150,7 @@ export default function MatchCard({
     if (onUpdateMatchAdvancementRules) {
       await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
     }
-    onMatchUpdatedRef.current();
+    onMatchUpdated();
     setEditMode(false);
     setPendingAdvancementRules([]);
     setAdvancementTargetMatches(null);

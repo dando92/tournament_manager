@@ -9,7 +9,6 @@ type PhaseMatchesPanelProps = {
   division: Division;
   controls: boolean;
   tournamentId?: number;
-  matchRefreshKey?: number;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   autoExpandSinglePhaseGroup?: boolean;
@@ -21,7 +20,6 @@ export default function PhaseMatchesPanel({
   division,
   controls,
   tournamentId,
-  matchRefreshKey,
   highlight,
   onHighlight,
   autoExpandSinglePhaseGroup = false,
@@ -50,7 +48,6 @@ export default function PhaseMatchesPanel({
               division={division}
               controls={controls}
               tournamentId={tournamentId}
-              matchRefreshKey={matchRefreshKey}
               highlight={highlight}
               onHighlight={onHighlight}
               defaultExpanded={expandSingleGroup}
@@ -64,7 +61,6 @@ export default function PhaseMatchesPanel({
           division={division}
           controls={controls}
           tournamentId={tournamentId}
-          matchUpdateSignal={matchRefreshKey}
           highlight={highlight}
           onHighlight={onHighlight}
         />

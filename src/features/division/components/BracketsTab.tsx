@@ -10,7 +10,6 @@ type BracketsTabProps = {
   division: Division;
   controls: boolean;
   tournamentId?: number;
-  matchRefreshKey?: number;
   onDivisionChanged?: () => Promise<void>;
 };
 
@@ -18,7 +17,6 @@ export default function BracketsTab({
   division,
   controls,
   tournamentId,
-  matchRefreshKey,
   onDivisionChanged,
 }: BracketsTabProps) {
   const state = useBracketsTab({ division, onDivisionChanged });
@@ -58,7 +56,6 @@ export default function BracketsTab({
                 division={division}
                 controls={controls}
                 tournamentId={tournamentId}
-                matchRefreshKey={matchRefreshKey}
                 highlight={highlight}
                 onHighlight={setHighlight}
                 autoExpandSinglePhaseGroup={false}
@@ -73,7 +70,6 @@ export default function BracketsTab({
           division={division}
           controls={controls}
           tournamentId={tournamentId}
-          matchRefreshKey={matchRefreshKey}
           highlight={highlight}
           onHighlight={setHighlight}
           onChanged={onDivisionChanged}

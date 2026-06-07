@@ -23,7 +23,6 @@ type PhaseGroupRowProps = {
   division: Division;
   controls: boolean;
   tournamentId?: number;
-  matchRefreshKey?: number;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   defaultExpanded?: boolean;
@@ -70,7 +69,6 @@ export default function PhaseGroupRow({
   division,
   controls,
   tournamentId,
-  matchRefreshKey,
   highlight,
   onHighlight,
   defaultExpanded = false,
@@ -142,7 +140,6 @@ export default function PhaseGroupRow({
       phaseGroup={phaseGroup}
       controls={controls}
       tournamentId={tournamentId}
-      matchUpdateSignal={matchRefreshKey}
       highlight={highlight}
       onHighlight={onHighlight}
     />
