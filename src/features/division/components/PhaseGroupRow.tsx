@@ -4,7 +4,7 @@ import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons
 import MatchList from "@/features/match/components/MatchList";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
-import { MatchHighlight, MatchState } from "@/features/match/types/Match";
+import { MatchHighlight } from "@/features/match/types/Match";
 import { Match } from "@/features/match/types/Match";
 import {
   deletePhaseGroup,
@@ -24,7 +24,6 @@ type PhaseGroupRowProps = {
   controls: boolean;
   tournamentId?: number;
   matchRefreshKey?: number;
-  matchStateFilter?: MatchState | "all";
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   defaultExpanded?: boolean;
@@ -72,7 +71,6 @@ export default function PhaseGroupRow({
   controls,
   tournamentId,
   matchRefreshKey,
-  matchStateFilter = "all",
   highlight,
   onHighlight,
   defaultExpanded = false,
@@ -145,7 +143,6 @@ export default function PhaseGroupRow({
       controls={controls}
       tournamentId={tournamentId}
       matchUpdateSignal={matchRefreshKey}
-      matchStateFilter={matchStateFilter}
       highlight={highlight}
       onHighlight={onHighlight}
     />

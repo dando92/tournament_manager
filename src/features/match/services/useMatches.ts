@@ -2,8 +2,8 @@ import { useEffect, useMemo, useReducer } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initialState, matchesReducer } from "@/features/match/services/matches.reducer";
 import * as MatchesApi from "@/features/match/services/matches.api";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
-import { Match, MatchAdvancementRuleInput, MatchState } from "@/features/match/types/Match";
+import { CreateMatchRequest, MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
+import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { toast } from "react-toastify";
 
@@ -283,22 +283,42 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     }
   }
 
-  async function updateMatchState(matchId: number, matchState: MatchState) {
+  async function updateMatchActive(matchId: number, active: boolean) {
     try {
-      const item = await MatchesApi.updateMatchState(matchId, matchState);
+      const item = await MatchesApi.updateMatchActive(matchId, active);
       dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
-      const messages: Record<MatchState, string> = {
-        NotActive: "Match deactivated.",
-        Active: "Match activated.",
-        Pending: "Match re-opened.",
-        Completed: "Match completed.",
-      };
-      toast.success(messages[matchState]);
+      toast.success(active ? "Match activated." : "Match deactivated.");
     } catch (error) {
-      toast.error("Error updating match state.");
-      console.error("Error updating match state:", error);
-      throw new Error("Unable to update match state.");
+      toast.error("Error updating match active state.");
+      console.error("Error updating match active state:", error);
+      throw new Error("Unable to update match active state.");
+    }
+  }
+
+  async function commitMatchResult(matchId: number, playerPoints?: MatchPlayerPointsRequest[]) {
+    try {
+      const item = await MatchesApi.commitMatchResult(matchId, playerPoints);
+      dispatch({ type: "onRefreshMatch", payload: item });
+      setCachedMatch(item);
+      toast.success("Match completed.");
+    } catch (error) {
+      toast.error("Error committing match result.");
+      console.error("Error committing match result:", error);
+      throw new Error("Unable to commit match result.");
+    }
+  }
+
+  async function reopenMatchResult(matchId: number) {
+    try {
+      const item = await MatchesApi.reopenMatchResult(matchId);
+      dispatch({ type: "onRefreshMatch", payload: item });
+      setCachedMatch(item);
+      toast.success("Match re-opened.");
+    } catch (error) {
+      toast.error("Error re-opening match.");
+      console.error("Error re-opening match:", error);
+      throw new Error("Unable to re-open match.");
     }
   }
 
@@ -321,7 +341,9 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
       editStandingFromMatch,
       deleteStandingsForPlayerFromMatch,
       updateMatchAdvancementRules,
-      updateMatchState,
+      updateMatchActive,
+      commitMatchResult,
+      reopenMatchResult,
     },
   };
 }

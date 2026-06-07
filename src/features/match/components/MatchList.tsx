@@ -6,7 +6,7 @@ import MatchCard from "@/features/match/components/MatchCard";
 import RawMatchCardsView from "@/features/match/components/RawMatchCardsView";
 import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
-import { Match, MatchHighlight, MatchState } from "@/features/match/types/Match";
+import { Match, MatchHighlight } from "@/features/match/types/Match";
 
 type MatchListProps = {
   division: Division;
@@ -15,7 +15,6 @@ type MatchListProps = {
   matchUpdateSignal?: number;
   phaseGroupId?: number;
   phaseGroup?: PhaseGroup;
-  matchStateFilter?: MatchState | "all";
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
 };
@@ -27,7 +26,6 @@ export default function MatchList({
   matchUpdateSignal,
   phaseGroupId,
   phaseGroup,
-  matchStateFilter = "all",
   highlight,
   onHighlight,
 }: MatchListProps) {
@@ -43,11 +41,6 @@ export default function MatchList({
     return Array.from(matchesById.values());
   }, [divisionMatches, phaseGroupId, state.matches]);
 
-  const visibleMatches = state.matches.filter((match) => {
-    const matchState = match.state ?? "NotActive";
-    if (matchStateFilter !== "all" && matchState !== matchStateFilter) return false;
-    return true;
-  });
   const phaseGroups = useMemo(
     () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
     [division.phases],
@@ -123,7 +116,9 @@ export default function MatchList({
         actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
       }
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
-      onUpdateMatchState={actions.updateMatchState}
+      onUpdateMatchActive={actions.updateMatchActive}
+      onCommitMatchResult={actions.commitMatchResult}
+      onReopenMatchResult={actions.reopenMatchResult}
       onRefreshSelf={() => actions.refreshMatch(match.id)}
       match={match}
     />
@@ -131,17 +126,17 @@ export default function MatchList({
 
   return (
     <div className="mt-4">
-      {visibleMatches.length === 0 ? (
+      {state.matches.length === 0 ? (
         <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
       ) : usesBracketTree ? (
         <EliminationMatchesView
-          matches={visibleMatches}
+          matches={state.matches}
           phaseGroups={phaseGroups}
           renderMatchCard={renderMatchCard}
         />
       ) : (
         <RawMatchCardsView
-          matches={visibleMatches}
+          matches={state.matches}
           renderMatchCard={(match) => renderMatchCard(match, true)}
         />
       )}

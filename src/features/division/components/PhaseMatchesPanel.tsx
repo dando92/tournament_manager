@@ -2,7 +2,7 @@ import MatchList from "@/features/match/components/MatchList";
 import PhaseGroupRow from "@/features/division/components/PhaseGroupRow";
 import { Division } from "@/features/division/types/Division";
 import { Phase } from "@/features/division/types/Phase";
-import { MatchHighlight, MatchState } from "@/features/match/types/Match";
+import { MatchHighlight } from "@/features/match/types/Match";
 
 type PhaseMatchesPanelProps = {
   phase: Phase;
@@ -10,7 +10,6 @@ type PhaseMatchesPanelProps = {
   controls: boolean;
   tournamentId?: number;
   matchRefreshKey?: number;
-  matchStateFilter?: MatchState | "all";
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   autoExpandSinglePhaseGroup?: boolean;
@@ -23,7 +22,6 @@ export default function PhaseMatchesPanel({
   controls,
   tournamentId,
   matchRefreshKey,
-  matchStateFilter = "all",
   highlight,
   onHighlight,
   autoExpandSinglePhaseGroup = false,
@@ -53,7 +51,6 @@ export default function PhaseMatchesPanel({
               controls={controls}
               tournamentId={tournamentId}
               matchRefreshKey={matchRefreshKey}
-              matchStateFilter={matchStateFilter}
               highlight={highlight}
               onHighlight={onHighlight}
               defaultExpanded={expandSingleGroup}
@@ -68,7 +65,6 @@ export default function PhaseMatchesPanel({
           controls={controls}
           tournamentId={tournamentId}
           matchUpdateSignal={matchRefreshKey}
-          matchStateFilter={matchStateFilter}
           highlight={highlight}
           onHighlight={onHighlight}
         />

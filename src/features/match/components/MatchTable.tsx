@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
@@ -32,6 +34,8 @@ type MatchTableProps = {
     isFailed: boolean,
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
+  manualPoints: Record<number, number>;
+  onManualPointsChange: (playerId: number, points: number) => void;
 };
 
 export default function MatchTable({
@@ -47,6 +51,8 @@ export default function MatchTable({
   onOpenAddStanding,
   onOpenEditStanding,
   onDeleteStanding,
+  manualPoints,
+  onManualPointsChange,
 }: MatchTableProps) {
   const [tooltip, setTooltip] = useState<{ roundId: number; title: string; x: number; y: number } | null>(null);
 
@@ -112,7 +118,7 @@ export default function MatchTable({
   );
   const sourceKeys = Array.from(new Set(incomingRules.map((rule) => `${rule.sourceKind}:${rule.sourceId}`)));
   const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
-  const canEditMatchContent = controls && (match.state ?? (match.matchResult ? "Completed" : "NotActive")) !== "Completed";
+  const canEditMatchContent = controls && !match.matchResult;
 
   const totalCols = Math.max(3, match.rounds.length + 3);
   const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
@@ -134,6 +140,15 @@ export default function MatchTable({
     <>
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="w-full text-sm border-collapse">
+          {match.rounds.length === 0 && (
+            <thead>
+              <tr className="bg-primary-dark text-white">
+                <th className="px-2 py-2.5 w-8" />
+                <th className="px-3 py-2.5 text-left font-semibold">Player</th>
+                <th className="px-3 py-2.5 text-center font-semibold w-[160px]">Pts</th>
+              </tr>
+            </thead>
+          )}
           {match.rounds.length > 0 && (
             <thead>
               <tr className="bg-primary-dark text-white">
@@ -193,6 +208,45 @@ export default function MatchTable({
               </tr>
             )}
 
+            {match.rounds.length === 0 && sortedPlayers.map((player) => {
+              const committedPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
+              const points = committedPoints ?? manualPoints[player.id] ?? 0;
+              return (
+                <tr key={player.id} className="border-t border-gray-100 odd:bg-white even:bg-gray-50">
+                  <td className="px-2 py-2 text-center w-8" />
+                  <td className="px-3 py-2">
+                    <span className="font-medium text-gray-800">{player.playerName}</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    {canEditMatchContent ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          disabled={points <= 0}
+                          onClick={() => onManualPointsChange(player.id, Math.max(0, points - 1))}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          title="Decrease points"
+                        >
+                          <FontAwesomeIcon icon={faMinus} />
+                        </button>
+                        <span className="w-8 text-center font-bold text-gray-700">{points}</span>
+                        <button
+                          type="button"
+                          onClick={() => onManualPointsChange(player.id, points + 1)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-100"
+                          title="Increase points"
+                        >
+                          <FontAwesomeIcon icon={faPlus} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center font-bold text-gray-700">{points}</div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+
             {sourceKeys.flatMap((sourceKey) => {
               const [sourceKind, rawSourceId] = sourceKey.split(":");
               const typedSourceKind = sourceKind as AdvancementCompetitionKind;
@@ -230,7 +284,7 @@ export default function MatchTable({
               ));
             })}
 
-            {sortedPlayers.map((player) => (
+            {match.rounds.length > 0 && sortedPlayers.map((player) => (
               (() => {
                 const routeTargetMatchId = routeByPlayerId.get(player.id) ?? null;
                 const routeTargetMatch = routeTargetMatchId ? allMatches.find((candidate) => candidate.id === routeTargetMatchId) : null;

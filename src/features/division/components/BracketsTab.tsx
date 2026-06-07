@@ -1,7 +1,7 @@
 import PhaseMatchesPanel from "@/features/division/components/PhaseMatchesPanel";
 import PhaseSelector from "@/features/division/components/PhaseSelector";
 import { Division } from "@/features/division/types/Division";
-import { MatchHighlight, MatchState } from "@/features/match/types/Match";
+import { MatchHighlight } from "@/features/match/types/Match";
 import { useBracketsTab } from "@/features/division/hooks/useBracketsTab";
 import { useState } from "react";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
@@ -22,7 +22,6 @@ export default function BracketsTab({
   onDivisionChanged,
 }: BracketsTabProps) {
   const state = useBracketsTab({ division, onDivisionChanged });
-  const [matchStateFilter, setMatchStateFilter] = useState<MatchState | "all">("all");
   const [highlight, setHighlight] = useState<MatchHighlight>({ matchId: null, phaseGroupId: null });
 
   return (
@@ -33,9 +32,8 @@ export default function BracketsTab({
         onSelect={state.setSelectedPhaseId}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <MatchStateFilter value={matchStateFilter} onChange={setMatchStateFilter} />
-        {controls && state.selectedPhase && (
+      {controls && state.selectedPhase && (
+        <div className="flex justify-end">
           <DeleteConfirmButton
             title="Delete phase"
             onConfirm={() => state.handleDeletePhase(state.selectedPhase!.id)}
@@ -45,8 +43,8 @@ export default function BracketsTab({
           >
             Delete phase
           </DeleteConfirmButton>
-        )}
-      </div>
+        </div>
+      )}
 
       {state.selectedPhaseId === "all" ? (
         state.phases.length === 0 ? (
@@ -61,7 +59,6 @@ export default function BracketsTab({
                 controls={controls}
                 tournamentId={tournamentId}
                 matchRefreshKey={matchRefreshKey}
-                matchStateFilter={matchStateFilter}
                 highlight={highlight}
                 onHighlight={setHighlight}
                 autoExpandSinglePhaseGroup={false}
@@ -77,7 +74,6 @@ export default function BracketsTab({
           controls={controls}
           tournamentId={tournamentId}
           matchRefreshKey={matchRefreshKey}
-          matchStateFilter={matchStateFilter}
           highlight={highlight}
           onHighlight={setHighlight}
           onChanged={onDivisionChanged}
@@ -85,41 +81,6 @@ export default function BracketsTab({
       ) : (
         <p className="text-center text-gray-400 text-sm py-8">No bracket yet.</p>
       )}
-    </div>
-  );
-}
-
-type MatchStateFilterProps = {
-  value: MatchState | "all";
-  onChange: (value: MatchState | "all") => void;
-};
-
-const matchStateOptions: Array<{ value: MatchState | "all"; label: string }> = [
-  { value: "all", label: "All states" },
-  { value: "NotActive", label: "Not active" },
-  { value: "Active", label: "Active" },
-  { value: "Pending", label: "Pending" },
-  { value: "Completed", label: "Completed" },
-];
-
-function MatchStateFilter({ value, onChange }: MatchStateFilterProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <label htmlFor="match-state-filter" className="text-sm font-medium text-gray-700">
-        Match state
-      </label>
-      <select
-        id="match-state-filter"
-        value={value}
-        onChange={(event) => onChange(event.target.value as MatchState | "all")}
-        className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 bg-white focus:outline-none focus:ring-primary-dark focus:border-primary-dark"
-      >
-        {matchStateOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

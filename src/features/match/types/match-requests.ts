@@ -36,3 +36,8 @@ export interface AddStandingToMatchRequest {
   score: number;
   isFailed: boolean;
 }
+
+export interface MatchPlayerPointsRequest {
+  playerId: number;
+  points: number;
+}

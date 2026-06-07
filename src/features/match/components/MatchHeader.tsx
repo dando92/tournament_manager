@@ -32,8 +32,7 @@ export default function MatchHeader({
   const [renameValue, setRenameValue] = useState("");
   const [mobileAddMenuOpen, setMobileAddMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
-  const isMatchEnded = matchState === "Completed";
+  const isMatchEnded = Boolean(match.matchResult);
   const canAddSong = (match.entrants?.length ?? 0) > 0;
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { Match, MatchAdvancementRuleInput, MatchHighlight, MatchState } from "@/features/match/types/Match";
+import { Match, MatchAdvancementRuleInput, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
@@ -10,6 +10,9 @@ import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
+import { getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
+import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
 type MatchCardProps = {
   division: Division;
@@ -50,7 +53,9 @@ type MatchCardProps = {
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
-  onUpdateMatchState?: (matchId: number, state: MatchState) => Promise<void>;
+  onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
+  onCommitMatchResult?: (matchId: number, playerPoints?: MatchPlayerPointsRequest[]) => Promise<void>;
+  onReopenMatchResult?: (matchId: number) => Promise<void>;
   onRefreshSelf?: () => void;
 };
 
@@ -101,7 +106,9 @@ export default function MatchCard({
   onDeleteStanding,
   onEditStanding,
   onUpdateMatchAdvancementRules,
-  onUpdateMatchState,
+  onUpdateMatchActive,
+  onCommitMatchResult,
+  onReopenMatchResult,
   onRefreshSelf,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
@@ -112,6 +119,7 @@ export default function MatchCard({
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
+  const [manualPoints, setManualPoints] = useState<Record<number, number>>({});
 
   const onMatchUpdatedRef = useRef(onMatchUpdated);
   useEffect(() => { onMatchUpdatedRef.current = onMatchUpdated; });
@@ -131,7 +139,8 @@ export default function MatchCard({
   }, [updatedMatchIds]);
 
   const isHighlighted = match.id === highlight.matchId;
-  const matchState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
+  const commitState = getMatchCommitState(match, manualPoints);
+  const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
 
   function enterEditMode() {
     setPendingAdvancementRules(
@@ -167,19 +176,35 @@ export default function MatchCard({
     setAdvancementTargetMatches(null);
   }
 
-  async function toggleCurrentMatch() {
+  function openAddSong() {
+    if (match.matchResult) return;
+    if (match.rounds.length === 0 && hasManualDraftPoints) {
+      const confirmed = window.confirm("Manual points will be reset before adding songs. Continue?");
+      if (!confirmed) return;
+      setManualPoints({});
+    }
+    setAddSongToMatchModalOpen(true);
+  }
+
+  async function toggleActive() {
     if (!controls) return;
+    await onUpdateMatchActive?.(match.id, !match.active);
+  }
 
-    const nextStateByState: Record<MatchState, MatchState> = {
-      NotActive: "Active",
-      Active: "NotActive",
-      Pending: "Completed",
-      Completed: "Pending",
-    };
-    const currentState = match.state ?? (match.matchResult ? "Completed" : "NotActive");
-    const nextState = nextStateByState[currentState];
+  async function commitOrReopenMatch() {
+    if (!controls || commitState === "Disabled") return;
 
-    await onUpdateMatchState?.(match.id, nextState);
+    if (commitState === "Completed") {
+      await onReopenMatchResult?.(match.id);
+      setManualPoints({});
+      return;
+    }
+
+    const playerPoints = match.rounds.length === 0
+      ? entrantPlayers(match.entrants).map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
+      : undefined;
+    await onCommitMatchResult?.(match.id, playerPoints);
+    setManualPoints({});
   }
 
   return (
@@ -236,7 +261,7 @@ export default function MatchCard({
         controls={controls}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
-        onOpenAddSong={() => setAddSongToMatchModalOpen(true)}
+        onOpenAddSong={openAddSong}
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
         onRenameMatch={onRenameMatch}
         canEditAdvancementRules={controls && !editMode}
@@ -280,11 +305,21 @@ export default function MatchCard({
             setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
           }
           onDeleteStanding={onDeleteStanding}
+          manualPoints={manualPoints}
+          onManualPointsChange={(playerId, points) =>
+            setManualPoints((current) => ({ ...current, [playerId]: points }))
+          }
         />
       )}
 
       {controls && !editMode && (
-        <MatchFooter state={matchState} onToggleState={toggleCurrentMatch} />
+        <MatchFooter
+          active={match.active}
+          activeDisabled={Boolean(match.matchResult && !match.active)}
+          commitState={commitState}
+          onToggleActive={toggleActive}
+          onCommitOrReopen={commitOrReopenMatch}
+        />
       )}
     </div>
   );
