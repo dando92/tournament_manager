@@ -9,6 +9,7 @@ type HeaderActionModalProps = {
   description: string;
   confirmLabel: string;
   loading: boolean;
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   children: ReactNode;
 };
@@ -20,6 +21,7 @@ export default function HeaderActionModal({
   description,
   confirmLabel,
   loading,
+  confirmDisabled = false,
   onConfirm,
   children,
 }: HeaderActionModalProps) {
@@ -41,8 +43,8 @@ export default function HeaderActionModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading}
-            className={btnPrimary}
+            disabled={loading || confirmDisabled}
+            className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {loading ? `${confirmLabel}...` : confirmLabel}
           </button>

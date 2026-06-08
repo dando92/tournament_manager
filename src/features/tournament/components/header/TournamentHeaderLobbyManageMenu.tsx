@@ -13,6 +13,15 @@ export default function TournamentHeaderLobbyManageMenu({
   tournamentId,
 }: Props) {
   const {
+    connectionStatus,
+    connectingServer,
+    disconnectingServer,
+    refreshing,
+    handleConnectServer,
+    handleDisconnectServer,
+    refreshLobbies,
+  } = useTournamentLobbiesContext();
+  const {
     menuOpen,
     createLobbyModalOpen,
     creatingLobby,
@@ -27,16 +36,8 @@ export default function TournamentHeaderLobbyManageMenu({
     handleCreateLobby,
   } = useTournamentHeaderLobbyManageMenu({
     tournamentId,
+    canCreateLobby: connectionStatus.isConnected,
   });
-  const {
-    connectionStatus,
-    connectingServer,
-    disconnectingServer,
-    refreshing,
-    handleConnectServer,
-    handleDisconnectServer,
-    refreshLobbies,
-  } = useTournamentLobbiesContext();
 
   const menuItemClass =
     "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white";
@@ -50,6 +51,7 @@ export default function TournamentHeaderLobbyManageMenu({
         description="Create a new SyncStart lobby that players can join from their machines."
         confirmLabel="Create lobby"
         loading={creatingLobby}
+        confirmDisabled={!connectionStatus.isConnected}
         onConfirm={() => {
           handleCreateLobby().catch(() => {});
         }}
@@ -130,9 +132,13 @@ export default function TournamentHeaderLobbyManageMenu({
               <button
                 type="button"
                 onClick={openCreateLobbyModal}
+                disabled={!connectionStatus.isConnected}
                 className={menuItemClass}
               >
-                <FontAwesomeIcon icon={faSatelliteDish} className="text-primary-dark" />
+                <FontAwesomeIcon
+                  icon={faSatelliteDish}
+                  className={connectionStatus.isConnected ? "text-primary-dark" : "text-gray-400"}
+                />
                 Create lobby
               </button>
             </div>
