@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 
 export function useLivePhase(tournamentId: number) {
-  const { activeLobbies, lobbyStates, liveLobbyDisplayStates, liveMatchStates } = useTournamentUpdates();
+  const { activeLobbies, liveMatchStates } = useTournamentUpdates();
 
   const tournamentActiveLobbies = useMemo(
     () =>
@@ -32,7 +32,5 @@ export function useLivePhase(tournamentId: number) {
     tournamentActiveLobbies,
     tournamentLiveStates,
     pendingLobbies,
-    lobbyStates,
-    liveLobbyDisplayStates,
   };
 }

@@ -5,11 +5,11 @@ import { useOBSPage } from "@/features/live/hooks/useOBSPage";
 
 export default function OBSPage() {
   const { lobbyId } = useParams<{ lobbyId: string }>();
-  const { lobbyState, latestLobbyState } = useOBSPage(lobbyId);
+  const { lobbyState } = useOBSPage(lobbyId);
 
   return (
     <div className="min-h-screen bg-transparent p-4">
-      {lobbyState ? <LobbyLiveScores lobbyState={lobbyState} latestLobbyState={latestLobbyState ?? undefined} /> : <OBSWaitingState />}
+      {lobbyState ? <LobbyLiveScores lobbyState={lobbyState} /> : <OBSWaitingState />}
     </div>
   );
 }

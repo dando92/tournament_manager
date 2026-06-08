@@ -2,8 +2,11 @@ import { ReactNode, createContext, useContext, useEffect, useRef, useState } fro
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ActiveLobbyDto,
-  LobbyStateDto,
+  LobbyCardStateDto,
+  LobbyPlayerReadyDto,
+  LobbySongSelectedDto,
   LiveMatchStateDto,
+  SyncStartConnectionStatusDto,
   scoreHubUrl,
 } from "@/features/live/services/useScoreHub";
 import { toast } from "react-toastify";
@@ -52,10 +55,14 @@ type TournamentSocketMessage =
   | { event: "UiWarning"; data: UiWarningMessage };
 
 type LobbySocketMessage =
-  | { event: "OnLobbyActive"; data: ActiveLobbyDto }
-  | { event: "OnLobbyDisconnected"; data: { tournamentId: number; lobbyId: string } }
-  | { event: "OnLobbyState"; data: LobbyStateDto }
-  | { event: "OnLiveMatchState"; data: LiveMatchStateDto };
+  | { event: "OnSyncStartConnectionStatus"; data: SyncStartConnectionStatusDto }
+  | { event: "OnConnectionActive"; data: ActiveLobbyDto }
+  | { event: "OnConnected"; data: ActiveLobbyDto }
+  | { event: "OnDisconnection"; data: ActiveLobbyDto }
+  | { event: "OnSongSelected"; data: LobbySongSelectedDto }
+  | { event: "OnPlayerReady"; data: LobbyPlayerReadyDto }
+  | { event: "OnGoingMatchUpdate"; data: LiveMatchStateDto }
+  | { event: "OnSongCompleted"; data: LiveMatchStateDto };
 
 type TournamentUpdatesContextValue = {
   tournamentVersion: number;
@@ -63,8 +70,8 @@ type TournamentUpdatesContextValue = {
   matchListVersions: ReadonlyMap<number, number>;
   updatedMatchIds: ReadonlySet<number>;
   activeLobbies: ReadonlyMap<string, ActiveLobbyDto>;
-  lobbyStates: ReadonlyMap<string, LobbyStateDto>;
-  liveLobbyDisplayStates: ReadonlyMap<string, LobbyStateDto>;
+  syncStartConnectionStatus: SyncStartConnectionStatusDto;
+  lobbyCardStates: ReadonlyMap<string, LobbyCardStateDto>;
   liveMatchStates: ReadonlyMap<string, LiveMatchStateDto>;
 };
 
@@ -74,8 +81,8 @@ const defaultValue: TournamentUpdatesContextValue = {
   matchListVersions: new Map(),
   updatedMatchIds: new Set(),
   activeLobbies: new Map(),
-  lobbyStates: new Map(),
-  liveLobbyDisplayStates: new Map(),
+  syncStartConnectionStatus: { tournamentId: 0, isActive: false, isConnected: false },
+  lobbyCardStates: new Map(),
   liveMatchStates: new Map(),
 };
 
@@ -108,8 +115,12 @@ export function TournamentUpdatesProvider({
   const [matchListVersions, setMatchListVersions] = useState<ReadonlyMap<number, number>>(new Map());
   const [updatedMatchIds, setUpdatedMatchIds] = useState<ReadonlySet<number>>(new Set());
   const [activeLobbies, setActiveLobbies] = useState<ReadonlyMap<string, ActiveLobbyDto>>(new Map());
-  const [lobbyStates, setLobbyStates] = useState<ReadonlyMap<string, LobbyStateDto>>(new Map());
-  const [liveLobbyDisplayStates, setLiveLobbyDisplayStates] = useState<ReadonlyMap<string, LobbyStateDto>>(new Map());
+  const [syncStartConnectionStatus, setSyncStartConnectionStatus] = useState<SyncStartConnectionStatusDto>({
+    tournamentId,
+    isActive: false,
+    isConnected: false,
+  });
+  const [lobbyCardStates, setLobbyCardStates] = useState<ReadonlyMap<string, LobbyCardStateDto>>(new Map());
   const [liveMatchStates, setLiveMatchStates] = useState<ReadonlyMap<string, LiveMatchStateDto>>(new Map());
   const pendingMatchIds = useRef<Set<number>>(new Set());
   const pendingPhaseGroupIds = useRef<Set<number>>(new Set());
@@ -242,67 +253,116 @@ export function TournamentUpdatesProvider({
           return;
         }
 
-        if (msg.event === "OnLobbyActive") {
+        if (msg.event === "OnSyncStartConnectionStatus") {
+          setSyncStartConnectionStatus(msg.data);
+          return;
+        }
+
+        if (msg.event === "OnConnectionActive" || msg.event === "OnConnected") {
           setActiveLobbies((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
-          return;
-        }
-
-        if (msg.event === "OnLobbyDisconnected") {
-          setActiveLobbies((prev) => {
+          setLobbyCardStates((prev) => {
+            if (prev.has(msg.data.lobbyId)) return prev;
             const next = new Map(prev);
-            next.delete(msg.data.lobbyId);
-            return next;
-          });
-          setLobbyStates((prev) => {
-            const next = new Map(prev);
-            next.delete(msg.data.lobbyId);
-            return next;
-          });
-          setLiveLobbyDisplayStates((prev) => {
-            const next = new Map(prev);
-            next.delete(msg.data.lobbyId);
-            return next;
-          });
-          setLiveMatchStates((prev) => {
-            const next = new Map(prev);
-            next.delete(msg.data.lobbyId);
+            next.set(msg.data.lobbyId, {
+              tournamentId: msg.data.tournamentId,
+              lobbyId: msg.data.lobbyId,
+              lobbyName: msg.data.lobbyName,
+              lobbyCode: msg.data.lobbyCode,
+              songTitle: "",
+              songPath: "",
+              players: [],
+            });
             return next;
           });
           return;
         }
 
-        if (msg.event === "OnLobbyState") {
-          setLobbyStates((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
-          setLiveLobbyDisplayStates((prev) => {
-            const next = new Map(prev);
-            const hasGameplay = msg.data.players.some((player) => player.screenName === "ScreenGameplay");
-            const hasEvaluation = msg.data.players.some(
-              (player) => player.screenName === "ScreenEvaluationStage",
-            );
-
-            if (hasGameplay) {
-              next.delete(msg.data.lobbyId);
-              return next;
-            }
-
-            if (hasEvaluation) {
-              next.set(msg.data.lobbyId, msg.data);
-            }
-
-            return next;
-          });
-          if (msg.data.players.some((player) => player.screenName === "ScreenGameplay")) {
-            setLiveMatchStates((prev) => {
-              if (!prev.has(msg.data.lobbyId)) return prev;
+        if (msg.event === "OnDisconnection") {
+          if (!msg.data.isActive) {
+            setActiveLobbies((prev) => {
               const next = new Map(prev);
               next.delete(msg.data.lobbyId);
               return next;
             });
+            setLobbyCardStates((prev) => {
+              const next = new Map(prev);
+              next.delete(msg.data.lobbyId);
+              return next;
+            });
+            setLiveMatchStates((prev) => {
+              const next = new Map(prev);
+              next.delete(msg.data.lobbyId);
+              return next;
+            });
+            return;
           }
+
+          setActiveLobbies((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
           return;
         }
 
-        if (msg.event === "OnLiveMatchState") {
+        if (msg.event === "OnSongSelected") {
+          setLobbyCardStates((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(msg.data.lobbyId);
+            next.set(msg.data.lobbyId, {
+              tournamentId: msg.data.tournamentId,
+              lobbyId: msg.data.lobbyId,
+              lobbyName: msg.data.lobbyName,
+              lobbyCode: msg.data.lobbyCode,
+              songTitle: msg.data.songTitle,
+              songPath: msg.data.songPath,
+              players: existing?.players ?? [],
+            });
+            return next;
+          });
+          setLiveMatchStates((prev) => {
+            const existing = prev.get(msg.data.lobbyId);
+            if (!existing) return prev;
+
+            const next = new Map(prev);
+            next.set(msg.data.lobbyId, {
+              ...existing,
+              tournamentId: msg.data.tournamentId,
+              lobbyId: msg.data.lobbyId,
+              lobbyName: msg.data.lobbyName,
+              lobbyCode: msg.data.lobbyCode,
+              songTitle: msg.data.songTitle,
+              songPath: msg.data.songPath,
+            });
+            return next;
+          });
+          return;
+        }
+
+        if (msg.event === "OnPlayerReady") {
+          setLobbyCardStates((prev) => {
+            const existing = prev.get(msg.data.lobbyId);
+            const players = (existing?.players ?? []).filter(
+              (player) => player.playerId !== msg.data.playerId,
+            );
+            players.push({
+              playerId: msg.data.playerId,
+              playerName: msg.data.playerName,
+              ready: msg.data.ready,
+            });
+
+            const next = new Map(prev);
+            next.set(msg.data.lobbyId, {
+              tournamentId: msg.data.tournamentId,
+              lobbyId: msg.data.lobbyId,
+              lobbyName: msg.data.lobbyName,
+              lobbyCode: msg.data.lobbyCode,
+              songTitle: existing?.songTitle ?? "",
+              songPath: existing?.songPath ?? "",
+              players: players.sort((a, b) => a.playerName.localeCompare(b.playerName)),
+            });
+            return next;
+          });
+          return;
+        }
+
+        if (msg.event === "OnGoingMatchUpdate" || msg.event === "OnSongCompleted") {
           setLiveMatchStates((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
         }
       } catch {
@@ -323,8 +383,8 @@ export function TournamentUpdatesProvider({
         matchListVersions,
         updatedMatchIds,
         activeLobbies,
-        lobbyStates,
-        liveLobbyDisplayStates,
+        syncStartConnectionStatus,
+        lobbyCardStates,
         liveMatchStates,
       }}
     >

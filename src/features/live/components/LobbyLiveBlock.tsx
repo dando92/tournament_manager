@@ -1,16 +1,16 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTv } from "@fortawesome/free-solid-svg-icons";
 import LobbyLiveScores from "@/features/live/components/LobbyLiveScores";
-import { LiveMatchStateDto, LobbyStateDto } from "@/features/live/services/useScoreHub";
+import { LiveMatchStateDto } from "@/features/live/services/useScoreHub";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {
   lobbyState: LiveMatchStateDto;
-  latestLobbyState?: LobbyStateDto;
 };
 
-export default function LobbyLiveBlock({ lobbyState, latestLobbyState }: Props) {
+export default function LobbyLiveBlock({ lobbyState }: Props) {
   const obsUrl = `${window.location.origin}/obs/${lobbyState.lobbyId}`;
+  const songName = lobbyState.songTitle || lobbyState.songPath;
 
   return (
     <div className="mb-6">
@@ -19,6 +19,9 @@ export default function LobbyLiveBlock({ lobbyState, latestLobbyState }: Props) 
           <span className="text-lg font-bold text-primary-dark">{lobbyState.lobbyName}</span>
           {lobbyState.lobbyCode && (
             <span className="text-xs text-gray-400">{lobbyState.lobbyCode}</span>
+          )}
+          {songName && (
+            <span className="text-sm text-gray-500">{songName}</span>
           )}
         </div>
         <a
@@ -31,7 +34,7 @@ export default function LobbyLiveBlock({ lobbyState, latestLobbyState }: Props) 
           <span>OBS source</span>
         </a>
       </div>
-      <LobbyLiveScores lobbyState={lobbyState} latestLobbyState={latestLobbyState} singleColumn />
+      <LobbyLiveScores lobbyState={lobbyState} singleColumn />
     </div>
   );
 }
