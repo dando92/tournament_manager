@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faSatelliteDish } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faPlug, faPowerOff, faRotate, faSatelliteDish } from "@fortawesome/free-solid-svg-icons";
 import { btnPrimary } from "@/styles/buttonStyles";
+import { useTournamentLobbiesContext } from "@/features/tournament/context/TournamentLobbiesContext";
 import { useTournamentHeaderLobbyManageMenu } from "@/features/tournament/hooks/useTournamentHeaderLobbyManageMenu";
 import HeaderActionModal from "./HeaderActionModal";
 
@@ -27,6 +28,18 @@ export default function TournamentHeaderLobbyManageMenu({
   } = useTournamentHeaderLobbyManageMenu({
     tournamentId,
   });
+  const {
+    connectionStatus,
+    connectingServer,
+    disconnectingServer,
+    refreshing,
+    handleConnectServer,
+    handleDisconnectServer,
+    refreshLobbies,
+  } = useTournamentLobbiesContext();
+
+  const menuItemClass =
+    "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white";
 
   return (
     <>
@@ -74,10 +87,50 @@ export default function TournamentHeaderLobbyManageMenu({
           <>
             <div className="fixed inset-0 z-10" onClick={closeMenu} />
             <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded shadow-lg border border-gray-200 min-w-[190px]">
+              {connectionStatus.isConnected ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    handleDisconnectServer().catch(() => {});
+                  }}
+                  disabled={disconnectingServer}
+                  className={menuItemClass}
+                >
+                  <FontAwesomeIcon icon={faPowerOff} className="text-red-500" />
+                  {disconnectingServer ? "Disconnecting..." : "Disconnect"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    handleConnectServer().catch(() => {});
+                  }}
+                  disabled={connectingServer || connectionStatus.isActive}
+                  className={menuItemClass}
+                >
+                  <FontAwesomeIcon icon={faPlug} className="text-primary-dark" />
+                  {connectingServer || connectionStatus.isActive ? "Connecting..." : "Connect"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  refreshLobbies().catch(() => {});
+                }}
+                disabled={refreshing || !connectionStatus.isConnected}
+                className={menuItemClass}
+              >
+                <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin text-primary-dark" : "text-primary-dark"} />
+                {refreshing ? "Refreshing..." : "Refresh all"}
+              </button>
+              <div className="my-1 border-t border-gray-100" />
               <button
                 type="button"
                 onClick={openCreateLobbyModal}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                className={menuItemClass}
               >
                 <FontAwesomeIcon icon={faSatelliteDish} className="text-primary-dark" />
                 Create lobby

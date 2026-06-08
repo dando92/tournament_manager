@@ -1,23 +1,15 @@
 import { Navigate } from "react-router-dom";
 import LobbyCardsSection from "@/features/tournament/components/lobbies/LobbyCardsSection";
+import { useTournamentLobbiesContext } from "@/features/tournament/context/TournamentLobbiesContext";
 import { useTournamentPageContext } from "@/features/tournament/context/TournamentPageContext";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
-import { useTournamentLobbiesPage } from "@/features/tournament/hooks/useTournamentLobbiesPage";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
 export default function TournamentLobbiesPage() {
   const { tournamentId, controls } = useTournamentPageContext();
-  const { activeLobbies, syncStartConnectionStatus, lobbyCardStates } = useTournamentUpdates();
   const {
     lobbies,
     connectionStatus,
-    connectingServer,
-    disconnectingServer,
-    handleConnectServer,
-    handleDisconnectServer,
-    refreshing,
-    refreshLobbies,
     spectateModal,
     setSpectateModal,
     spectating,
@@ -25,12 +17,7 @@ export default function TournamentLobbiesPage() {
     closeSpectateModal,
     handleSpectateLobby,
     handleDisconnectLobby,
-  } = useTournamentLobbiesPage({
-    tournamentId,
-    activeLobbies,
-    syncStartConnectionStatus,
-    lobbyCardStates,
-  });
+  } = useTournamentLobbiesContext();
 
   if (!controls) {
     return <Navigate to={`/tournament/${tournamentId}/overview`} replace />;
@@ -96,18 +83,6 @@ export default function TournamentLobbiesPage() {
       <LobbyCardsSection
         lobbies={lobbies}
         connectionStatus={connectionStatus}
-        connectingServer={connectingServer}
-        disconnectingServer={disconnectingServer}
-        onConnectServer={() => {
-          handleConnectServer().catch(() => {});
-        }}
-        onDisconnectServer={() => {
-          handleDisconnectServer().catch(() => {});
-        }}
-        refreshing={refreshing}
-        onRefresh={() => {
-          refreshLobbies().catch(() => {});
-        }}
         onSpectate={openSpectateModal}
         onDisconnect={handleDisconnectLobby}
       />

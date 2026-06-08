@@ -1,8 +1,5 @@
 import { LobbyCardStateDto } from "@/features/live/services/useScoreHub";
 import LobbyCard from "./LobbyCard";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRotate } from "@fortawesome/free-solid-svg-icons";
-import { btnSecondary } from "@/styles/buttonStyles";
 
 type LobbyEntry = {
   lobby: {
@@ -23,12 +20,6 @@ type Props = {
     isActive: boolean;
     isConnected: boolean;
   };
-  connectingServer: boolean;
-  disconnectingServer: boolean;
-  onConnectServer: () => void;
-  onDisconnectServer: () => void;
-  refreshing: boolean;
-  onRefresh: () => void;
   onSpectate: (lobbyCode: string) => void;
   onDisconnect: (lobbyId: string) => Promise<void>;
 };
@@ -36,12 +27,6 @@ type Props = {
 export default function LobbyCardsSection({
   lobbies,
   connectionStatus,
-  connectingServer,
-  disconnectingServer,
-  onConnectServer,
-  onDisconnectServer,
-  refreshing,
-  onRefresh,
   onSpectate,
   onDisconnect,
 }: Props) {
@@ -69,36 +54,6 @@ export default function LobbyCardsSection({
               {connectionStatus.isConnected ? "Connected" : "Disconnected"}
             </span>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {connectionStatus.isConnected ? (
-            <button
-              type="button"
-              onClick={onDisconnectServer}
-              disabled={disconnectingServer}
-              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {disconnectingServer ? "Disconnecting..." : "Disconnect"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onConnectServer}
-              disabled={connectingServer || connectionStatus.isActive}
-              className={`text-sm ${btnSecondary}`}
-            >
-              {connectingServer || connectionStatus.isActive ? "Connecting..." : "Connect"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshing || !connectionStatus.isConnected}
-            className={`flex items-center gap-2 text-sm ${btnSecondary}`}
-          >
-            <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin" : ""} />
-            <span>{refreshing ? "Refreshing..." : "Refresh all"}</span>
-          </button>
         </div>
       </div>
 

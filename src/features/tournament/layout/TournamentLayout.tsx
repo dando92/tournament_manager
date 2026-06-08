@@ -1,5 +1,6 @@
 import TournamentManagementModals from "@/features/tournament/components/TournamentManagementModals";
 import TournamentPageHeader from "@/features/tournament/components/header/TournamentPageHeader";
+import { TournamentLobbiesProvider } from "@/features/tournament/context/TournamentLobbiesContext";
 import { TournamentPageContextValue } from "@/features/tournament/context/TournamentPageContext";
 import { TournamentPageState } from "@/features/tournament/hooks/useTournamentPage";
 import { useTournamentLayout } from "@/features/tournament/hooks/useTournamentLayout";
@@ -26,18 +27,8 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
   } = useTournamentLayout({ context, state });
   const currentDivision = state.divisions.find((division) => division.id === currentDivisionId);
 
-  return (
-    <div className="flex flex-col gap-4">
-      <TournamentManagementModals
-        context={context}
-        state={state}
-        currentDivisionId={currentDivisionId}
-        currentPhaseId={currentPhaseId}
-        onCreatePhase={handleCreatePhase}
-        onCreatePhaseGroup={handleCreatePhaseGroup}
-        onGenerateBracket={handleGenerateBracket}
-      />
-
+  const pageContent = (
+    <>
       <TournamentPageHeader
         tournamentId={context.tournamentId}
         tournamentName={context.tournamentName}
@@ -63,6 +54,28 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
       />
 
       <Outlet context={context} />
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <TournamentManagementModals
+        context={context}
+        state={state}
+        currentDivisionId={currentDivisionId}
+        currentPhaseId={currentPhaseId}
+        onCreatePhase={handleCreatePhase}
+        onCreatePhaseGroup={handleCreatePhaseGroup}
+        onGenerateBracket={handleGenerateBracket}
+      />
+
+      {isLobbiesPage ? (
+        <TournamentLobbiesProvider tournamentId={context.tournamentId}>
+          {pageContent}
+        </TournamentLobbiesProvider>
+      ) : (
+        pageContent
+      )}
     </div>
   );
 }
