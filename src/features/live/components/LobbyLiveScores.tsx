@@ -1,4 +1,4 @@
-import { LiveMatchStateDto } from "@/features/live/services/useScoreHub";
+import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
 import LiveScoreCard from "@/features/live/components/LiveScoreCard";
 import { useLiveScores } from "@/features/live/hooks/useLiveScores";
 

@@ -1,5 +1,4 @@
 import { createContext, ReactNode, useContext } from "react";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 import { useTournamentLobbiesPage } from "@/features/tournament/hooks/useTournamentLobbiesPage";
 
 type TournamentLobbiesContextValue = ReturnType<typeof useTournamentLobbiesPage>;
@@ -12,13 +11,7 @@ type Props = {
 };
 
 export function TournamentLobbiesProvider({ tournamentId, children }: Props) {
-  const { activeLobbies, syncStartConnectionStatus, lobbyCardStates } = useTournamentUpdates();
-  const value = useTournamentLobbiesPage({
-    tournamentId,
-    activeLobbies,
-    syncStartConnectionStatus,
-    lobbyCardStates,
-  });
+  const value = useTournamentLobbiesPage({ tournamentId });
 
   return (
     <TournamentLobbiesContext.Provider value={value}>

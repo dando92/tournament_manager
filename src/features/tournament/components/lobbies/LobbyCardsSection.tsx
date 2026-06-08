@@ -1,4 +1,4 @@
-import { LobbyCardStateDto } from "@/features/live/services/useScoreHub";
+import { LobbyCardStateDto } from "@/features/live/services/syncstartGatewayDtos";
 import LobbyCard from "./LobbyCard";
 
 type LobbyEntry = {

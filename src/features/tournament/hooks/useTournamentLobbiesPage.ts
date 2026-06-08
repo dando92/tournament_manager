@@ -1,7 +1,14 @@
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { ActiveLobbyDto, LobbyCardStateDto, SyncStartConnectionStatusDto } from "@/features/live/services/useScoreHub";
+import {
+  ActiveLobbyDto,
+  LobbyCardStateDto,
+  LobbyPlayerReadyDto,
+  LobbySongSelectedDto,
+  SyncStartConnectionStatusDto,
+} from "@/features/live/services/syncstartGatewayDtos";
+import { useLobbyGateway } from "@/features/tournament/services/useLobbyGateway";
 
 export type TournamentLobbyStatusDto = {
   id: string;
@@ -22,9 +29,6 @@ type TournamentLobbiesDto = {
 
 type Params = {
   tournamentId: number;
-  activeLobbies: ReadonlyMap<string, ActiveLobbyDto>;
-  syncStartConnectionStatus: SyncStartConnectionStatusDto;
-  lobbyCardStates: ReadonlyMap<string, LobbyCardStateDto>;
 };
 
 type SpectateModalState = {
@@ -43,10 +47,14 @@ const closedSpectateModal: SpectateModalState = {
 
 export function useTournamentLobbiesPage({
   tournamentId,
-  activeLobbies,
-  syncStartConnectionStatus,
-  lobbyCardStates,
 }: Params) {
+  const [activeLobbies, setActiveLobbies] = useState<ReadonlyMap<string, ActiveLobbyDto>>(new Map());
+  const [syncStartConnectionStatus, setSyncStartConnectionStatus] = useState<SyncStartConnectionStatusDto>({
+    tournamentId,
+    isActive: false,
+    isConnected: false,
+  });
+  const [lobbyCardStates, setLobbyCardStates] = useState<ReadonlyMap<string, LobbyCardStateDto>>(new Map());
   const [availableLobbies, setAvailableLobbies] = useState<TournamentLobbyStatusDto[]>([]);
   const [serverConnectionStatus, setServerConnectionStatus] = useState({ isActive: false, isConnected: false });
   const [connectingServer, setConnectingServer] = useState(false);
@@ -86,6 +94,90 @@ export function useTournamentLobbiesPage({
   useEffect(() => {
     refreshLobbies().catch(() => {});
   }, [refreshLobbies]);
+
+  useLobbyGateway(tournamentId, {
+    onSyncStartConnectionStatus: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setSyncStartConnectionStatus(data);
+    },
+    onConnectionActive: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setActiveLobbies((prev) => new Map(prev).set(data.lobbyId, data));
+      setLobbyCardStates((prev) => {
+        if (prev.has(data.lobbyId)) return prev;
+        const next = new Map(prev);
+        next.set(data.lobbyId, {
+          tournamentId: data.tournamentId,
+          lobbyId: data.lobbyId,
+          lobbyName: data.lobbyName,
+          lobbyCode: data.lobbyCode,
+          songTitle: "",
+          songPath: "",
+          players: [],
+        });
+        return next;
+      });
+    },
+    onConnected: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setActiveLobbies((prev) => new Map(prev).set(data.lobbyId, data));
+      setLobbyCardStates((prev) => {
+        if (prev.has(data.lobbyId)) return prev;
+        const next = new Map(prev);
+        next.set(data.lobbyId, {
+          tournamentId: data.tournamentId,
+          lobbyId: data.lobbyId,
+          lobbyName: data.lobbyName,
+          lobbyCode: data.lobbyCode,
+          songTitle: "",
+          songPath: "",
+          players: [],
+        });
+        return next;
+      });
+    },
+    onSongSelected: (data: LobbySongSelectedDto) => {
+      if (data.tournamentId !== tournamentId) return;
+      setLobbyCardStates((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(data.lobbyId);
+        next.set(data.lobbyId, {
+          tournamentId: data.tournamentId,
+          lobbyId: data.lobbyId,
+          lobbyName: data.lobbyName,
+          lobbyCode: data.lobbyCode,
+          songTitle: data.songTitle,
+          songPath: data.songPath,
+          players: existing?.players ?? [],
+        });
+        return next;
+      });
+    },
+    onPlayerReady: (data: LobbyPlayerReadyDto) => {
+      if (data.tournamentId !== tournamentId) return;
+      setLobbyCardStates((prev) => {
+        const existing = prev.get(data.lobbyId);
+        const players = (existing?.players ?? []).filter((player) => player.playerId !== data.playerId);
+        players.push({
+          playerId: data.playerId,
+          playerName: data.playerName,
+          ready: data.ready,
+        });
+
+        const next = new Map(prev);
+        next.set(data.lobbyId, {
+          tournamentId: data.tournamentId,
+          lobbyId: data.lobbyId,
+          lobbyName: data.lobbyName,
+          lobbyCode: data.lobbyCode,
+          songTitle: existing?.songTitle ?? "",
+          songPath: existing?.songPath ?? "",
+          players: players.sort((a, b) => a.playerName.localeCompare(b.playerName)),
+        });
+        return next;
+      });
+    },
+  });
 
   const lobbies = useMemo(() => {
     const merged = new Map<string, TournamentLobbyStatusDto>();
@@ -170,6 +262,9 @@ export function useTournamentLobbiesPage({
         `tournaments/${tournamentId}/lobbies/server/disconnect`,
       );
       setServerConnectionStatus(response.data);
+      if (!response.data.isConnected) {
+        setAvailableLobbies([]);
+      }
       toast.success("Disconnected from SyncStart.");
     } catch (error: unknown) {
       const message =
@@ -210,6 +305,16 @@ export function useTournamentLobbiesPage({
   async function handleDisconnectLobby(lobbyId: string) {
     try {
       await axios.delete(`tournaments/${tournamentId}/lobbies/${lobbyId}/disconnect`);
+      setActiveLobbies((prev) => {
+        const next = new Map(prev);
+        next.delete(lobbyId);
+        return next;
+      });
+      setLobbyCardStates((prev) => {
+        const next = new Map(prev);
+        next.delete(lobbyId);
+        return next;
+      });
       toast.success("Lobby disconnected.");
     } catch {
       toast.error("Failed to disconnect lobby.");

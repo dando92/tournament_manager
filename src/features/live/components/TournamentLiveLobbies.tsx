@@ -1,17 +1,16 @@
 import LobbyLiveBlock from "@/features/live/components/LobbyLiveBlock";
-import LivePendingLobbyCard from "@/features/live/components/LivePendingLobbyCard";
 import { useLivePhase } from "@/features/live/hooks/useLivePhase";
 
 type Props = {
   tournamentId: number;
+  controls: boolean;
 };
 
-export default function TournamentLiveLobbies({ tournamentId }: Props) {
-  const { tournamentActiveLobbies, tournamentLiveStates, pendingLobbies } =
-    useLivePhase(tournamentId);
+export default function TournamentLiveLobbies({ tournamentId, controls }: Props) {
+  const { tournamentLiveStates } = useLivePhase(tournamentId);
 
-  if (tournamentActiveLobbies.length === 0) {
-    return <p className="text-gray-500">No active lobbies.</p>;
+  if (tournamentLiveStates.length === 0) {
+    return <p className="text-gray-500">No live lobbies.</p>;
   }
 
   return (
@@ -20,10 +19,8 @@ export default function TournamentLiveLobbies({ tournamentId }: Props) {
         <LobbyLiveBlock
           key={state.lobbyId}
           lobbyState={state}
+          showObsSource={controls}
         />
-      ))}
-      {pendingLobbies.map((lobby) => (
-        <LivePendingLobbyCard key={lobby.lobbyId} lobbyName={lobby.lobbyName} />
       ))}
     </div>
   );

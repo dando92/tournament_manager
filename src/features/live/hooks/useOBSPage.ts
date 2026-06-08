@@ -1,26 +1,25 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActiveLobbyDto,
   LiveMatchStateDto,
-  useScoreHub,
-} from "@/features/live/services/useScoreHub";
+} from "@/features/live/services/syncstartGatewayDtos";
+import { useLiveMatchGateway } from "@/features/live/services/useLiveMatchGateway";
 
-export function useOBSPage(lobbyId?: string) {
+export function useOBSPage(lobbyId?: string, tournamentId?: number) {
   const [liveMatchState, setLiveMatchState] = useState<LiveMatchStateDto | null>(null);
 
-  const handleLiveMatchState = useCallback(
+  const handleSongSelected = useCallback(
     (data: LiveMatchStateDto) => {
-      if (data.lobbyId === lobbyId && data.players.length > 0) {
+      if (data.lobbyId === lobbyId) {
         setLiveMatchState(data);
       }
     },
     [lobbyId],
   );
 
-  const handleLobbyDisconnected = useCallback(
-    (data: ActiveLobbyDto) => {
-      if (data.lobbyId === lobbyId && !data.isActive) {
-        setLiveMatchState(null);
+  const handleLiveMatchState = useCallback(
+    (data: LiveMatchStateDto) => {
+      if (data.lobbyId === lobbyId) {
+        setLiveMatchState(data);
       }
     },
     [lobbyId],
@@ -28,14 +27,14 @@ export function useOBSPage(lobbyId?: string) {
 
   const handlers = useMemo(
     () => ({
-      onDisconnection: handleLobbyDisconnected,
-      onGoingMatchUpdate: handleLiveMatchState,
+      onSongSelected: handleSongSelected,
+      onMatchUpdate: handleLiveMatchState,
       onSongCompleted: handleLiveMatchState,
     }),
-    [handleLiveMatchState, handleLobbyDisconnected],
+    [handleLiveMatchState, handleSongSelected],
   );
 
-  useScoreHub(handlers);
+  useLiveMatchGateway(tournamentId ?? null, handlers);
 
   return {
     lobbyState: liveMatchState,

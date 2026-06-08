@@ -1,4 +1,4 @@
-import { LiveMatchPlayerDto } from "@/features/live/services/useScoreHub";
+import { LiveMatchPlayerDto } from "@/features/live/services/syncstartGatewayDtos";
 
 type LiveScoreCardProps = {
   player: LiveMatchPlayerDto;

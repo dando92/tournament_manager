@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LiveMatchStateDto } from "@/features/live/services/useScoreHub";
+import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
 
 export function useLiveScores(lobbyState: LiveMatchStateDto) {
   const sortedPlayers = useMemo(() => {

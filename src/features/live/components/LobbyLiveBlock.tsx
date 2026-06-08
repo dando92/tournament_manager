@@ -1,15 +1,16 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTv } from "@fortawesome/free-solid-svg-icons";
 import LobbyLiveScores from "@/features/live/components/LobbyLiveScores";
-import { LiveMatchStateDto } from "@/features/live/services/useScoreHub";
+import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {
   lobbyState: LiveMatchStateDto;
+  showObsSource: boolean;
 };
 
-export default function LobbyLiveBlock({ lobbyState }: Props) {
-  const obsUrl = `${window.location.origin}/obs/${lobbyState.lobbyId}`;
+export default function LobbyLiveBlock({ lobbyState, showObsSource }: Props) {
+  const obsUrl = `${window.location.origin}/obs/${lobbyState.lobbyId}?tournamentId=${lobbyState.tournamentId}`;
   const songName = lobbyState.songTitle || lobbyState.songPath;
 
   return (
@@ -24,15 +25,17 @@ export default function LobbyLiveBlock({ lobbyState }: Props) {
             <span className="text-sm text-gray-500">{songName}</span>
           )}
         </div>
-        <a
-          href={obsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`flex items-center gap-2 text-sm ${btnPrimary}`}
-        >
-          <FontAwesomeIcon icon={faTv} />
-          <span>OBS source</span>
-        </a>
+        {showObsSource && (
+          <a
+            href={obsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-2 text-sm ${btnPrimary}`}
+          >
+            <FontAwesomeIcon icon={faTv} />
+            <span>OBS source</span>
+          </a>
+        )}
       </div>
       <LobbyLiveScores lobbyState={lobbyState} singleColumn />
     </div>

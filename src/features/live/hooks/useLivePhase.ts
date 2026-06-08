@@ -1,16 +1,24 @@
-import { useMemo } from "react";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import { useMemo, useState } from "react";
+import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
+import { useLiveMatchGateway } from "@/features/live/services/useLiveMatchGateway";
 
 export function useLivePhase(tournamentId: number) {
-  const { activeLobbies, liveMatchStates } = useTournamentUpdates();
+  const [liveMatchStates, setLiveMatchStates] = useState<ReadonlyMap<string, LiveMatchStateDto>>(new Map());
 
-  const tournamentActiveLobbies = useMemo(
-    () =>
-      Array.from(activeLobbies.values()).filter(
-        (lobby) => lobby.tournamentId === tournamentId,
-      ),
-    [activeLobbies, tournamentId],
-  );
+  useLiveMatchGateway(tournamentId, {
+    onSongSelected: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setLiveMatchStates((prev) => new Map(prev).set(data.lobbyId, data));
+    },
+    onMatchUpdate: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setLiveMatchStates((prev) => new Map(prev).set(data.lobbyId, data));
+    },
+    onSongCompleted: (data) => {
+      if (data.tournamentId !== tournamentId) return;
+      setLiveMatchStates((prev) => new Map(prev).set(data.lobbyId, data));
+    },
+  });
 
   const tournamentLiveStates = useMemo(
     () =>
@@ -20,17 +28,7 @@ export function useLivePhase(tournamentId: number) {
     [liveMatchStates, tournamentId],
   );
 
-  const pendingLobbies = useMemo(
-    () =>
-      tournamentActiveLobbies.filter(
-        (lobby) => !liveMatchStates.has(lobby.lobbyId),
-      ),
-    [liveMatchStates, tournamentActiveLobbies],
-  );
-
   return {
-    tournamentActiveLobbies,
     tournamentLiveStates,
-    pendingLobbies,
   };
 }

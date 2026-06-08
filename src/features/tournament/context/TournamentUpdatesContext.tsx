@@ -1,14 +1,5 @@
 import { ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  ActiveLobbyDto,
-  LobbyCardStateDto,
-  LobbyPlayerReadyDto,
-  LobbySongSelectedDto,
-  LiveMatchStateDto,
-  SyncStartConnectionStatusDto,
-  scoreHubUrl,
-} from "@/features/live/services/useScoreHub";
 import { toast } from "react-toastify";
 
 type TournamentUpdateMessage = {
@@ -54,25 +45,11 @@ type TournamentSocketMessage =
   | { event: "MatchUpdate"; data: MatchUpdateMessage }
   | { event: "UiWarning"; data: UiWarningMessage };
 
-type LobbySocketMessage =
-  | { event: "OnSyncStartConnectionStatus"; data: SyncStartConnectionStatusDto }
-  | { event: "OnConnectionActive"; data: ActiveLobbyDto }
-  | { event: "OnConnected"; data: ActiveLobbyDto }
-  | { event: "OnDisconnection"; data: ActiveLobbyDto }
-  | { event: "OnSongSelected"; data: LobbySongSelectedDto }
-  | { event: "OnPlayerReady"; data: LobbyPlayerReadyDto }
-  | { event: "OnGoingMatchUpdate"; data: LiveMatchStateDto }
-  | { event: "OnSongCompleted"; data: LiveMatchStateDto };
-
 type TournamentUpdatesContextValue = {
   tournamentVersion: number;
   divisionDetailVersions: ReadonlyMap<number, number>;
   matchListVersions: ReadonlyMap<number, number>;
   updatedMatchIds: ReadonlySet<number>;
-  activeLobbies: ReadonlyMap<string, ActiveLobbyDto>;
-  syncStartConnectionStatus: SyncStartConnectionStatusDto;
-  lobbyCardStates: ReadonlyMap<string, LobbyCardStateDto>;
-  liveMatchStates: ReadonlyMap<string, LiveMatchStateDto>;
 };
 
 const defaultValue: TournamentUpdatesContextValue = {
@@ -80,10 +57,6 @@ const defaultValue: TournamentUpdatesContextValue = {
   divisionDetailVersions: new Map(),
   matchListVersions: new Map(),
   updatedMatchIds: new Set(),
-  activeLobbies: new Map(),
-  syncStartConnectionStatus: { tournamentId: 0, isActive: false, isConnected: false },
-  lobbyCardStates: new Map(),
-  liveMatchStates: new Map(),
 };
 
 const TournamentUpdatesContext = createContext<TournamentUpdatesContextValue>(defaultValue);
@@ -114,14 +87,6 @@ export function TournamentUpdatesProvider({
   const [divisionDetailVersions, setDivisionDetailVersions] = useState<ReadonlyMap<number, number>>(new Map());
   const [matchListVersions, setMatchListVersions] = useState<ReadonlyMap<number, number>>(new Map());
   const [updatedMatchIds, setUpdatedMatchIds] = useState<ReadonlySet<number>>(new Set());
-  const [activeLobbies, setActiveLobbies] = useState<ReadonlyMap<string, ActiveLobbyDto>>(new Map());
-  const [syncStartConnectionStatus, setSyncStartConnectionStatus] = useState<SyncStartConnectionStatusDto>({
-    tournamentId,
-    isActive: false,
-    isConnected: false,
-  });
-  const [lobbyCardStates, setLobbyCardStates] = useState<ReadonlyMap<string, LobbyCardStateDto>>(new Map());
-  const [liveMatchStates, setLiveMatchStates] = useState<ReadonlyMap<string, LiveMatchStateDto>>(new Map());
   const pendingMatchIds = useRef<Set<number>>(new Set());
   const pendingPhaseGroupIds = useRef<Set<number>>(new Set());
   const pendingDivisionDetailIds = useRef<Set<number>>(new Set());
@@ -242,139 +207,6 @@ export function TournamentUpdatesProvider({
     };
   }, [queryClient, tournamentId]);
 
-  useEffect(() => {
-    const ws = new WebSocket(scoreHubUrl());
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as LobbySocketMessage;
-
-        if (!msg?.data || msg.data.tournamentId !== tournamentId) {
-          return;
-        }
-
-        if (msg.event === "OnSyncStartConnectionStatus") {
-          setSyncStartConnectionStatus(msg.data);
-          return;
-        }
-
-        if (msg.event === "OnConnectionActive" || msg.event === "OnConnected") {
-          setActiveLobbies((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
-          setLobbyCardStates((prev) => {
-            if (prev.has(msg.data.lobbyId)) return prev;
-            const next = new Map(prev);
-            next.set(msg.data.lobbyId, {
-              tournamentId: msg.data.tournamentId,
-              lobbyId: msg.data.lobbyId,
-              lobbyName: msg.data.lobbyName,
-              lobbyCode: msg.data.lobbyCode,
-              songTitle: "",
-              songPath: "",
-              players: [],
-            });
-            return next;
-          });
-          return;
-        }
-
-        if (msg.event === "OnDisconnection") {
-          if (!msg.data.isActive) {
-            setActiveLobbies((prev) => {
-              const next = new Map(prev);
-              next.delete(msg.data.lobbyId);
-              return next;
-            });
-            setLobbyCardStates((prev) => {
-              const next = new Map(prev);
-              next.delete(msg.data.lobbyId);
-              return next;
-            });
-            setLiveMatchStates((prev) => {
-              const next = new Map(prev);
-              next.delete(msg.data.lobbyId);
-              return next;
-            });
-            return;
-          }
-
-          setActiveLobbies((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
-          return;
-        }
-
-        if (msg.event === "OnSongSelected") {
-          setLobbyCardStates((prev) => {
-            const next = new Map(prev);
-            const existing = next.get(msg.data.lobbyId);
-            next.set(msg.data.lobbyId, {
-              tournamentId: msg.data.tournamentId,
-              lobbyId: msg.data.lobbyId,
-              lobbyName: msg.data.lobbyName,
-              lobbyCode: msg.data.lobbyCode,
-              songTitle: msg.data.songTitle,
-              songPath: msg.data.songPath,
-              players: existing?.players ?? [],
-            });
-            return next;
-          });
-          setLiveMatchStates((prev) => {
-            const existing = prev.get(msg.data.lobbyId);
-            if (!existing) return prev;
-
-            const next = new Map(prev);
-            next.set(msg.data.lobbyId, {
-              ...existing,
-              tournamentId: msg.data.tournamentId,
-              lobbyId: msg.data.lobbyId,
-              lobbyName: msg.data.lobbyName,
-              lobbyCode: msg.data.lobbyCode,
-              songTitle: msg.data.songTitle,
-              songPath: msg.data.songPath,
-            });
-            return next;
-          });
-          return;
-        }
-
-        if (msg.event === "OnPlayerReady") {
-          setLobbyCardStates((prev) => {
-            const existing = prev.get(msg.data.lobbyId);
-            const players = (existing?.players ?? []).filter(
-              (player) => player.playerId !== msg.data.playerId,
-            );
-            players.push({
-              playerId: msg.data.playerId,
-              playerName: msg.data.playerName,
-              ready: msg.data.ready,
-            });
-
-            const next = new Map(prev);
-            next.set(msg.data.lobbyId, {
-              tournamentId: msg.data.tournamentId,
-              lobbyId: msg.data.lobbyId,
-              lobbyName: msg.data.lobbyName,
-              lobbyCode: msg.data.lobbyCode,
-              songTitle: existing?.songTitle ?? "",
-              songPath: existing?.songPath ?? "",
-              players: players.sort((a, b) => a.playerName.localeCompare(b.playerName)),
-            });
-            return next;
-          });
-          return;
-        }
-
-        if (msg.event === "OnGoingMatchUpdate" || msg.event === "OnSongCompleted") {
-          setLiveMatchStates((prev) => new Map(prev).set(msg.data.lobbyId, msg.data));
-        }
-      } catch {
-        // ignore malformed websocket messages
-      }
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [tournamentId]);
-
   return (
     <TournamentUpdatesContext.Provider
       value={{
@@ -382,10 +214,6 @@ export function TournamentUpdatesProvider({
         divisionDetailVersions,
         matchListVersions,
         updatedMatchIds,
-        activeLobbies,
-        syncStartConnectionStatus,
-        lobbyCardStates,
-        liveMatchStates,
       }}
     >
       {children}
