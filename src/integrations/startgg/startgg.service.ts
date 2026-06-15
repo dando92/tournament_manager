@@ -739,9 +739,7 @@ export class StartggService {
             const dto = new CreatePhaseDto();
             dto.name = phase.name;
             dto.divisionId = divisionId;
-            localPhase = await this.phaseService.create(dto, {
-                createDefaultPhaseGroup: (phase.phaseGroups?.length ?? 0) === 0,
-            });
+            localPhase = await this.phaseService.create(dto);
         }
 
         this.cacheMapping(mappingCache, {
@@ -840,6 +838,10 @@ export class StartggService {
         const matchesBySetId = new Map<string, Match>();
         const touchedPhaseIds = new Set<number>();
         const touchedPhaseGroupIds = new Set<number>();
+        const needsFallbackPhaseGroup = sets.some((set) => !set.phaseGroupId || !localPhaseGroups.has(set.phaseGroupId));
+        const fallbackPhaseGroup = needsFallbackPhaseGroup
+            ? await this.resolveFallbackImportedPhaseGroup(fallbackPhase, localPhaseGroups)
+            : null;
 
         const stagedMatches = await Promise.all(sets.map(async (set) => {
             const existingMapping = this.findMappingInCache(mappingCache, 'match', 'set', set.id);
@@ -847,7 +849,10 @@ export class StartggService {
                 ? existingMatchesById.get(Number(existingMapping.localId)) ?? null
                 : null;
             const targetPhaseGroup = (set.phaseGroupId ? localPhaseGroups.get(set.phaseGroupId) : null)
-                ?? await this.phaseGroupService.findOrCreateDefaultForPhaseId(fallbackPhase.id);
+                ?? fallbackPhaseGroup;
+            if (!targetPhaseGroup) {
+                throw new NotFoundException(`Could not resolve a local phase group for imported start.gg set ${set.id}`);
+            }
             const match = existingMatch ?? this.matchRepository.create();
 
             match.name = this.buildMatchName(set);
@@ -966,6 +971,24 @@ export class StartggService {
             touchedPhaseIds,
             touchedPhaseGroupIds,
         };
+    }
+
+    private async resolveFallbackImportedPhaseGroup(
+        fallbackPhase: Phase,
+        localPhaseGroups: Map<string, PhaseGroup>,
+    ): Promise<PhaseGroup> {
+        const fallbackKey = `fallback:${fallbackPhase.id}`;
+        const cached = localPhaseGroups.get(fallbackKey);
+        if (cached) return cached;
+
+        const existing = await this.phaseGroupService.findDefaultForPhase(fallbackPhase.id);
+        const phaseGroup = existing ?? await this.phaseGroupService.createForPhase(fallbackPhase.id, {
+            name: `${fallbackPhase.name} Matches`,
+            displayIdentifier: null,
+            bracketType: null,
+        });
+        localPhaseGroups.set(fallbackKey, phaseGroup);
+        return phaseGroup;
     }
 
     private async createPhaseGroupProgressionRules(

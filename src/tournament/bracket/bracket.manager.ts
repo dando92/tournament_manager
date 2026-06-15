@@ -54,12 +54,9 @@ export class BracketManager {
             divisionId,
             name: dto.phaseName?.trim() || `Bracket ${nextPhaseNumber}`,
         });
-        const phaseGroup = await this.phaseGroupService.findDefaultForPhase(phase.id);
-        if (!phaseGroup) {
-            throw new Error(`Default PhaseGroup for Phase ${phase.id} not found`);
-        }
-
-        await this.phaseGroupService.update(phaseGroup.id, {
+        const phaseGroup = await this.phaseGroupService.createForPhase(phase.id, {
+            name: phase.name,
+            displayIdentifier: '1',
             bracketType: dto.bracketType,
         });
         await this.phaseGroupService.replaceEntrants(phaseGroup.id, entrants);

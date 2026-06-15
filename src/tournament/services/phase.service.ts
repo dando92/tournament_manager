@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Division, Entrant, Phase } from '@persistence/entities';
 import { CreatePhaseDto } from '../dtos';
 import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
-import { PhaseGroupService } from './phase-group.service';
 
 @Injectable()
 export class PhaseService {
@@ -14,10 +13,9 @@ export class PhaseService {
         @InjectRepository(Division)
         private readonly divisionRepository: Repository<Division>,
         private readonly uiUpdateGateway: UiUpdateGateway,
-        private readonly phaseGroupService: PhaseGroupService,
     ) {}
 
-    async create(dto: CreatePhaseDto, options: { createDefaultPhaseGroup?: boolean } = {}): Promise<Phase> {
+    async create(dto: CreatePhaseDto): Promise<Phase> {
         const division = await this.divisionRepository.findOneBy({ id: dto.divisionId });
         if (!division) throw new NotFoundException(`Division with ID ${dto.divisionId} not found`);
 
@@ -26,9 +24,6 @@ export class PhaseService {
         phase.division = division;
 
         const savedPhase = await this.phaseRepository.save(phase);
-        if (options.createDefaultPhaseGroup ?? true) {
-            await this.phaseGroupService.createDefaultForPhase(savedPhase);
-        }
         await this.uiUpdateGateway.emitDivisionUpdateByDivisionId(dto.divisionId);
         return savedPhase;
     }

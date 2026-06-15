@@ -19,23 +19,6 @@ export class PhaseGroupService {
         private readonly uiUpdateGateway: UiUpdateGateway,
     ) {}
 
-    async createDefaultForPhase(phase: Phase, bracketType?: string | null): Promise<PhaseGroup> {
-        const existing = await this.findDefaultForPhase(phase.id);
-        if (existing) return existing;
-
-        const phaseGroup = new PhaseGroup();
-        phaseGroup.name = phase.name;
-        phaseGroup.displayIdentifier = '1';
-        phaseGroup.bracketType = bracketType ?? null;
-        phaseGroup.state = 'pending';
-        phaseGroup.phase = phase;
-        phaseGroup.entrants = [];
-        const savedPhaseGroup = await this.phaseGroupRepository.save(phaseGroup);
-        await this.uiUpdateGateway.emitPhaseUpdateByPhaseId(phase.id);
-        await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(savedPhaseGroup.id);
-        return savedPhaseGroup;
-    }
-
     async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<PhaseGroup> {
         const phase = await this.phaseRepository.findOneBy({ id: phaseId });
         if (!phase) throw new NotFoundException(`Phase with ID ${phaseId} not found`);
@@ -130,15 +113,6 @@ export class PhaseGroupService {
         });
         await this.phaseGroupRepository.delete(id);
         await this.uiUpdateGateway.emitPhaseUpdateByPhaseId(phaseGroup?.phase?.id);
-    }
-
-    async findOrCreateDefaultForPhaseId(phaseId: number, bracketType?: string | null): Promise<PhaseGroup> {
-        const existing = await this.findDefaultForPhase(phaseId);
-        if (existing) return existing;
-
-        const phase = await this.phaseRepository.findOneBy({ id: phaseId });
-        if (!phase) throw new NotFoundException(`Phase with ID ${phaseId} not found`);
-        return this.createDefaultForPhase(phase, bracketType);
     }
 
     async replaceEntrants(phaseGroupId: number, entrants: Entrant[]): Promise<void> {
