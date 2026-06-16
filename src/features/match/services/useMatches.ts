@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initialState, matchesReducer } from "@/features/match/services/matches.reducer";
 import * as MatchesApi from "@/features/match/services/matches.api";
-import { CreateMatchRequest, MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
+import { CommitMatchResultRequest, CreateMatchRequest } from "@/features/match/types/match-requests";
 import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { toast } from "react-toastify";
@@ -296,12 +296,12 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     }
   }
 
-  async function commitMatchResult(matchId: number, playerPoints?: MatchPlayerPointsRequest[]) {
+  async function commitMatchResult(matchId: number, request?: CommitMatchResultRequest) {
     try {
-      const item = await MatchesApi.commitMatchResult(matchId, playerPoints);
+      const item = await MatchesApi.commitMatchResult(matchId, request);
       dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
-      toast.success("Match completed.");
+      toast.success(request?.publishToStartgg ? "Match completed and reported to start.gg." : "Match completed.");
     } catch (error) {
       toast.error("Error committing match result.");
       console.error("Error committing match result:", error);

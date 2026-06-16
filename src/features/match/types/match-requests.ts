@@ -41,3 +41,8 @@ export interface MatchPlayerPointsRequest {
   playerId: number;
   points: number;
 }
+
+export interface CommitMatchResultRequest {
+  playerPoints?: MatchPlayerPointsRequest[];
+  publishToStartgg?: boolean;
+}

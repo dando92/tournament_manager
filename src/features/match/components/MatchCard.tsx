@@ -10,7 +10,7 @@ import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { getMatchCommitState } from "@/features/match/utils/matchStatus";
-import { MatchPlayerPointsRequest } from "@/features/match/types/match-requests";
+import { CommitMatchResultRequest } from "@/features/match/types/match-requests";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
 type MatchCardProps = {
@@ -52,7 +52,7 @@ type MatchCardProps = {
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
-  onCommitMatchResult?: (matchId: number, playerPoints?: MatchPlayerPointsRequest[]) => Promise<void>;
+  onCommitMatchResult?: (matchId: number, request?: CommitMatchResultRequest) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
 };
 
@@ -183,7 +183,7 @@ export default function MatchCard({
     const playerPoints = match.rounds.length === 0
       ? entrantPlayers(match.entrants).map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
       : undefined;
-    await onCommitMatchResult?.(match.id, playerPoints);
+    await onCommitMatchResult?.(match.id, { playerPoints });
     setManualPoints({});
   }
 
