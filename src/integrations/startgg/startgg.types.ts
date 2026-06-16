@@ -54,6 +54,11 @@ export type StartggSetNode = {
     }>;
 };
 
+export type StartggReportedSetNode = {
+    id: string;
+    state?: number | null;
+};
+
 export type StartggPhaseGroupNode = {
     id: string;
     displayIdentifier?: string | null;

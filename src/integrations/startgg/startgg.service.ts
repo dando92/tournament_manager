@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     ForbiddenException,
     Injectable,
     Logger,
@@ -36,6 +37,7 @@ import {
     StartggPhaseGroupNode,
     StartggParticipantNode,
     StartggPhaseNode,
+    StartggReportedSetNode,
     StartggSetNode,
 } from './startgg.types';
 
@@ -456,6 +458,69 @@ export class StartggService {
         return result;
     }
 
+    async reportCompletedMatch(matchId: number): Promise<StartggReportedSetNode[]> {
+        const match = await this.matchRepository.findOne({
+            where: { id: matchId },
+            relations: {
+                matchResult: true,
+                entrants: { participants: { player: true } },
+                phaseGroup: { phase: { division: { tournament: true } } },
+            },
+        });
+        if (!match) throw new NotFoundException(`Match ${matchId} not found`);
+        if (!match.matchResult) {
+            throw new BadRequestException(`Match ${match.id} has no completed result to report to start.gg`);
+        }
+
+        const setMapping = await this.externalMappingRepository.findOne({
+            where: {
+                provider: 'startgg',
+                localType: 'match',
+                localId: String(match.id),
+                externalType: 'set',
+            },
+        });
+        if (!setMapping) {
+            throw new BadRequestException(`Match ${match.id} is not mapped to a start.gg set`);
+        }
+
+        const winnerPlayerId = this.resolveWinnerPlayerId(match);
+        const winnerEntrant = (match.entrants ?? []).find((entrant) =>
+            (entrant.participants ?? []).some((participant) => participant.player?.id === winnerPlayerId),
+        );
+        if (!winnerEntrant) {
+            throw new BadRequestException(`Unable to resolve winning entrant for match ${match.id}`);
+        }
+
+        const entrantMapping = await this.externalMappingRepository.findOne({
+            where: {
+                provider: 'startgg',
+                localType: 'entrant',
+                localId: String(winnerEntrant.id),
+                externalType: 'entrant',
+            },
+        });
+        if (!entrantMapping) {
+            throw new BadRequestException(`Winning entrant ${winnerEntrant.id} is not mapped to a start.gg entrant`);
+        }
+
+        const tournament = match.phaseGroup?.phase?.division?.tournament;
+        if (!tournament) {
+            throw new BadRequestException(`Unable to resolve tournament for match ${match.id}`);
+        }
+
+        const startggApiKey = this.getConfiguredStartggApiKey(tournament);
+        const result = await this.startggClient.reportBracketSet(
+            setMapping.externalId,
+            entrantMapping.externalId,
+            startggApiKey,
+        );
+        this.logger.log(
+            `Reported match ${match.id} to start.gg set ${setMapping.externalId} with winner entrant ${entrantMapping.externalId}`,
+        );
+        return result;
+    }
+
     private async buildEventSnapshot(eventSlug: string, startggApiKey: string): Promise<StartggEventSnapshot> {
         const cacheKey = `${eventSlug}:${startggApiKey.slice(-8)}`;
         const cached = this.snapshotCache.get(cacheKey);
@@ -578,7 +643,7 @@ export class StartggService {
     private getConfiguredStartggApiKey(tournament: Tournament): string {
         const startggApiKey = tournament.startggApiKey?.trim();
         if (!startggApiKey) {
-            throw new ForbiddenException('Configure the start.gg API key before importing from start.gg.');
+            throw new ForbiddenException('Configure the start.gg API key before using start.gg integration features.');
         }
         return startggApiKey;
     }
@@ -1051,6 +1116,16 @@ export class StartggService {
             .filter((entry): entry is { playerId: number; points: number; placement: number } => Boolean(entry))
             .sort((left, right) => left.placement - right.placement || right.points - left.points || left.playerId - right.playerId)
             .map(({ playerId, points }) => ({ playerId, points }));
+    }
+
+    private resolveWinnerPlayerId(match: Match): number {
+        const winner = [...(match.matchResult?.playerPoints ?? [])]
+            .sort((left, right) => right.points - left.points || left.playerId - right.playerId)[0];
+        if (!winner?.playerId) {
+            throw new BadRequestException(`Match ${match.id} result does not contain a winner`);
+        }
+
+        return winner.playerId;
     }
 
     private normalizePrereqType(prereqType: string): string {

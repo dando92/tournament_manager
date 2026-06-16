@@ -4,6 +4,7 @@ import { Match, MatchResultEntry } from '@persistence/entities';
 import { MatchResultService } from '@match/services/match-result.service';
 import { MatchService } from '@match/services/match.service';
 import { AdvancementManager } from '@match/services/advancement.manager';
+import { StartggService } from '../../../integrations/startgg/startgg.service';
 
 @Injectable()
 export class MatchWorkflowManager {
@@ -14,6 +15,8 @@ export class MatchWorkflowManager {
         private readonly matchResultService: MatchResultService,
         @Inject()
         private readonly advancementManager: AdvancementManager,
+        @Inject()
+        private readonly startggService: StartggService,
     ) {}
 
     async UpdateMatchActive(matchId: number, dto: UpdateMatchActiveDto): Promise<Match> {
@@ -46,6 +49,9 @@ export class MatchWorkflowManager {
         }
 
         await this.advancementManager.AdvanceFromCompletedMatch(match);
+        if (dto.publishToStartgg) {
+            await this.startggService.reportCompletedMatch(match.id);
+        }
         return await this.matchService.getMatch(match.id);
     }
 

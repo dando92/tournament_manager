@@ -172,6 +172,11 @@ export class CommitMatchResultDto {
   @IsOptional()
   @IsArray()
   playerPoints?: MatchPlayerPointsDto[];
+
+  @ApiProperty({ description: 'Report the completed result to the mapped start.gg set', required: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  publishToStartgg?: boolean;
 }
 
 export class AddStandingToMatchDto {

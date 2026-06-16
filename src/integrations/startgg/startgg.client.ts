@@ -18,6 +18,7 @@ import {
     StartggEntrantNode,
     StartggEventNode,
     StartggPhaseGroupNode,
+    StartggReportedSetNode,
     StartggSeedNode,
     StartggSetNode,
 } from './startgg.types';
@@ -27,10 +28,15 @@ import { GET_EVENT_BY_SLUG_QUERY } from './queries/get-event-by-slug.query';
 import { PHASE_GROUPS_BY_PHASE_QUERY } from './queries/phase-groups-by-phase.query';
 import { PHASE_GROUP_SETS_QUERY } from './queries/phase-group-sets.query';
 import { PHASE_SEEDS_QUERY } from './queries/phase-seeds.query';
+import { REPORT_BRACKET_SET_MUTATION } from './queries/report-bracket-set.mutation';
 
 type GraphqlResponse<T> = {
     data?: T;
     errors?: Array<{ message?: string }>;
+};
+
+type ReportBracketSetResponse = {
+    reportBracketSet?: StartggReportedSetNode[] | null;
 };
 
 @Injectable()
@@ -134,6 +140,16 @@ export class StartggClient {
                 return PhaseGroupSetsResponse.mapPage(response, phaseGroup);
             },
         );
+    }
+
+    async reportBracketSet(setId: string, winnerId: string, accessToken: string): Promise<StartggReportedSetNode[]> {
+        const response = await this.request<ReportBracketSetResponse>(
+            'ReportBracketSet',
+            REPORT_BRACKET_SET_MUTATION,
+            { setId, winnerId },
+            accessToken,
+        );
+        return response.reportBracketSet ?? [];
     }
 
     private async request<T>(operationName: string, query: string, variables: Record<string, unknown>, accessToken: string): Promise<T> {
