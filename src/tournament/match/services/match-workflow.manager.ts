@@ -49,9 +49,7 @@ export class MatchWorkflowManager {
         }
 
         await this.advancementManager.AdvanceFromCompletedMatch(match);
-        if (dto.publishToStartgg) {
-            await this.startggService.reportCompletedMatch(match.id);
-        }
+        await this.startggService.reportCompletedMatch(match.id);
         return await this.matchService.getMatch(match.id);
     }
 

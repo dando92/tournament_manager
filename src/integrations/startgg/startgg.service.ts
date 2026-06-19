@@ -39,6 +39,7 @@ import {
     StartggPhaseNode,
     StartggReportedSetNode,
     StartggSetNode,
+    StartggBracketSetGameDataInput,
 } from './startgg.types';
 
 type AuthUser = {
@@ -463,6 +464,13 @@ export class StartggService {
             where: { id: matchId },
             relations: {
                 matchResult: true,
+                rounds: {
+                    standings: {
+                        score: {
+                            player: true,
+                        },
+                    },
+                },
                 entrants: { participants: { player: true } },
                 phaseGroup: { phase: { division: { tournament: true } } },
             },
@@ -492,15 +500,9 @@ export class StartggService {
             throw new BadRequestException(`Unable to resolve winning entrant for match ${match.id}`);
         }
 
-        const entrantMapping = await this.externalMappingRepository.findOne({
-            where: {
-                provider: 'startgg',
-                localType: 'entrant',
-                localId: String(winnerEntrant.id),
-                externalType: 'entrant',
-            },
-        });
-        if (!entrantMapping) {
+        const entrantMappings = await this.resolveStartggEntrantMappings(match);
+        const winnerExternalEntrantId = entrantMappings.get(winnerEntrant.id);
+        if (!winnerExternalEntrantId) {
             throw new BadRequestException(`Winning entrant ${winnerEntrant.id} is not mapped to a start.gg entrant`);
         }
 
@@ -512,11 +514,12 @@ export class StartggService {
         const startggApiKey = this.getConfiguredStartggApiKey(tournament);
         const result = await this.startggClient.reportBracketSet(
             setMapping.externalId,
-            entrantMapping.externalId,
+            winnerExternalEntrantId,
             startggApiKey,
+            this.buildStartggGameData(match, entrantMappings),
         );
         this.logger.log(
-            `Reported match ${match.id} to start.gg set ${setMapping.externalId} with winner entrant ${entrantMapping.externalId}`,
+            `Reported match ${match.id} to start.gg set ${setMapping.externalId} with winner entrant ${winnerExternalEntrantId}`,
         );
         return result;
     }
@@ -1135,6 +1138,67 @@ export class StartggService {
         }
 
         return winner.playerId;
+    }
+
+    private async resolveStartggEntrantMappings(match: Match): Promise<Map<number, string>> {
+        const mappings = new Map<number, string>();
+
+        for (const entrant of match.entrants ?? []) {
+            const mapping = await this.externalMappingRepository.findOne({
+                where: {
+                    provider: 'startgg',
+                    localType: 'entrant',
+                    localId: String(entrant.id),
+                    externalType: 'entrant',
+                },
+            });
+            if (mapping) {
+                mappings.set(entrant.id, mapping.externalId);
+            }
+        }
+
+        return mappings;
+    }
+
+    private buildStartggGameData(
+        match: Match,
+        entrantMappings: Map<number, string>,
+    ): StartggBracketSetGameDataInput[] | undefined {
+        const entrants = match.entrants ?? [];
+        if (entrants.length !== 2 || (match.rounds?.length ?? 0) === 0) {
+            return undefined;
+        }
+
+        const entrantInfos = entrants.map((entrant) => ({
+            entrant,
+            playerId: entrant.participants?.[0]?.player?.id,
+            externalEntrantId: entrantMappings.get(entrant.id),
+        }));
+        if (entrantInfos.some((info) => !info.playerId || !info.externalEntrantId)) {
+            throw new BadRequestException(`Match ${match.id} cannot report game data because entrant mappings are incomplete`);
+        }
+
+        return [...(match.rounds ?? [])]
+            .sort((left, right) => left.id - right.id)
+            .map((round, index) => {
+                const entrant1Score = this.getRoundPointsForPlayer(round, entrantInfos[0].playerId!);
+                const entrant2Score = this.getRoundPointsForPlayer(round, entrantInfos[1].playerId!);
+                const winnerId = entrant1Score >= entrant2Score
+                    ? entrantInfos[0].externalEntrantId!
+                    : entrantInfos[1].externalEntrantId!;
+
+                return {
+                    winnerId,
+                    gameNum: index + 1,
+                    entrant1Score,
+                    entrant2Score,
+                };
+            });
+    }
+
+    private getRoundPointsForPlayer(round: Match['rounds'][number], playerId: number): number {
+        const standing = (round.standings ?? []).find((candidate) => candidate.score?.player?.id === playerId);
+        return Number(standing?.points ?? 0);
     }
 
     private isStartggSetCompleted(set: StartggSetNode): boolean {

@@ -16,6 +16,7 @@ import {
 } from './responses';
 import {
     StartggEntrantNode,
+    StartggBracketSetGameDataInput,
     StartggEventNode,
     StartggPhaseGroupNode,
     StartggReportedSetNode,
@@ -142,11 +143,16 @@ export class StartggClient {
         );
     }
 
-    async reportBracketSet(setId: string, winnerId: string, accessToken: string): Promise<StartggReportedSetNode[]> {
+    async reportBracketSet(
+        setId: string,
+        winnerId: string,
+        accessToken: string,
+        gameData?: StartggBracketSetGameDataInput[],
+    ): Promise<StartggReportedSetNode[]> {
         const response = await this.request<ReportBracketSetResponse>(
             'ReportBracketSet',
             REPORT_BRACKET_SET_MUTATION,
-            { setId, winnerId },
+            { setId, winnerId, gameData },
             accessToken,
         );
         return response.reportBracketSet ?? [];

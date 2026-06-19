@@ -62,6 +62,13 @@ export type StartggReportedSetNode = {
     state?: number | null;
 };
 
+export type StartggBracketSetGameDataInput = {
+    winnerId: string;
+    gameNum: number;
+    entrant1Score: number;
+    entrant2Score: number;
+};
+
 export type StartggPhaseGroupNode = {
     id: string;
     displayIdentifier?: string | null;
