@@ -10,6 +10,9 @@ query PhaseGroupSets($phaseGroupId: ID!, $page: Int!, $perPage: Int!) {
       nodes {
         id
         fullRoundText
+        state
+        completedAt
+        winnerId
         slots {
           prereqId
           prereqPlacement

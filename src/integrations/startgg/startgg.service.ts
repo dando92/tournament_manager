@@ -1008,6 +1008,15 @@ export class StartggService {
                 }
             }
 
+            if (!this.isStartggSetCompleted(set)) {
+                if (localMatch.matchResult?.id) {
+                    resultIdsToDelete.add(localMatch.matchResult.id);
+                }
+                localMatch.matchResult = null;
+                localMatch.active = false;
+                continue;
+            }
+
             const playerPoints = this.buildImportedPlayerPoints(set, entrantByExternalId);
             if (playerPoints.length === 0) {
                 if (localMatch.matchResult?.id) {
@@ -1126,6 +1135,13 @@ export class StartggService {
         }
 
         return winner.playerId;
+    }
+
+    private isStartggSetCompleted(set: StartggSetNode): boolean {
+        return set.state === 3
+            || set.state === 'COMPLETED'
+            || typeof set.completedAt === 'number'
+            || Boolean(set.winnerId);
     }
 
     private normalizePrereqType(prereqType: string): string {

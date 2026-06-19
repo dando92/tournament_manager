@@ -3,6 +3,9 @@ import { StartggPhaseGroupNode, StartggSetNode } from '../startgg.types';
 export type StartggRawSetNode = {
     id: string | number;
     fullRoundText?: string | null;
+    state?: number | string | null;
+    completedAt?: number | null;
+    winnerId?: string | number | null;
     phaseGroup?: {
         displayIdentifier?: string | null;
         phase?: {
@@ -37,6 +40,9 @@ export class StartggRawSetResponse {
         return {
             id: String(set.id),
             fullRoundText: set.fullRoundText ?? null,
+            state: set.state ?? null,
+            completedAt: set.completedAt ?? null,
+            winnerId: set.winnerId ? String(set.winnerId) : null,
             phaseGroupId: phaseGroup?.id ?? null,
             phaseId: phaseGroup?.phaseId ?? (set.phaseGroup?.phase?.id ? String(set.phaseGroup.phase.id) : null),
             phaseName: phaseGroup?.phaseName ?? set.phaseGroup?.phase?.name ?? null,

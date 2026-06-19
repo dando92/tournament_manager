@@ -31,6 +31,9 @@ export type StartggEntrantNode = {
 export type StartggSetNode = {
     id: string;
     fullRoundText?: string | null;
+    state?: number | string | null;
+    completedAt?: number | null;
+    winnerId?: string | null;
     phaseId?: string | null;
     phaseName?: string | null;
     phaseGroupId?: string | null;
