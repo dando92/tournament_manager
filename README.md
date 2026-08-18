@@ -37,18 +37,28 @@ npm run dev
 - Swagger UI: `http://localhost:3000/api-docs`
 - Frontend: `http://localhost:5173`
 
-The backend uses a local SQLite database by default. Runtime databases and environment files are not committed.
+The direct development command temporarily uses a local SQLite database until Phase 2 removes legacy database paths. Runtime databases and environment files are not committed.
 
 ## Docker
 
-Build and run the complete application:
+Start the complete provider-independent local stack with PostgreSQL and Redis:
 
 ```bash
-docker compose up --build
+npm run local:up
 ```
 
 - Frontend: `http://localhost`
 - Backend API: `http://localhost:3000`
+- Swagger UI: `http://localhost:3000/api-docs`
+
+Inspect and verify it with:
+
+```bash
+npm run local:status
+npm run verify:local
+```
+
+Stop it without deleting data with `npm run local:down`. See [Local Platform Operations](.ai/LocalOperations.md) for logs, backup, restore, restart, recovery, and explicit reset procedures.
 
 ## Verification
 
@@ -56,4 +66,4 @@ docker compose up --build
 npm run verify
 ```
 
-This runs linting, backend unit tests, behavioral backend e2e tests, and all workspace builds. The migration-specific commands listed in `.ai/MigrationPlan.md` will become available incrementally in the phases that introduce their infrastructure.
+This runs linting, backend unit tests, behavioral backend e2e tests, and all workspace builds. Run `npm run verify:local` against the started Compose stack for PostgreSQL, Redis, migrations, API, Swagger, seed, and frontend verification.

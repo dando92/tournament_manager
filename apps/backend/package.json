@@ -11,7 +11,7 @@
     "start": "npm run start:webprod",
     "start:dev": "npm run start:dev:localdev",
     "start:debug": "cross-env AUTH_MODE=local DB_TYPE=sqlite nest start --debug --watch",
-    "start:prod": "npm run start:webprod",
+    "start:prod": "node dist/main",
     "start:localdev": "cross-env AUTH_MODE=local DB_TYPE=sqlite nest start",
     "start:dev:localdev": "cross-env AUTH_MODE=local DB_TYPE=sqlite nest start --watch",
     "start:webdev": "cross-env AUTH_MODE=web DB_TYPE=sqlite nest start",
@@ -23,7 +23,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand",
+    "migration:run:prod": "node dist/database/run-migrations"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.18",

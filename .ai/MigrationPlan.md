@@ -114,6 +114,16 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 1 — Reproducible Local Platform
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-18.
+- The root local lifecycle and verification command contracts are established.
+- PostgreSQL 16.4 and Redis 7.4.0 run with named volumes and health checks.
+- API liveness and dependency-specific readiness are available; the migration runner gates API startup.
+- Deterministic, idempotent local seed data and real PostgreSQL/Redis integration tests are available.
+- Fresh startup, application restart, retained-volume restart, and dependency outage recovery passed.
+- Startup, status, logs, shutdown, backup, restore, recovery, and explicit reset are documented.
+
 ### Work
 
 - Add PostgreSQL and Redis to Docker Compose with pinned image versions, named volumes, and health checks.
@@ -285,7 +295,7 @@ A migrated behavior is complete only when all applicable items are true:
 ## Current Baseline Risks
 
 - The backend e2e suite protects authentication and basic tournament management, but the remaining critical tournament workflows are not yet covered.
-- Current local scripts and Docker Compose use SQLite, while the target requires PostgreSQL only.
+- Docker Compose uses PostgreSQL, while direct development and legacy e2e paths still use SQLite until Phase 2 completes PostgreSQL parity.
 - TypeORM currently uses schema synchronization instead of production-safe versioned migrations.
 - Redis, outbox, inbox, retry, dead-letter, and extracted-service test infrastructure do not yet exist.
 

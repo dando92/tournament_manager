@@ -12,6 +12,8 @@ import { Entities } from '@persistence/entities';
 
 import { AuthService } from '@auth/services';
 import { AuthController } from '@auth/controllers';
+import { HealthModule } from './health/health.module';
+import { LocalSeedModule } from './local-seed/local-seed.module';
 
 
 @Module({
@@ -59,7 +61,9 @@ import { AuthController } from '@auth/controllers';
     PersistenceModule,
     AuthModule,
     AccountModule,
-    TournamentModule
+    TournamentModule,
+    HealthModule,
+    LocalSeedModule,
 
    ],
   controllers:[

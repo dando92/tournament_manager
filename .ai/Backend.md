@@ -40,6 +40,15 @@ The current backend is located in `apps/backend` and is the source of the servic
 
 Local configuration is loaded from the repository-root `.env` file. The `local` configuration must start the complete application and its PostgreSQL and Redis dependencies through Docker Compose without requiring cloud services. Local startup requirements are defined in [Architecture.md](Architecture.md).
 
+## Health and Local Bootstrap
+
+- `GET /health/live` reports process liveness and must not depend on external services.
+- `GET /health/ready` reports PostgreSQL, Redis, and migration-runner readiness separately and returns HTTP `503` while any required dependency is unavailable.
+- Docker Compose runs the migration entrypoint to completion before starting the backend.
+- Phase 1 establishes the migration runner and its readiness gate. Versioned application-schema migrations and the removal of TypeORM schema synchronization belong to Phase 2.
+- Optional local seed data must be deterministic and idempotent. It is enabled only through `LOCAL_SEED_ENABLED=true`.
+- Operational procedures are defined in [LocalOperations.md](LocalOperations.md).
+
 ## Target Backend Boundaries
 
 The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).

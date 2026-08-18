@@ -9,9 +9,10 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-18.
-- Active phase: Phase 1 — Reproducible Local Platform (not started).
+- Active phase: Phase 2 — PostgreSQL-Only Persistence (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
-- Service extraction is not authorized yet because the Phase 1 exit gate remains open.
+- Phase 1 state: complete; its exit gate passed on 2026-08-18.
+- Service extraction is not authorized yet because the Phase 2 and subsequent pre-extraction exit gates remain open.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
@@ -173,6 +174,45 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 1 checkpoint 1 — Reproducible local platform
+
+- Added pinned PostgreSQL 16.4 and Redis 7.4.0 services with named volumes and health checks.
+- Added a one-shot migration runner that must complete before the backend starts. It establishes the runner and migration status table; versioned application-schema migrations and disabling TypeORM synchronization remain Phase 2 work.
+- Added backend liveness and readiness endpoints. Readiness reports PostgreSQL, Redis, and migration-runner state separately.
+- Added deterministic, idempotent local tournament seed data behind explicit local configuration.
+- Added the required root lifecycle commands: `local:up`, `local:status`, `local:logs`, `local:down`, and explicit destructive `local:reset`.
+- Added PostgreSQL and Redis integration tests plus `verify:local` checks for API liveness/readiness, migrations, Swagger, seed data, and frontend availability.
+- Fixed the production container entrypoint so it does not depend on the development-only `cross-env` package and respects container environment configuration.
+- Documented startup, status, logs, shutdown, restart, backup, restore, recovery, and reset procedures in [LocalOperations.md](LocalOperations.md).
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 31 unit tests
+PASS: 6 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+
+npm run local:up
+PASS: fresh PostgreSQL and Redis volumes created
+PASS: migration runner completed before backend startup
+PASS: PostgreSQL, Redis, backend, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis integration tests
+PASS: 6 behavioral e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+
+Operational checks
+PASS: backend-only restart
+PASS: Redis outage reported independently and readiness recovered after restart
+PASS: PostgreSQL outage reported independently and readiness recovered after restart
+PASS: complete shutdown and retained-volume restart; deterministic seed retained its identity
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -185,7 +225,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 1 with a focused local-platform checkpoint: add pinned PostgreSQL and Redis services, named volumes, and health checks to Docker Compose without switching application persistence yet.
+Begin Phase 2 by generating and reviewing the initial versioned PostgreSQL schema migration, then add empty-database and schema-equivalent upgrade tests before disabling TypeORM synchronization.
 
 ## Remaining Phase 0 Work
 
