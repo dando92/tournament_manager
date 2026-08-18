@@ -55,6 +55,25 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 3 — Bracket advancement characterization
+
+- Added focused `AdvancementManager` coverage for match-result placement into configured target slots.
+- Characterized duplicate prevention when an entrant is already present in the target match.
+- Covered aggregate phase-group placement and completion after all match results exist.
+- Covered incomplete phase groups remaining open.
+- Covered reversal of match and phase-group advancement, including phase-group reopening.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 17 unit tests
+PASS: 2 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -67,11 +86,10 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Add focused characterization tests for bracket advancement. Cover placement calculation, rule application, idempotent advancement, and invalid or incomplete source data without changing current production behavior.
+Add focused characterization tests for `MatchWorkflowManager` and result persistence orchestration. Cover incomplete standings, manual results, recompletion, reopening, activation constraints, advancement calls, and Start.gg reporting boundaries.
 
 ## Remaining Phase 0 Work
 
-- Add focused tests for bracket advancement.
 - Add focused tests for match workflow and result persistence.
 - Add focused tests for lobby state behavior.
 - Add deterministic Start.gg test doubles and behavioral coverage.
