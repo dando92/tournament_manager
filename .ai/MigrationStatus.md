@@ -74,6 +74,26 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 4 — Match workflow characterization
+
+- Added focused `MatchWorkflowManager` coverage for aggregating populated round standings and persisting results.
+- Covered rejection of incomplete standings and normalization of manual results.
+- Covered recompletion by reverting previous advancement before replacement.
+- Covered reopening a match, deleting its result, reverting advancement, and deactivating it.
+- Covered the boundary that reports completed matches to Start.gg only after local completion succeeds.
+- Covered the constraint that completed matches cannot be activated before reopening.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 23 unit tests
+PASS: 2 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -86,11 +106,11 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Add focused characterization tests for `MatchWorkflowManager` and result persistence orchestration. Cover incomplete standings, manual results, recompletion, reopening, activation constraints, advancement calls, and Start.gg reporting boundaries.
+Add focused characterization tests for `LobbyManager` state and SyncStart observer orchestration. Keep the real network disabled; a later checkpoint will add the deterministic protocol simulator.
 
 ## Remaining Phase 0 Work
 
-- Add focused tests for match workflow and result persistence.
+- Add behavioral persistence coverage for scores and match results.
 - Add focused tests for lobby state behavior.
 - Add deterministic Start.gg test doubles and behavioral coverage.
 - Add a deterministic SyncStart protocol simulator and behavioral coverage.
