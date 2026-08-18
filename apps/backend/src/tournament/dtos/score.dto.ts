@@ -34,25 +34,25 @@ export class UpdateScoreDto {
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
-  percentage: number;
+  percentage?: number;
 
   @ApiProperty({ description: 'Indicates if the score is a failure', example: false, required: false })
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
-  isFailed: boolean;
+  isFailed?: boolean;
 
   @ApiProperty({ description: 'The ID of the song', example: 1, required: false })
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
-  songId: number;
+  songId?: number;
 
   @ApiProperty({ description: 'The ID of the player', example: 1, required: false })
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
-  playerId: number;
+  playerId?: number;
 
   song?: Song;
   player?: Player;

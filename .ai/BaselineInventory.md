@@ -56,9 +56,9 @@ The migration safety net must cover these journeys before their implementation m
 | Authentication and tournament CRUD | Behavioral e2e baseline | Expand validation and authorization cases as needed |
 | Participants and tournament structure | Not covered | Add behavioral e2e coverage |
 | Bracket and match workflow | Focused advancement, completion, reopening, and reversal unit coverage | Add behavioral persistence tests |
-| Score persistence and standings | Focused scoring and standing-orchestration unit coverage | Add behavioral persistence coverage |
-| Start.gg import | Not covered | Add deterministic HTTP stub and fixtures |
-| SyncStart lifecycle | Focused lobby-state orchestration unit coverage | Add deterministic protocol simulator |
-| Browser realtime recovery | Not covered | Add fixtures now; complete recovery coverage in Phase 7 |
+| Score persistence and standings | Focused calculation coverage and behavioral persistence coverage | Expand through complete match journeys |
+| Start.gg import | Excluded by approved scope | Leave unchanged; decide future approach after migration |
+| SyncStart lifecycle | Focused internal lobby-state orchestration only | Defer integration and protocol tests to Phase 6 |
+| Browser realtime recovery | Event inventory only | Defer network and recovery coverage to Phase 7 |
 
 The first representative request and response inputs are stored in `apps/backend/test/fixtures/tournament-management.json`. Additional parity fixtures must be added with each protected vertical slice.

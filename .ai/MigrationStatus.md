@@ -12,6 +12,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Active phase: Phase 0 — Baseline and Safety Net.
 - Phase state: in progress; the Phase 0 exit gate has not passed.
 - Service extraction is not authorized yet because Phase 0 and Phase 1 exit gates remain open.
+- Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
 
@@ -115,6 +116,25 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 6 — Score and match-result persistence characterization
+
+- Added behavioral persistence coverage using an isolated local SQLite database and the real TypeORM services.
+- Covered score creation, relation loading, filtering, partial update, and missing-reference rejection.
+- Covered match-result creation, replacement without duplication, association with the match, and deletion.
+- Aligned the TypeScript optional fields in `UpdateScoreDto` with their existing validation metadata; runtime behavior is unchanged.
+- Updated the approved Phase 0 scope to exclude Start.gg, SyncStart integration, and browser WebSocket network tests.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 28 unit tests
+PASS: 5 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -126,16 +146,18 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Add behavioral persistence coverage for score and match-result writes using the current local test database. Keep this separate from the later PostgreSQL integration layer so the Phase 0 behavior remains independently characterized.
+Expand behavioral e2e coverage for participant and tournament-structure management, then run the Phase 0 gate from a clean `npm ci` installation.
 
 ## Remaining Phase 0 Work
 
-- Add behavioral persistence coverage for scores and match results.
-- Add deterministic Start.gg test doubles and behavioral coverage.
-- Add a deterministic SyncStart protocol simulator and behavioral coverage.
-- Add representative WebSocket fixtures for later parity tests.
 - Expand behavioral coverage for participants and tournament structure.
 - Verify the full Phase 0 gate from a clean `npm ci` installation.
+
+## Approved Deferred Coverage
+
+- Start.gg must remain intact and currently functional, without migration tests. Its future approach will be decided after the architecture migration.
+- SyncStart integration and protocol testing is deferred until the separate SyncStart service is implemented in Phase 6.
+- Browser WebSocket event names and responsibilities remain inventoried in [BaselineInventory.md](BaselineInventory.md); network, reconnect, and recovery tests are deferred to the realtime extraction in Phase 7.
 
 ## Handoff Rules
 

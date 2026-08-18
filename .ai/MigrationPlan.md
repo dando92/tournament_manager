@@ -90,23 +90,25 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - Focused bracket advancement, phase-group completion, and reversal characterization tests added.
 - Focused match completion, result orchestration, reopening, and activation characterization tests added.
 - Focused lobby state and SyncStart connector-orchestration characterization tests added without real network access.
+- Behavioral score and match-result persistence coverage added against the isolated current local database.
 - Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Remaining before the exit gate: behavioral result persistence tests; deterministic Start.gg and SyncStart doubles; broader behavioral coverage; and clean-install verification.
+- Remaining before the exit gate: participant and tournament-structure behavioral coverage, plus clean-install verification.
 
 ### Work
 
 - Inventory current HTTP routes, WebSocket messages, scheduled or observer-driven behavior, integrations, and critical user journeys.
 - Replace the placeholder NestJS e2e test with behavioral tests for the current application.
 - Add focused unit tests around standings, bracket advancement, match workflow, lobby state, and result persistence before moving those behaviors.
-- Add deterministic Start.gg and SyncStart test doubles; tests must not call external services.
-- Record representative request, response, and WebSocket fixtures for later parity tests.
+- Keep the Start.gg integration unchanged and out of automated migration coverage. Its future behavior and test strategy will be decided after the architecture migration.
+- Keep the SyncStart integration unchanged and out of automated migration coverage until the dedicated service extraction in Phase 6.
+- Maintain the browser WebSocket message inventory for later realtime extraction. Automated browser WebSocket coverage is deferred to Phase 7.
 - Make `npm run verify` reliable at the repository root.
 
 ### Exit gate
 
 - Current frontend and backend build successfully.
 - Lint, unit tests, and behavioral backend e2e tests pass from a clean install.
-- The documented critical workflows have automated coverage or an explicitly documented temporary manual test with an owner and removal phase.
+- The in-scope critical workflows have automated coverage. Start.gg, SyncStart protocol, and browser WebSocket exclusions remain documented with their future decision or implementation phase.
 - No production behavior has been intentionally changed.
 
 ## Phase 1 — Reproducible Local Platform
