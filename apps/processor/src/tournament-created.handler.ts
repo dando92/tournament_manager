@@ -6,18 +6,19 @@ import {
   LiveEventEnvelope,
   TournamentCreatedEvent,
   TournamentCreatedPayload,
-} from '../contracts/events';
+} from '@tournament-manager/contracts';
 import {
   EventConsumer,
   EventConsumerRegistry,
-} from './event-consumer.registry';
-import { LIVE_EVENT_TRANSPORT, LiveEventTransport } from './eventing.interfaces';
-import { PostgresTournamentCreatedPersistence } from './postgres-tournament-created.persistence';
+} from './eventing/event-consumer.registry';
+import {
+  LIVE_EVENT_TRANSPORT,
+  LiveEventTransport,
+} from '../../backend/src/eventing/eventing.interfaces';
+import { PostgresTournamentCreatedPersistence } from './eventing/postgres-tournament-created.persistence';
 
 @Injectable()
-export class TournamentCreatedHandler
-  implements EventConsumer, OnModuleInit
-{
+export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {
   readonly identity = 'tournament-created-projection';
   readonly eventType = 'tournament.created';
   private readonly logger = new Logger(TournamentCreatedHandler.name);

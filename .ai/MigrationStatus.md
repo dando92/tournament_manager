@@ -9,17 +9,64 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 5 — Processor Extraction (not started).
+- Active phase: Phase 6 — SyncStart Service Extraction (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
 - Phase 3 state: complete; its exit gate passed on 2026-08-18.
 - Phase 4 state: complete; its exit gate passed on 2026-08-19.
-- Processor extraction is now authorized for the already-tested handler and eventing workers.
-- Next action: begin Phase 5 by creating the independently buildable processor entrypoint and shared packages, then move only the extraction-ready handler and outbox relay while preserving the in-backend path until parity passes.
+- Phase 5 state: complete; its exit gate passed on 2026-08-19.
+- The API no longer executes durable handlers, the outbox relay, or transport retention.
+- Next action: begin Phase 6 with the SyncStart service shell and deterministic protocol simulator, then move connector ownership and volatile lobby sessions out of the API one vertical command/outcome slice at a time.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 5 checkpoint 1 — Independent processor extraction
+
+- Added `apps/processor` with an independent NestJS entrypoint, dependency readiness endpoints, Docker image, runtime configuration, and logs.
+- Moved the outbox relay, durable consumer loop, inbox transaction lifecycle, transport retention worker, registered handlers, and processor-only persistence adapters out of the API source tree.
+- Removed durable handler execution from the API after processor-path parity passed.
+- Added `packages/contracts` for shared current-only internal messages and `packages/application` for the scoring calculations used by both API and processor entrypoints.
+- Preserved post-commit browser notifications through Redis Pub/Sub and a temporary API live-event subscriber; this forwarding bridge moves to realtime in Phase 7.
+- Changed the default durable consumer group to `tournament-manager-processor` and kept unique replica consumer identities.
+- Added processor health to `local:status` and `verify:local`, and kept the processor port internal so Compose can run multiple replicas.
+- Verified the production container boundary caught and fixed build-time alias rewriting before accepting the checkpoint.
+
+Verification result:
+
+```text
+npm run verify
+PASS: shared packages, backend, processor, and frontend lint (existing warnings only)
+PASS: 34 unit tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: contracts, application, backend, processor, and frontend builds
+
+npm run local:up
+PASS: API and processor images rebuilt independently
+PASS: PostgreSQL, Redis, migrations, processor, API, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API and processor liveness/readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+
+Processor stopped/restarted with one queued tournament.created event
+PASS: stopped state = pending outbox 1, business projection 0
+PASS: restarted state = published 1, business projection 1, inbox 1
+
+docker compose up --detach --scale processor=2 --no-recreate
+PASS: both processor replicas healthy
+PASS: published 1, business projection 1, inbox 1 for the replica test event
+PASS: stack returned to one processor replica after verification
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+- npm reports 4 known dependency vulnerabilities (3 moderate and 1 high); no forced dependency update was applied during the migration checkpoint.
 
 ### Phase 4 checkpoint 3 — Uniform transactional consumer lifecycle
 
@@ -463,7 +510,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 5 with the processor application shell and shared package boundaries, then move the extraction-ready completed-song handler and outbox relay without removing their in-backend execution until independent-process parity passes.
+Begin Phase 6 with the SyncStart service shell and deterministic protocol simulator, then move connector ownership and volatile lobby sessions out of the API one vertical command/outcome slice at a time.
 
 ## Remaining Phase 0 Work
 

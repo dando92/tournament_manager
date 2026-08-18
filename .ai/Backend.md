@@ -71,7 +71,7 @@ Managers remain application-layer use cases. Event handlers in the processor may
 
 ## Eventing Inside the Existing Backend
 
-- Durable contracts are explicit internal envelopes in `apps/backend/src/contracts`. They contain only event ID, type, aggregate ID, and payload, and never expose TypeORM entities.
+- Durable contracts are explicit internal envelopes in `packages/contracts`. They contain only event ID, type, aggregate ID, and payload, and never expose TypeORM entities.
 - PostgreSQL `event_outbox` rows are written in the same transaction as their domain change. Publishing directly to Redis from a domain transaction is not allowed.
 - The relay publishes durable events to the configured Redis Stream and marks outbox rows only after Redis acknowledges `XADD`. A crash between those operations may duplicate delivery, so consumers must remain idempotent.
 - Durable consumers use Redis consumer groups and insert an `event_inbox` row in the same PostgreSQL transaction as their business effect. Inbox identity is the stable handler name plus event ID.
@@ -79,11 +79,19 @@ Managers remain application-layer use cases. Event handlers in the processor may
 - Replaceable live events use the separate Pub/Sub adapter. Subscribers must recover missed messages from a newer update or authoritative HTTP snapshot.
 - `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
 
-The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the in-backend consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
+The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the processor consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
 
 Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
 
-`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and one global advisory lock prevents concurrent sweeps across replicas. Retention deliberately does not lock against or recheck rare concurrent manual lifecycle operations. `PostgresEventRetentionPersistence` owns the retention SQL and `PostgresAdvisoryLock` owns the session-scoped global lock mechanics.
+`EventRetentionService` runs only inside the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and one global advisory lock prevents concurrent sweeps across replicas. Retention deliberately does not lock against or recheck rare concurrent manual lifecycle operations. `PostgresEventRetentionPersistence` owns the retention SQL and `PostgresAdvisoryLock` owns the session-scoped global lock mechanics.
+
+## Extracted Processor Boundary
+
+- `apps/processor` owns the outbox relay, durable Redis Streams consumer loop, inbox transaction lifecycle, retry/dead-letter behavior, retention sweep, and registered stateless handlers.
+- The API owns durable producers and the temporary Pub/Sub-to-WebSocket forwarding bridge, but it does not execute durable handlers or relay outbox work.
+- `packages/application` contains reusable scoring calculations used from both synchronous API paths and processor handlers.
+- `packages/contracts` contains the shared internal message types.
+- API and processor use independent entrypoints, images, health checks, and logs. Processor health is internal to the Compose network so multiple replicas can run without host-port conflicts.
 
 ## Stateless Handler Registration
 

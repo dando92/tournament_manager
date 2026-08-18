@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { EventEnvelope } from '../contracts/events';
+import { EventEnvelope } from '@tournament-manager/contracts';
 
 export interface EventConsumer {
   identity: string;

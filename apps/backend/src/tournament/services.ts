@@ -28,10 +28,9 @@ import { UiUpdateContextService } from '@match/services/ui-update-context.servic
 import { StartggService } from '../integrations/startgg/startgg.service';
 import { AdvancementRuleService } from './services/advancement-rule.service';
 import { AdvancementRuleManager } from './services/advancement-rule.manager';
-import { LobbySongCompletedHandler } from './standing/lobby-song-completed.handler';
-import { PostgresLobbySongCompletedPersistence } from './standing/postgres-lobby-song-completed.persistence';
 import { SyncStartDurableEventPublisher } from './standing/syncstart-durable-event.publisher';
 import { PostgresTournamentPersistence } from './services/postgres-tournament.persistence';
+import { LiveUiEventSubscriber } from './standing/live-ui-event.subscriber';
 
 export { MatchManager };
 export { AdvancementManager };
@@ -95,10 +94,9 @@ export const Services = [
     StartggService,
     AdvancementRuleService,
     AdvancementRuleManager,
-    LobbySongCompletedHandler,
-    PostgresLobbySongCompletedPersistence,
     SyncStartDurableEventPublisher,
     PostgresTournamentPersistence,
+    LiveUiEventSubscriber,
 
     TournamentService,
     TournamentManager,

@@ -4,17 +4,17 @@ import { createClient, RedisClientType } from 'redis';
 import { DataSource } from 'typeorm';
 
 import { EventEnvelope, LiveEventEnvelope } from '../src/contracts/events';
-import { DurableEventConsumerService } from '../src/eventing/durable-event-consumer.service';
-import { EventRetentionService } from '../src/eventing/event-retention.service';
-import { OutboxRelayService } from '../src/eventing/outbox-relay.service';
+import { DurableEventConsumerService } from '../../processor/src/eventing/durable-event-consumer.service';
+import { EventRetentionService } from '../../processor/src/eventing/event-retention.service';
+import { OutboxRelayService } from '../../processor/src/eventing/outbox-relay.service';
 import { OutboxService } from '../src/eventing/outbox.service';
-import { EventConsumerRegistry } from '../src/eventing/event-consumer.registry';
-import { PostgresEventTransaction } from '../src/eventing/postgres-event-transaction';
-import { PostgresEventRetentionPersistence } from '../src/eventing/postgres-event-retention.persistence';
+import { EventConsumerRegistry } from '../../processor/src/eventing/event-consumer.registry';
+import { PostgresEventTransaction } from '../../processor/src/eventing/postgres-event-transaction';
+import { PostgresEventRetentionPersistence } from '../../processor/src/eventing/postgres-event-retention.persistence';
 import { PostgresOutboxPersistence } from '../src/eventing/postgres-outbox.persistence';
 import { RedisEventTransport } from '../src/eventing/redis-event.transport';
-import { PostgresTournamentCreatedPersistence } from '../src/eventing/postgres-tournament-created.persistence';
-import { TournamentCreatedHandler } from '../src/eventing/tournament-created.handler';
+import { PostgresTournamentCreatedPersistence } from '../../processor/src/eventing/postgres-tournament-created.persistence';
+import { TournamentCreatedHandler } from '../../processor/src/tournament-created.handler';
 import { PostgresAdvisoryLock } from '../src/persistence/postgres-advisory-lock';
 import {
   Division,
@@ -30,7 +30,7 @@ import {
   Standing,
   Tournament,
 } from '../src/persistence/entities';
-import { LobbySongCompletedHandler } from '../src/tournament/standing/lobby-song-completed.handler';
+import { LobbySongCompletedHandler } from '../../processor/src/lobby-song-completed.handler';
 import { PostgresLobbySongCompletedPersistence } from '../src/tournament/standing/postgres-lobby-song-completed.persistence';
 import { ScoringSystemProvider } from '../src/tournament/services/scoring-systems/ScoringSystemProvider';
 import { TournamentService } from '../src/tournament/services/tournament.service';
@@ -241,15 +241,16 @@ describe('Eventing reliability (e2e)', () => {
       { playerId: 'two', playerName: 'Player Two', score: 900, exScore: 95, isFailed: false },
     ]);
     const registry = new EventConsumerRegistry();
-    const uiUpdates = {
-      emitWarning: jest.fn(),
-      emitMatchUpdateByMatchId: jest.fn().mockResolvedValue(undefined),
+    const liveTransport = {
+      publish: jest.fn().mockResolvedValue(undefined),
+      subscribe: jest.fn(),
     };
     const handler = new LobbySongCompletedHandler(
       registry,
       new PostgresLobbySongCompletedPersistence(),
       new ScoringSystemProvider(),
-      uiUpdates as never,
+      config,
+      liveTransport as never,
     );
     handler.onModuleInit();
     const consumer = new DurableEventConsumerService(
@@ -285,7 +286,7 @@ describe('Eventing reliability (e2e)', () => {
     });
     expect(scores).toHaveLength(2);
     expect(standings.map((standing) => standing.points)).toEqual([2, 1]);
-    expect(uiUpdates.emitMatchUpdateByMatchId).toHaveBeenCalledTimes(1);
+    expect(liveTransport.publish).toHaveBeenCalledTimes(1);
     await expect(
       dataSource.query(
         `SELECT count(*)::int AS count FROM event_inbox WHERE consumer = $1 AND event_id = $2`,

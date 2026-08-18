@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEnvelope } from '../contracts/events';
+import { EventEnvelope } from '@tournament-manager/contracts';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventMessage,
   DurableEventTransport,
-} from './eventing.interfaces';
+} from '../../../backend/src/eventing/eventing.interfaces';
 import { PostgresEventTransaction } from './postgres-event-transaction';
 import { EventConsumerRegistry } from './event-consumer.registry';
 
@@ -102,7 +102,7 @@ export class DurableEventConsumerService {
 
   private get group(): string {
     return (
-      this.config.get('EVENT_CONSUMER_GROUP') ?? 'tournament-manager-backend'
+      this.config.get('EVENT_CONSUMER_GROUP') ?? 'tournament-manager-processor'
     );
   }
 

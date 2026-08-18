@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventTransport,
-} from './eventing.interfaces';
+} from '../../../backend/src/eventing/eventing.interfaces';
 import { PostgresEventRetentionPersistence } from './postgres-event-retention.persistence';
 
 @Injectable()

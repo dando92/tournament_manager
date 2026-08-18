@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# ---- Build stage ----
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -12,11 +11,11 @@ COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci
 COPY packages packages
 COPY apps/backend apps/backend
+COPY apps/processor apps/processor
 RUN npm run build --workspace=@tournament-manager/contracts \
   && npm run build --workspace=@tournament-manager/application \
-  && npm run build --workspace=tournament_manager_backend
+  && npm run build --workspace=@tournament-manager/processor
 
-# ---- Production stage ----
 FROM node:22-alpine
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -28,7 +27,7 @@ COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --omit=dev
 COPY --from=builder /app/packages/contracts/dist packages/contracts/dist
 COPY --from=builder /app/packages/application/dist packages/application/dist
-COPY --from=builder /app/apps/backend/dist apps/backend/dist
+COPY --from=builder /app/apps/processor/dist apps/processor/dist
 ENV NODE_ENV=production
-EXPOSE 3000
-CMD ["npm", "run", "start:prod", "--workspace=tournament_manager_backend"]
+EXPOSE 3001
+CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/processor"]

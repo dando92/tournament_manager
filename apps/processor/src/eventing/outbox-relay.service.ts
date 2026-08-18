@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventTransport,
-} from './eventing.interfaces';
-import { PostgresOutboxPersistence } from './postgres-outbox.persistence';
+} from '../../../backend/src/eventing/eventing.interfaces';
+import { PostgresOutboxPersistence } from '../../../backend/src/eventing/postgres-outbox.persistence';
 
 @Injectable()
 export class OutboxRelayService {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { EventEnvelope } from '../contracts/events';
+import { EventEnvelope } from '@tournament-manager/contracts';
 import { EventConsumer } from './event-consumer.registry';
 
 @Injectable()

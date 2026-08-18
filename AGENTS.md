@@ -51,7 +51,10 @@ Tournament Manager is a self-contained, provider-independent application for man
 ## Repository Architecture
 
 - `apps/backend`: Current NestJS backend and source of the migration.
+- `apps/processor`: Independently deployable stateless event processor and outbox relay.
 - `apps/frontend`: Current React and Vite web application.
+- `packages/application`: Application logic shared by API and processor entrypoints.
+- `packages/contracts`: Internal durable and live event contracts.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.

@@ -14,8 +14,8 @@ export class EventingRunnerService
   implements OnApplicationBootstrap, OnModuleDestroy
 {
   private readonly logger = new Logger(EventingRunnerService.name);
-  private readonly consumer = `backend-${randomUUID()}`;
-  private stopped = false;
+  private readonly consumer = `processor-${randomUUID()}`;
+  private stopped: boolean = false;
   private relayLoop?: Promise<void>;
   private consumerLoop?: Promise<void>;
 

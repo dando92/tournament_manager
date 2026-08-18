@@ -30,6 +30,8 @@
     "migration:run:prod": "node dist/database/run-migrations"
   },
   "dependencies": {
+    "@tournament-manager/application": "0.0.1",
+    "@tournament-manager/contracts": "0.0.1",
     "@nestjs/common": "^11.1.18",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.18",

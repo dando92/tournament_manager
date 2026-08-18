@@ -40,7 +40,7 @@ services:
       dockerfile: apps/backend/Dockerfile
     restart: "no"
     command: ["npm", "run", "migration:run:prod", "--workspace=tournament_manager_backend"]
-    environment: &backend-environment
+    environment: &application-environment
       NODE_ENV: production
       AUTH_MODE: local
       LOCAL_API_KEY: ${LOCAL_API_KEY:-local-development-key}
@@ -55,7 +55,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
-      EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-backend}
+      EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-processor}
       LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
       OUTBOX_RELAY_IDLE_INTERVAL_MS: ${OUTBOX_RELAY_IDLE_INTERVAL_MS:-200}
       EVENT_CONSUMER_BLOCK_MS: ${EVENT_CONSUMER_BLOCK_MS:-500}
@@ -79,7 +79,29 @@ services:
     restart: unless-stopped
     ports:
       - "${API_PORT:-3000}:3000"
-    environment: *backend-environment
+    environment: *application-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      processor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 10s
+
+  processor:
+    build:
+      context: .
+      dockerfile: apps/processor/Dockerfile
+    restart: unless-stopped
+    environment: *application-environment
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,7 +110,7 @@ services:
       migrations:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health/ready"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/health/ready"]
       interval: 5s
       timeout: 3s
       retries: 18
