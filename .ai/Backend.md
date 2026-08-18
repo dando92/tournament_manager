@@ -12,6 +12,15 @@ The backend uses the following architectural layers:
 - **Gateways:** Provide real-time view updates through WebSockets.
 - **DTOs:** Define data exchanged with the view, both incoming and outgoing.
 
+## Maintainability
+
+- Prefer the smallest explicit implementation that satisfies the current requirement.
+- Keep classes, functions, fixtures, and test helpers focused and locally understandable.
+- Use descriptive names and straightforward control flow instead of implicit conventions or premature generic abstractions.
+- Extract shared code only when it removes real duplication or establishes an approved architectural boundary.
+- Keep characterization tests readable as behavior documentation for future maintainers.
+- Do not mix architectural migration with unrelated cleanup or functional changes.
+
 ## Technologies
 
 - Node.js 22

@@ -30,6 +30,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - [Incremental architecture migration work plan](.ai/MigrationPlan.md)
 - [Migration execution status and next action](.ai/MigrationStatus.md)
 - [Current behavior and migration safety-net inventory](.ai/BaselineInventory.md)
+- [Deferred functional questions](.ai/FunctionalQuestions.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
 
@@ -44,3 +45,7 @@ The approved target structure and service boundaries are defined in `.ai/Archite
 ## Migration Commit Authorization
 
 Contributors and coding agents are authorized to create local Git commits during the migration without requesting separate confirmation for each commit. A commit may be created whenever it represents a coherent, reviewable checkpoint and the verification appropriate to its scope has passed. Do not commit known regressions, unrelated user changes, secrets, generated runtime data, or incomplete destructive transitions. Record the completed checkpoint and next action in `.ai/MigrationStatus.md` before or as part of the commit.
+
+## Functional Question Tracking
+
+Record every discovered ambiguity, suspected behavior defect, and unresolved product rule in `.ai/FunctionalQuestions.md`. During the architecture migration, characterize existing behavior and link supporting tests, but do not silently decide a functional question. Functional changes are deferred until after the architectural migration unless the user explicitly prioritizes one earlier.

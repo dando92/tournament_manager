@@ -89,8 +89,9 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - Focused standings calculation and persistence-orchestration characterization tests added.
 - Focused bracket advancement, phase-group completion, and reversal characterization tests added.
 - Focused match completion, result orchestration, reopening, and activation characterization tests added.
+- Focused lobby state and SyncStart connector-orchestration characterization tests added without real network access.
 - Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Remaining before the exit gate: behavioral result persistence and lobby tests; deterministic Start.gg and SyncStart doubles; broader behavioral coverage; and clean-install verification.
+- Remaining before the exit gate: behavioral result persistence tests; deterministic Start.gg and SyncStart doubles; broader behavioral coverage; and clean-install verification.
 
 ### Work
 

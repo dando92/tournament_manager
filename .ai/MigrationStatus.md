@@ -4,6 +4,8 @@
 
 This is the durable handoff record for migration work. Future contributors and coding agents must read this document together with [MigrationPlan.md](MigrationPlan.md) before making migration changes. Update it after every completed checkpoint so that the repository always states what is done, what was verified, and what should happen next.
 
+Functional ambiguities and suspected behavior defects are tracked separately in [FunctionalQuestions.md](FunctionalQuestions.md). Migration work must link new findings there instead of silently deciding them.
+
 ## Current Position
 
 - Last updated: 2026-08-18.
@@ -94,6 +96,25 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 5 — Lobby state characterization and functional-question register
+
+- Added focused `LobbyManager` coverage without opening real network connections.
+- Covered connector initialization, lobby-code normalization, discovery metadata merging, failed connections, reconnectable disconnections, inactive lobby removal, and explicit leave behavior.
+- Created [FunctionalQuestions.md](FunctionalQuestions.md) as the post-migration functional decision backlog and indexed it from the project instructions.
+- Recorded known questions about finals failure handling, lobby identity scope, tournament creation fields, and local administrator ownership.
+- Added explicit backend maintainability rules favoring small, readable implementations and tests.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 28 unit tests
+PASS: 2 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -101,17 +122,15 @@ Known non-blocking output:
 
 ## Characterization Findings
 
-- `FinalsCalculator` sorts the supplied standings array in place.
-- `FinalsCalculator` currently awards the point to the higher percentage when that score is failed and the lower score is successful. This is recorded as existing behavior, not an approved product rule. Do not silently change it during migration; address it in a separately reviewed behavior-fix checkpoint.
+- See [FunctionalQuestions.md](FunctionalQuestions.md) for the inspectable post-migration decision backlog.
 
 ## Next Recommended Checkpoint
 
-Add focused characterization tests for `LobbyManager` state and SyncStart observer orchestration. Keep the real network disabled; a later checkpoint will add the deterministic protocol simulator.
+Add behavioral persistence coverage for score and match-result writes using the current local test database. Keep this separate from the later PostgreSQL integration layer so the Phase 0 behavior remains independently characterized.
 
 ## Remaining Phase 0 Work
 
 - Add behavioral persistence coverage for scores and match results.
-- Add focused tests for lobby state behavior.
 - Add deterministic Start.gg test doubles and behavioral coverage.
 - Add a deterministic SyncStart protocol simulator and behavioral coverage.
 - Add representative WebSocket fixtures for later parity tests.
