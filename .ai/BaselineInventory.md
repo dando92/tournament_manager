@@ -56,7 +56,7 @@ The migration safety net must cover these journeys before their implementation m
 | Authentication and tournament CRUD | Behavioral e2e baseline | Expand validation and authorization cases as needed |
 | Participants and tournament structure | Not covered | Add behavioral e2e coverage |
 | Bracket and match workflow | Not covered | Add focused unit and behavioral tests |
-| Score persistence and standings | Not covered | Add focused unit and behavioral tests |
+| Score persistence and standings | Focused scoring and standing-orchestration unit coverage | Add behavioral persistence coverage |
 | Start.gg import | Not covered | Add deterministic HTTP stub and fixtures |
 | SyncStart lifecycle | Not covered | Add deterministic protocol simulator |
 | Browser realtime recovery | Not covered | Add fixtures now; complete recovery coverage in Phase 7 |

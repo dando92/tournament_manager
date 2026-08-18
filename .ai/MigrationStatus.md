@@ -37,18 +37,40 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 2 — Standings characterization
+
+- Added focused unit coverage for Eurocup ranking, ties, failed scores, and point allocation.
+- Added focused unit coverage for the current finals scoring behavior.
+- Added focused `StandingManager` coverage for incomplete rounds, completed-round recalculation and persistence, score replacement, and workflow editability enforcement.
+- Recorded the existing finals failure-handling defect below without changing production behavior.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 12 unit tests
+PASS: 2 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
 - Vite reports an existing large JavaScript chunk warning.
 
+## Characterization Findings
+
+- `FinalsCalculator` sorts the supplied standings array in place.
+- `FinalsCalculator` currently awards the point to the higher percentage when that score is failed and the lower score is successful. This is recorded as existing behavior, not an approved product rule. Do not silently change it during migration; address it in a separately reviewed behavior-fix checkpoint.
+
 ## Next Recommended Checkpoint
 
-Add focused characterization tests for the highest-risk stateless domain behavior, beginning with standings calculation. Continue with bracket advancement and match workflow as separate reviewable checkpoints. Preserve current behavior; record defects exposed by characterization before deciding whether to change them.
+Add focused characterization tests for bracket advancement. Cover placement calculation, rule application, idempotent advancement, and invalid or incomplete source data without changing current production behavior.
 
 ## Remaining Phase 0 Work
 
-- Add focused tests for standings calculation.
 - Add focused tests for bracket advancement.
 - Add focused tests for match workflow and result persistence.
 - Add focused tests for lobby state behavior.

@@ -86,8 +86,9 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - In progress.
 - Root `npm run verify` command established.
 - Placeholder e2e test replaced with the first behavioral tournament-management workflow and reusable fixtures.
+- Focused standings calculation and persistence-orchestration characterization tests added.
 - Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Remaining before the exit gate: focused domain tests, deterministic Start.gg and SyncStart doubles, broader behavioral coverage, and clean-install verification.
+- Remaining before the exit gate: bracket, match workflow, result persistence, and lobby tests; deterministic Start.gg and SyncStart doubles; broader behavioral coverage; and clean-install verification.
 
 ### Work
 
