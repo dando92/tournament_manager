@@ -57,6 +57,16 @@ The approved target separates API, stateless event processing, SyncStart connect
 
 Managers remain application-layer use cases. Event handlers in the processor may invoke managers or services but must not access repositories directly.
 
+## Persistence Boundaries
+
+- Controllers, guards, managers, and application use cases depend on focused persistence interfaces rather than `DataSource`, `QueryRunner`, TypeORM repositories, or database SQL.
+- PostgreSQL persistence adapters implement those interfaces. They normally use TypeORM repositories and query builders; direct SQL is allowed only inside an adapter when PostgreSQL capabilities or required query semantics are not expressed adequately by TypeORM.
+- An atomic operation opens its transaction inside the persistence adapter and obtains every participating repository from the transaction `EntityManager`. An injected repository must not be used inside that transaction because it may use a different connection.
+- Lifecycle, outbox, inbox, relay, and retention persistence are exposed through focused adapters rather than mixed into application services.
+- PostgreSQL advisory-lock SQL, key namespaces, acquisition modes, and release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM transaction/session primitives; application code must not depend on it directly.
+- Do not present PostgreSQL advisory locks as a generic distributed-lock abstraction. PostgreSQL is an approved explicit infrastructure dependency, while provider independence means independence from a particular cloud provider rather than database-engine portability.
+- Use transaction-scoped row locks to serialize ordinary tournament writes with lifecycle changes and to recheck the `open` invariant in the same transaction. Use per-tournament advisory locks for lifecycle/transport-retention coordination that spans batched database work and Redis. Use a separate global advisory lock to elect a single retention sweep across replicas.
+
 ## Eventing Inside the Existing Backend
 
 - Durable contracts are explicit versioned envelopes in `apps/backend/src/contracts`. They include event, aggregate, time, correlation, and causation metadata and never expose TypeORM entities.
@@ -71,4 +81,4 @@ The first migrated Phase 3 slice is `tournament.created` version 1. Tournament c
 
 Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
 
-`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and advisory locks prevent concurrent sweeps or a reopen race.
+`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and advisory locks prevent concurrent sweeps or a lifecycle race. The approved persistence-boundary refactor will move its SQL and lock mechanics into PostgreSQL adapters before Phase 4 handler expansion.

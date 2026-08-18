@@ -166,7 +166,10 @@ Use standard PostgreSQL, Redis, and Docker interfaces. Do not introduce provider
 - Reopening clears `closedAt` and cancels any retention that has not completed. Reopening after a completed purge is allowed and does not reconstruct deleted transport history.
 - After a configurable number of continuously closed days, all transport data for the tournament is deleted: outbox, inbox, technical event projections, Redis Stream entries, pending state, retry state, and dead-letter entries.
 - Redis Pub/Sub traffic is ephemeral and has no retained history to purge.
-- Retention uses bounded PostgreSQL batches, a per-tournament Redis transport index, and PostgreSQL advisory locks so it is idempotent, replica-safe, and coordinated with reopen operations.
+- Retention uses bounded PostgreSQL batches, a per-tournament Redis transport index, and PostgreSQL advisory locks so it is idempotent, replica-safe, and coordinated with lifecycle operations.
+- Application use cases do not access TypeORM or lock SQL directly. Focused PostgreSQL persistence adapters own transactions and obtain repositories from their transaction `EntityManager`; a dedicated PostgreSQL advisory-lock infrastructure class centralizes lock namespaces and session/transaction semantics.
+- Ordinary tournament mutations use a transaction-scoped row lock and recheck the open-state invariant in that transaction. Per-tournament advisory locks coordinate lifecycle changes with multi-batch PostgreSQL and Redis transport cleanup, while a global advisory lock allows only one retention sweep across replicas.
+- Advisory locks remain an explicit PostgreSQL capability, not a nominally database-neutral distributed-lock abstraction. Provider independence refers to deployment/cloud providers; PostgreSQL remains the authoritative supported database.
 - Closed tournaments remain readable. Lifecycle state and authoritative tournament data are not deleted by transport retention.
 
 ## Deployment

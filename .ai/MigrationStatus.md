@@ -8,13 +8,14 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Current Position
 
-- Last updated: 2026-08-18.
+- Last updated: 2026-08-19.
 - Active phase: Phase 4 — Stateless Event Handlers (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
 - Phase 3 state: complete; its exit gate passed on 2026-08-18.
 - Service extraction is not authorized yet because the Phase 4 pre-extraction exit gate remains open.
+- Next action: refactor lifecycle and eventing persistence behind focused PostgreSQL adapters before adding Phase 4 handlers. Centralize advisory-lock mechanics in a dedicated infrastructure class and use transaction-owned repositories for atomic work.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints

@@ -200,6 +200,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ### Work
 
+- Before expanding event handlers, move lifecycle and eventing SQL behind focused PostgreSQL persistence adapters. Centralize advisory-lock SQL and namespaces in a dedicated infrastructure class, keep transactions inside adapters, and obtain repositories from each transaction's `EntityManager`.
 - Convert observer-driven behavior into explicit handlers one use case at a time.
 - Keep managers and reusable application use cases independent from controllers, transports, and repositories.
 - Migrate standings, bracket advancement, match state, result persistence, projections, lobby state, notifications, cache invalidation, and UI-event conversion as separate vertical slices.
