@@ -8,13 +8,22 @@ import { Repository } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { Account } from '@persistence/entities';
 import * as fixture from './fixtures/tournament-management.json';
+import {
+  dropTestDatabase,
+  getTestDatabaseName,
+  resetMigratedTestDatabase,
+} from './support/postgres-test-database';
 
 describe('Tournament management (e2e)', () => {
+  const database = getTestDatabaseName('application');
   let app: INestApplication;
   let accountRepository: Repository<Account>;
   let accessToken: string;
 
   beforeAll(async () => {
+    const migrations = await resetMigratedTestDatabase(database);
+    await migrations.destroy();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -22,7 +31,9 @@ describe('Tournament management (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useWebSocketAdapter(new WsAdapter(app));
     await app.init();
-    accountRepository = moduleFixture.get<Repository<Account>>(getRepositoryToken(Account));
+    accountRepository = moduleFixture.get<Repository<Account>>(
+      getRepositoryToken(Account),
+    );
 
     await request(app.getHttpServer())
       .post('/user')
@@ -48,6 +59,7 @@ describe('Tournament management (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    await dropTestDatabase(database);
   });
 
   it('rejects tournament creation without authentication', async () => {

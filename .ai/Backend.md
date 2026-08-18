@@ -31,7 +31,9 @@ The backend uses the following architectural layers:
 - Redis Streams for durable event transport
 - Redis Pub/Sub for replaceable live events
 - PostgreSQL is the only supported database in the target architecture.
-- Remove SQLite and MariaDB configuration, dependencies, adapters, and migration paths during the architecture migration.
+- SQLite and MariaDB configuration, dependencies, adapters, and migration paths are not supported.
+- TypeORM schema synchronization is disabled in every environment. Versioned PostgreSQL migrations are the only application-schema mechanism.
+- The initial migration targets an empty pre-production database. Existing test databases are reset instead of carrying compatibility code into the baseline.
 - Native WebSockets through NestJS gateways
 
 ## Location and Integrations
@@ -45,7 +47,7 @@ Local configuration is loaded from the repository-root `.env` file. The `local` 
 - `GET /health/live` reports process liveness and must not depend on external services.
 - `GET /health/ready` reports PostgreSQL, Redis, and migration-runner readiness separately and returns HTTP `503` while any required dependency is unavailable.
 - Docker Compose runs the migration entrypoint to completion before starting the backend.
-- Phase 1 establishes the migration runner and its readiness gate. Versioned application-schema migrations and the removal of TypeORM schema synchronization belong to Phase 2.
+- The migration runner applies versioned application-schema migrations before backend startup, and readiness remains unavailable if it does not complete.
 - Optional local seed data must be deterministic and idempotent. It is enabled only through `LOCAL_SEED_ENABLED=true`.
 - Operational procedures are defined in [LocalOperations.md](LocalOperations.md).
 

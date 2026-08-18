@@ -15,7 +15,8 @@ This plan implements the decisions in [Architecture.md](Architecture.md). It is 
 - Fix regressions in the current phase. Do not defer them to a later migration phase.
 - Keep local testing independent from cloud providers. Neon and managed Redis may be deployment targets, but never local test requirements.
 - Use production-equivalent PostgreSQL, Redis, containers, migrations, protocols, and event contracts locally.
-- Destructive persistence changes require a tested forward migration and, where feasible, a rollback or restore procedure.
+- The current pre-production data is disposable, so migration work should prefer a clean schema baseline over compatibility with test-only databases.
+- After the user explicitly declares production use, destructive persistence changes require a tested forward migration and, where feasible, a rollback or restore procedure.
 
 ## Execution and Commit Protocol
 
@@ -142,17 +143,26 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 2 — PostgreSQL-Only Persistence
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-18.
+- The initial versioned migration creates the complete application schema from an empty PostgreSQL database.
+- TypeORM schema synchronization is disabled in every runtime and test path.
+- Behavioral and migration tests run exclusively against isolated PostgreSQL databases.
+- SQLite and MariaDB runtime branches, dependencies, scripts, and documentation have been removed.
+- Compatibility with the disposable pre-production schema is intentionally excluded by user decision; existing test databases must be reset.
+
 ### Work
 
-- Create versioned PostgreSQL migrations for the existing schema; disable TypeORM schema synchronization.
+- Create a versioned PostgreSQL migration for a clean application schema; disable TypeORM schema synchronization.
 - Run repository and application integration tests exclusively against PostgreSQL.
-- Validate migrations against both an empty database and a copy or schema-equivalent fixture of the deployed PostgreSQL database.
+- Validate migration creation, idempotency, and entity-schema equivalence against an empty PostgreSQL database.
 - Switch every local and test path to PostgreSQL.
-- Remove SQLite and MariaDB configuration branches, dependencies, documentation, and scripts only after PostgreSQL parity passes.
+- Remove SQLite and MariaDB configuration branches, dependencies, documentation, and scripts after PostgreSQL parity passes.
 
 ### Exit gate
 
-- Empty-database creation and upgrade of an existing PostgreSQL schema both pass.
+- Empty-database creation, migration idempotency, and entity-schema equivalence pass.
 - All critical behavioral tests pass against PostgreSQL.
 - No runtime or test dependency on `sqlite3`, `mysql2`, SQLite, or MariaDB remains.
 - The complete local stack still passes `npm run verify:local`.
@@ -294,9 +304,8 @@ A migrated behavior is complete only when all applicable items are true:
 
 ## Current Baseline Risks
 
-- The backend e2e suite protects authentication and basic tournament management, but the remaining critical tournament workflows are not yet covered.
-- Docker Compose uses PostgreSQL, while direct development and legacy e2e paths still use SQLite until Phase 2 completes PostgreSQL parity.
-- TypeORM currently uses schema synchronization instead of production-safe versioned migrations.
-- Redis, outbox, inbox, retry, dead-letter, and extracted-service test infrastructure do not yet exist.
+- The backend e2e suite protects authentication, basic tournament management, PostgreSQL persistence, and schema creation, but the remaining critical tournament workflows are not yet covered.
+- Redis outbox, inbox, retry, dead-letter, and extracted-service test infrastructure do not yet exist.
+- The current clean-baseline policy is valid only while all deployments remain explicitly pre-production and disposable.
 
-These risks make Phase 0 and Phase 1 mandatory. Service extraction must not begin before their exit gates pass.
+Service extraction must not begin before the applicable preceding exit gates pass.

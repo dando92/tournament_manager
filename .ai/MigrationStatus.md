@@ -9,10 +9,11 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-18.
-- Active phase: Phase 2 — PostgreSQL-Only Persistence (not started).
+- Active phase: Phase 3 — Contracts and Eventing Inside the Existing Backend (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
-- Service extraction is not authorized yet because the Phase 2 and subsequent pre-extraction exit gates remain open.
+- Phase 2 state: complete; its exit gate passed on 2026-08-18.
+- Service extraction is not authorized yet because the Phase 3 and subsequent pre-extraction exit gates remain open.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
@@ -219,13 +220,60 @@ Known non-blocking output:
 - Vite reports an existing large JavaScript chunk warning.
 - `npm ci` reports deprecated transitive packages and 11 dependency vulnerabilities (2 low, 3 moderate, 5 high, and 1 critical). Dependency remediation is deferred to a dedicated reviewed checkpoint; do not apply breaking `npm audit fix --force` changes during migration.
 
+### Phase 2 checkpoint 1 — PostgreSQL-only persistence baseline
+
+- Added the initial versioned PostgreSQL migration for the complete application schema, including UUID support.
+- Disabled TypeORM schema synchronization in the application, migration runner, and tests.
+- Removed SQLite and MariaDB runtime selection, environment variables, scripts, direct dependencies, and documentation.
+- Converted behavioral persistence and application e2e suites to isolated PostgreSQL databases created from migrations.
+- Added migration coverage for empty-database creation, repeated-run idempotency, and full entity-schema equivalence.
+- Preserved the numeric score API behavior with an explicit PostgreSQL decimal transformer.
+- Strengthened platform integration coverage to require an applied migration and application tables.
+- Added the PostgreSQL dependency bootstrap command for direct development.
+- Recorded the user-approved pre-production policy: existing test data and schemas are disposable, and compatibility migrations or API compatibility layers are not required until production is explicitly declared.
+
+Verification result:
+
+```text
+npm run local:reset
+PASS: PostgreSQL and Redis volumes recreated from zero
+PASS: initial application-schema migration applied before backend startup
+PASS: PostgreSQL, Redis, backend, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis integration tests
+PASS: 8 PostgreSQL-backed behavioral and migration e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+
+npm ci
+PASS: clean workspace installation
+
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 31 unit tests
+PASS: 8 PostgreSQL-backed behavioral and migration e2e tests
+PASS: backend build
+PASS: frontend build
+
+npm run dev:dependencies
+PASS: PostgreSQL and Redis healthy
+PASS: migration runner repeated successfully with 0 pending migrations
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+- npm reports existing deprecated transitive packages and blocked install scripts; dependency cleanup is outside this migration checkpoint.
+
 ## Characterization Findings
 
 - See [FunctionalQuestions.md](FunctionalQuestions.md) for the inspectable post-migration decision backlog.
 
 ## Next Recommended Checkpoint
 
-Begin Phase 2 by generating and reviewing the initial versioned PostgreSQL schema migration, then add empty-database and schema-equivalent upgrade tests before disabling TypeORM synchronization.
+Begin Phase 3 by defining the shared versioned event envelope and provider-independent eventing interfaces, then implement PostgreSQL outbox and inbox migrations before moving the first low-risk event slice.
 
 ## Remaining Phase 0 Work
 

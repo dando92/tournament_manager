@@ -30,6 +30,7 @@ npm ci
 Copy `.env.example` to `.env`, then start both applications in local authentication mode:
 
 ```bash
+npm run dev:dependencies
 npm run dev
 ```
 
@@ -37,7 +38,7 @@ npm run dev
 - Swagger UI: `http://localhost:3000/api-docs`
 - Frontend: `http://localhost:5173`
 
-The direct development command temporarily uses a local SQLite database until Phase 2 removes legacy database paths. Runtime databases and environment files are not committed.
+The dependency command starts PostgreSQL, Redis, and the one-shot migration runner. Direct development and automated persistence tests use PostgreSQL only; TypeORM schema synchronization is disabled. Runtime data and environment files are not committed.
 
 ## Docker
 
@@ -66,4 +67,4 @@ Stop it without deleting data with `npm run local:down`. See [Local Platform Ope
 npm run verify
 ```
 
-This runs linting, backend unit tests, behavioral backend e2e tests, and all workspace builds. Run `npm run verify:local` against the started Compose stack for PostgreSQL, Redis, migrations, API, Swagger, seed, and frontend verification.
+This runs linting, backend unit tests, PostgreSQL-backed behavioral e2e tests, and all workspace builds. Start the development dependencies first. Run `npm run verify:local` against the complete Compose stack for PostgreSQL, Redis, migrations, API, Swagger, seed, and frontend verification.

@@ -149,8 +149,10 @@ Use standard PostgreSQL, Redis, and Docker interfaces. Do not introduce provider
 
 ## Persistence and Reliability
 
-- Disable TypeORM schema synchronization in production.
+- Disable TypeORM schema synchronization in every environment.
 - Apply versioned database migrations before application rollout.
+- The current pre-production database is disposable. Until production is explicitly declared, schema changes may establish a clean migration baseline without compatibility logic for earlier test schemas.
+- Before the first production deployment, define and approve forward data-migration, rollback, and compatibility requirements; later production migrations must preserve authoritative data.
 - Write domain changes and outbox records in the same transaction.
 - Retain outbox records long enough to support operational replay.
 - Use optimistic versioning or aggregate sequence checks where event ordering matters.

@@ -1,16 +1,27 @@
 import { DataSource } from 'typeorm';
+import { join } from 'node:path';
 
-export function createMigrationDataSource(): DataSource {
+import { Entities } from '../persistence/entities';
+
+export function createMigrationDataSource(
+  database = process.env.DATABASE_NAME ?? 'tournament_manager',
+): DataSource {
   return new DataSource({
     type: 'postgres',
     host: process.env.DATABASE_HOST ?? '127.0.0.1',
     port: Number(process.env.DATABASE_PORT ?? 5432),
     username: process.env.DATABASE_USER ?? 'tournament_manager',
     password: process.env.DATABASE_PASSWORD ?? 'tournament_manager',
-    database: process.env.DATABASE_NAME ?? 'tournament_manager',
-    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    database,
+    ssl:
+      process.env.DATABASE_SSL === 'true'
+        ? { rejectUnauthorized: false }
+        : false,
     synchronize: false,
-    migrations: [],
+    entities: Entities,
+    migrations: [join(__dirname, 'migrations', '*.{js,ts}')],
     migrationsTableName: 'migrations',
   });
 }
+
+export default createMigrationDataSource();

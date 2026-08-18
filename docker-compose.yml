@@ -46,7 +46,6 @@ services:
       LOCAL_API_KEY: ${LOCAL_API_KEY:-local-development-key}
       JWT_SECRET: ${JWT_SECRET:-local-development-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
-      DB_TYPE: postgres
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_USER: ${DATABASE_USER:-tournament_manager}

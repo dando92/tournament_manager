@@ -42,7 +42,7 @@ Local endpoints:
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-Readiness reports PostgreSQL, Redis, and migration-runner status separately. Phase 1 establishes and executes the runner before API readiness. The legacy TypeORM schema bootstrap remains temporarily enabled; Phase 2 replaces it with versioned application-schema migrations and disables schema synchronization.
+Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates or updates the application schema from versioned migrations before API readiness. TypeORM schema synchronization is disabled.
 
 The local stack creates an idempotent `Local E2E Tournament` fixture by default. Set `LOCAL_SEED_ENABLED=false` to disable it or override `LOCAL_SEED_TOURNAMENT_NAME` in `.env`.
 
@@ -107,6 +107,8 @@ npm run local:reset
 ```
 
 Create a backup first when the local data must be recoverable.
+
+The current pre-production schema baseline intentionally does not upgrade databases created before Phase 2. Reset those disposable test databases with `npm run local:reset` before starting the updated stack.
 
 ## Recovery Checks
 

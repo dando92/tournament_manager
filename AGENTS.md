@@ -16,6 +16,13 @@ Tournament Manager is a self-contained, provider-independent application for man
 - The `local` configuration must not require cloud services or provider-specific accounts.
 - Use npm workspaces from the repository root.
 
+## Pre-Production Evolution Policy
+
+- The application is currently deployed only for testing and contains no production data.
+- Until the user explicitly declares a production environment, prefer a clean implementation over database-upgrade compatibility, API compatibility layers, or legacy functional compatibility.
+- Pre-production database schemas and data may be reset when an architectural change requires a new clean baseline.
+- Once the user declares production use, replace this policy with explicit data-migration, API-compatibility, rollout, and rollback requirements before making breaking changes.
+
 ## Language
 
 - Communicate with the user in Italian unless the user explicitly requests another language.

@@ -15,62 +15,37 @@ import { AuthController } from '@auth/controllers';
 import { HealthModule } from './health/health.module';
 import { LocalSeedModule } from './local-seed/local-seed.module';
 
-
 @Module({
   imports: [
-  ConfigModule.forRoot({
-    envFilePath: ['../../.env', '.env'],
-    isGlobal: true,
+    ConfigModule.forRoot({
+      envFilePath: ['../../.env', '.env'],
+      isGlobal: true,
     }),
-  TypeOrmModule.forRootAsync({
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => {
-      if (config.get('DB_TYPE') === 'sqlite') {
-        return {
-          type: 'sqlite',
-          database: config.get('SQLITE_PATH') ?? './tournament.db',
-          entities: Entities,
-          synchronize: true,
-        };
-      }
-      if (config.get('DB_TYPE') === 'postgres') {
-        return {
-          type: 'postgres',
-          host: config.getOrThrow('DATABASE_HOST'),
-          port: parseInt(config.get('DATABASE_PORT') ?? '5432'),
-          username: config.getOrThrow('DATABASE_USER'),
-          password: config.getOrThrow('DATABASE_PASSWORD'),
-          database: config.getOrThrow('DATABASE_NAME'),
-          entities: Entities,
-          synchronize: true,
-          ssl: config.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
-        };
-      }
-      return {
-        type: 'mariadb',
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
         host: config.getOrThrow('DATABASE_HOST'),
-        port: 3306,
+        port: parseInt(config.get('DATABASE_PORT') ?? '5432'),
         username: config.getOrThrow('DATABASE_USER'),
         password: config.getOrThrow('DATABASE_PASSWORD'),
         database: config.getOrThrow('DATABASE_NAME'),
         entities: Entities,
-        synchronize: true,
-      };
-    },
-  }),
+        synchronize: false,
+        ssl:
+          config.get('DATABASE_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
+      }),
+    }),
     PersistenceModule,
     AuthModule,
     AccountModule,
     TournamentModule,
     HealthModule,
     LocalSeedModule,
-
-   ],
-  controllers:[
-    AuthController
   ],
-  providers: [
-    AuthService
-  ],
+  controllers: [AuthController],
+  providers: [AuthService],
 })
-export class AppModule { }
+export class AppModule {}

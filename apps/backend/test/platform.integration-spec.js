@@ -42,12 +42,14 @@ describe('local platform dependencies', () => {
     await postgres?.end();
   });
 
-  it('connects to PostgreSQL and finds the migration runner table', async () => {
+  it('connects to PostgreSQL and finds the migrated application schema', async () => {
     await expect(postgres.query('SELECT 1 AS value')).resolves.toMatchObject({
       rows: [{ value: 1 }],
     });
-    await expect(postgres.query('SELECT COUNT(*)::int AS count FROM migrations')).resolves.toMatchObject({
-      rows: [{ count: expect.any(Number) }],
+    const migrations = await postgres.query('SELECT COUNT(*)::int AS count FROM migrations');
+    expect(migrations.rows[0].count).toBeGreaterThanOrEqual(1);
+    await expect(postgres.query("SELECT to_regclass('public.tournament') AS table_name")).resolves.toMatchObject({
+      rows: [{ table_name: 'tournament' }],
     });
   });
 
