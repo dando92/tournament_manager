@@ -18,12 +18,21 @@ The backend uses the following architectural layers:
 - TypeScript
 - NestJS 11
 - TypeORM
-- SQLite for local and container-default persistence
-- PostgreSQL or MariaDB for configured external persistence
+- PostgreSQL-compatible persistence
+- Redis Streams for durable event transport
+- Redis Pub/Sub for replaceable live events
+- PostgreSQL is the only supported database in the target architecture.
+- Remove SQLite and MariaDB configuration, dependencies, adapters, and migration paths during the architecture migration.
 - Native WebSockets through NestJS gateways
 
 ## Location and Integrations
 
-The backend is located in `apps/backend` and is an npm workspace. Application-owned integrations, including Start.gg and SyncStart, remain inside the backend because they are not shared runtime packages.
+The current backend is located in `apps/backend` and is the source of the service extraction defined in `Architecture.md`. Its current module boundaries must not be treated as final deployment boundaries.
 
-Local configuration is loaded from the repository-root `.env` file. Docker Compose overrides the SQLite path to use its persistent `/data` volume.
+Local configuration is loaded from the repository-root `.env` file. The `local` configuration must start the complete application and its PostgreSQL and Redis dependencies through Docker Compose without requiring cloud services. Local startup requirements are defined in [Architecture.md](Architecture.md).
+
+## Target Backend Boundaries
+
+The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).
+
+Managers remain application-layer use cases. Event handlers in the processor may invoke managers or services but must not access repositories directly.
