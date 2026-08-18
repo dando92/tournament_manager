@@ -44,6 +44,8 @@ Local endpoints:
 
 Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates or updates the application schema from versioned migrations before API readiness. TypeORM schema synchronization is disabled.
 
+The backend also runs the Phase 3 outbox relay and durable consumer. Durable events use the `tournament-manager.events` Stream and `tournament-manager-backend-v1` consumer group by default; exhausted messages are visible in `tournament-manager.events.dead-letter`. Replaceable live events use the `tournament-manager.live` Pub/Sub channel. These names may be overridden with `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL`.
+
 The local stack creates an idempotent `Local E2E Tournament` fixture by default. Set `LOCAL_SEED_ENABLED=false` to disable it or override `LOCAL_SEED_TOURNAMENT_NAME` in `.env`.
 
 ## Status and Logs
@@ -115,4 +117,6 @@ The current pre-production schema baseline intentionally does not upgrade databa
 - After a normal shutdown and startup, `npm run local:status` must show retained data and all dependencies up.
 - If PostgreSQL or Redis is stopped, `/health/live` remains available while `/health/ready` returns `503` and identifies the failed dependency.
 - After the dependency restarts, Compose and the API health checks restore readiness without deleting volumes.
+- Outbox rows remain pending while Redis is unavailable. After Redis recovers, the relay publishes them; pending consumer entries are reclaimed after a consumer restart.
+- Inspect `event_outbox.last_error` and `publish_attempts` for relay failures and the configured `.dead-letter` Stream for messages that exhausted consumer retries.
 - If the migration container fails, inspect `docker compose logs migrations`; the API intentionally remains stopped.

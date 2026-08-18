@@ -169,6 +169,15 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 3 — Contracts and Eventing Inside the Existing Backend
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-18.
+- Versioned durable and replaceable-live event envelopes and provider-independent transport interfaces are established inside the existing backend.
+- PostgreSQL outbox, inbox, and first-slice projection tables are managed through a versioned migration.
+- The Redis Streams relay and consumer group support at-least-once delivery, pending-message reclaim, bounded retry, dead-letter handling, and correlation metadata.
+- Redis Pub/Sub is implemented separately and tested for fan-out, missed-message semantics, and later-update recovery.
+- The low-risk `tournament.created` version 1 slice commits atomically with its outbox row and produces an idempotent projection without removing legacy synchronous behavior.
+
 ### Work
 
 - Create shared, versioned event contracts and provider-independent eventing interfaces.
@@ -305,7 +314,7 @@ A migrated behavior is complete only when all applicable items are true:
 ## Current Baseline Risks
 
 - The backend e2e suite protects authentication, basic tournament management, PostgreSQL persistence, and schema creation, but the remaining critical tournament workflows are not yet covered.
-- Redis outbox, inbox, retry, dead-letter, and extracted-service test infrastructure do not yet exist.
+- Extracted-service test infrastructure does not yet exist; it will be introduced only after the Phase 4 stateless-handler gate.
 - The current clean-baseline policy is valid only while all deployments remain explicitly pre-production and disposable.
 
 Service extraction must not begin before the applicable preceding exit gates pass.

@@ -56,3 +56,15 @@ Local configuration is loaded from the repository-root `.env` file. The `local` 
 The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).
 
 Managers remain application-layer use cases. Event handlers in the processor may invoke managers or services but must not access repositories directly.
+
+## Eventing Inside the Existing Backend
+
+- Durable contracts are explicit versioned envelopes in `apps/backend/src/contracts`. They include event, aggregate, time, correlation, and causation metadata and never expose TypeORM entities.
+- PostgreSQL `event_outbox` rows are written in the same transaction as their domain change. Publishing directly to Redis from a domain transaction is not allowed.
+- The relay publishes durable events to the configured Redis Stream and marks outbox rows only after Redis acknowledges `XADD`. A crash between those operations may duplicate delivery, so consumers must remain idempotent.
+- Durable consumers use Redis consumer groups and insert an `event_inbox` row in the same PostgreSQL transaction as their business effect. Inbox identity is the stable handler name plus event ID.
+- Failed events remain pending for another consumer to reclaim. Retry count is bounded; exhausted events are acknowledged only after being copied to the `.dead-letter` stream with the reason, attempt count, and failure time.
+- Replaceable live events use the separate Pub/Sub adapter. Subscribers must recover missed messages from a newer update or authoritative HTTP snapshot.
+- `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
+
+The first migrated Phase 3 slice is `tournament.created` version 1. Tournament creation and its outbox record commit atomically; the in-backend consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.

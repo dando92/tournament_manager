@@ -9,11 +9,12 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-18.
-- Active phase: Phase 3 — Contracts and Eventing Inside the Existing Backend (not started).
+- Active phase: Phase 4 — Stateless Event Handlers (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
-- Service extraction is not authorized yet because the Phase 3 and subsequent pre-extraction exit gates remain open.
+- Phase 3 state: complete; its exit gate passed on 2026-08-18.
+- Service extraction is not authorized yet because the Phase 4 pre-extraction exit gate remains open.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
@@ -267,13 +268,47 @@ Known non-blocking output:
 - Vite reports the existing large JavaScript chunk warning.
 - npm reports existing deprecated transitive packages and blocked install scripts; dependency cleanup is outside this migration checkpoint.
 
+### Phase 3 checkpoint 1 — Reliable eventing and first durable slice
+
+- Added explicit versioned durable and replaceable-live event envelopes plus provider-independent eventing interfaces.
+- Added versioned PostgreSQL migrations for the transactional outbox, consumer inbox, and first-slice projection.
+- Added the Redis Streams relay, consumer group, pending-message reclaim, bounded retries, dead-letter stream, and relay failure metadata.
+- Added a separate Redis Pub/Sub adapter with fan-out and replaceable-message recovery coverage.
+- Migrated `tournament.created` version 1 as the first low-risk slice: tournament creation and its outbox record are atomic, duplicate delivery creates one inbox record and one projection effect, and existing synchronous behavior remains intact.
+- Added automated PostgreSQL and Redis coverage for atomic rollback, relay outage and restart recovery, consumer restart, duplicate delivery, poison messages, dead-letter handling, Pub/Sub fan-out, and missed-message recovery.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 33 unit tests, including versioned contract validation
+PASS: 13 PostgreSQL/Redis-backed behavioral, migration, and eventing e2e tests
+PASS: backend and frontend builds
+
+npm run local:up
+PASS: images rebuilt and additive eventing migration applied to retained PostgreSQL data
+PASS: PostgreSQL, Redis, backend, migrations, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 13 PostgreSQL/Redis-backed e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+
 ## Characterization Findings
 
 - See [FunctionalQuestions.md](FunctionalQuestions.md) for the inspectable post-migration decision backlog.
 
 ## Next Recommended Checkpoint
 
-Begin Phase 3 by defining the shared versioned event envelope and provider-independent eventing interfaces, then implement PostgreSQL outbox and inbox migrations before moving the first low-risk event slice.
+Begin Phase 4 with one explicit stateless handler slice, preserving its synchronous path until parity, idempotency, and restart tests pass.
 
 ## Remaining Phase 0 Work
 

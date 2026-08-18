@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Tournament, Song } from '@persistence/entities';
 import { CreateTournamentDto, UpdateTournamentDto } from '../dtos';
+import { OutboxService } from '../../eventing/outbox.service';
 
 export interface MyTournamentRoles {
     isAdmin: boolean;
@@ -18,13 +19,24 @@ export class TournamentService {
         private readonly tournamentRepository: Repository<Tournament>,
         @InjectRepository(Song)
         private readonly songRepository: Repository<Song>,
+        private readonly dataSource: DataSource,
+        private readonly outbox: OutboxService,
     ) {}
 
     async create(dto: CreateTournamentDto, _ownerId?: string): Promise<Tournament> {
-        const tournament = new Tournament();
-        tournament.name = dto.name;
-        if (dto.syncstartUrl) tournament.syncstartUrl = dto.syncstartUrl;
-        return this.tournamentRepository.save(tournament);
+        return this.dataSource.transaction(async (manager) => {
+            const tournament = new Tournament();
+            tournament.name = dto.name;
+            if (dto.syncstartUrl) tournament.syncstartUrl = dto.syncstartUrl;
+            const saved = await manager.getRepository(Tournament).save(tournament);
+            await this.outbox.add(manager, {
+                type: 'tournament.created',
+                version: 1,
+                aggregateId: String(saved.id),
+                payload: { tournamentId: saved.id, name: saved.name },
+            });
+            return saved;
+        });
     }
 
     async findAllPublic(): Promise<Tournament[]> {

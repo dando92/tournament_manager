@@ -54,6 +54,9 @@ services:
       DATABASE_SSL: "false"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
+      EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-backend-v1}
+      LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
       STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
       STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
       STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
