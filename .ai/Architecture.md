@@ -163,13 +163,13 @@ Use standard PostgreSQL, Redis, and Docker interfaces. Do not introduce provider
 
 - Tournament-scoped durable events use the tournament ID as `aggregateId`; entity-specific IDs remain in the payload.
 - A tournament is either `open` or `closed`. Closing is an explicit authorized action, records `closedAt`, disconnects its SyncStart lobbies, and makes every tournament mutation require a prior reopen.
-- Reopening clears `closedAt` and cancels any retention that has not completed. Reopening after a completed purge is allowed and does not reconstruct deleted transport history.
+- Reopening clears `closedAt` and prevents a later sweep from selecting the tournament. A retention sweep that already selected the tournament is allowed to finish without lifecycle coordination. Reopening after a completed purge is allowed and does not reconstruct deleted transport history.
 - After a configurable number of continuously closed days, all transport data for the tournament is deleted: outbox, inbox, technical event projections, Redis Stream entries, pending state, retry state, and dead-letter entries.
 - Redis Pub/Sub traffic is ephemeral and has no retained history to purge.
-- Retention uses bounded PostgreSQL batches, a per-tournament Redis transport index, and PostgreSQL advisory locks so it is idempotent, replica-safe, and coordinated with lifecycle operations.
-- Application use cases do not access TypeORM or lock SQL directly. Focused PostgreSQL persistence adapters own transactions and obtain repositories from their transaction `EntityManager`; a dedicated PostgreSQL advisory-lock infrastructure class centralizes lock namespaces and session/transaction semantics.
+- Retention uses bounded PostgreSQL batches, a per-tournament Redis transport index, and one global PostgreSQL advisory lock so it is idempotent and only one service replica sweeps at a time.
+- Application use cases do not access TypeORM or lock SQL directly. Focused PostgreSQL persistence adapters own transactions and obtain repositories from their transaction `EntityManager`; a dedicated PostgreSQL advisory-lock infrastructure class centralizes the global sweep lock's session semantics.
 - Ordinary tournament mutations check the open-state invariant at entry but do not all acquire a tournament row lock. The rare race with manual closure is an accepted pre-production tradeoff; stronger serialization must be reconsidered explicitly before production if required.
-- Per-tournament advisory locks coordinate lifecycle changes with multi-batch PostgreSQL and Redis transport cleanup, while a global advisory lock allows only one retention sweep across replicas.
+- Retention does not acquire a per-tournament advisory lock, repeat its eligibility query, or coordinate with manual close and reopen operations. These rare human-operation races are accepted to keep the implementation simple.
 - Advisory locks remain an explicit PostgreSQL capability, not a nominally database-neutral distributed-lock abstraction. Provider independence refers to deployment/cloud providers; PostgreSQL remains the authoritative supported database.
 - Closed tournaments remain readable. Lifecycle state and authoritative tournament data are not deleted by transport retention.
 

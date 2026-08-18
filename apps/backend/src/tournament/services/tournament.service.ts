@@ -103,18 +103,14 @@ export class TournamentService {
         }
     }
 
-    private changeLifecycle(id: number, status: 'open' | 'closed'): Promise<Tournament> {
-        return this.dataSource.transaction(async (manager) => {
-            await manager.query(`SELECT pg_advisory_xact_lock(1787000000, $1)`, [id]);
-            const repository = manager.getRepository(Tournament);
-            const tournament = await repository.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
-            if (!tournament) throw new NotFoundException(`Tournament with id ${id} not found`);
-            if (tournament.status === status) return tournament;
-            tournament.status = status;
-            tournament.closedAt = status === 'closed' ? new Date() : null;
-            tournament.transportPurgedAt = null;
-            return repository.save(tournament);
-        });
+    private async changeLifecycle(id: number, status: 'open' | 'closed'): Promise<Tournament> {
+        const tournament = await this.tournamentRepository.findOneBy({ id });
+        if (!tournament) throw new NotFoundException(`Tournament with id ${id} not found`);
+        if (tournament.status === status) return tournament;
+        tournament.status = status;
+        tournament.closedAt = status === 'closed' ? new Date() : null;
+        tournament.transportPurgedAt = null;
+        return this.tournamentRepository.save(tournament);
     }
 
     async getMyRoles(accountId: string): Promise<MyTournamentRoles> {

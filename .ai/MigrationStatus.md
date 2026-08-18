@@ -15,7 +15,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
 - Phase 3 state: complete; its exit gate passed on 2026-08-18.
 - Service extraction is not authorized yet because the Phase 4 pre-extraction exit gate remains open.
-- Next action: refactor lifecycle and eventing persistence behind focused PostgreSQL adapters before adding Phase 4 handlers. Centralize advisory-lock mechanics in a dedicated infrastructure class and use transaction-owned repositories for atomic work.
+- Next action: refactor lifecycle and eventing persistence behind focused PostgreSQL adapters before adding Phase 4 handlers. Centralize only the global retention-sweep advisory lock in a dedicated infrastructure class and use transaction-owned repositories for atomic work.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
@@ -310,7 +310,8 @@ Known non-blocking output:
 - Added frontend lifecycle controls with the configured retention period in the destructive close confirmation and read-only UI state.
 - Standardized tournament-scoped durable event aggregate IDs on the tournament ID.
 - Added atomic Redis indexing for Stream, retry, pending, and dead-letter cleanup without global scans.
-- Added replica-safe, configurable retention with batched PostgreSQL deletion, Redis cleanup, purge status, and lifecycle/retention advisory-lock coordination.
+- Added replica-safe, configurable retention with batched PostgreSQL deletion, Redis cleanup, purge status, and a global advisory lock that prevents concurrent sweeps across service replicas.
+- Simplified lifecycle concurrency after review: retention is not coordinated with manual close or reopen operations, eligibility is not repeated after candidate selection, and lifecycle changes do not acquire row or per-tournament advisory locks.
 - The retention policy deliberately deletes every transport artifact, including unpublished outbox and dead-letter records, after the tournament has remained closed for the configured period.
 - Added lifecycle and retention e2e coverage, including read-only enforcement, reopen, PostgreSQL cleanup, Redis entry removal, pending-state removal, and dead-letter removal.
 
@@ -332,6 +333,28 @@ PASS: 2 PostgreSQL and Redis platform integration tests
 PASS: 16 PostgreSQL/Redis-backed e2e tests
 PASS: API liveness and readiness
 PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+
+### Phase 3 checkpoint 3 — Concurrency simplification review
+
+- Confirmed the project rule to keep implementations as simple as reasonably possible and to obtain user approval before introducing substantial architectural or concurrency complexity.
+- Limited concurrency protection to application scaling and failure scenarios: the global retention-sweep lock, relay row claiming with `FOR UPDATE SKIP LOCKED`, inbox deduplication, atomic database transactions, and atomic Redis Stream/index writes remain.
+- Removed the per-tournament advisory lock, the repeated retention eligibility query, and lifecycle row locking. Rare overlaps between retention or tournament mutations and manual lifecycle actions are deliberately accepted during pre-production.
+- Phase 3 remains complete after this simplification review.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 33 unit tests
+PASS: 16 PostgreSQL/Redis-backed e2e tests
+PASS: backend and frontend builds
 ```
 
 Known non-blocking output:

@@ -23,6 +23,12 @@ Tournament Manager is a self-contained, provider-independent application for man
 - Pre-production database schemas and data may be reset when an architectural change requires a new clean baseline.
 - Once the user declares production use, replace this policy with explicit data-migration, API-compatibility, rollout, and rollback requirements before making breaking changes.
 
+## Simplicity and Complexity Approval
+
+- Keep the implementation as simple as reasonably possible for the approved requirements.
+- Do not introduce substantial architectural or concurrency complexity speculatively. Explain the concrete need and obtain the user's approval before adding it.
+- Handle concurrency caused by application scaling, service replicas, retries, and process failures. Do not add locking solely for rare overlaps between manual user operations unless the user explicitly approves that protection.
+
 ## Language
 
 - Communicate with the user in Italian unless the user explicitly requests another language.

@@ -67,12 +67,11 @@ export class EventRetentionService
       );
       let purged = 0;
       for (const candidate of candidates) {
-        if (await this.purgeCandidate(runner, candidate.id, cutoff)) {
-          purged += 1;
-          this.logger.log(
-            `Purged transport data for tournament ${candidate.id}`,
-          );
-        }
+        await this.purgeCandidate(runner, candidate.id);
+        purged += 1;
+        this.logger.log(
+          `Purged transport data for tournament ${candidate.id}`,
+        );
       }
       return purged;
     } finally {
@@ -86,31 +85,13 @@ export class EventRetentionService
   private async purgeCandidate(
     runner: QueryRunner,
     tournamentId: number,
-    cutoff: Date,
-  ): Promise<boolean> {
-    await runner.query(`SELECT pg_advisory_lock(1787000000, $1)`, [
-      tournamentId,
-    ]);
-    try {
-      const eligible: unknown[] = await runner.query(
-        `SELECT 1 FROM tournament
-          WHERE id = $1 AND status = 'closed' AND "closedAt" <= $2
-            AND "transportPurgedAt" IS NULL`,
-        [tournamentId, cutoff],
-      );
-      if (eligible.length === 0) return false;
-      await this.deleteDatabaseTransport(runner, tournamentId);
-      await this.transport.deleteAggregate(String(tournamentId));
-      await runner.query(
-        `UPDATE tournament SET "transportPurgedAt" = now() WHERE id = $1 AND status = 'closed'`,
-        [tournamentId],
-      );
-      return true;
-    } finally {
-      await runner.query(`SELECT pg_advisory_unlock(1787000000, $1)`, [
-        tournamentId,
-      ]);
-    }
+  ): Promise<void> {
+    await this.deleteDatabaseTransport(runner, tournamentId);
+    await this.transport.deleteAggregate(String(tournamentId));
+    await runner.query(
+      `UPDATE tournament SET "transportPurgedAt" = now() WHERE id = $1`,
+      [tournamentId],
+    );
   }
 
   private async deleteDatabaseTransport(

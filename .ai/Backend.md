@@ -15,6 +15,7 @@ The backend uses the following architectural layers:
 ## Maintainability
 
 - Prefer the smallest explicit implementation that satisfies the current requirement.
+- Ask the user before introducing substantial architectural or concurrency complexity. Do not add speculative protection for rare manual-operation races.
 - Keep classes, functions, fixtures, and test helpers focused and locally understandable.
 - Use descriptive names and straightforward control flow instead of implicit conventions or premature generic abstractions.
 - Extract shared code only when it removes real duplication or establishes an approved architectural boundary.
@@ -63,10 +64,10 @@ Managers remain application-layer use cases. Event handlers in the processor may
 - PostgreSQL persistence adapters implement those interfaces. They normally use TypeORM repositories and query builders; direct SQL is allowed only inside an adapter when PostgreSQL capabilities or required query semantics are not expressed adequately by TypeORM.
 - An atomic operation opens its transaction inside the persistence adapter and obtains every participating repository from the transaction `EntityManager`. An injected repository must not be used inside that transaction because it may use a different connection.
 - Lifecycle, outbox, inbox, relay, and retention persistence are exposed through focused adapters rather than mixed into application services.
-- PostgreSQL advisory-lock SQL, key namespaces, acquisition modes, and release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM transaction/session primitives; application code must not depend on it directly.
+- PostgreSQL advisory-lock SQL and session acquisition/release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM session primitives; application code must not depend on it directly.
 - Do not present PostgreSQL advisory locks as a generic distributed-lock abstraction. PostgreSQL is an approved explicit infrastructure dependency, while provider independence means independence from a particular cloud provider rather than database-engine portability.
 - Do not require every ordinary tournament mutation to open a transaction and lock the tournament row. Mutations check the lifecycle state at entry; the rare race in which a mutation overlaps manual closure is accepted during pre-production to avoid spreading locking complexity across all write paths. Revisit this tradeoff before production only if the stronger invariant is required.
-- Use per-tournament advisory locks for lifecycle/transport-retention coordination that spans batched database work and Redis. Use a separate global advisory lock to elect a single retention sweep across replicas.
+- Use one global advisory lock to elect a single retention sweep across service replicas. Do not coordinate retention with manual close or reopen operations through locks or repeated eligibility checks.
 
 ## Eventing Inside the Existing Backend
 
@@ -82,4 +83,4 @@ The first migrated Phase 3 slice is `tournament.created` version 1. Tournament c
 
 Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
 
-`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and advisory locks prevent concurrent sweeps or a lifecycle race. The approved persistence-boundary refactor will move its SQL and lock mechanics into PostgreSQL adapters before Phase 4 handler expansion.
+`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and one global advisory lock prevents concurrent sweeps across replicas. Retention deliberately does not lock against or recheck rare concurrent manual lifecycle operations. The approved persistence-boundary refactor will move its SQL and global lock mechanics into PostgreSQL adapters before Phase 4 handler expansion.
