@@ -28,6 +28,8 @@ Tournament Manager is a self-contained, provider-independent application for man
 - [Backend architecture and coding rules](.ai/Backend.md)
 - [Target scalable architecture and migration rules](.ai/Architecture.md)
 - [Incremental architecture migration work plan](.ai/MigrationPlan.md)
+- [Migration execution status and next action](.ai/MigrationStatus.md)
+- [Current behavior and migration safety-net inventory](.ai/BaselineInventory.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
 
@@ -38,3 +40,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.
+
+## Migration Commit Authorization
+
+Contributors and coding agents are authorized to create local Git commits during the migration without requesting separate confirmation for each commit. A commit may be created whenever it represents a coherent, reviewable checkpoint and the verification appropriate to its scope has passed. Do not commit known regressions, unrelated user changes, secrets, generated runtime data, or incomplete destructive transitions. Record the completed checkpoint and next action in `.ai/MigrationStatus.md` before or as part of the commit.

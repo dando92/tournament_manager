@@ -17,6 +17,16 @@ This plan implements the decisions in [Architecture.md](Architecture.md). It is 
 - Use production-equivalent PostgreSQL, Redis, containers, migrations, protocols, and event contracts locally.
 - Destructive persistence changes require a tested forward migration and, where feasible, a rollback or restore procedure.
 
+## Execution and Commit Protocol
+
+- Use [MigrationStatus.md](MigrationStatus.md) as the durable handoff record. Read it before starting migration work and update it after every completed checkpoint.
+- Contributors and coding agents may create local Git commits without asking for separate approval at each step.
+- Commit at coherent, reviewable checkpoints: a protected behavior slice, a test-infrastructure increment, a migration, or another independently verifiable unit of work.
+- Before committing, run the verification appropriate to the changed scope and record the command and result in `MigrationStatus.md`.
+- Keep commits focused. Do not include unrelated user changes, secrets, generated runtime data, known regressions, or a producer whose required consumer is not available.
+- A phase may span multiple commits. Passing a checkpoint does not imply that the phase exit gate has passed.
+- Commit messages must be in English and describe the completed outcome.
+
 ## Required Developer Commands
 
 The migration must progressively establish and preserve these repository-root commands:
@@ -70,6 +80,14 @@ Exercise the deployed local containers through public HTTP and WebSocket interfa
 Verify health endpoints, readiness dependencies, migrations, clean startup, restart with retained volumes, graceful shutdown, and recovery after temporarily stopping PostgreSQL, Redis, or an event consumer.
 
 ## Phase 0 — Baseline and Safety Net
+
+### Progress
+
+- In progress.
+- Root `npm run verify` command established.
+- Placeholder e2e test replaced with the first behavioral tournament-management workflow and reusable fixtures.
+- Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
+- Remaining before the exit gate: focused domain tests, deterministic Start.gg and SyncStart doubles, broader behavioral coverage, and clean-install verification.
 
 ### Work
 
@@ -259,7 +277,7 @@ A migrated behavior is complete only when all applicable items are true:
 
 ## Current Baseline Risks
 
-- The current backend e2e suite contains a generated placeholder and does not protect tournament workflows.
+- The backend e2e suite protects authentication and basic tournament management, but the remaining critical tournament workflows are not yet covered.
 - Current local scripts and Docker Compose use SQLite, while the target requires PostgreSQL only.
 - TypeORM currently uses schema synchronization instead of production-safe versioned migrations.
 - Redis, outbox, inbox, retry, dead-letter, and extracted-service test infrastructure do not yet exist.

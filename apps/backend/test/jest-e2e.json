@@ -3,7 +3,20 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "setupFiles": ["<rootDir>/setup-env.ts"],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@auth/(.*)$": "<rootDir>/../src/auth/$1",
+    "^@backwards-compat/(.*)$": "<rootDir>/../src/backwards-compat/$1",
+    "^@bracket/(.*)$": "<rootDir>/../src/tournament/bracket/$1",
+    "^@match/(.*)$": "<rootDir>/../src/tournament/match/$1",
+    "^@match-manager/(.*)$": "<rootDir>/../src/match-manager/$1",
+    "^@persistence/(.*)$": "<rootDir>/../src/persistence/$1",
+    "^@player/(.*)$": "<rootDir>/../src/tournament/player/$1",
+    "^@syncstart/(.*)$": "<rootDir>/../src/syncstart/$1",
+    "^@tournament/(.*)$": "<rootDir>/../src/tournament/$1",
+    "^@account/(.*)$": "<rootDir>/../src/account/$1"
   }
 }

@@ -13,7 +13,9 @@
     "dev:frontend": "npm run dev:local --workspace=tournament-viewer",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspace=tournament_manager_backend",
-    "test:e2e": "npm run test:e2e --workspace=tournament_manager_backend"
+    "test:unit": "npm run test --workspace=tournament_manager_backend -- --runInBand",
+    "test:e2e": "npm run test:e2e --workspace=tournament_manager_backend -- --runInBand",
+    "verify": "npm run lint && npm run test:unit && npm run test:e2e && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

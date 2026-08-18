@@ -53,7 +53,7 @@ docker compose up --build
 ## Verification
 
 ```bash
-npm run build
-npm test
-npm run lint
+npm run verify
 ```
+
+This runs linting, backend unit tests, behavioral backend e2e tests, and all workspace builds. The migration-specific commands listed in `.ai/MigrationPlan.md` will become available incrementally in the phases that introduce their infrastructure.

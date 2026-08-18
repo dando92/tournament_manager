@@ -1,0 +1,15 @@
+{
+  "account": {
+    "username": "migration-owner",
+    "email": "migration-owner@example.test",
+    "password": "MigrationPassword!",
+    "playerName": "Migration Owner"
+  },
+  "createTournament": {
+    "name": "Migration Baseline Tournament",
+    "syncstartUrl": "ws://127.0.0.1:19000"
+  },
+  "updateTournament": {
+    "name": "Migration Baseline Tournament Updated"
+  }
+}
