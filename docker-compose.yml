@@ -55,7 +55,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
-      EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-backend-v1}
+      EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-backend}
       LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
       OUTBOX_RELAY_IDLE_INTERVAL_MS: ${OUTBOX_RELAY_IDLE_INTERVAL_MS:-200}
       EVENT_CONSUMER_BLOCK_MS: ${EVENT_CONSUMER_BLOCK_MS:-500}

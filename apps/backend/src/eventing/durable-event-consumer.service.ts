@@ -2,9 +2,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   EventEnvelope,
-  isTournamentCreatedV1,
   LiveEventEnvelope,
-  TournamentCreatedV1Payload,
+  TournamentCreatedEvent,
+  TournamentCreatedPayload,
 } from '../contracts/events';
 import {
   DURABLE_EVENT_TRANSPORT,
@@ -18,7 +18,7 @@ import { DurableEventHandlerRegistry } from './durable-event-handler.registry';
 
 @Injectable()
 export class DurableEventConsumerService {
-  static readonly consumerIdentity = 'tournament-created-projection-v1';
+  static readonly consumerIdentity = 'tournament-created-projection';
   static readonly maximumAttempts = 3;
   private readonly logger = new Logger(DurableEventConsumerService.name);
 
@@ -102,25 +102,23 @@ export class DurableEventConsumerService {
   }
 
   private handleIdempotently(event: EventEnvelope): Promise<boolean> {
-    if (!isTournamentCreatedV1(event)) {
+    if (event.type !== 'tournament.created') {
       const handler = this.handlers.get(event);
       if (handler) return handler.handle(event);
-      throw new Error(`Unsupported or invalid event contract ${event.type} v${event.version}`);
+      throw new Error(`Unsupported event type ${event.type}`);
     }
     return this.persistence.processTournamentCreatedOnce(
       DurableEventConsumerService.consumerIdentity,
-      event,
+      event as TournamentCreatedEvent,
     );
   }
 
   private async publishLiveUpdate(event: EventEnvelope): Promise<void> {
-    if (!isTournamentCreatedV1(event)) return;
-    const payload: TournamentCreatedV1Payload = event.payload;
-    const liveEvent: LiveEventEnvelope<TournamentCreatedV1Payload> = {
+    if (event.type !== 'tournament.created') return;
+    const payload = event.payload as TournamentCreatedPayload;
+    const liveEvent: LiveEventEnvelope<TournamentCreatedPayload> = {
       type: 'tournament.snapshot-changed',
-      version: 1,
       tournamentId: payload.tournamentId,
-      occurredAt: new Date().toISOString(),
       payload,
     };
     try {
@@ -138,7 +136,7 @@ export class DurableEventConsumerService {
 
   private get group(): string {
     return (
-      this.config.get('EVENT_CONSUMER_GROUP') ?? 'tournament-manager-backend-v1'
+      this.config.get('EVENT_CONSUMER_GROUP') ?? 'tournament-manager-backend'
     );
   }
 

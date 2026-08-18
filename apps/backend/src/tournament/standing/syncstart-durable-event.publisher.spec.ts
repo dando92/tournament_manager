@@ -1,10 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { isSyncStartSongCompletedV1 } from '../../contracts/events';
 import { DurableEventTransport } from '../../eventing/eventing.interfaces';
 import { SyncStartDurableEventPublisher } from './syncstart-durable-event.publisher';
 
 describe('SyncStartDurableEventPublisher', () => {
-  it('maps a completed song to the versioned durable contract', async () => {
+  it('maps a completed song to the internal durable envelope', async () => {
     const transport = {
       publish: jest.fn().mockResolvedValue('1-0'),
     } as unknown as DurableEventTransport;
@@ -40,13 +39,11 @@ describe('SyncStartDurableEventPublisher', () => {
       'test-events',
       expect.objectContaining({
         type: 'syncstart.song-completed',
-        version: 1,
         aggregateId: '42',
         payload: event,
       }),
     );
     const durableEvent = (transport.publish as jest.Mock).mock.calls[0][1];
-    expect(isSyncStartSongCompletedV1(durableEvent)).toBe(true);
-    expect(durableEvent.correlationId).toBe(durableEvent.id);
+    expect(durableEvent.id).toEqual(expect.any(String));
   });
 });

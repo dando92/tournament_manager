@@ -71,7 +71,7 @@ Managers remain application-layer use cases. Event handlers in the processor may
 
 ## Eventing Inside the Existing Backend
 
-- Durable contracts are explicit versioned envelopes in `apps/backend/src/contracts`. They include event, aggregate, time, correlation, and causation metadata and never expose TypeORM entities.
+- Durable contracts are explicit internal envelopes in `apps/backend/src/contracts`. They contain only event ID, type, aggregate ID, and payload, and never expose TypeORM entities.
 - PostgreSQL `event_outbox` rows are written in the same transaction as their domain change. Publishing directly to Redis from a domain transaction is not allowed.
 - The relay publishes durable events to the configured Redis Stream and marks outbox rows only after Redis acknowledges `XADD`. A crash between those operations may duplicate delivery, so consumers must remain idempotent.
 - Durable consumers use Redis consumer groups and insert an `event_inbox` row in the same PostgreSQL transaction as their business effect. Inbox identity is the stable handler name plus event ID.
@@ -79,7 +79,7 @@ Managers remain application-layer use cases. Event handlers in the processor may
 - Replaceable live events use the separate Pub/Sub adapter. Subscribers must recover missed messages from a newer update or authoritative HTTP snapshot.
 - `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
 
-The first migrated Phase 3 slice is `tournament.created` version 1. Tournament creation and its outbox record commit atomically; the in-backend consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
+The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the in-backend consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
 
 Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
 
@@ -87,9 +87,10 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 
 ## Stateless Handler Registration
 
-- `DurableEventHandlerRegistry` allows application-owned handlers to register versioned event contracts without coupling the eventing runner to tournament modules.
-- The Phase 4 `syncstart.song-completed` version 1 producer publishes the external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
+- `DurableEventHandlerRegistry` registers one current handler per event type without coupling the eventing runner to tournament modules.
+- The Phase 4 `syncstart.song-completed` producer publishes the normalized external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
 - `LobbySongCompletedHandler` is stateless. Its PostgreSQL adapter records the inbox entry in the same transaction as score and standing effects, obtains all repositories from the transaction `EntityManager`, and emits match invalidations plus best-effort warnings only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
 - `PostgresTournamentPersistence` owns the tournament-creation transaction and obtains the tournament repository from its transaction `EntityManager`; it writes the `tournament.created` outbox event through the focused outbox adapter in that same transaction.
 - A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
 - Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.
+- Internal Redis payloads are trusted after minimal envelope parsing. Incompatible deployments discard retained transport work instead of supporting old message shapes.

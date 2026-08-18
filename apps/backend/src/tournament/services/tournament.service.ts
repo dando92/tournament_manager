@@ -28,7 +28,6 @@ export class TournamentService {
         if (dto.syncstartUrl) tournament.syncstartUrl = dto.syncstartUrl;
         return this.persistence.createWithEvent(tournament, (saved) => ({
                 type: 'tournament.created',
-                version: 1,
                 aggregateId: String(saved.id),
                 payload: { tournamentId: saved.id, name: saved.name },
         }));

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { SyncStartSongCompletedV1 } from '../../contracts/events';
+import { SyncStartSongCompletedEvent } from '../../contracts/events';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventTransport,
@@ -18,14 +18,10 @@ export class SyncStartDurableEventPublisher implements ILobbyObserver {
 
   async OnSongCompleted(event: LobbySongCompletedDto): Promise<void> {
     const id = randomUUID();
-    const durableEvent: SyncStartSongCompletedV1 = {
+    const durableEvent: SyncStartSongCompletedEvent = {
       id,
       type: 'syncstart.song-completed',
-      version: 1,
       aggregateId: String(event.tournamentId),
-      occurredAt: new Date().toISOString(),
-      correlationId: id,
-      causationId: null,
       payload: event,
     };
     await this.transport.publish(this.stream, durableEvent);

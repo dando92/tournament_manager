@@ -6,11 +6,8 @@ import { PostgresOutboxPersistence } from './postgres-outbox.persistence';
 
 export interface NewEvent<TPayload> {
   type: string;
-  version: number;
   aggregateId: string;
   payload: TPayload;
-  correlationId?: string;
-  causationId?: string | null;
 }
 
 @Injectable()
@@ -25,11 +22,7 @@ export class OutboxService {
     const event: EventEnvelope<TPayload> = {
       id,
       type: input.type,
-      version: input.version,
       aggregateId: input.aggregateId,
-      occurredAt: new Date().toISOString(),
-      correlationId: input.correlationId ?? id,
-      causationId: input.causationId ?? null,
       payload: input.payload,
     };
 

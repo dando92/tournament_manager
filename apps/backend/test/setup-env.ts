@@ -13,3 +13,6 @@ process.env.DATABASE_PASSWORD =
   process.env.TEST_DATABASE_PASSWORD ?? 'tournament_manager';
 process.env.DATABASE_NAME = 'tournament_manager_application_test';
 process.env.DATABASE_SSL = process.env.TEST_DATABASE_SSL ?? 'false';
+process.env.EVENT_STREAM = 'tournament-manager.e2e.events';
+process.env.EVENT_CONSUMER_GROUP = 'tournament-manager-e2e';
+process.env.LIVE_EVENT_CHANNEL = 'tournament-manager.e2e.live';

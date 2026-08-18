@@ -81,7 +81,7 @@ export class RedisEventTransport
         'CREATE',
         stream,
         group,
-        '0',
+        '$',
         'MKSTREAM',
       ]);
     } catch (error) {

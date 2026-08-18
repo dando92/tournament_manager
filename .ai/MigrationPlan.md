@@ -60,7 +60,7 @@ Run against real PostgreSQL and Redis containers. Cover repositories, migrations
 
 ### Contract tests
 
-Validate versioned command, domain-event, UI-event, and SyncStart payloads at producer and consumer boundaries. Database entities must never be accepted as event contracts.
+Validate external inputs before mapping them to internal command, domain-event, UI-event, and SyncStart contracts. Internal Redis messages use only minimal envelope validation and must never expose database entities.
 
 ### End-to-end tests
 
@@ -172,18 +172,18 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 ### Progress
 
 - Complete. Exit gate passed on 2026-08-18.
-- Versioned durable and replaceable-live event envelopes and provider-independent transport interfaces are established inside the existing backend.
+- Durable and replaceable-live event envelopes and provider-independent transport interfaces are established inside the existing backend. Phase 4 later simplified internal messages to current-only, unversioned contracts.
 - PostgreSQL outbox, inbox, and first-slice projection tables are managed through a versioned migration.
-- The Redis Streams relay and consumer group support at-least-once delivery, pending-message reclaim, bounded retry, dead-letter handling, and correlation metadata.
+- The Redis Streams relay and consumer group support at-least-once delivery, pending-message reclaim, bounded retry, dead-letter handling, and failure metadata.
 - Redis Pub/Sub is implemented separately and tested for fan-out, missed-message semantics, and later-update recovery.
-- The low-risk `tournament.created` version 1 slice commits atomically with its outbox row and produces an idempotent projection without removing legacy synchronous behavior.
+- The low-risk `tournament.created` slice commits atomically with its outbox row and produces an idempotent projection without removing legacy synchronous behavior.
 - Tournament lifecycle and bounded transport retention are complete: manual close makes a tournament read-only, reopen cancels pending retention, and a replica-safe worker deletes all PostgreSQL and Redis transport state after the configured closed period.
 
 ### Work
 
-- Create shared, versioned event contracts and provider-independent eventing interfaces.
+- Create shared internal event contracts and provider-independent eventing interfaces.
 - Add PostgreSQL outbox and consumer inbox tables through migrations.
-- Implement the outbox relay, Redis Streams adapter, consumer groups, bounded retry, dead-letter stream, and observability metadata.
+- Implement the outbox relay, Redis Streams adapter, consumer groups, bounded retry, dead-letter stream, and failure metadata.
 - Implement Redis Pub/Sub separately for replaceable live events.
 - Keep the first producers and consumers inside the existing backend so transport reliability can be tested before service extraction.
 - Migrate one low-risk event slice first, then expand only after its failure tests pass.
@@ -202,7 +202,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 - Complete. Exit gate passed on 2026-08-19.
 - Lifecycle, outbox, inbox, relay, and retention SQL is isolated in focused PostgreSQL persistence adapters; the global retention lock is centralized in `PostgresAdvisoryLock`.
-- The authoritative SyncStart completed-song observer path is replaced by a versioned durable event and a registered stateless handler.
+- The authoritative SyncStart completed-song observer path is replaced by a durable internal event and a registered stateless handler.
 - Score and standing persistence, round recalculation, inbox progress, warnings, and match UI invalidation for the completed-song slice are committed or derived without process-local authoritative state.
 - Duplicate delivery, abandoned pending-message reclaim, consumer restart, PostgreSQL effects, Redis delivery, and existing end-to-end behavior are covered.
 - The superseded `StandingManager` observer path has been removed. Match completion, bracket advancement, match state, and Start.gg reporting remain explicit synchronous application use cases; they were not converted speculatively because no observer-driven workflow requires that change.

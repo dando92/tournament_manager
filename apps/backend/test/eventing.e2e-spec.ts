@@ -86,7 +86,7 @@ describe('Eventing reliability (e2e)', () => {
     const service = createTournamentService(outbox);
     const created = await service.create({ name: 'Atomic tournament' });
     const rows = await dataSource.query(
-      `SELECT aggregate_id, event_type, event_version, payload
+      `SELECT aggregate_id, event_type, payload
          FROM event_outbox
         WHERE aggregate_id = $1`,
       [String(created.id)],
@@ -95,7 +95,6 @@ describe('Eventing reliability (e2e)', () => {
       expect.objectContaining({
         aggregate_id: String(created.id),
         event_type: 'tournament.created',
-        event_version: 1,
         payload: { tournamentId: created.id, name: 'Atomic tournament' },
       }),
     ]);
@@ -160,9 +159,6 @@ describe('Eventing reliability (e2e)', () => {
       [String(tournament.id)],
     );
     const event = eventFromOutbox(row);
-    await transport.publish(stream, event);
-    await transport.publish(stream, event);
-
     const live = { publish: jest.fn(), subscribe: jest.fn() };
     const consumer = new DurableEventConsumerService(
       new PostgresEventConsumerPersistence(dataSource),
@@ -172,6 +168,8 @@ describe('Eventing reliability (e2e)', () => {
       new DurableEventHandlerRegistry(),
     );
     await consumer.ensureGroup();
+    await transport.publish(stream, event);
+    await transport.publish(stream, event);
     await expect(consumer.consumeOnce('duplicate-test', 100)).resolves.toBe(2);
 
     const inbox = await dataSource.query(
@@ -378,9 +376,9 @@ describe('Eventing reliability (e2e)', () => {
     await transport.deadLetter(stream, event, 'retention test', 3);
     await transport.incrementAttempt(group, event.id, event.aggregateId);
     await dataSource.query(
-      `INSERT INTO event_inbox (consumer, event_id, event_type, correlation_id, aggregate_id)
-       VALUES ('retention-test', $1, $2, $3, $4)`,
-      [event.id, event.type, event.correlationId, event.aggregateId],
+      `INSERT INTO event_inbox (consumer, event_id, aggregate_id)
+       VALUES ('retention-test', $1, $2)`,
+      [event.id, event.aggregateId],
     );
     await dataSource.query(
       `INSERT INTO tournament_event_projection (tournament_id, created_event_id, name)
@@ -546,25 +544,16 @@ function eventFromOutbox(row: Record<string, unknown>): EventEnvelope {
   return {
     id: row.id as string,
     type: row.event_type as string,
-    version: row.event_version as number,
     aggregateId: row.aggregate_id as string,
-    occurredAt: (row.occurred_at as Date).toISOString(),
-    correlationId: row.correlation_id as string,
-    causationId: row.causation_id as string | null,
     payload: row.payload,
   };
 }
 
 function createEvent(tournamentId: number, payload: unknown): EventEnvelope {
-  const id = randomUUID();
   return {
-    id,
+    id: randomUUID(),
     type: 'tournament.created',
-    version: 1,
     aggregateId: String(tournamentId),
-    occurredAt: new Date().toISOString(),
-    correlationId: id,
-    causationId: null,
     payload,
   };
 }
@@ -575,9 +564,7 @@ function createLiveEvent(
 ): LiveEventEnvelope {
   return {
     type: 'tournament.snapshot-changed',
-    version: 1,
     tournamentId,
-    occurredAt: new Date().toISOString(),
     payload: { tournamentId, name },
   };
 }
@@ -592,15 +579,10 @@ function createSongCompletedEvent(
     isFailed: boolean;
   }>,
 ): EventEnvelope {
-  const id = randomUUID();
   return {
-    id,
+    id: randomUUID(),
     type: 'syncstart.song-completed',
-    version: 1,
     aggregateId: String(tournamentId),
-    occurredAt: new Date().toISOString(),
-    correlationId: id,
-    causationId: null,
     payload: {
       tournamentId,
       lobbyId: 'ABCD',

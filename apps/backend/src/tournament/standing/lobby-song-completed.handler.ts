@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   EventEnvelope,
-  isSyncStartSongCompletedV1,
+  SyncStartSongCompletedEvent,
 } from '../../contracts/events';
 import {
   DurableEventHandler,
@@ -16,7 +16,6 @@ export class LobbySongCompletedHandler
   implements DurableEventHandler, OnModuleInit
 {
   readonly eventType = 'syncstart.song-completed';
-  readonly version = 1;
 
   constructor(
     private readonly registry: DurableEventHandlerRegistry,
@@ -30,11 +29,9 @@ export class LobbySongCompletedHandler
   }
 
   async handle(event: EventEnvelope): Promise<boolean> {
-    if (!isSyncStartSongCompletedV1(event)) {
-      throw new Error(`Invalid ${this.eventType} v${this.version} event`);
-    }
+    const completedEvent = event as SyncStartSongCompletedEvent;
     const effect = await this.persistence.processOnce(
-      event,
+      completedEvent,
       (name, standings) => {
         const scoringSystem = this.scoringSystems.getScoringSystem(name);
         if (!scoringSystem) throw new Error(`Unknown scoring system ${name}`);
@@ -43,7 +40,7 @@ export class LobbySongCompletedHandler
     );
     if (!effect.processed) return false;
     for (const warning of effect.warnings) {
-      this.uiUpdates.emitWarning(event.payload.tournamentId, warning);
+      this.uiUpdates.emitWarning(completedEvent.payload.tournamentId, warning);
     }
     for (const matchId of effect.matchIds) {
       await this.uiUpdates.emitMatchUpdateByMatchId(matchId);

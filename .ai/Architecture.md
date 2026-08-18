@@ -53,7 +53,7 @@ Current manager migration guidance:
 - `MatchWorkflowManager` and `AdvancementManager` remain reusable application logic invoked by API commands or processor handlers.
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
-Phase 4 established the first extraction-ready registered handler for `syncstart.song-completed` version 1. The handler atomically records inbox progress with score, standing, and recalculation effects. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches remain replaceable state until Phase 7.
+Phase 4 established the first extraction-ready registered handler for `syncstart.song-completed`. The handler atomically records inbox progress with score, standing, and recalculation effects. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches remain replaceable state until Phase 7.
 
 ### SyncStart
 
@@ -122,18 +122,18 @@ These events do not use the transactional outbox. Missing an intermediate live e
 
 ### Event Contracts
 
-Commands and events are versioned contracts and must not expose database entities. Every durable envelope includes at least:
+Commands and events are internal current-version contracts and must not expose database entities. Producer and consumer are deployed together; the application does not support incremental message-contract versions or processing messages created by an older application release. Every durable envelope contains only:
 
 ```text
 id
 type
-version
 aggregateId
-occurredAt
-correlationId
-causationId
 payload
 ```
+
+The Redis adapter validates only that this minimal envelope can be routed and deduplicated. Payload-specific runtime validation is not repeated for messages produced by application-owned code; TypeScript contracts and producer-consumer tests protect that boundary. External inputs such as SyncStart protocol messages remain validated and normalized before an internal event is created.
+
+An incompatible application update must deliberately abandon old Stream entries, pending consumer-group work, retries, and dead letters, and delete unpublished outbox rows rather than attempting compatibility. A new consumer group starts at the current Stream tail, so it never replays retained messages from an older release. This coordinated clean-cut deployment policy is valid while the application remains pre-production. Before production, deployment and data-preservation requirements must be reviewed explicitly.
 
 UI realtime events additionally include the relevant tournament scope and a sequence number when ordered incremental delivery is required.
 
@@ -201,7 +201,7 @@ The `local` configuration is a first-class deployment target, not an ad hoc deve
 
 The executable phase plan, test requirements, and exit gates are defined in [MigrationPlan.md](MigrationPlan.md).
 
-1. Standardize persistence on PostgreSQL, remove SQLite and MariaDB support, and define versioned contracts and persistence migrations.
+1. Standardize persistence on PostgreSQL, remove SQLite and MariaDB support, and define internal contracts and versioned database migrations.
 2. Add Redis and provider-independent eventing interfaces to the local stack.
 3. Implement outbox, relay, inbox, Redis Streams, retries, and dead-letter handling inside the existing backend.
 4. Convert observer-driven domain behavior into stateless handlers without changing deployment boundaries.

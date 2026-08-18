@@ -21,11 +21,43 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Completed Checkpoints
 
+### Phase 4 checkpoint 2 — Current-only internal message contracts
+
+- Removed incremental versions from durable and live message envelopes, handler registration, consumer identities, and default consumer-group naming.
+- Reduced the internal durable envelope to `id`, `type`, `aggregateId`, and `payload`.
+- Kept only minimal envelope validation in the Redis adapter; payload-specific validation remains at external protocol boundaries and is not repeated for application-owned internal messages.
+- Simplified outbox and inbox storage by removing message-version and unused observability columns. The inbox continues to atomically deduplicate Redis redelivery through consumer and event identity.
+- Established the coordinated-update rule that incompatible deployments abandon retained Streams, pending work, retries, and dead letters, delete unpublished outbox events, and start the new consumer group at the current Stream tail rather than processing messages from an older release.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 34 unit tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: backend and frontend builds
+
+npm run local:up
+PASS: simplified-envelope migration applied and complete stack healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+
 ### Phase 4 checkpoint 1 — PostgreSQL adapters and stateless completed-song handler
 
 - Moved tournament creation with its atomic outbox write, outbox insertion/relay, inbox processing, and transport-retention SQL behind focused PostgreSQL persistence adapters.
 - Centralized the session-scoped global retention-sweep lock in `PostgresAdvisoryLock`.
-- Added the versioned `syncstart.song-completed` version 1 contract and a durable SyncStart producer.
+- Added the initial `syncstart.song-completed` durable contract and producer; checkpoint 2 later simplified it to the current-only internal envelope.
 - Added a handler registry so application-owned handlers can be discovered without coupling the eventing runner to tournament modules.
 - Replaced the authoritative `StandingManager` observer path with `LobbySongCompletedHandler` and removed the superseded observer implementation.
 - Made inbox progress, score persistence, standing persistence, and completed-round recalculation one PostgreSQL transaction using repositories from its `EntityManager`.

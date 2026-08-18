@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import {
   EventEnvelope,
-  SyncStartSongCompletedV1Payload,
+  SyncStartSongCompletedPayload,
 } from '../../contracts/events';
 import {
   Match,
@@ -25,25 +25,23 @@ type RecalculateStandings = (
 
 @Injectable()
 export class PostgresLobbySongCompletedPersistence {
-  static readonly consumerIdentity = 'syncstart-song-completed-v1';
+  static readonly consumerIdentity = 'syncstart-song-completed';
 
   constructor(private readonly dataSource: DataSource) {}
 
   processOnce(
-    event: EventEnvelope<SyncStartSongCompletedV1Payload>,
+    event: EventEnvelope<SyncStartSongCompletedPayload>,
     recalculate: RecalculateStandings,
   ): Promise<LobbySongCompletedEffect> {
     return this.dataSource.transaction(async (manager) => {
       const inserted: Array<{ event_id: string }> = await manager.query(
-        `INSERT INTO event_inbox (consumer, event_id, event_type, correlation_id, aggregate_id)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO event_inbox (consumer, event_id, aggregate_id)
+         VALUES ($1, $2, $3)
          ON CONFLICT DO NOTHING
          RETURNING event_id`,
         [
           PostgresLobbySongCompletedPersistence.consumerIdentity,
           event.id,
-          event.type,
-          event.correlationId,
           event.aggregateId,
         ],
       );
@@ -75,8 +73,8 @@ export class PostgresLobbySongCompletedPersistence {
 
   private async persistScore(
     manager: EntityManager,
-    payload: SyncStartSongCompletedV1Payload,
-    completedScore: SyncStartSongCompletedV1Payload['scores'][number],
+    payload: SyncStartSongCompletedPayload,
+    completedScore: SyncStartSongCompletedPayload['scores'][number],
     recalculate: RecalculateStandings,
   ): Promise<{ matchId?: number; warning?: string }> {
     const normalizedName = completedScore.playerName.trim().toLowerCase();
