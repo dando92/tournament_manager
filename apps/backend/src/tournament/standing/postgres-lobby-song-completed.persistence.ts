@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import {
   EventEnvelope,
   SyncStartSongCompletedPayload,
@@ -13,7 +13,6 @@ import {
 } from '@persistence/entities';
 
 export interface LobbySongCompletedEffect {
-  processed: boolean;
   matchIds: number[];
   warnings: string[];
 }
@@ -25,50 +24,30 @@ type RecalculateStandings = (
 
 @Injectable()
 export class PostgresLobbySongCompletedPersistence {
-  static readonly consumerIdentity = 'syncstart-song-completed';
-
-  constructor(private readonly dataSource: DataSource) {}
-
-  processOnce(
+  async apply(
+    manager: EntityManager,
     event: EventEnvelope<SyncStartSongCompletedPayload>,
     recalculate: RecalculateStandings,
   ): Promise<LobbySongCompletedEffect> {
-    return this.dataSource.transaction(async (manager) => {
-      const inserted: Array<{ event_id: string }> = await manager.query(
-        `INSERT INTO event_inbox (consumer, event_id, aggregate_id)
-         VALUES ($1, $2, $3)
-         ON CONFLICT DO NOTHING
-         RETURNING event_id`,
-        [
-          PostgresLobbySongCompletedPersistence.consumerIdentity,
-          event.id,
-          event.aggregateId,
-        ],
-      );
-      if (inserted.length === 0) {
-        return { processed: false, matchIds: [], warnings: [] };
-      }
-
-      const matchIds = new Set<number>();
-      const warnings: string[] = [];
-      for (const completedScore of event.payload.scores) {
-        if (completedScore.exScore == null) {
-          warnings.push(
-            `No EX score found for ${completedScore.playerName} on "${event.payload.song.songPath}". Score was not saved.`,
-          );
-          continue;
-        }
-        const result = await this.persistScore(
-          manager,
-          event.payload,
-          completedScore,
-          recalculate,
+    const matchIds = new Set<number>();
+    const warnings: string[] = [];
+    for (const completedScore of event.payload.scores) {
+      if (completedScore.exScore == null) {
+        warnings.push(
+          `No EX score found for ${completedScore.playerName} on "${event.payload.song.songPath}". Score was not saved.`,
         );
-        if (result.warning) warnings.push(result.warning);
-        if (result.matchId) matchIds.add(result.matchId);
+        continue;
       }
-      return { processed: true, matchIds: [...matchIds], warnings };
-    });
+      const result = await this.persistScore(
+        manager,
+        event.payload,
+        completedScore,
+        recalculate,
+      );
+      if (result.warning) warnings.push(result.warning);
+      if (result.matchId) matchIds.add(result.matchId);
+    }
+    return { matchIds: [...matchIds], warnings };
   }
 
   private async persistScore(

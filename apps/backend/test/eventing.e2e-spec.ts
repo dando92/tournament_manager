@@ -8,11 +8,13 @@ import { DurableEventConsumerService } from '../src/eventing/durable-event-consu
 import { EventRetentionService } from '../src/eventing/event-retention.service';
 import { OutboxRelayService } from '../src/eventing/outbox-relay.service';
 import { OutboxService } from '../src/eventing/outbox.service';
-import { DurableEventHandlerRegistry } from '../src/eventing/durable-event-handler.registry';
-import { PostgresEventConsumerPersistence } from '../src/eventing/postgres-event-consumer.persistence';
+import { EventConsumerRegistry } from '../src/eventing/event-consumer.registry';
+import { PostgresEventTransaction } from '../src/eventing/postgres-event-transaction';
 import { PostgresEventRetentionPersistence } from '../src/eventing/postgres-event-retention.persistence';
 import { PostgresOutboxPersistence } from '../src/eventing/postgres-outbox.persistence';
 import { RedisEventTransport } from '../src/eventing/redis-event.transport';
+import { PostgresTournamentCreatedPersistence } from '../src/eventing/postgres-tournament-created.persistence';
+import { TournamentCreatedHandler } from '../src/eventing/tournament-created.handler';
 import { PostgresAdvisoryLock } from '../src/persistence/postgres-advisory-lock';
 import {
   Division,
@@ -160,12 +162,12 @@ describe('Eventing reliability (e2e)', () => {
     );
     const event = eventFromOutbox(row);
     const live = { publish: jest.fn(), subscribe: jest.fn() };
+    const registry = createTournamentCreatedRegistry(live);
     const consumer = new DurableEventConsumerService(
-      new PostgresEventConsumerPersistence(dataSource),
+      new PostgresEventTransaction(dataSource),
       config,
       transport,
-      live,
-      new DurableEventHandlerRegistry(),
+      registry,
     );
     await consumer.ensureGroup();
     await transport.publish(stream, event);
@@ -195,15 +197,12 @@ describe('Eventing reliability (e2e)', () => {
     });
     await transport.publish(stream, poison);
 
+    const live = { publish: jest.fn(), subscribe: jest.fn() };
     const consumer = new DurableEventConsumerService(
-      new PostgresEventConsumerPersistence(dataSource),
+      new PostgresEventTransaction(dataSource),
       config,
       transport,
-      {
-        publish: jest.fn(),
-        subscribe: jest.fn(),
-      },
-      new DurableEventHandlerRegistry(),
+      createTournamentCreatedRegistry(live),
     );
     await consumer.ensureGroup();
     await expect(
@@ -241,23 +240,22 @@ describe('Eventing reliability (e2e)', () => {
       { playerId: 'one', playerName: 'Player One', score: 1000, exScore: 99, isFailed: false },
       { playerId: 'two', playerName: 'Player Two', score: 900, exScore: 95, isFailed: false },
     ]);
-    const registry = new DurableEventHandlerRegistry();
+    const registry = new EventConsumerRegistry();
     const uiUpdates = {
       emitWarning: jest.fn(),
       emitMatchUpdateByMatchId: jest.fn().mockResolvedValue(undefined),
     };
     const handler = new LobbySongCompletedHandler(
       registry,
-      new PostgresLobbySongCompletedPersistence(dataSource),
+      new PostgresLobbySongCompletedPersistence(),
       new ScoringSystemProvider(),
       uiUpdates as never,
     );
     handler.onModuleInit();
     const consumer = new DurableEventConsumerService(
-      new PostgresEventConsumerPersistence(dataSource),
+      new PostgresEventTransaction(dataSource),
       config,
       transport,
-      { publish: jest.fn(), subscribe: jest.fn() },
       registry,
     );
     await consumer.ensureGroup();
@@ -291,7 +289,7 @@ describe('Eventing reliability (e2e)', () => {
     await expect(
       dataSource.query(
         `SELECT count(*)::int AS count FROM event_inbox WHERE consumer = $1 AND event_id = $2`,
-        [PostgresLobbySongCompletedPersistence.consumerIdentity, event.id],
+        [handler.identity, event.id],
       ),
     ).resolves.toEqual([{ count: 1 }]);
   });
@@ -477,6 +475,21 @@ describe('Eventing reliability (e2e)', () => {
       config,
       transport,
     );
+  }
+
+  function createTournamentCreatedRegistry(live: {
+    publish: jest.Mock;
+    subscribe: jest.Mock;
+  }): EventConsumerRegistry {
+    const registry = new EventConsumerRegistry();
+    const handler = new TournamentCreatedHandler(
+      registry,
+      new PostgresTournamentCreatedPersistence(),
+      config,
+      live,
+    );
+    handler.onModuleInit();
+    return registry;
   }
 
   async function createLobbyScoreFixture(): Promise<{

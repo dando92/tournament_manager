@@ -1,35 +1,25 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  EventEnvelope,
-  LiveEventEnvelope,
-  TournamentCreatedEvent,
-  TournamentCreatedPayload,
-} from '../contracts/events';
+import { EventEnvelope } from '../contracts/events';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventMessage,
   DurableEventTransport,
-  LIVE_EVENT_TRANSPORT,
-  LiveEventTransport,
 } from './eventing.interfaces';
-import { PostgresEventConsumerPersistence } from './postgres-event-consumer.persistence';
-import { DurableEventHandlerRegistry } from './durable-event-handler.registry';
+import { PostgresEventTransaction } from './postgres-event-transaction';
+import { EventConsumerRegistry } from './event-consumer.registry';
 
 @Injectable()
 export class DurableEventConsumerService {
-  static readonly consumerIdentity = 'tournament-created-projection';
   static readonly maximumAttempts = 3;
   private readonly logger = new Logger(DurableEventConsumerService.name);
 
   constructor(
-    private readonly persistence: PostgresEventConsumerPersistence,
+    private readonly transaction: PostgresEventTransaction,
     private readonly config: ConfigService,
     @Inject(DURABLE_EVENT_TRANSPORT)
     private readonly durableTransport: DurableEventTransport,
-    @Inject(LIVE_EVENT_TRANSPORT)
-    private readonly liveTransport: LiveEventTransport,
-    private readonly handlers: DurableEventHandlerRegistry,
+    private readonly consumers: EventConsumerRegistry,
   ) {}
 
   ensureGroup(): Promise<void> {
@@ -62,8 +52,7 @@ export class DurableEventConsumerService {
 
   private async process(message: DurableEventMessage): Promise<void> {
     try {
-      const handled = await this.handleIdempotently(message.event);
-      if (handled) await this.publishLiveUpdate(message.event);
+      await this.handleIdempotently(message.event);
       await this.durableTransport.acknowledge(
         this.stream,
         this.group,
@@ -102,32 +91,9 @@ export class DurableEventConsumerService {
   }
 
   private handleIdempotently(event: EventEnvelope): Promise<boolean> {
-    if (event.type !== 'tournament.created') {
-      const handler = this.handlers.get(event);
-      if (handler) return handler.handle(event);
-      throw new Error(`Unsupported event type ${event.type}`);
-    }
-    return this.persistence.processTournamentCreatedOnce(
-      DurableEventConsumerService.consumerIdentity,
-      event as TournamentCreatedEvent,
-    );
-  }
-
-  private async publishLiveUpdate(event: EventEnvelope): Promise<void> {
-    if (event.type !== 'tournament.created') return;
-    const payload = event.payload as TournamentCreatedPayload;
-    const liveEvent: LiveEventEnvelope<TournamentCreatedPayload> = {
-      type: 'tournament.snapshot-changed',
-      tournamentId: payload.tournamentId,
-      payload,
-    };
-    try {
-      await this.liveTransport.publish(this.liveChannel, liveEvent);
-    } catch (error) {
-      this.logger.warn(
-        `Replaceable live update was missed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    const consumer = this.consumers.get(event);
+    if (!consumer) throw new Error(`Unsupported event type ${event.type}`);
+    return this.transaction.processOnce(event, consumer);
   }
 
   private get stream(): string {
@@ -138,10 +104,6 @@ export class DurableEventConsumerService {
     return (
       this.config.get('EVENT_CONSUMER_GROUP') ?? 'tournament-manager-backend'
     );
-  }
-
-  private get liveChannel(): string {
-    return this.config.get('LIVE_EVENT_CHANNEL') ?? 'tournament-manager.live';
   }
 
   private get consumerBlockMilliseconds(): number {

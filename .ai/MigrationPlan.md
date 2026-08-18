@@ -205,6 +205,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - The authoritative SyncStart completed-song observer path is replaced by a durable internal event and a registered stateless handler.
 - Score and standing persistence, round recalculation, inbox progress, warnings, and match UI invalidation for the completed-song slice are committed or derived without process-local authoritative state.
 - Duplicate delivery, abandoned pending-message reclaim, consumer restart, PostgreSQL effects, Redis delivery, and existing end-to-end behavior are covered.
+- Inbox insertion and consumer execution share one common PostgreSQL transaction wrapper; every event, including `tournament.created`, is resolved through the same consumer registry.
 - The superseded `StandingManager` observer path has been removed. Match completion, bracket advancement, match state, and Start.gg reporting remain explicit synchronous application use cases; they were not converted speculatively because no observer-driven workflow requires that change.
 - Lobby connector/session maps and gateway snapshots remain deliberately volatile connection-adapter state for extraction in Phases 6 and 7, not authoritative workflow progress.
 

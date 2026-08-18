@@ -87,9 +87,11 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 
 ## Stateless Handler Registration
 
-- `DurableEventHandlerRegistry` registers one current handler per event type without coupling the eventing runner to tournament modules.
+- `EventConsumerRegistry` registers one current consumer per event type without coupling the eventing runner to tournament modules.
+- Every `EventConsumer` owns its stable inbox `identity`, event type, transactional `handle`, and optional post-commit effect. `PostgresEventTransaction` performs the standard inbox insertion and invokes the concrete handler inside the same transaction; duplicate events never enter the handler body.
+- `tournament.created` uses the same registry and transaction path as every other durable event. The event loop contains no event-specific branches.
 - The Phase 4 `syncstart.song-completed` producer publishes the normalized external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
-- `LobbySongCompletedHandler` is stateless. Its PostgreSQL adapter records the inbox entry in the same transaction as score and standing effects, obtains all repositories from the transaction `EntityManager`, and emits match invalidations plus best-effort warnings only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
+- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then its PostgreSQL adapter applies score and standing effects using repositories from the transaction `EntityManager`. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
 - `PostgresTournamentPersistence` owns the tournament-creation transaction and obtains the tournament repository from its transaction `EntityManager`; it writes the `tournament.created` outbox event through the focused outbox adapter in that same transaction.
 - A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
 - Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.

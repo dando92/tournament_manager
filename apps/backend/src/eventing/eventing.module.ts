@@ -10,10 +10,12 @@ import { OutboxService } from './outbox.service';
 import { RedisEventTransport } from './redis-event.transport';
 import { EventRetentionService } from './event-retention.service';
 import { PersistenceModule } from '../persistence/persistence.module';
-import { PostgresEventConsumerPersistence } from './postgres-event-consumer.persistence';
+import { PostgresEventTransaction } from './postgres-event-transaction';
 import { PostgresEventRetentionPersistence } from './postgres-event-retention.persistence';
 import { PostgresOutboxPersistence } from './postgres-outbox.persistence';
-import { DurableEventHandlerRegistry } from './durable-event-handler.registry';
+import { EventConsumerRegistry } from './event-consumer.registry';
+import { TournamentCreatedHandler } from './tournament-created.handler';
+import { PostgresTournamentCreatedPersistence } from './postgres-tournament-created.persistence';
 
 @Module({
   imports: [PersistenceModule],
@@ -26,10 +28,12 @@ import { DurableEventHandlerRegistry } from './durable-event-handler.registry';
     DurableEventConsumerService,
     EventingRunnerService,
     EventRetentionService,
-    PostgresEventConsumerPersistence,
+    PostgresEventTransaction,
     PostgresEventRetentionPersistence,
     PostgresOutboxPersistence,
-    DurableEventHandlerRegistry,
+    EventConsumerRegistry,
+    TournamentCreatedHandler,
+    PostgresTournamentCreatedPersistence,
   ],
   exports: [
     OutboxService,
@@ -38,7 +42,7 @@ import { DurableEventHandlerRegistry } from './durable-event-handler.registry';
     EventRetentionService,
     DURABLE_EVENT_TRANSPORT,
     LIVE_EVENT_TRANSPORT,
-    DurableEventHandlerRegistry,
+    EventConsumerRegistry,
   ],
 })
 export class EventingModule {}

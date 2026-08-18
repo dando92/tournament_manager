@@ -21,6 +21,32 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Completed Checkpoints
 
+### Phase 4 checkpoint 3 — Uniform transactional consumer lifecycle
+
+- Added the common `PostgresEventTransaction` wrapper for inbox insertion and concrete consumer execution in one transaction.
+- Moved stable inbox identity from persistence adapters into the `EventConsumer` interface implemented by each concrete handler.
+- Added optional post-commit effects so UI and replaceable live publication stay outside the database transaction.
+- Registered `tournament.created` as an ordinary consumer and removed its special-case branch from the durable consumer loop.
+- Kept event-specific PostgreSQL queries in focused adapters while eliminating duplicated transaction and inbox code.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 34 unit tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: backend and frontend builds
+
+npm run local:up
+PASS: local images rebuilt and all services healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL/Redis integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API, Swagger, deterministic seed, and frontend smoke checks
+```
+
 ### Phase 4 checkpoint 2 — Current-only internal message contracts
 
 - Removed incremental versions from durable and live message envelopes, handler registration, consumer identities, and default consumer-group naming.

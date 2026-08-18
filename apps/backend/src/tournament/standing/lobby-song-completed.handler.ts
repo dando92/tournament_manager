@@ -1,24 +1,29 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 import {
   EventEnvelope,
   SyncStartSongCompletedEvent,
 } from '../../contracts/events';
 import {
-  DurableEventHandler,
-  DurableEventHandlerRegistry,
-} from '../../eventing/durable-event-handler.registry';
+  EventConsumer,
+  EventConsumerRegistry,
+} from '../../eventing/event-consumer.registry';
 import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
 import { ScoringSystemProvider } from '../services/scoring-systems/ScoringSystemProvider';
-import { PostgresLobbySongCompletedPersistence } from './postgres-lobby-song-completed.persistence';
+import {
+  LobbySongCompletedEffect,
+  PostgresLobbySongCompletedPersistence,
+} from './postgres-lobby-song-completed.persistence';
 
 @Injectable()
 export class LobbySongCompletedHandler
-  implements DurableEventHandler, OnModuleInit
+  implements EventConsumer, OnModuleInit
 {
+  readonly identity = 'syncstart-song-completed';
   readonly eventType = 'syncstart.song-completed';
 
   constructor(
-    private readonly registry: DurableEventHandlerRegistry,
+    private readonly registry: EventConsumerRegistry,
     private readonly persistence: PostgresLobbySongCompletedPersistence,
     private readonly scoringSystems: ScoringSystemProvider,
     private readonly uiUpdates: UiUpdateGateway,
@@ -28,9 +33,13 @@ export class LobbySongCompletedHandler
     this.registry.register(this);
   }
 
-  async handle(event: EventEnvelope): Promise<boolean> {
+  handle(
+    manager: EntityManager,
+    event: EventEnvelope,
+  ): Promise<LobbySongCompletedEffect> {
     const completedEvent = event as SyncStartSongCompletedEvent;
-    const effect = await this.persistence.processOnce(
+    return this.persistence.apply(
+      manager,
       completedEvent,
       (name, standings) => {
         const scoringSystem = this.scoringSystems.getScoringSystem(name);
@@ -38,13 +47,16 @@ export class LobbySongCompletedHandler
         scoringSystem.recalc(standings);
       },
     );
-    if (!effect.processed) return false;
+  }
+
+  async afterCommit(event: EventEnvelope, result: unknown): Promise<void> {
+    const completedEvent = event as SyncStartSongCompletedEvent;
+    const effect = result as LobbySongCompletedEffect;
     for (const warning of effect.warnings) {
       this.uiUpdates.emitWarning(completedEvent.payload.tournamentId, warning);
     }
     for (const matchId of effect.matchIds) {
       await this.uiUpdates.emitMatchUpdateByMatchId(matchId);
     }
-    return true;
   }
 }

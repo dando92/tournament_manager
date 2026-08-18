@@ -53,7 +53,7 @@ Current manager migration guidance:
 - `MatchWorkflowManager` and `AdvancementManager` remain reusable application logic invoked by API commands or processor handlers.
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
-Phase 4 established the first extraction-ready registered handler for `syncstart.song-completed`. The handler atomically records inbox progress with score, standing, and recalculation effects. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches remain replaceable state until Phase 7.
+Phase 4 established a common registered-consumer lifecycle for all durable events. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches remain replaceable state until Phase 7.
 
 ### SyncStart
 
