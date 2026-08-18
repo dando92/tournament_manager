@@ -135,10 +135,31 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 7 — Clean-install verification
+
+- Reinstalled the complete workspace dependency tree with `npm ci` from the committed lockfile.
+- Increased only the Jest e2e timeout from 5 to 30 seconds so the first cold `ts-jest` compilation is reliable on a clean installation.
+- Ran the complete verification command after the clean install.
+
+Verification result:
+
+```text
+npm ci
+PASS: 1093 packages installed from the lockfile
+
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 28 unit tests
+PASS: 5 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
 - Vite reports an existing large JavaScript chunk warning.
+- `npm ci` reports deprecated transitive packages and 11 dependency vulnerabilities (2 low, 3 moderate, 5 high, and 1 critical). Dependency remediation is deferred to a dedicated reviewed checkpoint; do not apply breaking `npm audit fix --force` changes during migration.
 
 ## Characterization Findings
 
@@ -151,7 +172,6 @@ Expand behavioral e2e coverage for participant and tournament-structure manageme
 ## Remaining Phase 0 Work
 
 - Expand behavioral coverage for participants and tournament structure.
-- Verify the full Phase 0 gate from a clean `npm ci` installation.
 
 ## Approved Deferred Coverage
 

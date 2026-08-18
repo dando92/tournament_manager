@@ -91,8 +91,9 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - Focused match completion, result orchestration, reopening, and activation characterization tests added.
 - Focused lobby state and SyncStart connector-orchestration characterization tests added without real network access.
 - Behavioral score and match-result persistence coverage added against the isolated current local database.
+- Clean `npm ci` installation followed by the complete root verification command passed.
 - Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Remaining before the exit gate: participant and tournament-structure behavioral coverage, plus clean-install verification.
+- Remaining before the exit gate: participant and tournament-structure behavioral coverage.
 
 ### Work
 
