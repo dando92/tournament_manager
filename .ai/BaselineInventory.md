@@ -54,7 +54,7 @@ The migration safety net must cover these journeys before their implementation m
 | Journey | Current coverage | Phase 0 action |
 | --- | --- | --- |
 | Authentication and tournament CRUD | Behavioral e2e baseline | Expand validation and authorization cases as needed |
-| Participants and tournament structure | Not covered | Add behavioral e2e coverage |
+| Participants and tournament structure | Behavioral e2e baseline | Expand only when a migrated slice requires it |
 | Bracket and match workflow | Focused advancement, completion, reopening, and reversal unit coverage | Add behavioral persistence tests |
 | Score persistence and standings | Focused calculation coverage and behavioral persistence coverage | Expand through complete match journeys |
 | Start.gg import | Excluded by approved scope | Leave unchanged; decide future approach after migration |

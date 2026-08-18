@@ -9,9 +9,9 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-18.
-- Active phase: Phase 0 — Baseline and Safety Net.
-- Phase state: in progress; the Phase 0 exit gate has not passed.
-- Service extraction is not authorized yet because Phase 0 and Phase 1 exit gates remain open.
+- Active phase: Phase 1 — Reproducible Local Platform (not started).
+- Phase 0 state: complete; its exit gate passed on 2026-08-18.
+- Service extraction is not authorized yet because the Phase 1 exit gate remains open.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
@@ -155,6 +155,24 @@ PASS: backend build
 PASS: frontend build
 ```
 
+### Phase 0 checkpoint 8 — Participant structure workflow and phase completion
+
+- Expanded the behavioral HTTP workflow to create a tournament participant, division, singles entrant, phase, and phase group.
+- Covered phase-group entrant assignment and the resulting tournament overview counts.
+- Re-ran the complete verification command after the final Phase 0 change.
+- Confirmed that the approved Phase 0 exit gate passes with the documented Start.gg, SyncStart, and browser WebSocket exclusions.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 28 unit tests
+PASS: 6 behavioral e2e tests
+PASS: backend build
+PASS: frontend build
+```
+
 Known non-blocking output:
 
 - Existing backend and frontend lint warnings remain.
@@ -167,11 +185,11 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Expand behavioral e2e coverage for participant and tournament-structure management, then run the Phase 0 gate from a clean `npm ci` installation.
+Begin Phase 1 with a focused local-platform checkpoint: add pinned PostgreSQL and Redis services, named volumes, and health checks to Docker Compose without switching application persistence yet.
 
 ## Remaining Phase 0 Work
 
-- Expand behavioral coverage for participants and tournament structure.
+- None within the approved scope.
 
 ## Approved Deferred Coverage
 

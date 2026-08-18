@@ -83,7 +83,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ### Progress
 
-- In progress.
+- Complete. Exit gate passed on 2026-08-18.
 - Root `npm run verify` command established.
 - Placeholder e2e test replaced with the first behavioral tournament-management workflow and reusable fixtures.
 - Focused standings calculation and persistence-orchestration characterization tests added.
@@ -93,7 +93,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - Behavioral score and match-result persistence coverage added against the isolated current local database.
 - Clean `npm ci` installation followed by the complete root verification command passed.
 - Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Remaining before the exit gate: participant and tournament-structure behavioral coverage.
+- Participant and tournament-structure behavioral coverage added; no Phase 0 work remains within the approved scope.
 
 ### Work
 

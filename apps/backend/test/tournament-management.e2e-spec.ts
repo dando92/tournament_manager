@@ -102,4 +102,65 @@ describe('Tournament management (e2e)', () => {
         });
       });
   });
+
+  it('creates participants and the tournament division structure', async () => {
+    const tournamentResponse = await request(app.getHttpServer())
+      .post('/tournaments')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Structure Baseline Tournament' })
+      .expect(201);
+    const tournamentId = tournamentResponse.body.id;
+
+    const participantResponse = await request(app.getHttpServer())
+      .post(`/tournaments/${tournamentId}/participants`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ playerName: 'Structure Player' })
+      .expect(201);
+    const participantId = participantResponse.body.id;
+
+    const divisionResponse = await request(app.getHttpServer())
+      .post('/divisions')
+      .send({ name: 'Main Division', tournamentId })
+      .expect(201);
+    const divisionId = divisionResponse.body.id;
+
+    const entrantResponse = await request(app.getHttpServer())
+      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .expect(201);
+    const entrantId = entrantResponse.body.id;
+
+    const phaseResponse = await request(app.getHttpServer())
+      .post('/phases')
+      .send({ name: 'Qualifiers', divisionId })
+      .expect(201);
+    const phaseId = phaseResponse.body.id;
+
+    const phaseGroupResponse = await request(app.getHttpServer())
+      .post(`/phases/${phaseId}/phase-groups`)
+      .send({ name: 'Pool A', displayIdentifier: 'A' })
+      .expect(201);
+    const phaseGroupId = phaseGroupResponse.body.id;
+
+    await request(app.getHttpServer())
+      .post(`/phase-groups/${phaseGroupId}/entrants/${entrantId}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get(`/phase-groups/${phaseGroupId}/entrants`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toContainEqual(expect.objectContaining({ id: entrantId }));
+      });
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/overview`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          divisionCount: 1,
+          playerCount: 1,
+          matchCount: 0,
+        });
+      });
+  });
 });
