@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths" : {
+      "@auth/*" : ["./src/auth/*"],
+      "@backwards-compat/*" : ["./src/backwards-compat/*"],
+      "@bracket/*" : ["./src/tournament/bracket/*"],
+      "@match/*" : ["./src/tournament/match/*"],
+      "@match-manager/*" : ["./src/match-manager/*"],
+      "@persistence/*": ["./src/persistence/*"],
+      "@player/*" : ["./src/tournament/player/*"],
+      "@syncstart/*" : ["./src/syncstart/*"],
+      "@tournament/*" : ["./src/tournament/*"],
+      "@account/*" : ["./src/account/*"]
+    },
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
