@@ -9,6 +9,7 @@ import { Services } from './services';
 import { Controllers } from './controllers';
 import { Gateways } from './gateways';
 import { TournamentAccessGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
+import { TournamentOpenGuard } from './guards/tournament-open.guard';
 
 @Module({
     imports: [
@@ -19,7 +20,7 @@ import { TournamentAccessGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/gu
 		StartggModule,
         EventingModule,
     ],
-    providers: [...Gateways, ...Services, TournamentAccessGuard, AdminGuard, CreatorOrAdminGuard],
+    providers: [...Gateways, ...Services, TournamentAccessGuard, TournamentOpenGuard, AdminGuard, CreatorOrAdminGuard],
     controllers: [...Controllers]
 })
 export class TournamentModule {}

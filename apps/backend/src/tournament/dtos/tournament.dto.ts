@@ -6,6 +6,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { TournamentStatus } from '@persistence/entities';
 
 export class TournamentStaffDto {
     @ApiProperty({ example: 'd9c42b76-3c5f-4d2f-8f4c-32a2d93b24ff', description: 'Staff account id.' })
@@ -21,6 +22,12 @@ export class TournamentResponseDto {
 
     @ApiProperty({ example: 'UEFA Euro 2024', description: 'The name of the tournament.' })
     name: string;
+
+    @ApiProperty({ enum: ['open', 'closed'], example: 'open' })
+    status: TournamentStatus;
+
+    @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' })
+    closedAt: Date | null;
 
     @ApiProperty({
         description: 'WebSocket URL of the syncstart server for this tournament.',
@@ -45,6 +52,15 @@ export class TournamentConfigurationDto {
 
     @ApiProperty({ example: 'UEFA Euro 2024', description: 'The name of the tournament.' })
     name: string;
+
+    @ApiProperty({ enum: ['open', 'closed'], example: 'open' })
+    status: TournamentStatus;
+
+    @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' })
+    closedAt: Date | null;
+
+    @ApiProperty({ example: 10, description: 'Days after closure before transport data is permanently deleted.' })
+    transportRetentionDays: number;
 
     @ApiProperty({ description: 'WebSocket URL of the syncstart server for this tournament.' })
     syncstartUrl: string;

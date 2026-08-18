@@ -51,7 +51,7 @@ export class LobbyManager implements OnModuleInit, ILobbyObserver {
     async onModuleInit(): Promise<void> {
         const tournaments = await this.tournamentRepository.find();
         for (const tournament of tournaments) {
-            if (tournament.syncstartUrl) {
+            if (tournament.status !== 'closed' && tournament.syncstartUrl) {
                 this._createConnector(tournament.id, tournament.syncstartUrl);
                 console.log(`[LobbyManager] Created connector for tournament=${tournament.id} url=${tournament.syncstartUrl}`);
             }
@@ -143,6 +143,15 @@ export class LobbyManager implements OnModuleInit, ILobbyObserver {
         this._disconnectAllForTournament(tournamentId);
         this._createConnector(tournamentId, newUrl);
         console.log(`[LobbyManager] URL changed for tournament=${tournamentId}, new connector created (no lobbies connected)`);
+    }
+
+    OnTournamentClosed(tournamentId: number): void {
+        this._disconnectAllForTournament(tournamentId);
+    }
+
+    OnTournamentReopened(tournamentId: number, syncstartUrl: string): void {
+        this._disconnectAllForTournament(tournamentId);
+        if (syncstartUrl) this._createConnector(tournamentId, syncstartUrl);
     }
 
     async GetLobbies(tournamentId: number): Promise<TournamentLobbiesDto> {

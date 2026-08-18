@@ -24,6 +24,7 @@ export type { MatchResultEntry } from './entities/match_result.entity';
 export type { AdvancementCompetitionKind } from './entities/advancement-rule.entity';
 export type { PhaseGroupState } from './entities/phase-group.entity';
 export type { PhaseGroupEntrantStatus } from './entities/phase-group-entrant.entity';
+export type { TournamentStatus } from './entities/tournament.entity';
 export type {
     ExternalProvider,
     ExternalMappingLocalType,

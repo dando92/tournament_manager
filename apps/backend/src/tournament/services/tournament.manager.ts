@@ -13,6 +13,7 @@ import { DivisionService } from './division.service';
 import { TournamentService } from './tournament.service';
 import { ParticipantService } from './participant.service';
 import { PlayerService } from '@player/player.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TournamentManager {
@@ -21,6 +22,7 @@ export class TournamentManager {
         private readonly tournamentService: TournamentService,
         private readonly participantService: ParticipantService,
         private readonly playerService: PlayerService,
+        private readonly config: ConfigService,
     ) {}
 
     private normalizeName(value: string): string {
@@ -43,6 +45,8 @@ export class TournamentManager {
         return {
             id: tournament.id,
             name: tournament.name,
+            status: tournament.status,
+            closedAt: tournament.closedAt,
             syncstartUrl: tournament.syncstartUrl,
             availableSetupsCount: tournament.availableSetupsCount,
             defaultScoringSystem: tournament.defaultScoringSystem,
@@ -59,6 +63,9 @@ export class TournamentManager {
         return {
             id: tournament.id,
             name: tournament.name,
+            status: tournament.status,
+            closedAt: tournament.closedAt,
+            transportRetentionDays: Number(this.config.get('TOURNAMENT_TRANSPORT_RETENTION_DAYS') ?? 10),
             syncstartUrl: tournament.syncstartUrl,
             startggApiKey: tournament.startggApiKey,
             availableSetupsCount: tournament.availableSetupsCount,
@@ -98,6 +105,14 @@ export class TournamentManager {
             tournament: this.toResponseDto(result.tournament),
             previousSyncstartUrl: result.previousSyncstartUrl,
         };
+    }
+
+    async close(tournamentId: number): Promise<TournamentResponseDto> {
+        return this.toResponseDto(await this.tournamentService.close(tournamentId));
+    }
+
+    async reopen(tournamentId: number): Promise<TournamentResponseDto> {
+        return this.toResponseDto(await this.tournamentService.reopen(tournamentId));
     }
 
     async listParticipants(tournamentId: number) {

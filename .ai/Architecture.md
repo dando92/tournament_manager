@@ -159,6 +159,16 @@ Use standard PostgreSQL, Redis, and Docker interfaces. Do not introduce provider
 - Persist workflow state, leases, and recovery checkpoints.
 - Treat graceful shutdown, lease release, reconnection, and replay as required behavior for stateful services.
 
+### Tournament lifecycle and transport retention
+
+- Tournament-scoped durable events use the tournament ID as `aggregateId`; entity-specific IDs remain in the payload.
+- A tournament is either `open` or `closed`. Closing is an explicit authorized action, records `closedAt`, disconnects its SyncStart lobbies, and makes every tournament mutation require a prior reopen.
+- Reopening clears `closedAt` and cancels any retention that has not completed. Reopening after a completed purge is allowed and does not reconstruct deleted transport history.
+- After a configurable number of continuously closed days, all transport data for the tournament is deleted: outbox, inbox, technical event projections, Redis Stream entries, pending state, retry state, and dead-letter entries.
+- Redis Pub/Sub traffic is ephemeral and has no retained history to purge.
+- Retention uses bounded PostgreSQL batches, a per-tournament Redis transport index, and PostgreSQL advisory locks so it is idempotent, replica-safe, and coordinated with reopen operations.
+- Closed tournaments remain readable. Lifecycle state and authoritative tournament data are not deleted by transport retention.
+
 ## Deployment
 
 - GitHub Actions is the release control plane.

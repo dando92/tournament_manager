@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Song } from '@persistence/entities';
 import { CreateSongDto } from '../dtos';
 import { ScoreService } from '../services/score.service';
 import { SongService } from '../services/song.service';
 import { TournamentService } from '../services/tournament.service';
+import { RequireOpenTournament, TournamentOpenGuard } from '../guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller('songs')
 export class SongsController {
     constructor(
@@ -14,6 +16,7 @@ export class SongsController {
     ) {}
 
     @Post()
+    @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
     async create(@Body(new ValidationPipe()) dto: CreateSongDto): Promise<Song> {
         return await this.songService.create(dto);
     }
@@ -29,6 +32,7 @@ export class SongsController {
     }
 
     @Delete(':id')
+    @RequireOpenTournament({ entity: 'song', location: 'params', field: 'id' })
     remove(@Param('id') id: number): Promise<void> {
         return this.songService.delete(id);
     }

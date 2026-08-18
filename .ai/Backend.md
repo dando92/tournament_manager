@@ -68,3 +68,7 @@ Managers remain application-layer use cases. Event handlers in the processor may
 - `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
 
 The first migrated Phase 3 slice is `tournament.created` version 1. Tournament creation and its outbox record commit atomically; the in-backend consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
+
+Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
+
+`EventRetentionService` currently runs inside the backend and moves to the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and advisory locks prevent concurrent sweeps or a reopen race.

@@ -23,4 +23,11 @@ Vite loads environment files from the repository root so local and container con
 - Reload the relevant snapshot after reconnecting or detecting a sequence gap.
 - Do not require replay of replaceable high-frequency live events.
 
-Additional frontend architectural and coding rules have not been defined yet.
+## Tournament Lifecycle
+
+- Tournament lifecycle state comes from the authoritative HTTP response.
+- Closed tournaments expose read views but suppress mutation controls. Configuration remains available to authorized staff so the tournament can be reopened.
+- Closing requires an explicit confirmation that states the configured retention period, read-only behavior, lobby disconnection, and permanent transport-data deletion.
+- Reopening restores mutation controls but does not imply that previously purged transport history can be reconstructed.
+
+Additional frontend architectural and coding rules remain intentionally minimal.

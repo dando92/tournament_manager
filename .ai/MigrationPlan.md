@@ -177,6 +177,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - The Redis Streams relay and consumer group support at-least-once delivery, pending-message reclaim, bounded retry, dead-letter handling, and correlation metadata.
 - Redis Pub/Sub is implemented separately and tested for fan-out, missed-message semantics, and later-update recovery.
 - The low-risk `tournament.created` version 1 slice commits atomically with its outbox row and produces an idempotent projection without removing legacy synchronous behavior.
+- Tournament lifecycle and bounded transport retention are complete: manual close makes a tournament read-only, reopen cancels pending retention, and a replica-safe worker deletes all PostgreSQL and Redis transport state after the configured closed period.
 
 ### Work
 

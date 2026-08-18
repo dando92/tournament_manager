@@ -1,11 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
 import { Division, Entrant } from '@persistence/entities';
 import { CreateDivisionDto, DivisionStandingRowDto, DivisionSummaryDto, GenerateDivisionBracketDto, UpdateDivisionDto } from '../dtos';
 import { DivisionManager } from '../services/division.manager';
 import { DivisionService } from '../services/division.service';
 import { EntrantService } from '../services/entrant.service';
+import { RequireOpenTournament, TournamentOpenGuard } from '../guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller('divisions')
 export class DivisionsController {
     constructor(
@@ -16,6 +18,7 @@ export class DivisionsController {
     ) {}
 
     @Post()
+    @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
     async create(@Body(new ValidationPipe()) dto: CreateDivisionDto): Promise<Division> {
         return this.divisionService.create(dto);
     }
@@ -36,6 +39,7 @@ export class DivisionsController {
     }
 
     @Post(':id/generate-bracket')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async generateBracket(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: GenerateDivisionBracketDto,
@@ -49,11 +53,13 @@ export class DivisionsController {
     }
 
     @Patch(':id')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateDivisionDto): Promise<Division> {
         return this.divisionService.update(id, dto);
     }
 
     @Delete(':id')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async remove(@Param('id') id: number): Promise<void> {
         return this.divisionService.delete(id);
     }
@@ -69,6 +75,7 @@ export class DivisionsController {
     }
 
     @Post(':id/participants/:participantId')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async addParticipantToDivision(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
@@ -77,6 +84,7 @@ export class DivisionsController {
     }
 
     @Delete(':id/participants/:participantId')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async removeParticipantFromDivision(
         @Param('id') id: number,
         @Param('participantId') participantId: number,

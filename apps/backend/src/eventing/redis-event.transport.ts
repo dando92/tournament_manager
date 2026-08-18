@@ -62,14 +62,14 @@ export class RedisEventTransport
     event: EventEnvelope | LiveEventEnvelope,
   ): Promise<string | void> {
     if ('id' in event) {
-      const reply = await this.commandClient.sendCommand([
-        'XADD',
-        destination,
-        '*',
+      return this.addIndexedStreamEntry(destination, event.aggregateId, [
+        'eventId',
+        event.id,
+        'aggregateId',
+        event.aggregateId,
         'event',
         JSON.stringify(event),
       ]);
-      return String(reply);
     }
     await this.commandClient.publish(destination, JSON.stringify(event));
   }
@@ -142,9 +142,17 @@ export class RedisEventTransport
     await this.commandClient.sendCommand(['XACK', stream, group, streamId]);
   }
 
-  async incrementAttempt(group: string, eventId: string): Promise<number> {
+  async incrementAttempt(
+    group: string,
+    eventId: string,
+    aggregateId: string,
+  ): Promise<number> {
     const key = `eventing:attempts:${group}`;
     const attempts = await this.commandClient.hIncrBy(key, eventId, 1);
+    await this.commandClient.sAdd(
+      this.aggregateIndexKey(aggregateId),
+      JSON.stringify({ kind: 'hash', key, field: eventId }),
+    );
     await this.commandClient.expire(key, 7 * 24 * 60 * 60);
     return attempts;
   }
@@ -159,19 +167,44 @@ export class RedisEventTransport
     reason: string,
     attempts: number,
   ): Promise<void> {
-    await this.commandClient.sendCommand([
-      'XADD',
+    await this.addIndexedStreamEntry(
       `${stream}.dead-letter`,
-      '*',
-      'event',
-      JSON.stringify(event),
-      'reason',
-      reason,
-      'attempts',
-      String(attempts),
-      'failedAt',
-      new Date().toISOString(),
-    ]);
+      event.aggregateId,
+      [
+        'eventId',
+        event.id,
+        'aggregateId',
+        event.aggregateId,
+        'event',
+        JSON.stringify(event),
+        'reason',
+        reason,
+        'attempts',
+        String(attempts),
+        'failedAt',
+        new Date().toISOString(),
+      ],
+    );
+  }
+
+  async deleteAggregate(aggregateId: string): Promise<void> {
+    const indexKey = this.aggregateIndexKey(aggregateId);
+    const members = await this.commandClient.sMembers(indexKey);
+    for (const member of members) {
+      const entry = JSON.parse(member) as {
+        kind: 'stream' | 'hash';
+        key: string;
+        id?: string;
+        field?: string;
+      };
+      if (entry.kind === 'stream' && entry.id) {
+        await this.acknowledgeAllGroups(entry.key, entry.id);
+        await this.commandClient.sendCommand(['XDEL', entry.key, entry.id]);
+      } else if (entry.kind === 'hash' && entry.field) {
+        await this.commandClient.hDel(entry.key, entry.field);
+      }
+    }
+    await this.commandClient.del(indexKey);
   }
 
   async subscribe(
@@ -194,6 +227,58 @@ export class RedisEventTransport
       result.push(...this.parseEntries(streamReply[1] as unknown[]));
     }
     return result;
+  }
+
+  private async addIndexedStreamEntry(
+    stream: string,
+    aggregateId: string,
+    fields: string[],
+  ): Promise<string> {
+    const script = `
+      local id = redis.call('XADD', KEYS[1], '*', unpack(ARGV))
+      redis.call('SADD', KEYS[2], cjson.encode({kind='stream', key=KEYS[1], id=id}))
+      return id
+    `;
+    const reply = await this.commandClient.sendCommand([
+      'EVAL',
+      script,
+      '2',
+      stream,
+      this.aggregateIndexKey(aggregateId),
+      ...fields,
+    ]);
+    return String(reply);
+  }
+
+  private aggregateIndexKey(aggregateId: string): string {
+    return `eventing:aggregate:${aggregateId}:transport`;
+  }
+
+  private async acknowledgeAllGroups(
+    stream: string,
+    streamId: string,
+  ): Promise<void> {
+    let groups: unknown;
+    try {
+      groups = await this.commandClient.sendCommand([
+        'XINFO',
+        'GROUPS',
+        stream,
+      ]);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('no such key'))
+        return;
+      throw error;
+    }
+    if (!Array.isArray(groups)) return;
+    for (const group of groups) {
+      if (!Array.isArray(group)) continue;
+      const nameIndex = group.findIndex((value) => value === 'name');
+      const name = group[nameIndex + 1];
+      if (nameIndex >= 0 && typeof name === 'string') {
+        await this.commandClient.sendCommand(['XACK', stream, name, streamId]);
+      }
+    }
   }
 
   private parseEntries(entries: unknown[]): DurableEventMessage[] {

@@ -175,4 +175,52 @@ describe('Tournament management (e2e)', () => {
         });
       });
   });
+
+  it('makes a closed tournament read-only until an authorized user reopens it', async () => {
+    const tournamentResponse = await request(app.getHttpServer())
+      .post('/tournaments')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Lifecycle Tournament' })
+      .expect(201);
+    const tournamentId = tournamentResponse.body.id;
+
+    await request(app.getHttpServer())
+      .post(`/tournaments/${tournamentId}/close`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.status).toBe('closed');
+        expect(body.closedAt).toBeTruthy();
+      });
+
+    await request(app.getHttpServer())
+      .patch(`/tournaments/${tournamentId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Forbidden update' })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .post('/divisions')
+      .send({ name: 'Forbidden division', tournamentId })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.status).toBe('closed'));
+
+    await request(app.getHttpServer())
+      .post(`/tournaments/${tournamentId}/reopen`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.status).toBe('open');
+        expect(body.closedAt).toBeNull();
+      });
+
+    await request(app.getHttpServer())
+      .post('/divisions')
+      .send({ name: 'Allowed division', tournamentId })
+      .expect(201);
+  });
 });

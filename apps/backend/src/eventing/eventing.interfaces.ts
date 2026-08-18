@@ -26,8 +26,13 @@ export interface DurableEventTransport {
     count: number,
   ): Promise<DurableEventMessage[]>;
   acknowledge(stream: string, group: string, streamId: string): Promise<void>;
-  incrementAttempt(group: string, eventId: string): Promise<number>;
+  incrementAttempt(
+    group: string,
+    eventId: string,
+    aggregateId: string,
+  ): Promise<number>;
   clearAttempt(group: string, eventId: string): Promise<void>;
+  deleteAggregate(aggregateId: string): Promise<void>;
   deadLetter(
     stream: string,
     event: EventEnvelope,

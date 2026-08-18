@@ -8,6 +8,7 @@ import { EventingRunnerService } from './eventing-runner.service';
 import { OutboxRelayService } from './outbox-relay.service';
 import { OutboxService } from './outbox.service';
 import { RedisEventTransport } from './redis-event.transport';
+import { EventRetentionService } from './event-retention.service';
 
 @Module({
   providers: [
@@ -18,11 +19,13 @@ import { RedisEventTransport } from './redis-event.transport';
     OutboxRelayService,
     DurableEventConsumerService,
     EventingRunnerService,
+    EventRetentionService,
   ],
   exports: [
     OutboxService,
     OutboxRelayService,
     DurableEventConsumerService,
+    EventRetentionService,
     DURABLE_EVENT_TRANSPORT,
     LIVE_EVENT_TRANSPORT,
   ],

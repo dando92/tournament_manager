@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 
 import { EventEnvelope, LiveEventEnvelope } from '../src/contracts/events';
 import { DurableEventConsumerService } from '../src/eventing/durable-event-consumer.service';
+import { EventRetentionService } from '../src/eventing/event-retention.service';
 import { OutboxRelayService } from '../src/eventing/outbox-relay.service';
 import { OutboxService } from '../src/eventing/outbox.service';
 import { RedisEventTransport } from '../src/eventing/redis-event.transport';
@@ -29,6 +30,8 @@ describe('Eventing reliability (e2e)', () => {
     EVENT_STREAM: stream,
     EVENT_CONSUMER_GROUP: group,
     LIVE_EVENT_CHANNEL: liveChannel,
+    TOURNAMENT_TRANSPORT_RETENTION_DAYS: 0,
+    TRANSPORT_RETENTION_BATCH_SIZE: 1,
   });
 
   let dataSource: DataSource;
@@ -265,6 +268,111 @@ describe('Eventing reliability (e2e)', () => {
       unsubscribeMissed(),
     ]);
     await secondSubscriber.onApplicationShutdown();
+  });
+
+  it('purges all PostgreSQL and Redis transport data after the configured closed-tournament retention', async () => {
+    const tournament = await createTournamentService(outbox).create({
+      name: 'Retention target',
+    });
+    const [row] = await dataSource.query(
+      `SELECT * FROM event_outbox WHERE aggregate_id = $1`,
+      [String(tournament.id)],
+    );
+    const event = eventFromOutbox(row);
+    const retentionGroup = `${group}:retention`;
+    await redis.sendCommand([
+      'XGROUP',
+      'CREATE',
+      stream,
+      retentionGroup,
+      '$',
+      'MKSTREAM',
+    ]);
+    await transport.publish(stream, event);
+    const pendingMessage = await transport.read(
+      stream,
+      retentionGroup,
+      'retention-consumer',
+      1,
+      100,
+    );
+    expect(pendingMessage[0].event.id).toBe(event.id);
+    await transport.deadLetter(stream, event, 'retention test', 3);
+    await transport.incrementAttempt(group, event.id, event.aggregateId);
+    await dataSource.query(
+      `INSERT INTO event_inbox (consumer, event_id, event_type, correlation_id, aggregate_id)
+       VALUES ('retention-test', $1, $2, $3, $4)`,
+      [event.id, event.type, event.correlationId, event.aggregateId],
+    );
+    await dataSource.query(
+      `INSERT INTO tournament_event_projection (tournament_id, created_event_id, name)
+       VALUES ($1, $2, $3)`,
+      [tournament.id, event.id, tournament.name],
+    );
+    await dataSource.query(
+      `UPDATE tournament SET status = 'closed', "closedAt" = now() - interval '1 day' WHERE id = $1`,
+      [tournament.id],
+    );
+
+    const retention = new EventRetentionService(dataSource, config, transport);
+    await expect(retention.sweepOnce()).resolves.toBe(1);
+
+    await expect(
+      dataSource.query(
+        `SELECT
+           (SELECT count(*)::int FROM event_outbox WHERE aggregate_id = $1) AS outbox,
+           (SELECT count(*)::int FROM event_inbox WHERE aggregate_id = $1) AS inbox,
+           (SELECT count(*)::int FROM tournament_event_projection WHERE tournament_id = $2) AS projection`,
+        [event.aggregateId, tournament.id],
+      ),
+    ).resolves.toEqual([{ outbox: 0, inbox: 0, projection: 0 }]);
+    const [lifecycle] = await dataSource.query(
+      `SELECT "transportPurgedAt" FROM tournament WHERE id = $1`,
+      [tournament.id],
+    );
+    expect(lifecycle.transportPurgedAt).not.toBeNull();
+
+    const streamEntries = await redis.sendCommand(['XRANGE', stream, '-', '+']);
+    const deadLetters = await redis.sendCommand([
+      'XRANGE',
+      `${stream}.dead-letter`,
+      '-',
+      '+',
+    ]);
+    expect(JSON.stringify(streamEntries)).not.toContain(event.id);
+    expect(JSON.stringify(deadLetters)).not.toContain(event.id);
+    const pending = (await redis.sendCommand([
+      'XPENDING',
+      stream,
+      retentionGroup,
+    ])) as unknown[];
+    expect(pending[0]).toBe(0);
+    await expect(
+      redis.exists(`eventing:aggregate:${event.aggregateId}:transport`),
+    ).resolves.toBe(0);
+  });
+
+  it('cancels pending retention when a tournament is reopened', async () => {
+    const service = createTournamentService(outbox);
+    const tournament = await service.create({
+      name: 'Reopened retention target',
+    });
+    await dataSource.query(
+      `UPDATE tournament SET status = 'closed', "closedAt" = now() - interval '1 day' WHERE id = $1`,
+      [tournament.id],
+    );
+
+    const reopened = await service.reopen(tournament.id);
+    expect(reopened.status).toBe('open');
+    expect(reopened.closedAt).toBeNull();
+    const retention = new EventRetentionService(dataSource, config, transport);
+    await expect(retention.sweepOnce()).resolves.toBe(0);
+    await expect(
+      dataSource.query(
+        `SELECT count(*)::int AS count FROM event_outbox WHERE aggregate_id = $1`,
+        [String(tournament.id)],
+      ),
+    ).resolves.toEqual([{ count: 1 }]);
   });
 
   function createTournamentService(

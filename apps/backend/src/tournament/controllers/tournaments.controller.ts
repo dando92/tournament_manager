@@ -17,7 +17,9 @@ import { TournamentManager } from '../services/tournament.manager';
 import { LobbyManager } from '../services/lobby-manager.service';
 import { StartggService } from '../../integrations/startgg/startgg.service';
 import { StartggImportPreviewDto } from '../../integrations/startgg/startgg.dto';
+import { RequireOpenTournament, TournamentOpenGuard } from '../guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller('tournaments')
 export class TournamentsController {
     constructor(
@@ -79,11 +81,28 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Patch(':id')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<TournamentResponseDto> {
         const { tournament, previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
         if (dto.syncstartUrl !== undefined && dto.syncstartUrl !== previousSyncstartUrl) {
             this.lobbyManager.OnTournamentUrlChanged(Number(id), dto.syncstartUrl);
         }
+        return tournament;
+    }
+
+    @UseGuards(JwtAuthGuard, TournamentAccessGuard)
+    @Post(':id/close')
+    async close(@Param('id') id: number): Promise<TournamentResponseDto> {
+        const tournament = await this.tournamentManager.close(Number(id));
+        this.lobbyManager.OnTournamentClosed(Number(id));
+        return tournament;
+    }
+
+    @UseGuards(JwtAuthGuard, TournamentAccessGuard)
+    @Post(':id/reopen')
+    async reopen(@Param('id') id: number): Promise<TournamentResponseDto> {
+        const tournament = await this.tournamentManager.reopen(Number(id));
+        this.lobbyManager.OnTournamentReopened(Number(id), tournament.syncstartUrl ?? '');
         return tournament;
     }
 
@@ -95,6 +114,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async createParticipant(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: CreateParticipantDto,
@@ -104,6 +124,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/participants/:participantId')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async removeParticipant(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
@@ -122,6 +143,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants/import')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async importParticipants(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: ImportParticipantsDto,
@@ -144,6 +166,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/startgg/import')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async importStartggEvent(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: StartggImportPreviewDto,
@@ -157,6 +180,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants/:participantId/staff')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async addParticipantStaffRole(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
@@ -166,6 +190,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/participants/:participantId/staff')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async removeParticipantStaffRole(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
@@ -186,18 +211,21 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/lobbies/server/connect')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async connectSyncStartServer(@Param('id') id: number) {
         return this.lobbyManager.ConnectSyncStartServer(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/lobbies/server/disconnect')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     disconnectSyncStartServer(@Param('id') id: number) {
         return this.lobbyManager.DisconnectSyncStartServer(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/lobbies/connect')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async connectLobby(
         @Param('id') id: number,
         @Body() body: { name?: string; lobbyCode: string; password?: string },
@@ -208,6 +236,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/lobbies/create')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async createLobby(
         @Param('id') id: number,
         @Body() body: { name?: string; password?: string },
@@ -217,6 +246,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/lobbies/:lobbyId/disconnect')
+    @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     disconnectLobby(@Param('id') id: number, @Param('lobbyId') lobbyId: string) {
         this.lobbyManager.DisconnectLobby(Number(id), lobbyId);
         return { ok: true };

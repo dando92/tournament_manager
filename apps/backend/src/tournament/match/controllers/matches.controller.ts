@@ -1,11 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchListDto } from '@match/dtos/match-list.dto';
 import { AddSongToMatchDto, CommitMatchResultDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@persistence/entities';
 import { MatchManager } from '@match/services/match.manager';
 import { MatchService } from '@match/services/match.service';
 import { ScoringSystemProvider } from '@tournament/services/scoring-systems/ScoringSystemProvider';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller('matches')
 export class MatchesController {
     constructor(
@@ -20,6 +22,7 @@ export class MatchesController {
     }
 
     @Post()
+    @RequireOpenTournament({ entity: 'phase-group', location: 'body', field: 'phaseGroupId' })
     async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<Match> {
         const createMatchDto: CreateMatchDto = {
             name: dto.name,
@@ -56,16 +59,19 @@ export class MatchesController {
     }
 
     @Patch(':id')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
     update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<Match> {
         return this.matchManager.UpdateMatch(Number(id), dto);
     }
 
     @Delete(':id')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
     remove(@Param('id') id: number): Promise<void> {
         return this.matchService.delete(id);
     }
 
     @Post(':matchId/songs')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async addSongToMatch(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: AddSongToMatchDto): Promise<Match> {
         const match = await this.matchService.getMatch(matchId);
 
@@ -79,12 +85,14 @@ export class MatchesController {
     }
 
     @Delete(':matchId/songs/:songId')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async removeSongFromMatch(@Param('matchId') matchId: number, @Param('songId') songId: number): Promise<Match> {
         await this.matchManager.RemoveSongFromMatchById(matchId, songId);
         return await this.matchService.getMatch(matchId);
     }
 
     @Put(':matchId/songs/:songId')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async editSongInMatch(@Param('matchId') matchId: number, @Param('songId') songId: number, @Body(new ValidationPipe()) dto: AddSongToMatchDto): Promise<Match> {
         await this.matchManager.RemoveSongFromMatchById(matchId, songId);
         const match = await this.matchService.getMatch(matchId);
@@ -99,16 +107,19 @@ export class MatchesController {
     }
 
     @Put(':matchId/active')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<MatchListDto | null> {
         return await this.matchManager.UpdateMatchActive(Number(matchId), dto);
     }
 
     @Put(':matchId/result')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async commitMatchResult(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: CommitMatchResultDto): Promise<MatchListDto | null> {
         return await this.matchManager.CommitMatchResult(Number(matchId), dto);
     }
 
     @Delete(':matchId/result')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async reopenMatchResult(@Param('matchId') matchId: number): Promise<MatchListDto | null> {
         return await this.matchManager.ReopenMatchResult(Number(matchId));
     }

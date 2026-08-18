@@ -302,6 +302,42 @@ Known non-blocking output:
 - Existing backend and frontend lint warnings remain.
 - Vite reports the existing large JavaScript chunk warning.
 
+### Phase 3 checkpoint 2 — Tournament lifecycle and transport retention
+
+- Added explicit `open` and `closed` tournament lifecycle state with manual close and reopen endpoints.
+- Closing disconnects SyncStart lobbies and makes tournament mutation routes return `409 Conflict`; reads and authorized reopen remain available.
+- Added frontend lifecycle controls with the configured retention period in the destructive close confirmation and read-only UI state.
+- Standardized tournament-scoped durable event aggregate IDs on the tournament ID.
+- Added atomic Redis indexing for Stream, retry, pending, and dead-letter cleanup without global scans.
+- Added replica-safe, configurable retention with batched PostgreSQL deletion, Redis cleanup, purge status, and lifecycle/retention advisory-lock coordination.
+- The retention policy deliberately deletes every transport artifact, including unpublished outbox and dead-letter records, after the tournament has remained closed for the configured period.
+- Added lifecycle and retention e2e coverage, including read-only enforcement, reopen, PostgreSQL cleanup, Redis entry removal, pending-state removal, and dead-letter removal.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 33 unit tests
+PASS: 16 PostgreSQL/Redis-backed behavioral, migration, lifecycle, and eventing e2e tests
+PASS: backend and frontend builds
+
+npm run local:up
+PASS: lifecycle/retention migration applied to retained PostgreSQL data
+PASS: PostgreSQL, Redis, backend, migrations, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 16 PostgreSQL/Redis-backed e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+
 ## Characterization Findings
 
 - See [FunctionalQuestions.md](FunctionalQuestions.md) for the inspectable post-migration decision backlog.

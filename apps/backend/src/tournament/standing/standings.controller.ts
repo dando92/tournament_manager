@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { AddStandingToMatchDto, CreateScoreDto } from '../dtos';
 import { Match } from '@persistence/entities';
 import { StandingManager } from './standing.manager';
+import { RequireOpenTournament, TournamentOpenGuard } from '../guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller('standings')
 export class StandingsController {
     constructor(
@@ -10,6 +12,7 @@ export class StandingsController {
     ) {}
 
     @Post('matches/:matchId')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async addStanding(@Param('matchId') matchId: number, @Body() dto: AddStandingToMatchDto): Promise<Match> {
         const score = new CreateScoreDto();
         score.isFailed = dto.isFailed;
@@ -21,6 +24,7 @@ export class StandingsController {
     }
 
     @Delete('matches/:matchId/:playerId/:songId')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async deleteStanding(
         @Param('matchId') matchId: number,
         @Param('playerId') playerId: number,
@@ -30,6 +34,7 @@ export class StandingsController {
     }
 
     @Put('matches/:matchId')
+    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async editStanding(@Param('matchId') matchId: number, @Body() dto: AddStandingToMatchDto): Promise<Match> {
         return await this.standingManager.EditStandingInMatch(
             matchId,

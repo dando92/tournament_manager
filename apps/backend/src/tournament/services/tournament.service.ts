@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Tournament, Song } from '@persistence/entities';
@@ -67,6 +67,7 @@ export class TournamentService {
     }
 
     async update(id: number, dto: UpdateTournamentDto): Promise<{ tournament: Tournament; previousSyncstartUrl: string | undefined }> {
+        await this.assertOpen(id);
         const existing = await this.findOneForUpdate(id);
         if (!existing) throw new NotFoundException(`Tournament with id ${id} not found`);
 
@@ -81,6 +82,39 @@ export class TournamentService {
         });
         const tournament = await this.tournamentRepository.save(existing);
         return { tournament, previousSyncstartUrl };
+    }
+
+    async close(id: number): Promise<Tournament> {
+        return this.changeLifecycle(id, 'closed');
+    }
+
+    async reopen(id: number): Promise<Tournament> {
+        return this.changeLifecycle(id, 'open');
+    }
+
+    async assertOpen(id: number): Promise<void> {
+        const tournament = await this.tournamentRepository.findOne({
+            where: { id },
+            select: { id: true, status: true },
+        });
+        if (!tournament) throw new NotFoundException(`Tournament with id ${id} not found`);
+        if (tournament.status === 'closed') {
+            throw new ConflictException(`Tournament with id ${id} is closed and must be reopened before it can be modified`);
+        }
+    }
+
+    private changeLifecycle(id: number, status: 'open' | 'closed'): Promise<Tournament> {
+        return this.dataSource.transaction(async (manager) => {
+            await manager.query(`SELECT pg_advisory_xact_lock(1787000000, $1)`, [id]);
+            const repository = manager.getRepository(Tournament);
+            const tournament = await repository.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+            if (!tournament) throw new NotFoundException(`Tournament with id ${id} not found`);
+            if (tournament.status === status) return tournament;
+            tournament.status = status;
+            tournament.closedAt = status === 'closed' ? new Date() : null;
+            tournament.transportPurgedAt = null;
+            return repository.save(tournament);
+        });
     }
 
     async getMyRoles(accountId: string): Promise<MyTournamentRoles> {

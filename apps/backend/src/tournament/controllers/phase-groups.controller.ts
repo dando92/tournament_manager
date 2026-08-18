@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import {
     CreatePhaseGroupDto,
     UpdatePhaseGroupDto,
@@ -6,7 +6,9 @@ import {
 } from '@tournament/dtos';
 import { DivisionSummaryPhaseGroupDto } from '@tournament/dtos/division-summary.dto';
 import { PhaseGroupManager } from '@tournament/services';
+import { RequireOpenTournament, TournamentOpenGuard } from '../guards/tournament-open.guard';
 
+@UseGuards(TournamentOpenGuard)
 @Controller()
 export class PhaseGroupsController {
     constructor(private readonly phaseGroupManager: PhaseGroupManager) {}
@@ -17,6 +19,7 @@ export class PhaseGroupsController {
     }
 
     @Post('phases/:phaseId/phase-groups')
+    @RequireOpenTournament({ entity: 'phase', location: 'params', field: 'phaseId' })
     async createForPhase(
         @Param('phaseId') phaseId: number,
         @Body(new ValidationPipe()) dto: CreatePhaseGroupDto,
@@ -35,6 +38,7 @@ export class PhaseGroupsController {
     }
 
     @Patch('phase-groups/:id')
+    @RequireOpenTournament({ entity: 'phase-group', location: 'params', field: 'id' })
     async update(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: UpdatePhaseGroupDto,
@@ -43,21 +47,25 @@ export class PhaseGroupsController {
     }
 
     @Delete('phase-groups/:id')
+    @RequireOpenTournament({ entity: 'phase-group', location: 'params', field: 'id' })
     async delete(@Param('id') id: number): Promise<void> {
         return this.phaseGroupManager.delete(Number(id));
     }
 
     @Post('phase-groups/:id/entrants/:entrantId')
+    @RequireOpenTournament({ entity: 'phase-group', location: 'params', field: 'id' })
     async addEntrant(@Param('id') id: number, @Param('entrantId') entrantId: number): Promise<void> {
         return this.phaseGroupManager.addEntrant(Number(id), Number(entrantId));
     }
 
     @Delete('phase-groups/:id/entrants/:entrantId')
+    @RequireOpenTournament({ entity: 'phase-group', location: 'params', field: 'id' })
     async removeEntrant(@Param('id') id: number, @Param('entrantId') entrantId: number): Promise<void> {
         return this.phaseGroupManager.removeEntrant(Number(id), Number(entrantId));
     }
 
     @Patch('phase-groups/:id/entrants/seeding')
+    @RequireOpenTournament({ entity: 'phase-group', location: 'params', field: 'id' })
     async updateSeeding(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: UpdatePhaseGroupSeedingDto,

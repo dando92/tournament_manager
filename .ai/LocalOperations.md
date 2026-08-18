@@ -46,6 +46,8 @@ Readiness reports PostgreSQL, Redis, and migration-runner status separately. The
 
 The backend also runs the Phase 3 outbox relay and durable consumer. Durable events use the `tournament-manager.events` Stream and `tournament-manager-backend-v1` consumer group by default; exhausted messages are visible in `tournament-manager.events.dead-letter`. Replaceable live events use the `tournament-manager.live` Pub/Sub channel. These names may be overridden with `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL`.
 
+Transport timing and retention are deploy-time configuration, so changing them does not require rebuilding the image. `OUTBOX_RELAY_IDLE_INTERVAL_MS`, `EVENT_CONSUMER_BLOCK_MS`, and `EVENT_RECLAIM_IDLE_MS` control eventing loops. `TOURNAMENT_TRANSPORT_RETENTION_DAYS`, `TRANSPORT_RETENTION_SWEEP_INTERVAL_MS`, and `TRANSPORT_RETENTION_BATCH_SIZE` control closed-tournament cleanup. A process restart or rolling restart is required after changing environment values.
+
 The local stack creates an idempotent `Local E2E Tournament` fixture by default. Set `LOCAL_SEED_ENABLED=false` to disable it or override `LOCAL_SEED_TOURNAMENT_NAME` in `.env`.
 
 ## Status and Logs
@@ -119,4 +121,5 @@ The current pre-production schema baseline intentionally does not upgrade databa
 - After the dependency restarts, Compose and the API health checks restore readiness without deleting volumes.
 - Outbox rows remain pending while Redis is unavailable. After Redis recovers, the relay publishes them; pending consumer entries are reclaimed after a consumer restart.
 - Inspect `event_outbox.last_error` and `publish_attempts` for relay failures and the configured `.dead-letter` Stream for messages that exhausted consumer retries.
+- A successful retention sweep records `tournament.transportPurgedAt`. Until that value is set, failed PostgreSQL or Redis cleanup is retried on a later sweep.
 - If the migration container fails, inspect `docker compose logs migrations`; the API intentionally remains stopped.

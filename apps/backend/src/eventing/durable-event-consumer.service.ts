@@ -36,13 +36,13 @@ export class DurableEventConsumerService {
 
   async consumeOnce(
     consumer: string,
-    blockMilliseconds = 100,
+    blockMilliseconds = this.consumerBlockMilliseconds,
   ): Promise<number> {
     const pending = await this.durableTransport.claimStale(
       this.stream,
       this.group,
       consumer,
-      250,
+      this.reclaimIdleMilliseconds,
       10,
     );
     const messages = pending.length
@@ -72,6 +72,7 @@ export class DurableEventConsumerService {
       const attempts = await this.durableTransport.incrementAttempt(
         this.group,
         message.event.id,
+        message.event.aggregateId,
       );
       const reason = error instanceof Error ? error.message : String(error);
       if (attempts >= DurableEventConsumerService.maximumAttempts) {
@@ -106,8 +107,8 @@ export class DurableEventConsumerService {
         );
       }
       const inserted: Array<{ event_id: string }> = await manager.query(
-        `INSERT INTO event_inbox (consumer, event_id, event_type, correlation_id)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO event_inbox (consumer, event_id, event_type, correlation_id, aggregate_id)
+         VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT DO NOTHING
          RETURNING event_id`,
         [
@@ -115,6 +116,7 @@ export class DurableEventConsumerService {
           event.id,
           event.type,
           event.correlationId,
+          event.aggregateId,
         ],
       );
       if (inserted.length === 0) return false;
@@ -162,5 +164,22 @@ export class DurableEventConsumerService {
 
   private get liveChannel(): string {
     return this.config.get('LIVE_EVENT_CHANNEL') ?? 'tournament-manager.live';
+  }
+
+  private get consumerBlockMilliseconds(): number {
+    return this.numberConfig('EVENT_CONSUMER_BLOCK_MS', 500, 1);
+  }
+
+  private get reclaimIdleMilliseconds(): number {
+    return this.numberConfig('EVENT_RECLAIM_IDLE_MS', 250, 1);
+  }
+
+  private numberConfig(
+    name: string,
+    fallback: number,
+    minimum: number,
+  ): number {
+    const value = Number(this.config.get(name) ?? fallback);
+    return Number.isFinite(value) && value >= minimum ? value : fallback;
   }
 }
