@@ -65,7 +65,8 @@ Managers remain application-layer use cases. Event handlers in the processor may
 - Lifecycle, outbox, inbox, relay, and retention persistence are exposed through focused adapters rather than mixed into application services.
 - PostgreSQL advisory-lock SQL, key namespaces, acquisition modes, and release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM transaction/session primitives; application code must not depend on it directly.
 - Do not present PostgreSQL advisory locks as a generic distributed-lock abstraction. PostgreSQL is an approved explicit infrastructure dependency, while provider independence means independence from a particular cloud provider rather than database-engine portability.
-- Use transaction-scoped row locks to serialize ordinary tournament writes with lifecycle changes and to recheck the `open` invariant in the same transaction. Use per-tournament advisory locks for lifecycle/transport-retention coordination that spans batched database work and Redis. Use a separate global advisory lock to elect a single retention sweep across replicas.
+- Do not require every ordinary tournament mutation to open a transaction and lock the tournament row. Mutations check the lifecycle state at entry; the rare race in which a mutation overlaps manual closure is accepted during pre-production to avoid spreading locking complexity across all write paths. Revisit this tradeoff before production only if the stronger invariant is required.
+- Use per-tournament advisory locks for lifecycle/transport-retention coordination that spans batched database work and Redis. Use a separate global advisory lock to elect a single retention sweep across replicas.
 
 ## Eventing Inside the Existing Backend
 
