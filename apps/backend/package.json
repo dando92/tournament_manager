@@ -17,7 +17,8 @@
     "start:webdev": "cross-env AUTH_MODE=web DB_TYPE=sqlite nest start",
     "start:dev:webdev": "cross-env AUTH_MODE=web DB_TYPE=sqlite nest start --watch",
     "start:webprod": "cross-env AUTH_MODE=web DB_TYPE=postgres node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "cross-env ESLINT_USE_FLAT_CONFIG=false eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "lint:fix": "npm run lint -- --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -92,6 +93,18 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@auth/(.*)$": "<rootDir>/auth/$1",
+      "^@backwards-compat/(.*)$": "<rootDir>/backwards-compat/$1",
+      "^@bracket/(.*)$": "<rootDir>/tournament/bracket/$1",
+      "^@match/(.*)$": "<rootDir>/tournament/match/$1",
+      "^@match-manager/(.*)$": "<rootDir>/match-manager/$1",
+      "^@persistence/(.*)$": "<rootDir>/persistence/$1",
+      "^@player/(.*)$": "<rootDir>/tournament/player/$1",
+      "^@syncstart/(.*)$": "<rootDir>/syncstart/$1",
+      "^@tournament/(.*)$": "<rootDir>/tournament/$1",
+      "^@account/(.*)$": "<rootDir>/account/$1"
+    }
   }
 }

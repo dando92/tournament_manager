@@ -17,7 +17,8 @@ import { AuthController } from '@auth/controllers';
 @Module({
   imports: [
   ConfigModule.forRoot({
-  isGlobal: true,
+    envFilePath: ['../../.env', '.env'],
+    isGlobal: true,
     }),
   TypeOrmModule.forRootAsync({
     inject: [ConfigService],

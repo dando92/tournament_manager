@@ -14,6 +14,16 @@ The backend uses the following architectural layers:
 
 ## Technologies
 
-- NestJS
+- Node.js 22
+- TypeScript
+- NestJS 11
+- TypeORM
+- SQLite for local and container-default persistence
+- PostgreSQL or MariaDB for configured external persistence
+- Native WebSockets through NestJS gateways
 
-Other backend technologies have not been defined yet.
+## Location and Integrations
+
+The backend is located in `apps/backend` and is an npm workspace. Application-owned integrations, including Start.gg and SyncStart, remain inside the backend because they are not shared runtime packages.
+
+Local configuration is loaded from the repository-root `.env` file. Docker Compose overrides the SQLite path to use its persistent `/data` volume.

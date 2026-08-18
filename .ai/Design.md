@@ -1,3 +1,3 @@
 # Design System and Design Decisions
 
-The design system and frontend design decisions have not been defined yet.
+The frontend uses Tailwind CSS. The design system and other frontend design decisions have not been defined yet.

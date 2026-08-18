@@ -60,7 +60,6 @@ function compressImage(file: File, maxSize: number): Promise<string> {
 }
 
 export default function AccountInfoPage() {
-  if (isLocalMode()) return <Navigate to="/" replace />;
   const { state, actions } = useAuthContext();
   const { account } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +82,7 @@ export default function AccountInfoPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
 
+  if (isLocalMode()) return <Navigate to="/" replace />;
   if (!account) return null;
 
   async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {

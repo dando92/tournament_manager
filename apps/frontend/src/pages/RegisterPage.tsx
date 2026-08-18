@@ -5,7 +5,6 @@ import { isLocalMode } from "@/features/auth/services/auth-mode";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 export default function RegisterPage() {
-  if (isLocalMode()) return <Navigate to="/" replace />;
   const { actions } = useAuthContext();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -17,6 +16,8 @@ export default function RegisterPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  if (isLocalMode()) return <Navigate to="/" replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

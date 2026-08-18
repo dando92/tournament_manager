@@ -89,7 +89,8 @@ export function useTournamentPage({
     );
   }, [tournamentId]);
 
-  const refreshDivision = useCallback(async (_divisionId: number) => {
+  const refreshDivision = useCallback(async (divisionId: number) => {
+    void divisionId;
     await refreshDivisions();
   }, [refreshDivisions]);
 

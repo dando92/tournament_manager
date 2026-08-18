@@ -7,7 +7,6 @@ import RoleAccountItem from "@/features/admin/components/RoleAccountItem";
 import { isLocalMode } from "@/features/auth/services/auth-mode";
 
 export default function ManageRolesPage() {
-  if (isLocalMode()) return <Navigate to="/" replace />;
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +17,8 @@ export default function ManageRolesPage() {
       toast.error("Failed to load accounts.");
     }).finally(() => setLoading(false));
   }, []);
+
+  if (isLocalMode()) return <Navigate to="/" replace />;
 
   async function handleFlagChange(accountId: string, flag: "isAdmin" | "isTournamentCreator", value: boolean) {
     try {

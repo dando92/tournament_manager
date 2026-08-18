@@ -1,0 +1,43 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      AUTH_MODE: ${AUTH_MODE:-local}
+      LOCAL_API_KEY: ${LOCAL_API_KEY:-change-me}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      DB_TYPE: ${DB_TYPE:-sqlite}
+      SQLITE_PATH: /data/tournament.db
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
+      STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
+      STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
+    volumes:
+      - backend-data:/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_PUBLIC_API_URL: ${VITE_PUBLIC_API_URL:-http://localhost:3000/}
+        VITE_PUBLIC_ENABLE_LIVE_SCORES: ${VITE_PUBLIC_ENABLE_LIVE_SCORES:-true}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:

@@ -1,5 +1,18 @@
 # Project Instructions
 
+## Project Purpose
+
+Tournament Manager is a self-contained application for managing tournaments. The repository is an npm workspace monorepo containing only the NestJS backend, the React frontend, and integrations owned by the application.
+
+## Scope and Requirements
+
+- Keep the application isolated from the legacy container repository and unrelated projects.
+- Maintain the backend in `apps/backend` and the frontend in `apps/frontend`.
+- Keep application-owned integrations within the application that owns them. Start.gg and SyncStart integrations currently belong to the backend.
+- Do not add Git submodules unless a future requirement explicitly justifies an external source dependency.
+- Support independent backend and frontend builds and a complete local stack through Docker Compose.
+- Use npm workspaces from the repository root.
+
 ## Language
 
 - Communicate with the user in Italian unless the user explicitly requests another language.
@@ -12,6 +25,14 @@
 - [Backend architecture and coding rules](.ai/Backend.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
+
+## Repository Architecture
+
+- `apps/backend`: NestJS API, persistence, WebSocket gateways, and integrations.
+- `apps/frontend`: React and Vite web application.
+- `.ai`: Project architecture, coding, and design decisions.
+
+No shared integration package is currently required. Shared packages may be introduced only when code is genuinely used by more than one application.
 
 ## NestJS Architecture
 
