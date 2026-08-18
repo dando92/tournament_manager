@@ -1,4 +1,8 @@
-import { isEventEnvelope, isTournamentCreatedV1 } from './events';
+import {
+  isEventEnvelope,
+  isSyncStartSongCompletedV1,
+  isTournamentCreatedV1,
+} from './events';
 
 describe('versioned event contracts', () => {
   const event = {
@@ -25,6 +29,42 @@ describe('versioned event contracts', () => {
       isTournamentCreatedV1({
         ...event,
         payload: { tournamentId: '42', name: 'Invalid' },
+      }),
+    ).toBe(false);
+  });
+
+  it('validates syncstart.song-completed v1 without accepting database entities', () => {
+    const completed = {
+      ...event,
+      type: 'syncstart.song-completed',
+      aggregateId: '42',
+      payload: {
+        tournamentId: 42,
+        lobbyId: 'ABCD',
+        lobbyName: 'Finals',
+        lobbyCode: 'ABCD',
+        song: {
+          songPath: 'Test Song',
+          title: 'Test Song',
+          artist: 'Artist',
+          songLength: 120,
+        },
+        scores: [
+          {
+            playerId: 'player-1',
+            playerName: 'Player 1',
+            score: 1000,
+            exScore: 99.5,
+            isFailed: false,
+          },
+        ],
+      },
+    };
+    expect(isSyncStartSongCompletedV1(completed)).toBe(true);
+    expect(
+      isSyncStartSongCompletedV1({
+        ...completed,
+        payload: { ...completed.payload, scores: [{ playerName: 'incomplete' }] },
       }),
     ).toBe(false);
   });

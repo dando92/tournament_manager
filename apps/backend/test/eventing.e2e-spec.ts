@@ -8,9 +8,31 @@ import { DurableEventConsumerService } from '../src/eventing/durable-event-consu
 import { EventRetentionService } from '../src/eventing/event-retention.service';
 import { OutboxRelayService } from '../src/eventing/outbox-relay.service';
 import { OutboxService } from '../src/eventing/outbox.service';
+import { DurableEventHandlerRegistry } from '../src/eventing/durable-event-handler.registry';
+import { PostgresEventConsumerPersistence } from '../src/eventing/postgres-event-consumer.persistence';
+import { PostgresEventRetentionPersistence } from '../src/eventing/postgres-event-retention.persistence';
+import { PostgresOutboxPersistence } from '../src/eventing/postgres-outbox.persistence';
 import { RedisEventTransport } from '../src/eventing/redis-event.transport';
-import { Song, Tournament } from '../src/persistence/entities';
+import { PostgresAdvisoryLock } from '../src/persistence/postgres-advisory-lock';
+import {
+  Division,
+  Entrant,
+  Match,
+  Participant,
+  Phase,
+  PhaseGroup,
+  Player,
+  Round,
+  Score,
+  Song,
+  Standing,
+  Tournament,
+} from '../src/persistence/entities';
+import { LobbySongCompletedHandler } from '../src/tournament/standing/lobby-song-completed.handler';
+import { PostgresLobbySongCompletedPersistence } from '../src/tournament/standing/postgres-lobby-song-completed.persistence';
+import { ScoringSystemProvider } from '../src/tournament/services/scoring-systems/ScoringSystemProvider';
 import { TournamentService } from '../src/tournament/services/tournament.service';
+import { PostgresTournamentPersistence } from '../src/tournament/services/postgres-tournament.persistence';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -45,7 +67,7 @@ describe('Eventing reliability (e2e)', () => {
     await redis.connect();
     transport = new RedisEventTransport(config);
     await transport.onModuleInit();
-    outbox = new OutboxService();
+    outbox = new OutboxService(new PostgresOutboxPersistence(dataSource));
   });
 
   afterAll(async () => {
@@ -92,7 +114,7 @@ describe('Eventing reliability (e2e)', () => {
   });
 
   it('recovers relay publication after a Redis client outage without losing the outbox event', async () => {
-    await new OutboxRelayService(dataSource, config, transport).relayBatch();
+    await createRelay(transport).relayBatch();
     await redis.del(stream);
     const tournament = await createTournamentService(outbox).create({
       name: 'Relay recovery',
@@ -100,11 +122,7 @@ describe('Eventing reliability (e2e)', () => {
     const unavailableTransport = new RedisEventTransport(config);
     await unavailableTransport.onModuleInit();
     await unavailableTransport.onApplicationShutdown();
-    const failedRelay = new OutboxRelayService(
-      dataSource,
-      config,
-      unavailableTransport,
-    );
+    const failedRelay = createRelay(unavailableTransport);
     await expect(failedRelay.relayBatch()).rejects.toThrow();
 
     const [pending] = await dataSource.query(
@@ -117,11 +135,7 @@ describe('Eventing reliability (e2e)', () => {
     expect(pending.publish_attempts).toBe(1);
     expect(pending.last_error).toBeTruthy();
 
-    const restartedRelay = new OutboxRelayService(
-      dataSource,
-      config,
-      transport,
-    );
+    const restartedRelay = createRelay(transport);
     await expect(restartedRelay.relayBatch()).resolves.toBeGreaterThanOrEqual(
       1,
     );
@@ -151,10 +165,11 @@ describe('Eventing reliability (e2e)', () => {
 
     const live = { publish: jest.fn(), subscribe: jest.fn() };
     const consumer = new DurableEventConsumerService(
-      dataSource,
+      new PostgresEventConsumerPersistence(dataSource),
       config,
       transport,
       live,
+      new DurableEventHandlerRegistry(),
     );
     await consumer.ensureGroup();
     await expect(consumer.consumeOnce('duplicate-test', 100)).resolves.toBe(2);
@@ -183,13 +198,14 @@ describe('Eventing reliability (e2e)', () => {
     await transport.publish(stream, poison);
 
     const consumer = new DurableEventConsumerService(
-      dataSource,
+      new PostgresEventConsumerPersistence(dataSource),
       config,
       transport,
       {
         publish: jest.fn(),
         subscribe: jest.fn(),
       },
+      new DurableEventHandlerRegistry(),
     );
     await consumer.ensureGroup();
     await expect(
@@ -218,6 +234,68 @@ describe('Eventing reliability (e2e)', () => {
       [poison.id],
     );
     expect(inbox).toEqual([{ count: 0 }]);
+  });
+
+  it('resumes a stateless song-completed handler after restart and applies duplicate delivery once', async () => {
+    await redis.del(stream);
+    const fixture = await createLobbyScoreFixture();
+    const event = createSongCompletedEvent(fixture.tournament.id, [
+      { playerId: 'one', playerName: 'Player One', score: 1000, exScore: 99, isFailed: false },
+      { playerId: 'two', playerName: 'Player Two', score: 900, exScore: 95, isFailed: false },
+    ]);
+    const registry = new DurableEventHandlerRegistry();
+    const uiUpdates = {
+      emitWarning: jest.fn(),
+      emitMatchUpdateByMatchId: jest.fn().mockResolvedValue(undefined),
+    };
+    const handler = new LobbySongCompletedHandler(
+      registry,
+      new PostgresLobbySongCompletedPersistence(dataSource),
+      new ScoringSystemProvider(),
+      uiUpdates as never,
+    );
+    handler.onModuleInit();
+    const consumer = new DurableEventConsumerService(
+      new PostgresEventConsumerPersistence(dataSource),
+      config,
+      transport,
+      { publish: jest.fn(), subscribe: jest.fn() },
+      registry,
+    );
+    await consumer.ensureGroup();
+
+    await transport.publish(stream, event);
+    const abandoned = await transport.read(
+      stream,
+      group,
+      'stopped-handler',
+      1,
+      100,
+    );
+    expect(abandoned).toHaveLength(1);
+    await delay(300);
+    await expect(consumer.consumeOnce('restarted-handler', 100)).resolves.toBe(1);
+
+    await transport.publish(stream, event);
+    await expect(consumer.consumeOnce('duplicate-handler', 100)).resolves.toBe(1);
+
+    const scores = await dataSource.getRepository(Score).find({
+      where: { song: { id: fixture.song.id } },
+    });
+    const standings = await dataSource.getRepository(Standing).find({
+      where: { round: { id: fixture.round.id } },
+      relations: { score: { player: true } },
+      order: { points: 'DESC' },
+    });
+    expect(scores).toHaveLength(2);
+    expect(standings.map((standing) => standing.points)).toEqual([2, 1]);
+    expect(uiUpdates.emitMatchUpdateByMatchId).toHaveBeenCalledTimes(1);
+    await expect(
+      dataSource.query(
+        `SELECT count(*)::int AS count FROM event_inbox WHERE consumer = $1 AND event_id = $2`,
+        [PostgresLobbySongCompletedPersistence.consumerIdentity, event.id],
+      ),
+    ).resolves.toEqual([{ count: 1 }]);
   });
 
   it('fans out replaceable Pub/Sub events and recovers a missed update with a later snapshot event', async () => {
@@ -314,7 +392,7 @@ describe('Eventing reliability (e2e)', () => {
       [tournament.id],
     );
 
-    const retention = new EventRetentionService(dataSource, config, transport);
+    const retention = createRetention();
     await expect(retention.sweepOnce()).resolves.toBe(1);
 
     await expect(
@@ -365,7 +443,7 @@ describe('Eventing reliability (e2e)', () => {
     const reopened = await service.reopen(tournament.id);
     expect(reopened.status).toBe('open');
     expect(reopened.closedAt).toBeNull();
-    const retention = new EventRetentionService(dataSource, config, transport);
+    const retention = createRetention();
     await expect(retention.sweepOnce()).resolves.toBe(0);
     await expect(
       dataSource.query(
@@ -381,9 +459,86 @@ describe('Eventing reliability (e2e)', () => {
     return new TournamentService(
       dataSource.getRepository(Tournament),
       dataSource.getRepository(Song),
-      dataSource,
-      eventOutbox,
+      new PostgresTournamentPersistence(dataSource, eventOutbox),
     );
+  }
+
+  function createRelay(eventTransport: RedisEventTransport): OutboxRelayService {
+    return new OutboxRelayService(
+      new PostgresOutboxPersistence(dataSource),
+      config,
+      eventTransport,
+    );
+  }
+
+  function createRetention(): EventRetentionService {
+    return new EventRetentionService(
+      new PostgresEventRetentionPersistence(
+        new PostgresAdvisoryLock(dataSource),
+      ),
+      config,
+      transport,
+    );
+  }
+
+  async function createLobbyScoreFixture(): Promise<{
+    tournament: Tournament;
+    song: Song;
+    round: Round;
+  }> {
+    const tournament = await dataSource.getRepository(Tournament).save({
+      name: 'Stateless handler tournament',
+    });
+    const players = await dataSource.getRepository(Player).save([
+      { playerName: 'Player One' },
+      { playerName: 'Player Two' },
+    ]);
+    const participants = await dataSource.getRepository(Participant).save(
+      players.map((player) => ({
+        tournament,
+        player,
+        roles: ['competitor'] as Participant['roles'],
+        status: 'registered' as Participant['status'],
+      })),
+    );
+    const division = await dataSource.getRepository(Division).save({
+      name: 'Division',
+      tournament,
+    });
+    const entrants = await dataSource.getRepository(Entrant).save(
+      participants.map((participant, index) => ({
+        name: `Entrant ${index + 1}`,
+        type: 'player' as const,
+        status: 'active' as const,
+        division,
+        participants: [participant],
+      })),
+    );
+    const phase = await dataSource.getRepository(Phase).save({
+      name: 'Phase',
+      division,
+    });
+    const phaseGroup = await dataSource.getRepository(PhaseGroup).save({
+      name: 'Group',
+      state: 'active',
+      phase,
+    });
+    const song = await dataSource.getRepository(Song).save({
+      title: 'Test Song',
+      artist: 'Artist',
+      group: 'Test',
+      difficulty: 10,
+      tournament,
+    });
+    const match = await dataSource.getRepository(Match).save({
+      name: 'Match',
+      scoringSystem: 'EurocupScoreCalculator',
+      active: true,
+      phaseGroup,
+      entrants,
+    });
+    const round = await dataSource.getRepository(Round).save({ match, song });
+    return { tournament, song, round };
   }
 });
 
@@ -424,6 +579,41 @@ function createLiveEvent(
     tournamentId,
     occurredAt: new Date().toISOString(),
     payload: { tournamentId, name },
+  };
+}
+
+function createSongCompletedEvent(
+  tournamentId: number,
+  scores: Array<{
+    playerId: string;
+    playerName: string;
+    score: number;
+    exScore: number;
+    isFailed: boolean;
+  }>,
+): EventEnvelope {
+  const id = randomUUID();
+  return {
+    id,
+    type: 'syncstart.song-completed',
+    version: 1,
+    aggregateId: String(tournamentId),
+    occurredAt: new Date().toISOString(),
+    correlationId: id,
+    causationId: null,
+    payload: {
+      tournamentId,
+      lobbyId: 'ABCD',
+      lobbyName: 'Finals',
+      lobbyCode: 'ABCD',
+      song: {
+        songPath: 'Test Song',
+        title: 'Test Song',
+        artist: 'Artist',
+        songLength: 120,
+      },
+      scores,
+    },
   };
 }
 

@@ -9,16 +9,53 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 4 — Stateless Event Handlers (not started).
+- Active phase: Phase 5 — Processor Extraction (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
 - Phase 3 state: complete; its exit gate passed on 2026-08-18.
-- Service extraction is not authorized yet because the Phase 4 pre-extraction exit gate remains open.
-- Next action: refactor lifecycle and eventing persistence behind focused PostgreSQL adapters before adding Phase 4 handlers. Centralize only the global retention-sweep advisory lock in a dedicated infrastructure class and use transaction-owned repositories for atomic work.
+- Phase 4 state: complete; its exit gate passed on 2026-08-19.
+- Processor extraction is now authorized for the already-tested handler and eventing workers.
+- Next action: begin Phase 5 by creating the independently buildable processor entrypoint and shared packages, then move only the extraction-ready handler and outbox relay while preserving the in-backend path until parity passes.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 4 checkpoint 1 — PostgreSQL adapters and stateless completed-song handler
+
+- Moved tournament creation with its atomic outbox write, outbox insertion/relay, inbox processing, and transport-retention SQL behind focused PostgreSQL persistence adapters.
+- Centralized the session-scoped global retention-sweep lock in `PostgresAdvisoryLock`.
+- Added the versioned `syncstart.song-completed` version 1 contract and a durable SyncStart producer.
+- Added a handler registry so application-owned handlers can be discovered without coupling the eventing runner to tournament modules.
+- Replaced the authoritative `StandingManager` observer path with `LobbySongCompletedHandler` and removed the superseded observer implementation.
+- Made inbox progress, score persistence, standing persistence, and completed-round recalculation one PostgreSQL transaction using repositories from its `EntityManager`.
+- Preserved best-effort warnings and match UI invalidation as post-commit effects; authoritative match state remains recoverable from HTTP snapshots.
+- Ensured a Redis publication failure remains retryable by recording the SyncStart completion signature only after observer delivery succeeds.
+- Confirmed that bracket advancement, match state/result workflows, and Start.gg reporting are already explicit stateless synchronous use cases and remain synchronous under the approved architecture. Volatile lobby and gateway state remains confined to connection adapters for Phases 6 and 7.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (warnings only)
+PASS: 35 unit tests
+PASS: 17 PostgreSQL/Redis-backed behavioral, migration, eventing, and stateless-handler e2e tests
+PASS: backend and frontend builds
+
+npm run local:up
+PASS: images rebuilt and complete retained-volume stack healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API liveness and readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
 
 ### Phase 0 checkpoint 1 — Verification command and first behavioral e2e slice
 
@@ -368,7 +405,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 4 with one explicit stateless handler slice, preserving its synchronous path until parity, idempotency, and restart tests pass.
+Begin Phase 5 with the processor application shell and shared package boundaries, then move the extraction-ready completed-song handler and outbox relay without removing their in-backend execution until independent-process parity passes.
 
 ## Remaining Phase 0 Work
 

@@ -3,10 +3,8 @@ import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
 
-import { ParticipantService } from '../services/participant.service';
 import { ScoreService } from '../services/score.service';
 import { ScoringSystemProvider } from '../services/scoring-systems/ScoringSystemProvider';
-import { SongService } from '../services/song.service';
 import { StandingManager } from './standing.manager';
 import { StandingService } from './standing.service';
 
@@ -54,12 +52,6 @@ describe('StandingManager', () => {
     create: jest.fn(),
     findOne: jest.fn(),
   };
-  const participantService = {
-    findForTournamentByPlayerNameNormalized: jest.fn(),
-  };
-  const songService = {
-    findByTitleAndTournament: jest.fn(),
-  };
   const scoringSystem = {
     recalc: jest.fn(),
   };
@@ -76,8 +68,6 @@ describe('StandingManager', () => {
     matchService as unknown as MatchService,
     matchWorkflowManager as unknown as MatchWorkflowManager,
     scoreService as unknown as ScoreService,
-    participantService as unknown as ParticipantService,
-    songService as unknown as SongService,
     scoringSystemProvider as unknown as ScoringSystemProvider,
     uiUpdateGateway as unknown as UiUpdateGateway,
   );

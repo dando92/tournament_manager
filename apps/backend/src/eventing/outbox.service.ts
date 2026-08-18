@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { EntityManager } from 'typeorm';
 import { EventEnvelope } from '../contracts/events';
+import { PostgresOutboxPersistence } from './postgres-outbox.persistence';
 
 export interface NewEvent<TPayload> {
   type: string;
@@ -14,6 +15,8 @@ export interface NewEvent<TPayload> {
 
 @Injectable()
 export class OutboxService {
+  constructor(private readonly persistence: PostgresOutboxPersistence) {}
+
   async add<TPayload>(
     manager: EntityManager,
     input: NewEvent<TPayload>,
@@ -30,21 +33,7 @@ export class OutboxService {
       payload: input.payload,
     };
 
-    await manager.query(
-      `INSERT INTO event_outbox
-        (id, event_type, event_version, aggregate_id, occurred_at, correlation_id, causation_id, payload)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-      [
-        event.id,
-        event.type,
-        event.version,
-        event.aggregateId,
-        event.occurredAt,
-        event.correlationId,
-        event.causationId,
-        JSON.stringify(event.payload),
-      ],
-    );
+    await this.persistence.insert(manager, event);
     return event;
   }
 }

@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tournament } from '@persistence/entities';
 import { ILobbyObserver, LobbyConnectionDto, SyncStartConnector } from '@syncstart/index';
-import { StandingManager } from '../standing/standing.manager';
 import { LiveMatchGateway } from '../gateways/live-match.gateway';
 import { LobbyGateway } from '../gateways/lobby.gateway';
+import { SyncStartDurableEventPublisher } from '../standing/syncstart-durable-event.publisher';
 
 interface LobbyMeta {
     tournamentId: number;
@@ -43,7 +43,7 @@ export class LobbyManager implements OnModuleInit, ILobbyObserver {
     constructor(
         @InjectRepository(Tournament)
         private readonly tournamentRepository: Repository<Tournament>,
-        private readonly standingManager: StandingManager,
+        private readonly durableEventPublisher: SyncStartDurableEventPublisher,
         private readonly lobbyGateway: LobbyGateway,
         private readonly liveMatchGateway: LiveMatchGateway,
     ) {}
@@ -213,7 +213,7 @@ export class LobbyManager implements OnModuleInit, ILobbyObserver {
     private _createConnector(tournamentId: number, syncstartUrl: string): void {
         const connector = new SyncStartConnector(
             syncstartUrl,
-            [this, this.standingManager, this.lobbyGateway, this.liveMatchGateway],
+            [this, this.durableEventPublisher, this.lobbyGateway, this.liveMatchGateway],
         );
         this.connectors.set(tournamentId, connector);
     }

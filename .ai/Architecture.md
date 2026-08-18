@@ -53,6 +53,8 @@ Current manager migration guidance:
 - `MatchWorkflowManager` and `AdvancementManager` remain reusable application logic invoked by API commands or processor handlers.
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
+Phase 4 established the first extraction-ready registered handler for `syncstart.song-completed` version 1. The handler atomically records inbox progress with score, standing, and recalculation effects. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches remain replaceable state until Phase 7.
+
 ### SyncStart
 
 - Owns the SyncStart protocol and all persistent outbound WebSocket connections.

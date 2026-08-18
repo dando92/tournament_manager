@@ -198,6 +198,16 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 4 — Stateless Event Handlers
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-19.
+- Lifecycle, outbox, inbox, relay, and retention SQL is isolated in focused PostgreSQL persistence adapters; the global retention lock is centralized in `PostgresAdvisoryLock`.
+- The authoritative SyncStart completed-song observer path is replaced by a versioned durable event and a registered stateless handler.
+- Score and standing persistence, round recalculation, inbox progress, warnings, and match UI invalidation for the completed-song slice are committed or derived without process-local authoritative state.
+- Duplicate delivery, abandoned pending-message reclaim, consumer restart, PostgreSQL effects, Redis delivery, and existing end-to-end behavior are covered.
+- The superseded `StandingManager` observer path has been removed. Match completion, bracket advancement, match state, and Start.gg reporting remain explicit synchronous application use cases; they were not converted speculatively because no observer-driven workflow requires that change.
+- Lobby connector/session maps and gateway snapshots remain deliberately volatile connection-adapter state for extraction in Phases 6 and 7, not authoritative workflow progress.
+
 ### Work
 
 - Before expanding event handlers, move lifecycle and eventing SQL behind focused PostgreSQL persistence adapters. Centralize the global retention-sweep advisory lock in a dedicated infrastructure class, keep atomic transactions inside adapters, and obtain repositories from each transaction's `EntityManager`.

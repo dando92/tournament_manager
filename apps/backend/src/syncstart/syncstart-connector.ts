@@ -504,12 +504,12 @@ export class SyncStartConnector {
       const scores = lobbyState.players.map((player) => this.toCompletedScoreDto(player));
       const signature = this.completedSignature(song, scores);
       if (signature !== session.lastCompletedSignature) {
-        session.lastCompletedSignature = signature;
         await this.dispatcher.OnSongCompleted({
           ...identity,
           song,
           scores,
         });
+        session.lastCompletedSignature = signature;
       }
     }
 

@@ -3,16 +3,13 @@ import { CreateScoreDto, CreateStandingDto, UpdateStandingDto } from '../dtos';
 import { Match, Player, Score } from '@persistence/entities';
 import { ScoringSystemProvider } from "../services/scoring-systems/ScoringSystemProvider";
 import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
-import { ILobbyObserver, LobbySongCompletedDto } from '@syncstart/index';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
-import { ParticipantService } from '../services/participant.service';
 import { ScoreService } from '../services/score.service';
-import { SongService } from '../services/song.service';
 import { StandingService } from './standing.service';
 
 @Injectable()
-export class StandingManager implements ILobbyObserver {
+export class StandingManager {
     constructor(
         @Inject()
         private readonly standingService: StandingService,
@@ -22,10 +19,6 @@ export class StandingManager implements ILobbyObserver {
         private readonly matchWorkflowManager: MatchWorkflowManager,
         @Inject()
         private readonly scoreService: ScoreService,
-        @Inject()
-        private readonly participantService: ParticipantService,
-        @Inject()
-        private readonly songService: SongService,
         @Inject()
         private readonly scoringSystemProvider: ScoringSystemProvider,
         @Inject()
@@ -219,90 +212,6 @@ export class StandingManager implements ILobbyObserver {
         await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
 
         return match;
-    }
-
-    async OnSongCompleted(event: LobbySongCompletedDto): Promise<void> {
-        for (const score of event.scores) {
-            if (score.exScore == null) {
-                this.uiUpdateGateway.emitWarning(
-                    event.tournamentId,
-                    `No EX score found for ${score.playerName} on "${event.song.songPath}". Score was not saved.`,
-                );
-                continue;
-            }
-
-            await this.registerLobbyScore(
-                event.tournamentId,
-                event.song.songPath,
-                score.playerName,
-                score.exScore,
-                score.isFailed,
-            );
-        }
-    }
-
-    private async registerLobbyScore(
-        tournamentId: number,
-        songPath: string,
-        playerName: string,
-        percentage: number,
-        isFailed: boolean,
-    ): Promise<void> {
-        const participant = await this.participantService.findForTournamentByPlayerNameNormalized(tournamentId, playerName);
-        const song = await this.songService.findByTitleAndTournament(songPath, tournamentId);
-
-        if (!participant?.player || !song) {
-            this.uiUpdateGateway.emitWarning(
-                tournamentId,
-                `No database player-song found for ${playerName} on "${songPath}". Score was not saved.`,
-            );
-            return;
-        }
-
-        const player = participant.player;
-
-        const score = await this.scoreService.create({
-            playerId: player.id,
-            songId: song.id,
-            percentage,
-            isFailed,
-        });
-
-        const matches = await this.matchService.findActiveByTournamentForLobbyLookup(tournamentId);
-        const candidates = matches.filter(
-            (candidate) =>
-                candidate.rounds?.some((round) => round.song?.id === song.id) &&
-                this.getSinglesPlayers(candidate).some((candidatePlayer) => candidatePlayer.id === player.id),
-        );
-
-        if (candidates.length === 0) {
-            return;
-        }
-
-        const emptyCandidate = candidates.find((candidate) => {
-            const matchPlayer = this.getSinglesPlayers(candidate).find((candidatePlayer) => candidatePlayer.id === player.id);
-            const round = candidate.rounds.find((currentRound) => currentRound.song.id === song.id);
-            return matchPlayer && round && !(round.standings ?? []).some(
-                (standing) => standing.score.player.id === matchPlayer.id && standing.score.song.id === round.song.id,
-            );
-        });
-        const targetCandidate = emptyCandidate ?? candidates[0];
-        const matchPlayer = this.getSinglesPlayers(targetCandidate).find((candidatePlayer) => candidatePlayer.id === player.id);
-        const matchRound = targetCandidate.rounds.find((candidateRound) => candidateRound.song.id === song.id);
-
-        if (!matchPlayer || !matchRound) {
-            this.uiUpdateGateway.emitWarning(
-                tournamentId,
-                `Unable to resolve score target for ${playerName} on "${songPath}". Score was not saved.`,
-            );
-            return;
-        }
-
-        if (!emptyCandidate) {
-            return;
-        }
-
-        await this.AddScoreToEmptyStanding(emptyCandidate, score);
     }
 
     private async getExistingScoreForStanding(scoreId: number, playerId: number, songId: number): Promise<Score> {

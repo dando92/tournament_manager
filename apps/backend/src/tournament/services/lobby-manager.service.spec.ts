@@ -4,7 +4,7 @@ import { Tournament } from '@persistence/entities';
 import { SyncStartConnector } from '@syncstart/index';
 import { LiveMatchGateway } from '../gateways/live-match.gateway';
 import { LobbyGateway } from '../gateways/lobby.gateway';
-import { StandingManager } from '../standing/standing.manager';
+import { SyncStartDurableEventPublisher } from '../standing/syncstart-durable-event.publisher';
 
 import { LobbyManager } from './lobby-manager.service';
 
@@ -49,7 +49,7 @@ describe('LobbyManager', () => {
   };
   const manager = new LobbyManager(
     tournamentRepository as unknown as Repository<Tournament>,
-    {} as StandingManager,
+    {} as SyncStartDurableEventPublisher,
     lobbyGateway as unknown as LobbyGateway,
     {} as LiveMatchGateway,
   );
