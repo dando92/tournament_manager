@@ -29,17 +29,3 @@ for (const [index, realtimeUrl] of realtimeUrls.entries()) {
     process.exitCode = 1;
   }
 }
-
-try {
-  const output = execFileSync(
-    'docker',
-    { encoding: 'utf8' },
-  );
-  const result = JSON.parse(output);
-  console.log('\nProcessor readiness and migration status:');
-  console.log(JSON.stringify(result, null, 2));
-  if (result.status !== 'ready') process.exitCode = 1;
-} catch (error) {
-  console.error(`\nProcessor readiness unavailable: ${error.message}`);
-  process.exitCode = 1;
-}
