@@ -69,6 +69,8 @@ npm run verify:local
 
 Stop it without deleting data with `npm run local:down`. See [Local Platform Operations](.ai/LocalOperations.md) for logs, backup, restore, restart, recovery, and explicit reset procedures.
 
+GitHub Actions verifies pull requests, publishes commit-SHA images, and promotes `main` to the pre-production testing target. See [Continuous Delivery and Testing Deployment](.ai/Deployment.md) for required environment settings and rollback behavior.
+
 ## Verification
 
 ```bash

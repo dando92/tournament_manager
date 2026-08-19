@@ -42,6 +42,38 @@ for (const app of apps) {
   }
 }
 
+const deploymentCompose = readFileSync(join(root, 'deploy', 'docker-compose.yml'), 'utf8');
+for (const app of apps) {
+  const imageName = app === 'api' ? 'api' : app;
+  if (!deploymentCompose.includes(`tournament-manager-${imageName}:\${RELEASE_SHA}`)) {
+    errors.push(`deployment image for ${app} must use the immutable RELEASE_SHA tag`);
+  }
+}
+if (/^\s+build:/m.test(deploymentCompose)) {
+  errors.push('deployment Compose must consume published images instead of rebuilding source');
+}
+
+const deliveryWorkflow = readFileSync(join(root, '.github', 'workflows', 'delivery.yml'), 'utf8');
+for (const required of [
+  'npm run lint',
+  'npm run test:contract',
+  'npm run test:unit',
+  'npm run test:e2e',
+  'npm run build',
+  'npm run verify:local',
+  'type=raw,value=${{ github.sha }}',
+  'Apply migrations once',
+  'Smoke test release',
+  'Roll back failed promotion',
+]) {
+  if (!deliveryWorkflow.includes(required)) {
+    errors.push(`delivery workflow is missing required stage: ${required}`);
+  }
+}
+if (/type=raw,value=(latest|testing)/.test(deliveryWorkflow)) {
+  errors.push('delivery workflow must not publish mutable release tags');
+}
+
 const allowedDependencies = new Map([
   ['@tournament-manager/contracts', []],
   ['@tournament-manager/application', []],

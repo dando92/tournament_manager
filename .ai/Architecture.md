@@ -266,6 +266,9 @@ Use standard PostgreSQL, Redis, and Docker interfaces. Do not introduce provider
 - Apply migrations, deploy services, verify health, and run smoke tests.
 - Keep secrets in deployment environments, never in images or repository files.
 - Provider-native source builds may be used only if they preserve the same container contract and rollback capability.
+- The current pre-production target uses GHCR and the existing self-hosted Docker runner through `deploy/docker-compose.yml`. Hosted settings enter only through environment variables.
+- Frontend public endpoints and authentication mode are injected into `runtime-config.js` at container startup so the tested image is not rebuilt per environment.
+- Pull-request verification and the complete local-stack gate precede SHA-only image publication. Testing promotion applies migrations once, waits for readiness, runs smoke tests, and restores the previous database snapshot and SHA-tagged images after a failed promotion.
 
 ## Local Runtime
 

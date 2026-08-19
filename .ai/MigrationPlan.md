@@ -333,8 +333,11 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ### Progress
 
-- In progress.
+- Implementation complete; the local delivery-adapter gate passed on 2026-08-19. Remote activation requires the documented GitHub environment secrets, branch protection, and first `main` workflow run.
 - The frontend image now receives public API, realtime, and authentication configuration at container startup, so environment changes do not rebuild or retag the tested image.
+- Pull requests run architecture, lint/type, contract, unit, PostgreSQL/Redis e2e, build, and complete Docker-stack gates.
+- Merges to `main` publish five SHA-only GHCR images with provenance and SBOM metadata, then promote those exact tags through a provider-neutral Docker Compose adapter.
+- Testing promotion applies migrations once, waits for every service, runs public smoke tests, and restores both the prior database snapshot and prior immutable image set after failure.
 
 ### Work
 
@@ -372,4 +375,4 @@ A migrated behavior is complete only when all applicable items are true:
 - Extracted-service test infrastructure does not yet exist; it will be introduced only after the Phase 4 stateless-handler gate.
 - The current clean-baseline policy is valid only while all deployments remain explicitly pre-production and disposable.
 
-Service extraction must not begin before the applicable preceding exit gates pass.
+All migration implementation phases are complete. Phase 9 remote activation and its first observed `main` promotion remain repository/environment operations documented in [Deployment.md](Deployment.md).

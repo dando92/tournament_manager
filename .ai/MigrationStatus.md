@@ -9,7 +9,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 9 — Continuous Delivery and Deployment Validation (in progress).
+- Active phase: migration implementation complete; Phase 9 remote activation pending.
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
@@ -19,12 +19,61 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 6 state: complete; its exit gate passed on 2026-08-19.
 - Phase 7 state: complete; its exit gate passed on 2026-08-19.
 - Phase 8 state: complete; its exit gate passed on 2026-08-19.
+- Phase 9 state: implementation complete and locally validated on 2026-08-19; remote exit-gate observation requires GitHub environment configuration, branch protection, and the first successful `main` promotion.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
-- Next action: commit the validated runtime-configurable frontend image, then complete the CI verification, immutable publication, deployment, and rollback checkpoint.
+- Next action: configure the documented GitHub `testing` environment and required branch checks, then merge or push the completed branch to observe the first remote promotion.
 - Pending technical review: the proposed four-port eventing decomposition (`DurableEventPublisher`, `DurableEventConsumer`, `RealTimeEventPublisher`, and `RealTimeEventSubscriber`) is documented in `Architecture.md`. It is not approved and must not be implemented before user review.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 9 checkpoint 2 — Continuous delivery and deployment validation
+
+- Replaced the legacy two-image build workflow with required architecture, lint/type, contract, unit, PostgreSQL/Redis e2e, workspace build, and complete production-equivalent local-stack jobs.
+- Added SHA-only publication for API, processor, SyncStart, realtime, and frontend images, including provenance and SBOM metadata; mutable `latest`, branch, and environment tags are forbidden by the delivery-contract check.
+- Added a provider-neutral pre-production Compose adapter that consumes published images without source builds and keeps hosted configuration in environment variables.
+- Added ordered deployment stages for dependency startup, transient database backup, one migration run, application rollout, readiness, and public smoke tests.
+- Added automatic failed-promotion recovery: restore the clean pre-migration database and redeploy the previously captured SHA; failed first promotions restore the database and leave application services stopped.
+- Moved internal envelope validation into a dedicated shared-package contract suite and removed the obsolete API re-export.
+- Extended architecture checks to enforce immutable deployment tags, absence of deployment builds, required CI stages, and absence of mutable release tags.
+- Documented GitHub secrets/variables, branch protection, the self-hosted Docker testing target, runtime frontend configuration, promotion, and recovery.
+- Validated the deployment adapter locally with all five images assigned a synthetic 40-character SHA tag: four migrations applied once and API, Swagger, realtime, and frontend smoke checks passed. Removed the isolated containers, network, volumes, and synthetic tags after validation.
+
+Verification result:
+
+```text
+npm ci
+PASS: 1000 packages installed from the committed lockfile
+
+npm run verify
+PASS: architecture and delivery-contract checks
+PASS: all workspace lint and type checks (existing warnings only)
+PASS: 2 shared contract tests
+PASS: 26 API, 1 processor, 5 SyncStart, 3 realtime, and 2 frontend unit tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: every package and application build
+
+npm run local:up
+npm run verify:local
+PASS: complete rebuilt local stack and runtime frontend configuration
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: complete service health, migration, Swagger, seed, realtime, and frontend checks
+
+docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml config --quiet
+PASS: deployment configuration resolves
+
+isolated SHA-tagged deployment validation
+PASS: PostgreSQL and Redis startup
+PASS: 4 migrations applied once
+PASS: processor, SyncStart, two realtime replicas, API, and frontend readiness
+PASS: API, Swagger, realtime, frontend, and runtime-config smoke checks
+PASS: isolated deployment resources and synthetic image tags removed after validation
+```
+
+Remote activation requirement:
+
+- Repository files cannot enable GitHub branch protection or populate environment secrets. Follow [Deployment.md](Deployment.md), require the two documented checks on `main`, and configure the `testing` environment before the first remote run.
 
 ### Phase 9 checkpoint 1 — Runtime-configurable frontend image
 
@@ -716,7 +765,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Complete Phase 9 with required verification, immutable image publication, provider-neutral migration and deployment, readiness and smoke gates, and automatic rollback.
+Configure GitHub branch protection and the `testing` environment described in [Deployment.md](Deployment.md), then observe the first successful `main` workflow promotion. No migration implementation work remains.
 
 ## Remaining Phase 0 Work
 

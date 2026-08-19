@@ -1,0 +1,164 @@
+name: tournament-manager-deployment
+
+x-application-environment: &application-environment
+  NODE_ENV: production
+  AUTH_MODE: ${AUTH_MODE:-local}
+  LOCAL_API_KEY: ${LOCAL_API_KEY}
+  JWT_SECRET: ${JWT_SECRET}
+  CORS_ORIGINS: ${CORS_ORIGINS}
+  DATABASE_HOST: postgres
+  DATABASE_PORT: 5432
+  DATABASE_USER: ${DATABASE_USER}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+  DATABASE_NAME: ${DATABASE_NAME}
+  DATABASE_SSL: "false"
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
+  EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-processor}
+  SYNCSTART_COMMAND_STREAM: ${SYNCSTART_COMMAND_STREAM:-tournament-manager.syncstart.commands}
+  SYNCSTART_CONSUMER_GROUP: ${SYNCSTART_CONSUMER_GROUP:-tournament-manager-syncstart}
+  SYNCSTART_COMMAND_TIMEOUT_MS: ${SYNCSTART_COMMAND_TIMEOUT_MS:-15000}
+  LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
+  OUTBOX_RELAY_IDLE_INTERVAL_MS: ${OUTBOX_RELAY_IDLE_INTERVAL_MS:-200}
+  EVENT_CONSUMER_BLOCK_MS: ${EVENT_CONSUMER_BLOCK_MS:-500}
+  EVENT_RECLAIM_IDLE_MS: ${EVENT_RECLAIM_IDLE_MS:-250}
+  TOURNAMENT_TRANSPORT_RETENTION_DAYS: ${TOURNAMENT_TRANSPORT_RETENTION_DAYS:-10}
+  TRANSPORT_RETENTION_SWEEP_INTERVAL_MS: ${TRANSPORT_RETENTION_SWEEP_INTERVAL_MS:-21600000}
+  TRANSPORT_RETENTION_BATCH_SIZE: ${TRANSPORT_RETENTION_BATCH_SIZE:-1000}
+  STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
+  STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
+  STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
+  LOCAL_SEED_ENABLED: ${LOCAL_SEED_ENABLED:-false}
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4.0-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  migrations:
+    image: ${IMAGE_REGISTRY}/tournament-manager-api:${RELEASE_SHA}
+    restart: "no"
+    command: ["npm", "run", "migration:run:prod", "--workspace=@tournament-manager/api"]
+    environment: *application-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  processor:
+    image: ${IMAGE_REGISTRY}/tournament-manager-processor:${RELEASE_SHA}
+    restart: unless-stopped
+    environment: *application-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
+  syncstart:
+    image: ${IMAGE_REGISTRY}/tournament-manager-syncstart:${RELEASE_SHA}
+    restart: unless-stopped
+    environment: *application-environment
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3002/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
+  realtime-a:
+    image: ${IMAGE_REGISTRY}/tournament-manager-realtime:${RELEASE_SHA}
+    restart: unless-stopped
+    ports:
+      - "${DEPLOY_BIND_ADDRESS:-127.0.0.1}:${DEPLOY_REALTIME_PORT:-3003}:3003"
+    environment: *application-environment
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3003/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
+  realtime-b:
+    image: ${IMAGE_REGISTRY}/tournament-manager-realtime:${RELEASE_SHA}
+    restart: unless-stopped
+    environment: *application-environment
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3003/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
+  api:
+    image: ${IMAGE_REGISTRY}/tournament-manager-api:${RELEASE_SHA}
+    restart: unless-stopped
+    ports:
+      - "${DEPLOY_BIND_ADDRESS:-127.0.0.1}:${DEPLOY_API_PORT:-3000}:3000"
+    environment: *application-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
+  frontend:
+    image: ${IMAGE_REGISTRY}/tournament-manager-frontend:${RELEASE_SHA}
+    restart: unless-stopped
+    ports:
+      - "${DEPLOY_BIND_ADDRESS:-127.0.0.1}:${DEPLOY_FRONTEND_PORT:-8080}:80"
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      PUBLIC_REALTIME_URL: ${PUBLIC_REALTIME_URL}
+      PUBLIC_AUTH_MODE: ${AUTH_MODE:-local}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  postgres-data:
+  redis-data:

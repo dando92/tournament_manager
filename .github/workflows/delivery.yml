@@ -1,0 +1,246 @@
+name: Continuous Delivery
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: delivery-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verification:
+    name: Required verification
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16.4-alpine
+        env:
+          POSTGRES_USER: tournament_manager
+          POSTGRES_PASSWORD: tournament_manager
+          POSTGRES_DB: tournament_manager
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tournament_manager -d tournament_manager"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7.4.0-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: 5432
+      DATABASE_USER: tournament_manager
+      DATABASE_PASSWORD: tournament_manager
+      DATABASE_NAME: tournament_manager
+      DATABASE_SSL: "false"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check architecture and delivery contracts
+        run: npm run check:architecture
+      - name: Lint and type-check workspaces
+        run: npm run lint
+      - name: Run contract tests
+        run: npm run test:contract
+      - name: Run app unit tests
+        run: npm run test:unit
+      - name: Run PostgreSQL and Redis e2e tests
+        run: npm run test:e2e
+      - name: Build every workspace
+        run: npm run build
+
+  local-stack:
+    name: Production-equivalent local stack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run local:up
+      - run: npm run verify:local
+      - name: Show container logs after failure
+        if: failure()
+        run: docker compose logs --no-color --tail=300
+      - name: Stop local stack
+        if: always()
+        run: npm run local:down
+
+  publish-images:
+    name: Publish ${{ matrix.name }} image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verification, local-stack]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: apps/api/Dockerfile
+          - name: processor
+            dockerfile: apps/processor/Dockerfile
+          - name: syncstart
+            dockerfile: apps/syncstart/Dockerfile
+          - name: realtime
+            dockerfile: apps/realtime/Dockerfile
+          - name: frontend
+            dockerfile: apps/frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: metadata
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/tournament-manager-${{ matrix.name }}
+          tags: type=raw,value=${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+
+  deploy-testing:
+    name: Deploy tested release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: publish-images
+    runs-on: self-hosted
+    environment: testing
+    permissions:
+      contents: read
+      packages: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      RELEASE_SHA: ${{ github.sha }}
+      DATABASE_USER: ${{ vars.DATABASE_USER || 'tournament_manager' }}
+      DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+      DATABASE_NAME: ${{ vars.DATABASE_NAME || 'tournament_manager' }}
+      LOCAL_API_KEY: ${{ secrets.LOCAL_API_KEY }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+      AUTH_MODE: ${{ vars.AUTH_MODE || 'local' }}
+      DEPLOY_BIND_ADDRESS: ${{ vars.DEPLOY_BIND_ADDRESS || '127.0.0.1' }}
+      DEPLOY_API_PORT: ${{ vars.DEPLOY_API_PORT || '3000' }}
+      DEPLOY_REALTIME_PORT: ${{ vars.DEPLOY_REALTIME_PORT || '3003' }}
+      DEPLOY_FRONTEND_PORT: ${{ vars.DEPLOY_FRONTEND_PORT || '8080' }}
+      PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+      PUBLIC_REALTIME_URL: ${{ vars.PUBLIC_REALTIME_URL }}
+      DEPLOY_API_URL: ${{ vars.DEPLOY_API_URL || 'http://127.0.0.1:3000' }}
+      DEPLOY_REALTIME_URL: ${{ vars.DEPLOY_REALTIME_URL || 'http://127.0.0.1:3003' }}
+      DEPLOY_FRONTEND_URL: ${{ vars.DEPLOY_FRONTEND_URL || 'http://127.0.0.1:8080' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment configuration
+        run: |
+          set -eu
+          test -n "$DATABASE_PASSWORD"
+          test -n "$LOCAL_API_KEY"
+          test -n "$JWT_SECRET"
+          test -n "$CORS_ORIGINS"
+          test -n "$PUBLIC_API_URL"
+          test -n "$PUBLIC_REALTIME_URL"
+          printf '%s' "$DATABASE_USER" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$'
+          printf '%s' "$DATABASE_NAME" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$'
+          echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Capture previous immutable release
+        run: |
+          set -eu
+          previous_image="$(docker inspect --format '{{.Config.Image}}' tournament-manager-deployment-api-1 2>/dev/null || true)"
+          previous_sha="${previous_image##*:}"
+          if printf '%s' "$previous_sha" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "PREVIOUS_RELEASE_SHA=$previous_sha" >> "$GITHUB_ENV"
+          fi
+      - name: Pull exact release images
+        run: docker compose -f deploy/docker-compose.yml pull migrations processor syncstart realtime-a realtime-b api frontend
+      - name: Start stateful dependencies
+        run: docker compose -f deploy/docker-compose.yml up --detach --wait postgres redis
+      - name: Back up pre-production database
+        run: |
+          docker compose -f deploy/docker-compose.yml exec -T postgres \
+            pg_dump -U "$DATABASE_USER" --clean --if-exists --no-owner "$DATABASE_NAME" \
+            > "$GITHUB_WORKSPACE/.deployment-backup.sql"
+          echo "BACKUP_READY=true" >> "$GITHUB_ENV"
+      - name: Apply migrations once
+        run: docker compose -f deploy/docker-compose.yml run --rm --no-deps migrations
+      - name: Deploy application services
+        run: |
+          set -eu
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait processor syncstart realtime-a realtime-b
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait api
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait frontend
+      - name: Smoke test release
+        run: node scripts/smoke-deployment.mjs
+      - name: Recover failed first promotion
+        if: failure() && env.PREVIOUS_RELEASE_SHA == '' && env.BACKUP_READY == 'true'
+        run: |
+          set -eu
+          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart processor || true
+          docker compose -f deploy/docker-compose.yml exec -T postgres \
+            psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d postgres \
+              -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\" WITH (FORCE)" \
+              -c "CREATE DATABASE \"$DATABASE_NAME\" OWNER \"$DATABASE_USER\""
+          cat "$GITHUB_WORKSPACE/.deployment-backup.sql" |
+            docker compose -f deploy/docker-compose.yml exec -T postgres \
+              psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d "$DATABASE_NAME"
+      - name: Roll back failed promotion
+        if: failure() && env.PREVIOUS_RELEASE_SHA != '' && env.BACKUP_READY == 'true'
+        run: |
+          set -eu
+          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart processor
+          docker compose -f deploy/docker-compose.yml exec -T postgres \
+            psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d postgres \
+              -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\" WITH (FORCE)" \
+              -c "CREATE DATABASE \"$DATABASE_NAME\" OWNER \"$DATABASE_USER\""
+          cat "$GITHUB_WORKSPACE/.deployment-backup.sql" |
+            docker compose -f deploy/docker-compose.yml exec -T postgres \
+              psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d "$DATABASE_NAME"
+          export RELEASE_SHA="$PREVIOUS_RELEASE_SHA"
+          docker compose -f deploy/docker-compose.yml pull processor syncstart realtime-a realtime-b api frontend
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait processor syncstart realtime-a realtime-b
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait api
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait frontend
+          node scripts/smoke-deployment.mjs
+      - name: Remove transient backup
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/.deployment-backup.sql"
