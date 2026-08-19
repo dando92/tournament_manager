@@ -6,6 +6,7 @@ import {
   RedisEventTransport,
 } from "@tournament-manager/eventing";
 import { HealthController } from "./health.controller";
+import { InternalController } from './internal.controller';
 import { SyncStartCommandConsumer } from "./syncstart-command.consumer";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
 import { SyncStartSessionManager } from "./syncstart-session.manager";
@@ -18,7 +19,7 @@ import { SyncStartStateStore } from "./syncstart-state.store";
       isGlobal: true,
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, InternalController],
   providers: [
     RedisEventTransport,
     { provide: DURABLE_EVENT_TRANSPORT, useExisting: RedisEventTransport },

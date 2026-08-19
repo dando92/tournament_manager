@@ -6,21 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import type {
   LiveEventEnvelope,
   SyncStartCommandAction,
-  SyncStartCommandEvent,
   SyncStartCommandPayload,
   SyncStartCommandResultPayload,
 } from '@tournament-manager/contracts';
-import {
-  DURABLE_EVENT_TRANSPORT,
-  DurableEventTransport,
-  LIVE_EVENT_TRANSPORT,
-  LiveEventTransport,
-} from '@tournament-manager/eventing';
+import { LIVE_EVENT_TRANSPORT, LiveEventTransport } from '@tournament-manager/eventing';
 import { Tournament } from '@tournament-manager/persistence';
 
 export type TournamentLobbyStatusDto = {
@@ -51,8 +44,6 @@ export class LobbyManager implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(Tournament)
     private readonly tournaments: Repository<Tournament>,
     private readonly config: ConfigService,
-    @Inject(DURABLE_EVENT_TRANSPORT)
-    private readonly durable: DurableEventTransport,
     @Inject(LIVE_EVENT_TRANSPORT) private readonly live: LiveEventTransport,
   ) {}
 
@@ -157,28 +148,7 @@ export class LobbyManager implements OnModuleInit, OnModuleDestroy {
     tournamentId: number,
     extra: Partial<SyncStartCommandPayload> = {},
   ): Promise<unknown> {
-    const id = randomUUID();
-    const event: SyncStartCommandEvent = {
-      id,
-      type: 'syncstart.command',
-      aggregateId: String(tournamentId),
-      payload: { action, tournamentId, ...extra },
-    };
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(
-        () => {
-          this.pending.delete(id);
-          reject(new Error(`SyncStart command timed out: ${action}`));
-        },
-        Number(this.config.get('SYNCSTART_COMMAND_TIMEOUT_MS') ?? 15000),
-      );
-      this.pending.set(id, { resolve, reject, timeout });
-      this.durable.publish(this.commandStream, event).catch((error) => {
-        clearTimeout(timeout);
-        this.pending.delete(id);
-        reject(error);
-      });
-    });
+    return this.request(action, tournamentId, extra);
   }
 
   private async sendNoWait(
@@ -186,13 +156,24 @@ export class LobbyManager implements OnModuleInit, OnModuleDestroy {
     tournamentId: number,
     extra: Partial<SyncStartCommandPayload> = {},
   ): Promise<void> {
-    const event: SyncStartCommandEvent = {
-      id: randomUUID(),
-      type: 'syncstart.command',
-      aggregateId: String(tournamentId),
-      payload: { action, tournamentId, ...extra },
+    await this.request(action, tournamentId, extra);
+  }
+
+  private async request(action: SyncStartCommandAction, tournamentId: number, body: Partial<SyncStartCommandPayload>): Promise<unknown> {
+    const path: Record<SyncStartCommandAction, [string, string]> = {
+      'configure-tournament': ['PUT', 'configuration'], 'close-tournament': ['DELETE', 'configuration'],
+      'connect-server': ['POST', 'server/connect'], 'disconnect-server': ['DELETE', 'server/disconnect'],
+      'list-lobbies': ['GET', 'lobbies'], 'connect-lobby': ['POST', 'lobbies/connect'],
+      'create-lobby': ['POST', 'lobbies'], 'disconnect-lobby': ['DELETE', `lobbies/${body.lobbyId}`],
     };
-    await this.durable.publish(this.commandStream, event);
+    const [method, suffix] = path[action];
+    const timeout = AbortSignal.timeout(Number(this.config.get('INTERNAL_HTTP_TIMEOUT_MS') ?? 5000));
+    const response = await fetch(`${this.config.getOrThrow<string>('SYNCSTART_INTERNAL_URL')}/internal/tournaments/${tournamentId}/${suffix}`, {
+      method, signal: timeout, headers: { 'content-type': 'application/json', 'x-internal-service-token': this.config.getOrThrow<string>('INTERNAL_SERVICE_TOKEN') },
+      body: method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`SyncStart command failed with HTTP ${response.status}`);
+    return response.status === 204 ? undefined : response.json();
   }
 
   private onLiveEvent(event: LiveEventEnvelope): void {

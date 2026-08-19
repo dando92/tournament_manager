@@ -156,6 +156,9 @@ export interface LiveEventEnvelope<TPayload = unknown> {
   sequence?: number;
 }
 
+export interface ConfigureTournamentRequest { tournamentId: number; syncstartUrl: string; }
+export interface CompletedSongRequest { completionId: string; tournamentId: number; lobbyId: string; lobbyName: string; lobbyCode: string; song: LobbySongDto; scores: LobbyCompletedScoreDto[]; }
+
 export function isEventEnvelope(value: unknown): value is EventEnvelope {
   if (!value || typeof value !== "object") return false;
   const event = value as Record<string, unknown>;
