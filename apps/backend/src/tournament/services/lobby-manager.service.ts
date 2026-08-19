@@ -22,8 +22,6 @@ import {
   LiveEventTransport,
 } from '@tournament-manager/eventing';
 import { Tournament } from '@persistence/entities';
-import { LobbyGateway } from '../gateways/lobby.gateway';
-import { LiveMatchGateway } from '../gateways/live-match.gateway';
 
 export type TournamentLobbyStatusDto = {
   id: string;
@@ -53,8 +51,6 @@ export class LobbyManager implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(Tournament)
     private readonly tournaments: Repository<Tournament>,
     private readonly config: ConfigService,
-    private readonly lobbyGateway: LobbyGateway,
-    private readonly liveMatchGateway: LiveMatchGateway,
     @Inject(DURABLE_EVENT_TRANSPORT)
     private readonly durable: DurableEventTransport,
     @Inject(LIVE_EVENT_TRANSPORT) private readonly live: LiveEventTransport,
@@ -211,25 +207,6 @@ export class LobbyManager implements OnModuleInit, OnModuleDestroy {
         pending.reject(new Error(result.error ?? 'SyncStart command failed'));
       return;
     }
-    const payload = event.payload as never;
-    if (event.type === 'syncstart.connection-status')
-      this.lobbyGateway.OnSyncStartConnectionStatus(payload);
-    else if (event.type === 'syncstart.lobby-active')
-      this.lobbyGateway.OnConnectionActive(payload);
-    else if (event.type === 'syncstart.lobby-connected')
-      this.lobbyGateway.OnConnected(payload);
-    else if (event.type === 'syncstart.lobby-disconnected') {
-      this.lobbyGateway.OnDisconnection(payload);
-      this.liveMatchGateway.OnDisconnection(payload);
-    } else if (event.type === 'syncstart.song-selected') {
-      this.lobbyGateway.OnSongSelected(payload);
-      this.liveMatchGateway.OnSongSelected(payload);
-    } else if (event.type === 'syncstart.match-update')
-      this.liveMatchGateway.OnGoingMatchUpdate(payload);
-    else if (event.type === 'syncstart.song-completed-live')
-      this.liveMatchGateway.OnSongCompleted(payload);
-    else if (event.type === 'syncstart.player-ready')
-      this.lobbyGateway.OnPlayerReady(payload);
   }
 
   private get commandStream(): string {

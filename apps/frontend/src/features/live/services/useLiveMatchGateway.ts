@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   LiveMatchStateDto,
 } from "@/features/live/services/syncstartGatewayDtos";
+import { realtimeWebSocketUrl, SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type LiveMatchGatewayMessage =
   | { event: "OnSongSelected"; data: LiveMatchStateDto }
@@ -12,13 +13,11 @@ export type LiveMatchGatewayHandlers = {
   onSongSelected?: (data: LiveMatchStateDto) => void;
   onMatchUpdate?: (data: LiveMatchStateDto) => void;
   onSongCompleted?: (data: LiveMatchStateDto) => void;
+  onRecover?: () => void;
 };
 
 export function liveMatchGatewayUrl(tournamentId: number): string {
-  const apiUrl = import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:3000/";
-  const resolved = new URL("../livematchgateway", apiUrl);
-  resolved.searchParams.set("tournamentId", String(tournamentId));
-  return resolved.href.replace(/^http/, "ws");
+  return realtimeWebSocketUrl("/livematchgateway", tournamentId);
 }
 
 export function useLiveMatchGateway(tournamentId: number | null, handlers: LiveMatchGatewayHandlers) {
@@ -28,16 +27,9 @@ export function useLiveMatchGateway(tournamentId: number | null, handlers: LiveM
     handlersRef.current = handlers;
   }, [handlers]);
 
-  useEffect(() => {
-    if (!tournamentId || !Number.isFinite(tournamentId)) {
-      return;
-    }
-
-    const ws = new WebSocket(liveMatchGatewayUrl(tournamentId));
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as LiveMatchGatewayMessage;
+  useRealtimeSocket("/livematchgateway", tournamentId ?? 0, (message: SequencedRealtimeMessage) => {
+        if (!tournamentId) return;
+        const msg = message as LiveMatchGatewayMessage & SequencedRealtimeMessage;
         if (msg.event === "OnSongSelected") {
           handlersRef.current.onSongSelected?.(msg.data);
         } else if (msg.event === "OnMatchUpdate") {
@@ -45,13 +37,5 @@ export function useLiveMatchGateway(tournamentId: number | null, handlers: LiveM
         } else if (msg.event === "OnSongCompleted") {
           handlersRef.current.onSongCompleted?.(msg.data);
         }
-      } catch {
-        // ignore malformed websocket messages
-      }
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [tournamentId]);
+  }, () => handlersRef.current.onRecover?.());
 }

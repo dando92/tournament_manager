@@ -46,3 +46,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should local mode create a persisted administrator account, omit persisted ownership, or use a different ownership model?
 - Evidence: compare `AuthService.loginWithApiKey`, `TournamentManager.create`, and `ParticipantService.ensureOwner`.
 - Migration rule: Do not redesign local ownership implicitly while moving authentication or persistence boundaries.
+
+### FQ-005 — Browser realtime access policy
+
+- Status: Deferred.
+- Observed behavior: the legacy browser gateways accepted anonymous connections, and tournament read views are public. Phase 7 preserves that behavior while moving connection and tournament-subscription validation to `apps/realtime`.
+- Question: Should any realtime paths require a JWT, or should all tournament-scoped update feeds remain public read surfaces?
+- Evidence: the removed Phase 6 gateway implementations had no authentication guard; `apps/realtime/src/realtime.gateway.ts` validates path and tournament scope but deliberately does not introduce a new access restriction.
+- Migration rule: Preserve anonymous read access until the product access policy is explicitly resolved.

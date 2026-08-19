@@ -12,10 +12,10 @@ COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci
 COPY packages packages
-COPY apps/syncstart apps/syncstart
+COPY apps/realtime apps/realtime
 RUN npm run build --workspace=@tournament-manager/contracts \
   && npm run build --workspace=@tournament-manager/eventing \
-  && npm run build --workspace=@tournament-manager/syncstart
+  && npm run build --workspace=@tournament-manager/realtime
 
 FROM node:22-alpine
 WORKDIR /app
@@ -31,7 +31,7 @@ COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --omit=dev
 COPY --from=builder /app/packages/contracts/dist packages/contracts/dist
 COPY --from=builder /app/packages/eventing/dist packages/eventing/dist
-COPY --from=builder /app/apps/syncstart/dist apps/syncstart/dist
+COPY --from=builder /app/apps/realtime/dist apps/realtime/dist
 ENV NODE_ENV=production
-EXPOSE 3002
-CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/syncstart"]
+EXPOSE 3003
+CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/realtime"]

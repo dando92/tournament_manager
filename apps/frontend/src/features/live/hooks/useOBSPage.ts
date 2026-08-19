@@ -30,6 +30,7 @@ export function useOBSPage(lobbyId?: string, tournamentId?: number) {
       onSongSelected: handleSongSelected,
       onMatchUpdate: handleLiveMatchState,
       onSongCompleted: handleLiveMatchState,
+      onRecover: () => setLiveMatchState(null),
     }),
     [handleLiveMatchState, handleSongSelected],
   );

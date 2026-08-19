@@ -53,7 +53,7 @@ Current manager migration guidance:
 - `MatchWorkflowManager` and `AdvancementManager` remain reusable application logic invoked by API commands or processor handlers.
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
-Phase 4 established a common registered-consumer lifecycle for all durable events. Phase 5 moved that lifecycle, the relay, retention, and the extraction-ready handlers into `apps/processor`; the API no longer executes durable consumers. Shared transport interfaces, Redis adapters, and outbox components now live in `packages/eventing`. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. Phase 6 moved SyncStart protocol, connector, reconnection, and lobby-session ownership into `apps/syncstart`. Browser gateway caches and the Pub/Sub-to-WebSocket bridge remain replaceable API state until Phase 7.
+Phase 4 established a common registered-consumer lifecycle for all durable events. Phase 5 moved that lifecycle, the relay, retention, and the extraction-ready handlers into `apps/processor`; the API no longer executes durable consumers. Shared transport interfaces, Redis adapters, and outbox components now live in `packages/eventing`. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. Phase 6 moved SyncStart protocol, connector, reconnection, and lobby-session ownership into `apps/syncstart`. Phase 7 moved all inbound browser WebSockets, Pub/Sub fan-out, replaceable gateway snapshots, and connection state into `apps/realtime`; the API contains no gateway or live-subscriber bridge.
 
 ### SyncStart
 
@@ -214,6 +214,8 @@ The Redis adapter validates only that this minimal envelope can be routed and de
 An incompatible application update must deliberately abandon old Stream entries, pending consumer-group work, retries, and dead letters, and delete unpublished outbox rows rather than attempting compatibility. A new consumer group starts at the current Stream tail, so it never replays retained messages from an older release. This coordinated clean-cut deployment policy is valid while the application remains pre-production. Before production, deployment and data-preservation requirements must be reviewed explicitly.
 
 UI realtime events additionally include the relevant tournament scope and a sequence number when ordered incremental delivery is required.
+
+The Redis live transport assigns that sequence atomically per tournament before publication. Realtime replicas therefore observe the same sequence and can expose missed-message gaps consistently. Compatibility WebSocket paths receive no-payload sequence markers for unrelated event kinds in the same tournament, preserving gap detection without cross-path or cross-tournament leakage.
 
 ## State Ownership
 

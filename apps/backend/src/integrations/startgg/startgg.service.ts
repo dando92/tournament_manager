@@ -21,7 +21,7 @@ import {
 } from '@persistence/entities';
 import { DivisionService } from '@tournament/services/division.service';
 import { EntrantService } from '@tournament/services/entrant.service';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantService } from '@tournament/services/participant.service';
 import { PhaseService } from '@tournament/services/phase.service';
 import { PlayerService } from '@player/player.service';
@@ -73,7 +73,7 @@ export class StartggService {
         private readonly participantService: ParticipantService,
         private readonly entrantService: EntrantService,
         private readonly playerService: PlayerService,
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
         private readonly phaseGroupService: PhaseGroupService,
         @InjectRepository(Tournament)

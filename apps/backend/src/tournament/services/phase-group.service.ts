@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Entrant, Phase, PhaseGroup, PhaseGroupEntrant } from '@persistence/entities';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
 @Injectable()
 export class PhaseGroupService {
@@ -16,7 +16,7 @@ export class PhaseGroupService {
         private readonly phaseRepository: Repository<Phase>,
         @InjectRepository(Entrant)
         private readonly entrantRepository: Repository<Entrant>,
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
 
     async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<PhaseGroup> {

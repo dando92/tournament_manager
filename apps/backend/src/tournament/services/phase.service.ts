@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Division, Entrant, Phase } from '@persistence/entities';
 import { CreatePhaseDto } from '../dtos';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
 @Injectable()
 export class PhaseService {
@@ -12,7 +12,7 @@ export class PhaseService {
         private readonly phaseRepository: Repository<Phase>,
         @InjectRepository(Division)
         private readonly divisionRepository: Repository<Division>,
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
 
     async create(dto: CreatePhaseDto): Promise<Phase> {

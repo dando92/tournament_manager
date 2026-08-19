@@ -153,6 +153,7 @@ export interface LiveEventEnvelope<TPayload = unknown> {
   type: string;
   tournamentId: number;
   payload: TPayload;
+  sequence?: number;
 }
 
 export function isEventEnvelope(value: unknown): value is EventEnvelope {

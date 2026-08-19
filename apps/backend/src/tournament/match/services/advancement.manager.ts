@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { UpdateMatchDto } from '@match/dtos/match.dto';
 import { AdvancementRule, Entrant, Match } from '@persistence/entities';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { AdvancementRuleService } from '@tournament/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/services/phase-group.service';
@@ -16,7 +16,7 @@ export class AdvancementManager {
         @Inject()
         private readonly phaseGroupService: PhaseGroupService,
         @Inject()
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
 
     async AdvanceFromCompletedMatch(match: Match): Promise<void> {

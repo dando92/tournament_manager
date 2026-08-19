@@ -18,6 +18,7 @@ export function useLivePhase(tournamentId: number) {
       if (data.tournamentId !== tournamentId) return;
       setLiveMatchStates((prev) => new Map(prev).set(data.lobbyId, data));
     },
+    onRecover: () => setLiveMatchStates(new Map()),
   });
 
   const tournamentLiveStates = useMemo(

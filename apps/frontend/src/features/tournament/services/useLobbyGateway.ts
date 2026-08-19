@@ -5,6 +5,7 @@ import {
   LobbySongSelectedDto,
   SyncStartConnectionStatusDto,
 } from "@/features/live/services/syncstartGatewayDtos";
+import { realtimeWebSocketUrl, SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type LobbyGatewayMessage =
   | { event: "OnSyncStartConnectionStatus"; data: SyncStartConnectionStatusDto }
@@ -22,25 +23,18 @@ export type LobbyGatewayHandlers = {
 };
 
 export function lobbyGatewayUrl(tournamentId: number): string {
-  const apiUrl = import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:3000/";
-  const resolved = new URL("../lobbygateway", apiUrl);
-  resolved.searchParams.set("tournamentId", String(tournamentId));
-  return resolved.href.replace(/^http/, "ws");
+  return realtimeWebSocketUrl("/lobbygateway", tournamentId);
 }
 
-export function useLobbyGateway(tournamentId: number, handlers: LobbyGatewayHandlers) {
+export function useLobbyGateway(tournamentId: number, handlers: LobbyGatewayHandlers, onRecover?: () => void | Promise<void>) {
   const handlersRef = useRef(handlers);
 
   useEffect(() => {
     handlersRef.current = handlers;
   }, [handlers]);
 
-  useEffect(() => {
-    const ws = new WebSocket(lobbyGatewayUrl(tournamentId));
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as LobbyGatewayMessage;
+  useRealtimeSocket("/lobbygateway", tournamentId, (message: SequencedRealtimeMessage) => {
+      const msg = message as LobbyGatewayMessage & SequencedRealtimeMessage;
         if (msg.event === "OnSyncStartConnectionStatus") {
           handlersRef.current.onSyncStartConnectionStatus?.(msg.data);
         } else if (msg.event === "OnConnectionActive") {
@@ -52,13 +46,5 @@ export function useLobbyGateway(tournamentId: number, handlers: LobbyGatewayHand
         } else if (msg.event === "OnPlayerReady") {
           handlersRef.current.onPlayerReady?.(msg.data);
         }
-      } catch {
-        // ignore malformed websocket messages
-      }
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [tournamentId]);
+  }, onRecover);
 }

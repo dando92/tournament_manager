@@ -6,7 +6,6 @@ import { StartggModule } from '../integrations/startgg/startgg.module';
 import { EventingModule } from '../eventing/eventing.module';
 import { Services } from './services';
 import { Controllers } from './controllers';
-import { Gateways } from './gateways';
 import { TournamentAccessGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
 import { TournamentOpenGuard } from './guards/tournament-open.guard';
 
@@ -18,7 +17,7 @@ import { TournamentOpenGuard } from './guards/tournament-open.guard';
 		StartggModule,
         EventingModule,
     ],
-    providers: [...Gateways, ...Services, TournamentAccessGuard, TournamentOpenGuard, AdminGuard, CreatorOrAdminGuard],
+    providers: [...Services, TournamentAccessGuard, TournamentOpenGuard, AdminGuard, CreatorOrAdminGuard],
     controllers: [...Controllers]
 })
 export class TournamentModule {}

@@ -9,7 +9,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 7 — UI Realtime Service Extraction (not started).
+- Active phase: Phase 8 — Final Monorepo Boundaries and Cleanup (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
@@ -17,12 +17,47 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 4 state: complete; its exit gate passed on 2026-08-19.
 - Phase 5 state: complete; its exit gate passed on 2026-08-19.
 - Phase 6 state: complete; its exit gate passed on 2026-08-19.
+- Phase 7 state: complete; its exit gate passed on 2026-08-19.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
-- Next action: begin Phase 7 by extracting browser WebSocket ownership and replacing the temporary API Pub/Sub bridge with the realtime service.
+- Next action: begin Phase 8 by finalizing monorepo dependency boundaries and removing remaining migration-era compatibility structure.
 - Pending technical review: the proposed four-port eventing decomposition (`DurableEventPublisher`, `DurableEventConsumer`, `RealTimeEventPublisher`, and `RealTimeEventSubscriber`) is documented in `Architecture.md`. It is not approved and must not be implemented before user review.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 7 checkpoint 1 — UI realtime service extraction
+
+- Created the independently buildable and deployable `apps/realtime` service and moved all browser WebSocket paths, tournament subscriptions, scoped fan-out, replaceable gateway snapshots, and connection state out of the API.
+- Replaced direct API gateway broadcasts with prepared UI events over Redis Pub/Sub. Processor post-commit match invalidations now include the complete scoped browser payload, so realtime performs no database query or domain calculation.
+- Added atomic per-tournament live-event sequences in the Redis adapter. Both replicas receive the same sequence, and path-specific clients receive no-payload markers for unrelated events so a missing Pub/Sub delivery remains detectable without leaking payloads.
+- Added two healthy local realtime replicas on ports 3003 and 3004, independent frontend realtime configuration, and local status/verification coverage for both replicas.
+- Added a shared frontend client with bounded reconnect, disconnect and sequence-gap detection, authoritative application-query invalidation, and HTTP replaceable-snapshot recovery for lobby and live telemetry.
+- Removed the API WebSocket adapter, all three gateway implementations, and the temporary API live-event subscriber. The API remains healthy and public HTTP reads succeed while both realtime replicas are stopped.
+- Preserved the existing anonymous public-read behavior and recorded the unresolved realtime access policy as FQ-005 instead of introducing a new authorization rule during migration.
+- Added mapper tests and network e2e coverage for two-replica fan-out, identical ordering, tournament isolation, disconnect, missed message, and HTTP snapshot recovery.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (existing warnings only)
+PASS: 36 unit tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests, including realtime replica and recovery coverage
+PASS: contracts, application, eventing, backend, processor, SyncStart, realtime, and frontend builds
+
+npm run local:up
+PASS: complete retained-volume stack rebuilt and healthy with two realtime replicas
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: API, processor, SyncStart, both realtime replicas, Swagger, deterministic seed, and frontend health checks
+
+Realtime outage check
+PASS: both realtime replicas stopped
+PASS: API readiness and public tournament HTTP snapshot remained available
+PASS: both realtime replicas rebuilt, restarted, and returned healthy
+```
 
 ### Phase 6 checkpoint 1 — SyncStart service extraction
 
@@ -615,7 +650,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 7 with the realtime service shell, move browser WebSocket ownership out of the API, and add reconnect, sequence-gap, and HTTP snapshot recovery coverage.
+Begin Phase 8 by reviewing workspace dependencies and service-owned files, then remove migration-era compatibility structure while preserving the complete local verification gate.
 
 ## Remaining Phase 0 Work
 

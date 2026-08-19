@@ -1,5 +1,5 @@
 import { AdvancementRule, Entrant, Match, Player } from '@persistence/entities';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/services/phase-group.service';
 
@@ -59,7 +59,7 @@ describe('AdvancementManager', () => {
     matchService as unknown as MatchService,
     advancementRuleService as unknown as AdvancementRuleService,
     phaseGroupService as unknown as PhaseGroupService,
-    uiUpdateGateway as unknown as UiUpdateGateway,
+    uiUpdateGateway as unknown as UiUpdatePublisher,
   );
 
   beforeEach(() => {

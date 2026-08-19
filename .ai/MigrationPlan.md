@@ -277,6 +277,15 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 7 — UI Realtime Service Extraction
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-19.
+- `apps/realtime` owns browser WebSocket paths, tournament scoping, fan-out, replaceable snapshots, health, and replica-local connection state.
+- Redis assigns one atomic live sequence per tournament before Pub/Sub fan-out, and two local realtime replicas expose identical scoped ordering without cross-tournament leakage.
+- The API no longer contains WebSocket gateways or the temporary Pub/Sub forwarding bridge; UI publishers prepare their browser payloads before transport.
+- The frontend reconnects with bounded backoff and reloads HTTP snapshots after disconnect or sequence gaps.
+- Realtime replica outage and restart leave the authoritative HTTP application usable.
+
 ### Work
 
 - Create `apps/realtime` and move browser WebSocket authentication, rooms, subscriptions, and fan-out into it.

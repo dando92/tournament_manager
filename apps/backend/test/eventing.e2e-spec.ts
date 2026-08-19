@@ -333,9 +333,11 @@ describe('Eventing reliability (e2e)', () => {
         missedMessages.length === 1,
     );
 
-    expect(firstMessages[0]).toEqual(currentSnapshot);
-    expect(secondMessages[0]).toEqual(currentSnapshot);
-    expect(missedMessages[0]).toEqual(currentSnapshot);
+    expect(firstMessages[0]).toMatchObject(currentSnapshot);
+    expect(secondMessages[0]).toMatchObject(currentSnapshot);
+    expect(missedMessages[0]).toMatchObject(currentSnapshot);
+    expect(firstMessages[0].sequence).toBe(secondMessages[0].sequence);
+    expect(missedMessages[0].sequence).toBeGreaterThan(firstMessages[0].sequence!);
     await Promise.all([
       unsubscribeFirst(),
       unsubscribeSecond(),

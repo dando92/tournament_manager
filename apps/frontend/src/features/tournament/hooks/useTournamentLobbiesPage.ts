@@ -177,7 +177,7 @@ export function useTournamentLobbiesPage({
         return next;
       });
     },
-  });
+  }, refreshLobbies);
 
   const lobbies = useMemo(() => {
     const merged = new Map<string, TournamentLobbyStatusDto>();

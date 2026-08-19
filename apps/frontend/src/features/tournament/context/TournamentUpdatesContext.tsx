@@ -1,6 +1,7 @@
 import { ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import { SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -61,12 +62,6 @@ const defaultValue: TournamentUpdatesContextValue = {
 
 const TournamentUpdatesContext = createContext<TournamentUpdatesContextValue>(defaultValue);
 
-function uiUpdateHubUrl(): string {
-  const apiUrl = import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:3000/";
-  const resolved = new URL("../uiupdatehub", apiUrl);
-  return resolved.href.replace(/^http/, "ws");
-}
-
 function incrementVersion(map: ReadonlyMap<number, number>, id: number): Map<number, number> {
   const next = new Map(map);
   next.set(id, (next.get(id) ?? 0) + 1);
@@ -93,9 +88,6 @@ export function TournamentUpdatesProvider({
   const pendingMatchListDivisionIds = useRef<Set<number>>(new Set());
   const pendingDivisionMatchIds = useRef<Set<number>>(new Set());
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const ws = new WebSocket(uiUpdateHubUrl());
 
     function scheduleInvalidationFlush() {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -156,9 +148,8 @@ export function TournamentUpdatesProvider({
       }
     }
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as TournamentSocketMessage;
+  useRealtimeSocket("/uiupdatehub", tournamentId, (message: SequencedRealtimeMessage) => {
+        const msg = message as TournamentSocketMessage & SequencedRealtimeMessage;
 
         if (!msg?.data || msg.data.tournamentId !== tournamentId) {
           return;
@@ -196,16 +187,16 @@ export function TournamentUpdatesProvider({
             toast.warn(msg.data.message);
             break;
         }
-      } catch {
-        // ignore malformed websocket messages
-      }
-    };
+  }, async () => {
+    await queryClient.invalidateQueries();
+    setTournamentVersion((value) => value + 1);
+  });
 
+  useEffect(() => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      ws.close();
     };
-  }, [queryClient, tournamentId]);
+  }, []);
 
   return (
     <TournamentUpdatesContext.Provider

@@ -3,7 +3,7 @@ import { CreateRoundDto } from '@tournament/dtos';
 import { CommitMatchResultDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@persistence/entities';
 import { SongRoller } from '@tournament/services/song.roller';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { RoundService } from '@tournament/services/round.service';
 import { StandingService } from '@tournament/standing/standing.service';
@@ -23,7 +23,7 @@ export class MatchManager {
         @Inject()
         private readonly roundService: RoundService,
         @Inject()
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
         @Inject()
         private readonly matchWorkflowManager: MatchWorkflowManager,
         @Inject()

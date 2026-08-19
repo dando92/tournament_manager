@@ -90,7 +90,7 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 ## Extracted Processor Boundary
 
 - `apps/processor` owns the outbox relay, durable Redis Streams consumer loop, inbox transaction lifecycle, retry/dead-letter behavior, retention sweep, and registered stateless handlers.
-- The API owns durable producers and the temporary Pub/Sub-to-WebSocket forwarding bridge, but it does not execute durable handlers or relay outbox work.
+- The API owns durable and prepared live-event producers, but it does not maintain browser WebSockets, execute durable handlers, or relay outbox work.
 - `packages/application` contains reusable scoring calculations used from both synchronous API paths and processor handlers.
 - `packages/contracts` contains the shared internal message types.
 - `packages/eventing` contains the transport interfaces, Redis adapter, outbox service, and PostgreSQL outbox adapter shared by API producers and processor workers.
@@ -115,5 +115,13 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 - The service publishes normalized song completion to the main durable event Stream and replaceable connection, ready-state, song, score, and progress telemetry to Redis Pub/Sub.
 - Desired connector URLs and spectated-lobby reconnection specifications are service-owned operational state in Redis. They rebuild connections after a process restart and do not replace PostgreSQL tournament or result persistence.
 - Command idempotency markers and completed outcomes are retained in Redis. A completed redelivery reuses its outcome; an interrupted command with an indeterminate external outcome is not executed a second time.
-- The API temporarily subscribes to SyncStart telemetry and forwards it through the existing browser gateways. Phase 7 removes that bridge when browser connections move to `apps/realtime`.
+- `apps/realtime` subscribes directly to SyncStart telemetry and prepared UI events. The API no longer imports gateway implementations or forwards Pub/Sub telemetry.
 - Protocol frames are serialized per connection before parsing and event derivation, preventing adjacent duplicate completion frames from racing the completion signature.
+
+## Extracted Realtime Boundary
+
+- `apps/realtime` owns the three browser-compatible WebSocket paths, tournament subscriptions, scoped fan-out, replaceable snapshots, and its own health endpoints.
+- Two local replicas subscribe independently to Redis Pub/Sub. Every live publication receives one atomic per-tournament Redis sequence, so all replicas expose the same ordering.
+- Every scoped connection receives sequence markers even for events outside its compatibility path. This detects missed Pub/Sub messages without leaking another event payload or tournament scope.
+- API and processor publishers resolve database identifiers into prepared UI payloads before publication. Realtime maps transport events to browser DTOs but performs no queries or domain calculations.
+- Realtime restart loses connections and local caches only. HTTP APIs remain available and authoritative while both replicas are stopped.

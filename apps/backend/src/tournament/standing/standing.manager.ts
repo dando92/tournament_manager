@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Inject, NotFoundException } from "@nes
 import { CreateScoreDto, CreateStandingDto, UpdateStandingDto } from '../dtos';
 import { Match, Player, Score } from '@persistence/entities';
 import { ScoringSystemProvider } from "../services/scoring-systems/ScoringSystemProvider";
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
 import { ScoreService } from '../services/score.service';
@@ -22,7 +22,7 @@ export class StandingManager {
         @Inject()
         private readonly scoringSystemProvider: ScoringSystemProvider,
         @Inject()
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
     ) { }
 
     async AddScoreToMatchById(matchId: number, score: CreateScoreDto, scoreId?: number): Promise<Match> {

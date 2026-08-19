@@ -9,6 +9,7 @@ COPY packages/eventing/package.json packages/eventing/package.json
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/processor/package.json apps/processor/package.json
 COPY apps/syncstart/package.json apps/syncstart/package.json
+COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci
 COPY packages packages
@@ -28,6 +29,7 @@ COPY packages/eventing/package.json packages/eventing/package.json
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/processor/package.json apps/processor/package.json
 COPY apps/syncstart/package.json apps/syncstart/package.json
+COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --omit=dev
 COPY --from=builder /app/packages/contracts/dist packages/contracts/dist

@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { WsAdapter } from '@nestjs/platform-ws';
 import { AppLogger } from './logger/app-logger.service';
 
 async function bootstrap() {
@@ -26,7 +25,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useWebSocketAdapter(new WsAdapter(app));
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);

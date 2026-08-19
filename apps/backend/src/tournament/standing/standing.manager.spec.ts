@@ -1,5 +1,5 @@
 import { Match, Player, Score, Standing } from '@persistence/entities';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
 
@@ -69,7 +69,7 @@ describe('StandingManager', () => {
     matchWorkflowManager as unknown as MatchWorkflowManager,
     scoreService as unknown as ScoreService,
     scoringSystemProvider as unknown as ScoringSystemProvider,
-    uiUpdateGateway as unknown as UiUpdateGateway,
+    uiUpdateGateway as unknown as UiUpdatePublisher,
   );
 
   beforeEach(() => {

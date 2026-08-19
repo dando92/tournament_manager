@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Division, Entrant, Participant, Tournament } from '@persistence/entities';
 import { CreateDivisionDto, UpdateDivisionDto } from '../dtos';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
 @Injectable()
 export class DivisionService {
@@ -12,7 +12,7 @@ export class DivisionService {
         private readonly divisionRepository: Repository<Division>,
         @InjectRepository(Tournament)
         private readonly tournamentRepository: Repository<Tournament>,
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
 
     async create(dto: CreateDivisionDto): Promise<Division> {

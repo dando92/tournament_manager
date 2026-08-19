@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Entrant, Match, PhaseGroup } from '@persistence/entities';
 import { CreateMatchDto, UpdateMatchDto } from '@match/dtos/match.dto';
-import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/services/advancement-rule.service';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class MatchService {
         private readonly phaseGroupRepository: Repository<PhaseGroup>,
         @InjectRepository(Entrant)
         private readonly entrantRepository: Repository<Entrant>,
-        private readonly uiUpdateGateway: UiUpdateGateway,
+        private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
     ) {}
 

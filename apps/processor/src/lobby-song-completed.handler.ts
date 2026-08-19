@@ -11,7 +11,7 @@ import {
   LIVE_EVENT_TRANSPORT,
   LiveEventTransport,
 } from '@tournament-manager/eventing';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import {
   Match,
   Participant,
@@ -26,7 +26,13 @@ import {
 } from '@processor/eventing/event-consumer.registry';
 
 export interface LobbySongCompletedEffect {
-  matchIds: number[];
+  matchUpdates: Array<{
+    tournamentId: number;
+    divisionId: number;
+    phaseId: number;
+    phaseGroupId: number;
+    matchId: number;
+  }>;
   warnings: string[];
 }
 
@@ -72,7 +78,20 @@ export class LobbySongCompletedHandler implements EventConsumer, OnModuleInit {
       if (result.matchId) matchIds.add(result.matchId);
     }
 
-    return { matchIds: [...matchIds], warnings };
+    const matches = await manager.getRepository(Match).find({
+      where: { id: In([...matchIds]) },
+      relations: { phaseGroup: { phase: { division: { tournament: true } } } },
+    });
+    return {
+      matchUpdates: matches.map((match) => ({
+        tournamentId: completedEvent.payload.tournamentId,
+        divisionId: match.phaseGroup.phase.division.id,
+        phaseId: match.phaseGroup.phase.id,
+        phaseGroupId: match.phaseGroup.id,
+        matchId: match.id,
+      })),
+      warnings,
+    };
   }
 
   async afterCommit(event: EventEnvelope, result: unknown): Promise<void> {
@@ -83,9 +102,9 @@ export class LobbySongCompletedHandler implements EventConsumer, OnModuleInit {
         message: warning,
       });
     }
-    for (const matchId of effect.matchIds) {
+    for (const matchUpdate of effect.matchUpdates) {
       await this.publish(completed.payload.tournamentId, 'ui.match-changed', {
-        matchId,
+        ...matchUpdate,
       });
     }
   }

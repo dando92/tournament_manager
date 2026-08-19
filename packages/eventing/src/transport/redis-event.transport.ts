@@ -71,7 +71,23 @@ export class RedisEventTransport
         JSON.stringify(event),
       ]);
     }
-    await this.commandClient.publish(destination, JSON.stringify(event));
+    const script = `
+      local sequence = redis.call('INCR', KEYS[2])
+      local event = cjson.decode(ARGV[1])
+      event.sequence = sequence
+      redis.call('PUBLISH', KEYS[1], cjson.encode(event))
+      redis.call('SADD', KEYS[3], cjson.encode({kind='key', key=KEYS[2]}))
+      return sequence
+    `;
+    await this.commandClient.sendCommand([
+      'EVAL',
+      script,
+      '3',
+      destination,
+      `eventing:live-sequence:${event.tournamentId}`,
+      this.aggregateIndexKey(String(event.tournamentId)),
+      JSON.stringify(event),
+    ]);
   }
 
   async ensureConsumerGroup(stream: string, group: string): Promise<void> {
@@ -192,7 +208,7 @@ export class RedisEventTransport
     const members = await this.commandClient.sMembers(indexKey);
     for (const member of members) {
       const entry = JSON.parse(member) as {
-        kind: 'stream' | 'hash';
+        kind: 'stream' | 'hash' | 'key';
         key: string;
         id?: string;
         field?: string;
@@ -202,6 +218,8 @@ export class RedisEventTransport
         await this.commandClient.sendCommand(['XDEL', entry.key, entry.id]);
       } else if (entry.kind === 'hash' && entry.field) {
         await this.commandClient.hDel(entry.key, entry.field);
+      } else if (entry.kind === 'key') {
+        await this.commandClient.del(entry.key);
       }
     }
     await this.commandClient.del(indexKey);
