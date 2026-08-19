@@ -9,7 +9,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 9 — Continuous Delivery and Deployment Validation (not started).
+- Active phase: Phase 9 — Continuous Delivery and Deployment Validation (in progress).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
@@ -20,11 +20,37 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 7 state: complete; its exit gate passed on 2026-08-19.
 - Phase 8 state: complete; its exit gate passed on 2026-08-19.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
-- Next action: implement Phase 9 CI verification, immutable image publication, migration/deployment/readiness/smoke gates, and documented rollback behavior.
+- Next action: commit the validated runtime-configurable frontend image, then complete the CI verification, immutable publication, deployment, and rollback checkpoint.
 - Pending technical review: the proposed four-port eventing decomposition (`DurableEventPublisher`, `DurableEventConsumer`, `RealTimeEventPublisher`, and `RealTimeEventSubscriber`) is documented in `Architecture.md`. It is not approved and must not be implemented before user review.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 9 checkpoint 1 — Runtime-configurable frontend image
+
+- Replaced build-time frontend endpoint and authentication configuration with `/runtime-config.js`, generated from container environment variables at startup.
+- Kept Vite values only as direct-development fallbacks and added unit coverage proving runtime configuration takes precedence.
+- Removed frontend Docker build arguments from the local stack, so the same image can run with different local or hosted endpoint configuration.
+- Rebuilt the complete local stack and confirmed the frontend container generated the expected local runtime configuration.
+
+Verification result:
+
+```text
+npm run test --workspace=tournament-viewer
+PASS: route subtitle and runtime configuration tests
+
+npm run build --workspace=tournament-viewer
+PASS: TypeScript and Vite production build
+
+npm run local:up
+PASS: frontend and complete application images rebuilt
+PASS: all retained-volume services healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: complete service health, migration, Swagger, seed, and frontend checks
+```
 
 ### Phase 8 checkpoint 1 — Final monorepo boundaries and cleanup
 
@@ -690,7 +716,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 9 by replacing the legacy image-only workflow with required verification and immutable image publication, then add provider-neutral migration, deployment, readiness, smoke, promotion, and rollback contracts.
+Complete Phase 9 with required verification, immutable image publication, provider-neutral migration and deployment, readiness and smoke gates, and automatic rollback.
 
 ## Remaining Phase 0 Work
 

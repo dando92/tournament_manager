@@ -188,11 +188,11 @@ services:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
-      args:
-        VITE_PUBLIC_API_URL: ${VITE_PUBLIC_API_URL:-http://localhost:3000/}
-        VITE_PUBLIC_REALTIME_URL: ${VITE_PUBLIC_REALTIME_URL:-http://localhost:3003/}
-        VITE_PUBLIC_ENABLE_LIVE_SCORES: ${VITE_PUBLIC_ENABLE_LIVE_SCORES:-true}
     restart: unless-stopped
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3000/}
+      PUBLIC_REALTIME_URL: ${PUBLIC_REALTIME_URL:-http://localhost:3003/}
+      PUBLIC_AUTH_MODE: ${PUBLIC_AUTH_MODE:-local}
     ports:
       - "${FRONTEND_PORT:-80}:80"
     depends_on:

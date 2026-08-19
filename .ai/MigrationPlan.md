@@ -333,7 +333,8 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ### Progress
 
-- Not started.
+- In progress.
+- The frontend image now receives public API, realtime, and authentication configuration at container startup, so environment changes do not rebuild or retag the tested image.
 
 ### Work
 

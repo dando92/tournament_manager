@@ -1,0 +1,1 @@
+window.__TOURNAMENT_MANAGER_CONFIG__ = window.__TOURNAMENT_MANAGER_CONFIG__ || {};

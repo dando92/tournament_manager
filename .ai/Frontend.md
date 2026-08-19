@@ -13,7 +13,7 @@
 
 The frontend is located in `apps/frontend` and is an npm workspace. It communicates with the API through HTTP and with `apps/realtime` through browser WebSockets.
 
-Vite loads environment files from the repository root so local and container configuration remain centralized.
+Vite loads build-time development defaults from the repository root. Container deployments inject public endpoints and authentication mode through `/runtime-config.js` at startup so one immutable image works in every environment.
 
 ## Realtime Recovery
 
@@ -22,7 +22,7 @@ Vite loads environment files from the repository root so local and container con
 - Reconnect automatically after transport interruption.
 - Reload the relevant snapshot after reconnecting or detecting a sequence gap.
 - Do not require replay of replaceable high-frequency live events.
-- Configure the browser WebSocket and realtime snapshot origin independently with `VITE_PUBLIC_REALTIME_URL`; `VITE_PUBLIC_API_URL` remains the authoritative application API.
+- Configure the browser WebSocket and realtime snapshot origin independently with `PUBLIC_REALTIME_URL`; `PUBLIC_API_URL` remains the authoritative application API. The `VITE_*` values are development fallbacks only.
 - Keep the legacy path-specific message handlers during the migration, but route them through the shared reconnecting and sequence-aware client.
 
 ## Tournament Lifecycle

@@ -15,18 +15,17 @@ COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --workspace=tournament-viewer
 COPY apps/frontend apps/frontend
-# VITE_PUBLIC_API_URL must be passed at build time via --build-arg
-ARG VITE_PUBLIC_API_URL
-ARG VITE_PUBLIC_REALTIME_URL
-ARG VITE_PUBLIC_ENABLE_LIVE_SCORES=true
-ENV VITE_PUBLIC_API_URL=$VITE_PUBLIC_API_URL
-ENV VITE_PUBLIC_REALTIME_URL=$VITE_PUBLIC_REALTIME_URL
-ENV VITE_PUBLIC_ENABLE_LIVE_SCORES=$VITE_PUBLIC_ENABLE_LIVE_SCORES
 RUN npm run build --workspace=tournament-viewer
 
 # ---- Serve stage ----
 FROM nginx:alpine
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/frontend/runtime-config.template.js /etc/tournament-manager/runtime-config.template.js
+COPY apps/frontend/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
+ENV PUBLIC_API_URL=http://localhost:3000/ \
+    PUBLIC_REALTIME_URL=http://localhost:3003/ \
+    PUBLIC_AUTH_MODE=web
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,1 +1,3 @@
-export const isLocalMode = () => import.meta.env.VITE_AUTH_MODE === 'local';
+import { authMode } from '@/shared/runtime-config';
+
+export const isLocalMode = () => authMode() === 'local';

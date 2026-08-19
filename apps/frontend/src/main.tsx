@@ -6,8 +6,9 @@ import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { PermissionProvider } from "@/shared/services/permissions/PermissionContext";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { apiUrl } from "@/shared/runtime-config";
 
-axios.defaults.baseURL = import.meta.env.VITE_PUBLIC_API_URL!;
+axios.defaults.baseURL = apiUrl();
 
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");

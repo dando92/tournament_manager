@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { realtimeUrl } from "../runtime-config";
 
 export type SequencedRealtimeMessage = {
   event: string;
@@ -9,7 +10,7 @@ export type SequencedRealtimeMessage = {
 type RealtimePath = "/uiupdatehub" | "/lobbygateway" | "/livematchgateway";
 
 export function realtimeHttpUrl(): string {
-  return import.meta.env.VITE_PUBLIC_REALTIME_URL ?? "http://localhost:3003/";
+  return realtimeUrl();
 }
 
 export function realtimeWebSocketUrl(path: RealtimePath, tournamentId: number): string {
