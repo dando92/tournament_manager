@@ -3,10 +3,10 @@
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- State: Phase 5 review complete; local-stack final verification remains.
+- Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
+- State: Migration complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: run clean local-stack and retained-volume verification, then mark the migration complete.
+- Next action: none; future work follows the normal product backlog and the deferred questions in [FunctionalQuestions.md](FunctionalQuestions.md).
 
 ## Completed Checkpoints
 
@@ -33,34 +33,35 @@
 - Deployment topology, CI matrix, local checks, and service images no longer include the processor.
 - Final code parity verification passed for API unit tests, contract tests, PostgreSQL/Redis e2e tests, workspace builds, and architecture boundaries. Existing lint warnings remain non-blocking.
 
+### Migration closure complete
+
+- Fixed missing workspace build dependencies in the API and local-fixtures images and enabled Nest dependency-injection metadata in `@tournament-manager/live-messaging`.
+- Made repository and local verification build shared workspaces before running tests, and aligned the affected e2e tests with the synchronous SyncStart and lazy Redis publisher lifecycles.
+- Consolidated the pre-production database history into one application-only baseline; eventing migrations, tables, indexes, and the obsolete `transportPurgedAt` field were removed.
+- Removed stale processor, Streams, outbox, inbox, retry, dead-letter, and retention procedures from local operations documentation.
+- Passed clean-stack verification and a second complete verification after restarting with PostgreSQL and Redis volumes retained.
+
 ## Verification
 
 ```text
 npm run verify
-PASS: architecture-boundary check
-PASS: workspace TypeScript and ESLint checks (10 pre-existing API lint warnings; no errors)
-PASS: contracts, unit, PostgreSQL/Redis e2e, and workspace build stages
+PASS: architecture boundaries, all workspace builds, lint (warnings only), contracts, unit tests, API e2e tests, and migration-runner e2e test
 
-npm run test --workspace=@tournament-manager/api -- --runInBand
-PASS: 8 suites, 26 tests
+npm run local:reset
+PASS: all images build; migrations and fixtures complete; API, SyncStart, both Realtime replicas, frontend, PostgreSQL, and Redis become healthy
 
-npm run test:e2e --workspace=@tournament-manager/api -- --runInBand
-PASS: 5 suites, 19 tests
+Database baseline inspection
+PASS: only InitialSchema1787085404083 is recorded; event_outbox and event_inbox are absent; Local E2E Tournament has id 1
 
-npm run test:e2e --workspace=@tournament-manager/migrations
-PASS: 1 suite, 1 test
+npm run verify:local
+PASS: workspace build, PostgreSQL/Redis integration tests, 11 API e2e tests, migration-runner e2e test, all health/readiness endpoints, Swagger, deterministic fixture, and frontend
 
-npm run build
-PASS: all workspaces build
+npm run local:down
+docker compose up --detach --wait --remove-orphans
+PASS: stack restarts with named volumes retained; migration record and fixture remain unchanged
 
-npm run check:architecture
-PASS: architecture boundaries verified
-
-docker compose build migrations local-fixtures
-PASS: both images compile; a concurrent local Compose build reported a non-code tag-export conflict for the already-created local-fixtures image.
-
-npm run verify
-PASS: architecture check, lint (warnings only), contract tests, unit tests, e2e tests, and workspace builds.
+npm run verify:local
+PASS: complete local verification after retained-volume restart
 ```
 
 ## Handoff Rule

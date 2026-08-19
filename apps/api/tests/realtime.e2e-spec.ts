@@ -16,11 +16,10 @@ describe('realtime service extraction', () => {
     process.env.LIVE_EVENT_CHANNEL = `test:realtime:${Date.now()}`;
     replicas = await Promise.all([startReplica(), startReplica()]);
     publisher = new RedisLiveEventPublisher(new ConfigService(process.env));
-    await publisher.onModuleInit();
   });
 
   afterAll(async () => {
-    await publisher?.onApplicationShutdown();
+    await publisher?.onModuleDestroy();
     await Promise.all(replicas.map((app) => app.close()));
   });
 

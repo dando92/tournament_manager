@@ -42,6 +42,7 @@ describe('migration runner', () => {
   it('creates the application schema and is repeatable', async () => {
     const tables = await dataSource.query<{ table_name: string }[]>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
     expect(tables.map(({ table_name }) => table_name)).toEqual(expect.arrayContaining(['tournament', 'match', 'score', 'standing']));
+    expect(tables.map(({ table_name }) => table_name)).not.toEqual(expect.arrayContaining(['event_outbox', 'event_inbox']));
     await expect(dataSource.runMigrations({ transaction: 'all' })).resolves.toEqual([]);
   });
 });

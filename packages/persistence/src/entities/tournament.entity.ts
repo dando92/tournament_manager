@@ -2,7 +2,6 @@ import {
   Entity,
   Column,
   Check,
-  Index,
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
@@ -15,9 +14,6 @@ export type TournamentStatus = 'open' | 'closed';
 
 @Entity()
 @Check('CHK_tournament_status', `"status" IN ('open', 'closed')`)
-@Index('IDX_tournament_retention', ['closedAt'], {
-  where: `"status" = 'closed' AND "transportPurgedAt" IS NULL`,
-})
 export class Tournament {
   @PrimaryGeneratedColumn()
   id: number;
@@ -30,9 +26,6 @@ export class Tournament {
 
   @Column({ type: 'timestamptz', nullable: true })
   closedAt: Date | null;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  transportPurgedAt: Date | null;
 
   @Column({ default: 'ws://syncservice.groovestats.com:1337' })
   syncstartUrl: string;

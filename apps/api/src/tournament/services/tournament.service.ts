@@ -101,7 +101,6 @@ export class TournamentService {
         if (tournament.status === status) return tournament;
         tournament.status = status;
         tournament.closedAt = status === 'closed' ? new Date() : null;
-        tournament.transportPurgedAt = null;
         return this.tournamentRepository.save(tournament);
     }
 

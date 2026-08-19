@@ -39,14 +39,13 @@ Local endpoints:
 - Swagger: `http://localhost:3000/api-docs`
 - API liveness: `http://localhost:3000/health/live`
 - API readiness: `http://localhost:3000/health/ready`
-- Processor liveness and readiness: internal container endpoints on port `3001`, reported by `npm run local:status` and `npm run verify:local`
 - SyncStart liveness and readiness: internal container endpoints on port `3002`, reported by `npm run verify:local`
 - Realtime replica A: `http://localhost:3003` (health, snapshot HTTP, and browser WebSockets)
 - Realtime replica B: `http://localhost:3004` (independent local fan-out replica)
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates or updates the application schema from versioned migrations before API readiness. TypeORM schema synchronization is disabled.
+Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates the application schema from the reviewed pre-production baseline before API readiness. TypeORM schema synchronization is disabled.
 
 Replaceable live events use the `tournament-manager.live` Redis Pub/Sub channel. API-to-SyncStart commands and completed-song submissions use authenticated internal HTTP.
 
@@ -128,10 +127,7 @@ The current pre-production schema baseline intentionally does not upgrade databa
 - After a normal shutdown and startup, `npm run local:status` must show retained data and all dependencies up.
 - If PostgreSQL or Redis is stopped, `/health/live` remains available while `/health/ready` returns `503` and identifies the failed dependency.
 - After the dependency restarts, Compose and the API health checks restore readiness without deleting volumes.
-- Outbox rows remain pending while the processor or Redis is unavailable. After the processor and Redis are available, the relay publishes them; pending consumer entries are reclaimed after a processor restart.
-- SyncStart commands remain in their dedicated Stream while the service is stopped. On restart it consumes pending commands and rebuilds configured connectors and lobby sessions from its Redis operational state.
+- API-to-SyncStart commands use synchronous internal HTTP. A failed request is reported to the caller and is not retained for automatic retry.
+- Redis Pub/Sub live messages are replaceable and may be lost while Redis, a publisher, or a subscriber is unavailable. Authoritative state remains in PostgreSQL and clients recover through HTTP snapshots.
 - Realtime may be stopped without affecting HTTP behavior or authoritative state. After reconnect or a sequence gap, the frontend reloads HTTP snapshots; only browser connections and replaceable cached telemetry are lost on restart.
-- Multiple processor replicas share the configured consumer group and retain business-level exactly-once effects through inbox uniqueness. For a temporary local scale check, run `docker compose up --detach --scale processor=2 --no-recreate`, then return to one replica with the same command and `--scale processor=1`.
-- Inspect `event_outbox.last_error` and `publish_attempts` for relay failures and the configured `.dead-letter` Stream for messages that exhausted consumer retries.
-- A successful retention sweep records `tournament.transportPurgedAt`. Until that value is set, failed PostgreSQL or Redis cleanup is retried on a later sweep.
 - If the migration container fails, inspect `docker compose logs migrations`; the API intentionally remains stopped.

@@ -59,13 +59,12 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `apps/frontend`: Current React and Vite web application.
 - `packages/application`: Pure reusable application calculations when genuinely shared.
 - `packages/contracts`: Transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
-- `packages/live-messaging`: Redis Pub/Sub live-message ports and adapters.
-- `packages/live-messaging`: Target live-message publisher/subscriber ports and Redis Pub/Sub adapters.
+- `packages/live-messaging`: Live-message publisher/subscriber ports and Redis Pub/Sub adapters.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `.ai`: Project architecture, coding, and design decisions.
 
-The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.
+The implemented structure and service boundaries are defined in `.ai/Architecture.md`.
 
 ## Migration Commit Authorization
 

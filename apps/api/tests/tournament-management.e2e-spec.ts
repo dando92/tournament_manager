@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 
 import { AppModule } from '../src/app.module';
 import { Account } from '@tournament-manager/persistence';
+import { LobbyManager } from '../src/tournament/services/lobby-manager.service';
 import * as fixture from './fixtures/tournament-management.json';
 import {
   dropTestDatabase,
@@ -25,7 +26,15 @@ describe('Tournament management (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(LobbyManager)
+      .useValue({
+        OnTournamentCreated: jest.fn().mockResolvedValue(undefined),
+        OnTournamentUrlChanged: jest.fn().mockResolvedValue(undefined),
+        OnTournamentClosed: jest.fn().mockResolvedValue(undefined),
+        OnTournamentReopened: jest.fn().mockResolvedValue(undefined),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

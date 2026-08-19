@@ -45,6 +45,9 @@ describe('PostgreSQL migrations (e2e)', () => {
         'tournament',
       ]),
     );
+    expect(tables.map(({ table_name }) => table_name)).not.toEqual(
+      expect.arrayContaining(['event_outbox', 'event_inbox']),
+    );
     await expect(dataSource.showMigrations()).resolves.toBe(false);
   });
 
