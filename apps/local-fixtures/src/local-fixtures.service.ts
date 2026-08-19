@@ -3,13 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tournament } from '@tournament-manager/persistence';
-import { Inject } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { SyncStartCommandEvent } from '@tournament-manager/contracts';
-import {
-  DURABLE_EVENT_TRANSPORT,
-  DurableEventTransport,
-} from '@tournament-manager/eventing';
 
 @Injectable()
 export class LocalFixturesService {
@@ -19,8 +12,6 @@ export class LocalFixturesService {
     @InjectRepository(Tournament)
     private readonly tournaments: Repository<Tournament>,
     private readonly config: ConfigService,
-    @Inject(DURABLE_EVENT_TRANSPORT)
-    private readonly eventTransport: DurableEventTransport,
   ) {}
 
   async apply(): Promise<void> {
@@ -48,20 +39,10 @@ export class LocalFixturesService {
 
   private async configureSyncStart(tournament: Tournament): Promise<void> {
     if (!tournament.syncstartUrl) return;
-    const event: SyncStartCommandEvent = {
-      id: randomUUID(),
-      type: 'syncstart.command',
-      aggregateId: String(tournament.id),
-      payload: {
-        action: 'configure-tournament',
-        tournamentId: tournament.id,
-        syncstartUrl: tournament.syncstartUrl,
-      },
-    };
-    await this.eventTransport.publish(
-      this.config.get('SYNCSTART_COMMAND_STREAM') ??
-        'tournament-manager.syncstart.commands',
-      event,
-    );
+    const response = await fetch(`${this.config.getOrThrow<string>('SYNCSTART_INTERNAL_URL')}/internal/tournaments/${tournament.id}/configuration`, {
+      method: 'PUT', headers: { 'content-type': 'application/json', 'x-internal-service-token': this.config.getOrThrow<string>('INTERNAL_SERVICE_TOKEN') },
+      body: JSON.stringify({ syncstartUrl: tournament.syncstartUrl }),
+    });
+    if (!response.ok) throw new Error(`SyncStart configuration failed with HTTP ${response.status}`);
   }
 }

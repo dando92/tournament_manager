@@ -32,7 +32,7 @@
   "dependencies": {
     "@tournament-manager/application": "0.0.1",
     "@tournament-manager/contracts": "0.0.1",
-    "@tournament-manager/eventing": "0.0.1",
+    "@tournament-manager/live-messaging": "0.0.1",
     "@tournament-manager/persistence": "0.0.1",
     "@tournament-manager/startgg": "0.0.1",
     "@nestjs/common": "^11.1.18",
@@ -101,7 +101,6 @@
     "testEnvironment": "node",
       "moduleNameMapper": {
       "^@api/(.*)$": "<rootDir>/src/$1",
-      "^@processor/(.*)$": "<rootDir>/../processor/src/$1",
       "^@test/(.*)$": "<rootDir>/tests/$1",
       "^@auth/(.*)$": "<rootDir>/src/auth/$1",
       "^@bracket/(.*)$": "<rootDir>/src/tournament/bracket/$1",

@@ -16,7 +16,7 @@
     "@nestjs/core": "^11.1.18",
     "@nestjs/platform-express": "^11.1.18",
     "@tournament-manager/contracts": "0.0.1",
-    "@tournament-manager/eventing": "0.0.1",
+    "@tournament-manager/live-messaging": "0.0.1",
     "redis": "^5.8.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

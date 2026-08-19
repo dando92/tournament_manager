@@ -1,21 +1,21 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
-import { RedisEventTransport } from '@tournament-manager/eventing';
+import { RedisLiveEventPublisher } from '@tournament-manager/live-messaging';
 import type { LiveEventEnvelope } from '@tournament-manager/contracts';
 import { WebSocket } from 'ws';
 import { RealtimeModule } from '../../realtime/src/realtime.module';
 
 describe('realtime service extraction', () => {
   let replicas: INestApplication[] = [];
-  let publisher: RedisEventTransport;
+  let publisher: RedisLiveEventPublisher;
   const tournamentId = 910001;
   const otherTournamentId = 910002;
 
   beforeAll(async () => {
     process.env.LIVE_EVENT_CHANNEL = `test:realtime:${Date.now()}`;
     replicas = await Promise.all([startReplica(), startReplica()]);
-    publisher = new RedisEventTransport(new ConfigService(process.env));
+    publisher = new RedisLiveEventPublisher(new ConfigService(process.env));
     await publisher.onModuleInit();
   });
 
@@ -84,7 +84,7 @@ describe('realtime service extraction', () => {
   });
 
   async function publish(event: Omit<LiveEventEnvelope, 'sequence'>): Promise<void> {
-    await publisher.publish(process.env.LIVE_EVENT_CHANNEL!, event);
+    await publisher.publish(event);
   }
 });
 

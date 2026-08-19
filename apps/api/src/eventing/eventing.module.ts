@@ -1,24 +1,13 @@
 import { Module } from '@nestjs/common';
-import {
-  DURABLE_EVENT_TRANSPORT,
-  LIVE_EVENT_TRANSPORT,
-  OutboxService,
-  PostgresOutboxPersistence,
-  RedisEventTransport,
-} from '@tournament-manager/eventing';
+import { LIVE_EVENT_PUBLISHER, RedisLiveEventPublisher } from '@tournament-manager/live-messaging';
 
 @Module({
   providers: [
-    RedisEventTransport,
-    { provide: DURABLE_EVENT_TRANSPORT, useExisting: RedisEventTransport },
-    { provide: LIVE_EVENT_TRANSPORT, useExisting: RedisEventTransport },
-    OutboxService,
-    PostgresOutboxPersistence,
+    RedisLiveEventPublisher,
+    { provide: LIVE_EVENT_PUBLISHER, useExisting: RedisLiveEventPublisher },
   ],
   exports: [
-    OutboxService,
-    DURABLE_EVENT_TRANSPORT,
-    LIVE_EVENT_TRANSPORT,
+    LIVE_EVENT_PUBLISHER,
   ],
 })
 export class EventingModule {}

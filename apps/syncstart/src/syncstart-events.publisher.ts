@@ -12,16 +12,16 @@ import type {
   SyncStartTelemetryType,
 } from "@tournament-manager/contracts";
 import {
-  LIVE_EVENT_TRANSPORT,
-  LiveEventTransport,
-} from "@tournament-manager/eventing";
+  LIVE_EVENT_PUBLISHER,
+  LiveEventPublisher,
+} from '@tournament-manager/live-messaging';
 import type { ILobbyObserver } from "./protocol";
 
 @Injectable()
 export class SyncStartEventsPublisher implements ILobbyObserver {
   constructor(
     private readonly config: ConfigService,
-    @Inject(LIVE_EVENT_TRANSPORT) private readonly live: LiveEventTransport,
+    @Inject(LIVE_EVENT_PUBLISHER) private readonly live: LiveEventPublisher,
   ) {}
 
   publishCommandResult(
@@ -101,9 +101,6 @@ export class SyncStartEventsPublisher implements ILobbyObserver {
     payload: unknown,
   ): Promise<void> {
     const event: LiveEventEnvelope = { type, tournamentId, payload };
-    return this.live.publish(
-      this.config.get("LIVE_EVENT_CHANNEL") ?? "tournament-manager.live",
-      event,
-    );
+    return this.live.publish(event);
   }
 }

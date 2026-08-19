@@ -9,9 +9,9 @@ import {
   SyncStartSongCompletedPayload,
 } from '@tournament-manager/contracts';
 import {
-  LIVE_EVENT_TRANSPORT,
-  LiveEventTransport,
-} from '@tournament-manager/eventing';
+  LIVE_EVENT_PUBLISHER,
+  LiveEventPublisher,
+} from '@tournament-manager/live-messaging';
 import { DataSource, EntityManager, In } from 'typeorm';
 import {
   Match,
@@ -43,8 +43,8 @@ export class CompletedSongService {
     private readonly dataSource: DataSource,
     private readonly scoringSystems: ScoringSystemProvider,
     private readonly config: ConfigService,
-    @Inject(LIVE_EVENT_TRANSPORT)
-    private readonly liveTransport: LiveEventTransport,
+    @Inject(LIVE_EVENT_PUBLISHER)
+    private readonly liveTransport: LiveEventPublisher,
   ) {}
 
   async submit(request: CompletedSongRequest): Promise<void> {
@@ -316,10 +316,7 @@ export class CompletedSongService {
     payload: unknown,
   ): Promise<void> {
     const event: LiveEventEnvelope = { type, tournamentId, payload };
-    return this.liveTransport.publish(
-      this.config.get('LIVE_EVENT_CHANNEL') ?? 'tournament-manager.live',
-      event,
-    );
+    return this.liveTransport.publish(event);
   }
 }
 

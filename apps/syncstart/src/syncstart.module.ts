@@ -1,15 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import {
-  LIVE_EVENT_TRANSPORT,
-  RedisEventTransport,
-} from "@tournament-manager/eventing";
+import { LIVE_EVENT_PUBLISHER, RedisLiveEventPublisher } from '@tournament-manager/live-messaging';
 import { HealthController } from "./health.controller";
 import { InternalController } from './internal.controller';
-import { SyncStartCommandConsumer } from "./syncstart-command.consumer";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
 import { SyncStartSessionManager } from "./syncstart-session.manager";
-import { SyncStartStateStore } from "./syncstart-state.store";
 
 @Module({
   imports: [
@@ -20,12 +15,10 @@ import { SyncStartStateStore } from "./syncstart-state.store";
   ],
   controllers: [HealthController, InternalController],
   providers: [
-    RedisEventTransport,
-    { provide: LIVE_EVENT_TRANSPORT, useExisting: RedisEventTransport },
+    RedisLiveEventPublisher,
+    { provide: LIVE_EVENT_PUBLISHER, useExisting: RedisLiveEventPublisher },
     SyncStartEventsPublisher,
-    SyncStartStateStore,
     SyncStartSessionManager,
-    SyncStartCommandConsumer,
   ],
 })
 export class SyncStartModule {}

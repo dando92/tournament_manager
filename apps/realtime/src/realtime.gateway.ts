@@ -2,7 +2,7 @@ import { Inject, Injectable, OnApplicationBootstrap, OnModuleDestroy } from '@ne
 import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { LiveEventEnvelope } from '@tournament-manager/contracts';
-import { LIVE_EVENT_TRANSPORT, type LiveEventTransport } from '@tournament-manager/eventing';
+import { LIVE_EVENT_SUBSCRIBER, type LiveEventSubscriber } from '@tournament-manager/live-messaging';
 import type { IncomingMessage } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { mapRealtimeEvent, RealtimeMessage, RealtimePath } from './realtime-event.mapper';
@@ -22,14 +22,14 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnModuleDestroy 
   constructor(
     private readonly config: ConfigService,
     private readonly adapterHost: HttpAdapterHost,
-    @Inject(LIVE_EVENT_TRANSPORT) private readonly transport: LiveEventTransport,
+    @Inject(LIVE_EVENT_SUBSCRIBER) private readonly transport: LiveEventSubscriber,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
     const httpServer = this.adapterHost.httpAdapter.getHttpServer();
     this.upgradeHandler = (request, socket, head) => this.handleUpgrade(request, socket, head);
     httpServer.on('upgrade', this.upgradeHandler);
-    this.unsubscribe = await this.transport.subscribe(this.liveChannel, (event) => this.forward(event));
+    this.unsubscribe = await this.transport.subscribe((event) => this.forward(event));
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -68,7 +68,7 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnModuleDestroy 
   }
 
   private forward(event: LiveEventEnvelope): void {
-    if (typeof event.sequence !== 'number') return;
+    if (typeof event.sequence !== 'number') event.sequence = (this.lastSequence.get(event.tournamentId) ?? 0) + 1;
     this.lastSequence.set(event.tournamentId, event.sequence);
     const lobbyPayload = event.payload as { lobbyId?: string; isActive?: boolean };
     if (event.type === 'syncstart.lobby-disconnected' && lobbyPayload.lobbyId && !lobbyPayload.isActive)

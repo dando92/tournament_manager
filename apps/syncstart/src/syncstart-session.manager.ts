@@ -1,7 +1,6 @@
 import {
   Injectable,
   OnApplicationShutdown,
-  OnModuleInit,
 } from "@nestjs/common";
 import type {
   LobbyConnectionDto,
@@ -9,7 +8,6 @@ import type {
 } from "@tournament-manager/contracts";
 import { SyncStartConnector } from "./protocol";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
-import { SyncStartStateStore } from "./syncstart-state.store";
 
 type LobbyMeta = LobbyConnectionDto;
 type LobbySummary = {
@@ -23,31 +21,14 @@ type LobbySummary = {
 
 @Injectable()
 export class SyncStartSessionManager
-  implements OnModuleInit, OnApplicationShutdown
+  implements OnApplicationShutdown
 {
   private readonly connectors = new Map<number, SyncStartConnector>();
   private readonly lobbyMeta = new Map<string, LobbyMeta>();
 
   constructor(
     private readonly events: SyncStartEventsPublisher,
-    private readonly state: SyncStartStateStore,
   ) {}
-
-  async onModuleInit(): Promise<void> {
-    for (const [id, url] of Object.entries(await this.state.configurations()))
-      this.createConnector(Number(id), url);
-    for (const lobby of await this.state.lobbies()) {
-      if (!this.connectors.has(lobby.tournamentId)) continue;
-      this.connectors
-        .get(lobby.tournamentId)
-        ?.SpectateLobby({ ...lobby })
-        .catch((error) =>
-          console.error(
-            `[SyncStartSessionManager] Failed to restore lobby ${lobby.lobbyCode}: ${error instanceof Error ? error.message : error}`,
-          ),
-        );
-    }
-  }
 
   async execute(command: SyncStartCommandPayload): Promise<unknown> {
     switch (command.action) {
@@ -95,7 +76,6 @@ export class SyncStartSessionManager
     await this.close(tournamentId);
     if (!url) return;
     this.createConnector(tournamentId, url);
-    await this.state.setConfiguration(tournamentId, url);
   }
 
   private async close(tournamentId: number): Promise<void> {
@@ -103,7 +83,6 @@ export class SyncStartSessionManager
     this.connectors.delete(tournamentId);
     for (const [key, meta] of this.lobbyMeta)
       if (meta.tournamentId === tournamentId) this.lobbyMeta.delete(key);
-    await this.state.deleteTournament(tournamentId);
   }
 
   private async connectLobby(
@@ -114,12 +93,6 @@ export class SyncStartSessionManager
       tournamentId: command.tournamentId,
       lobbyName: command.lobbyName || code,
       lobbyCode: code,
-      password: command.password ?? "",
-    });
-    await this.state.saveLobby({
-      tournamentId: command.tournamentId,
-      lobbyCode: result.lobbyCode,
-      lobbyName: command.lobbyName || code,
       password: command.password ?? "",
     });
     return { id: result.lobbyId };
@@ -133,12 +106,6 @@ export class SyncStartSessionManager
       lobbyName: command.lobbyName || undefined,
       password: command.password ?? "",
     });
-    await this.state.saveLobby({
-      tournamentId: command.tournamentId,
-      lobbyCode: result.lobbyCode,
-      lobbyName: command.lobbyName || result.lobbyCode,
-      password: command.password ?? "",
-    });
     return result;
   }
 
@@ -149,7 +116,6 @@ export class SyncStartSessionManager
     const code = lobbyId.toUpperCase();
     this.connectors.get(tournamentId)?.LeaveLobby(code);
     this.lobbyMeta.delete(this.key(tournamentId, code));
-    await this.state.deleteLobby(tournamentId, code);
   }
 
   private async listLobbies(
