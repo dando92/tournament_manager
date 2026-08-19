@@ -16,9 +16,8 @@ describe("SyncStartClient protocol boundary", () => {
       OnGoingMatchUpdate: jest.fn(),
       OnSongCompleted: jest.fn(),
     };
-    const connector = new SyncStartClient(await simulator.url(), [observer]);
+    const connector = new SyncStartClient(7, await simulator.url(), [observer]);
     await connector.SpectateLobby({
-      tournamentId: 7,
       lobbyName: "Finals",
       lobbyCode: "abcd",
     });
@@ -41,8 +40,8 @@ describe("SyncStartClient protocol boundary", () => {
 
   it("searches lobbies through the deterministic server protocol", async () => {
     simulator = new SyncStartProtocolSimulator();
-    const connector = new SyncStartClient(await simulator.url(), []);
-    await connector.ConnectToServer(7);
+    const connector = new SyncStartClient(7, await simulator.url(), []);
+    await connector.ConnectToServer();
     await expect(connector.SearchLobbies()).resolves.toEqual([
       {
         code: "abcd",
@@ -59,9 +58,8 @@ describe("SyncStartClient protocol boundary", () => {
       disconnectFirstLobbyConnection: true,
     });
     const observer: ILobbyObserver = { OnConnected: jest.fn() };
-    const connector = new SyncStartClient(await simulator.url(), [observer]);
+    const connector = new SyncStartClient(7, await simulator.url(), [observer]);
     await connector.SpectateLobby({
-      tournamentId: 7,
       lobbyName: "Finals",
       lobbyCode: "ABCD",
     });

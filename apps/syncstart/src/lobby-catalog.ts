@@ -1,4 +1,3 @@
-import { Injectable } from "@nestjs/common";
 import type { LobbyConnectionDto } from "@tournament-manager/contracts";
 import type {
   ILobbyObserver,
@@ -14,9 +13,11 @@ export type LobbySummary = {
   spectatorCount: number;
 };
 
-@Injectable()
+/** Owns the replaceable lobby query projection for one tournament runtime. */
 export class LobbyCatalog implements ILobbyObserver {
   private readonly lobbyMeta = new Map<string, LobbyConnectionDto>();
+
+  constructor(readonly tournamentId: number) {}
 
   OnConnectionActive(event: LobbyConnectionDto): void {
     this.remember(event);
@@ -27,21 +28,20 @@ export class LobbyCatalog implements ILobbyObserver {
   }
 
   OnDisconnection(event: LobbyConnectionDto): void {
+    this.assertOwner(event);
+    const lobbyCode = event.lobbyCode.toUpperCase();
     if (!event.isActive) {
-      this.lobbyMeta.delete(this.key(event.tournamentId, event.lobbyCode));
+      this.lobbyMeta.delete(lobbyCode);
       return;
     }
-    this.remember(event);
+    this.lobbyMeta.set(lobbyCode, event);
   }
 
-  list(
-    tournamentId: number,
-    discovered: SyncStartLobbySummaryDto[],
-  ): LobbySummary[] {
+  list(discovered: SyncStartLobbySummaryDto[]): LobbySummary[] {
     const result = new Map<string, LobbySummary>();
     for (const lobby of discovered) {
       const lobbyCode = lobby.code.toUpperCase();
-      const meta = this.lobbyMeta.get(this.key(tournamentId, lobbyCode));
+      const meta = this.lobbyMeta.get(lobbyCode);
       result.set(lobbyCode, {
         id: lobbyCode,
         name: meta?.lobbyName ?? lobbyCode,
@@ -52,7 +52,6 @@ export class LobbyCatalog implements ILobbyObserver {
       });
     }
     for (const meta of this.lobbyMeta.values()) {
-      if (meta.tournamentId !== tournamentId) continue;
       const existing = result.get(meta.lobbyCode);
       result.set(meta.lobbyCode, {
         id: meta.lobbyId,
@@ -68,17 +67,20 @@ export class LobbyCatalog implements ILobbyObserver {
     );
   }
 
-  removeTournament(tournamentId: number): void {
-    for (const [key, meta] of this.lobbyMeta) {
-      if (meta.tournamentId === tournamentId) this.lobbyMeta.delete(key);
-    }
+  clear(): void {
+    this.lobbyMeta.clear();
   }
 
   private remember(event: LobbyConnectionDto): void {
-    this.lobbyMeta.set(this.key(event.tournamentId, event.lobbyCode), event);
+    this.assertOwner(event);
+    this.lobbyMeta.set(event.lobbyCode.toUpperCase(), event);
   }
 
-  private key(tournamentId: number, lobbyCode: string): string {
-    return `${tournamentId}:${lobbyCode.toUpperCase()}`;
+  private assertOwner(event: LobbyConnectionDto): void {
+    if (event.tournamentId !== this.tournamentId) {
+      throw new Error(
+        `Cannot apply tournament ${event.tournamentId} lobby event to tournament ${this.tournamentId} catalog`,
+      );
+    }
   }
 }

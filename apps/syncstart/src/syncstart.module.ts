@@ -8,9 +8,10 @@ import {
 import { HealthController } from "./health.controller";
 import { InternalController } from "./internal.controller";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
-import { LobbyCatalog } from "./lobby-catalog";
 import { CompletedSongSubmitter } from "./completed-song-submitter";
 import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
+import { syncStartClientFactoryProvider } from "./syncstart-client.factory";
+import { RedisHealthService } from "./redis-health.service";
 
 @Module({
   imports: [
@@ -24,10 +25,11 @@ import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
   providers: [
     RedisLiveEventPublisher,
     { provide: LIVE_EVENT_PUBLISHER, useExisting: RedisLiveEventPublisher },
-    LobbyCatalog,
     CompletedSongSubmitter,
     SyncStartEventsPublisher,
+    syncStartClientFactoryProvider,
     TournamentSyncStartRegistry,
+    RedisHealthService,
   ],
 })
 export class SyncStartModule {}

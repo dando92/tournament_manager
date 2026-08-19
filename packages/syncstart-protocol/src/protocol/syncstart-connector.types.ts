@@ -1,5 +1,4 @@
 export type CreateLobbyRequestDto = {
-  tournamentId: number;
   lobbyName?: string;
   password?: string;
 };

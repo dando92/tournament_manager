@@ -8,7 +8,7 @@ import {
   SyncStartConnectionStatusDto,
 } from "./lobby-observer.interface";
 
-export class LobbyEventDispatcher {
+export class LobbyEventDispatcher implements ILobbyObserver {
   constructor(private readonly observers: ILobbyObserver[]) {}
 
   async OnSyncStartConnectionStatus(

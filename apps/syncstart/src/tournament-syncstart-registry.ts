@@ -1,82 +1,67 @@
-import { Injectable, OnApplicationShutdown } from "@nestjs/common";
-import {
-  defaultSyncStartClientFactory,
-  SyncStartClient,
-  type SyncStartClientFactory,
-} from "@tournament-manager/syncstart-protocol";
-import { LobbyCatalog, LobbySummary } from "./lobby-catalog";
+import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
+import type { SyncStartClientFactory } from "@tournament-manager/syncstart-protocol";
 import { CompletedSongSubmitter } from "./completed-song-submitter";
+import { SYNCSTART_CLIENT_FACTORY } from "./syncstart-client.factory";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
+import { TournamentSyncStartRuntime } from "./tournament-syncstart-runtime";
 
 type ConnectionStatus = { isActive: boolean; isConnected: boolean };
 
+/** Creates, locates, replaces, and shuts down replica-local tournament owners. */
 @Injectable()
 export class TournamentSyncStartRegistry implements OnApplicationShutdown {
-  private readonly clients = new Map<number, SyncStartClient>();
+  private readonly runtimes = new Map<number, TournamentSyncStartRuntime>();
 
   constructor(
-    private readonly catalog: LobbyCatalog,
     private readonly events: SyncStartEventsPublisher,
     private readonly completedSongs: CompletedSongSubmitter,
-    private readonly clientFactory: SyncStartClientFactory = defaultSyncStartClientFactory,
+    @Inject(SYNCSTART_CLIENT_FACTORY)
+    private readonly clientFactory: SyncStartClientFactory,
   ) {}
 
   configure(tournamentId: number, syncstartUrl: string): void {
     this.close(tournamentId);
-    if (syncstartUrl) {
-      this.clients.set(
+    if (!syncstartUrl) return;
+
+    this.runtimes.set(
+      tournamentId,
+      new TournamentSyncStartRuntime(
         tournamentId,
-        this.clientFactory(syncstartUrl, [
-          this.catalog,
-          this.events,
-          this.completedSongs,
-        ]),
-      );
-    }
+        syncstartUrl,
+        [this.events, this.completedSongs],
+        this.clientFactory,
+      ),
+    );
   }
 
   close(tournamentId: number): void {
-    this.clients.get(tournamentId)?.DisconnectAll();
-    this.clients.delete(tournamentId);
-    this.catalog.removeTournament(tournamentId);
+    this.runtimes.get(tournamentId)?.close();
+    this.runtimes.delete(tournamentId);
   }
 
   connectServer(tournamentId: number): Promise<ConnectionStatus> {
-    return this.client(tournamentId).ConnectToServer(tournamentId);
+    return this.runtime(tournamentId).connectServer();
   }
 
   disconnectServer(tournamentId: number): ConnectionStatus {
-    return this.client(tournamentId).DisconnectFromServer();
+    return this.runtime(tournamentId).disconnectServer();
   }
 
-  async listLobbies(tournamentId: number): Promise<{
-    status: ConnectionStatus;
-    lobbies: LobbySummary[];
-  }> {
-    const client = this.clients.get(tournamentId);
-    const status = {
-      isActive: client?.IsActive() ?? false,
-      isConnected: client?.IsConnected() ?? false,
-    };
-    const discovered =
-      client && status.isConnected ? await client.SearchLobbies() : [];
-    return { status, lobbies: this.catalog.list(tournamentId, discovered) };
+  listLobbies(tournamentId: number) {
+    return this.runtimes.get(tournamentId)?.listLobbies() ?? Promise.resolve({
+      status: { isActive: false, isConnected: false },
+      lobbies: [],
+    });
   }
 
-  async connectLobby(request: {
+  connectLobby(request: {
     tournamentId: number;
     lobbyName: string;
     lobbyCode: string;
     password?: string;
   }): Promise<{ id: string }> {
-    const lobbyCode = request.lobbyCode.toUpperCase();
-    const result = await this.client(request.tournamentId).SpectateLobby({
-      ...request,
-      lobbyCode,
-      lobbyName: request.lobbyName || lobbyCode,
-      password: request.password ?? "",
-    });
-    return { id: result.lobbyId };
+    const { tournamentId, ...lobby } = request;
+    return this.runtime(tournamentId).connectLobby(lobby);
   }
 
   createLobby(request: {
@@ -84,28 +69,26 @@ export class TournamentSyncStartRegistry implements OnApplicationShutdown {
     lobbyName: string;
     password?: string;
   }): Promise<{ lobbyId: string; lobbyCode: string }> {
-    return this.client(request.tournamentId).CreateLobby({
-      ...request,
-      lobbyName: request.lobbyName || undefined,
-      password: request.password ?? "",
-    });
+    const { tournamentId, ...lobby } = request;
+    return this.runtime(tournamentId).createLobby(lobby);
   }
 
   disconnectLobby(tournamentId: number, lobbyId: string): void {
-    this.client(tournamentId).LeaveLobby(lobbyId);
+    this.runtime(tournamentId).disconnectLobby(lobbyId);
   }
 
   onApplicationShutdown(): void {
-    for (const client of this.clients.values()) client.DisconnectAll();
+    for (const runtime of this.runtimes.values()) runtime.close();
+    this.runtimes.clear();
   }
 
-  private client(tournamentId: number): SyncStartClient {
-    const client = this.clients.get(tournamentId);
-    if (!client) {
+  private runtime(tournamentId: number): TournamentSyncStartRuntime {
+    const runtime = this.runtimes.get(tournamentId);
+    if (!runtime) {
       throw new Error(
-        `No SyncStart client for tournament=${tournamentId}. Ensure the tournament has a syncstartUrl set.`,
+        `No SyncStart runtime for tournament=${tournamentId}. Ensure the tournament has a syncstartUrl set.`,
       );
     }
-    return client;
+    return runtime;
   }
 }

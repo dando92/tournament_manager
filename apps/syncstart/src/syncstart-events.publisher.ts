@@ -1,5 +1,4 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import type {
   LobbyConnectionDto,
   LobbyMatchUpdateDto,
@@ -20,7 +19,6 @@ import type { ILobbyObserver } from "@tournament-manager/syncstart-protocol";
 @Injectable()
 export class SyncStartEventsPublisher implements ILobbyObserver {
   constructor(
-    private readonly config: ConfigService,
     @Inject(LIVE_EVENT_PUBLISHER) private readonly live: LiveEventPublisher,
   ) {}
 
