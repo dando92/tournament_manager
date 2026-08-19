@@ -3,12 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import {
   CompletedSongRequest,
-  EventEnvelope,
-  LiveEventEnvelope,
-  SyncStartSongCompletedEvent,
   SyncStartSongCompletedPayload,
 } from '@tournament-manager/contracts';
 import {
+  EventEnvelope,
+  IdentifiedEventEnvelope,
   LIVE_EVENT_PUBLISHER,
   LiveEventPublisher,
 } from '@tournament-manager/live-messaging';
@@ -34,6 +33,9 @@ export interface LobbySongCompletedEffect {
 }
 
 type CompletedScore = SyncStartSongCompletedPayload['scores'][number];
+type SyncStartSongCompletedEvent = IdentifiedEventEnvelope<SyncStartSongCompletedPayload> & {
+  type: 'syncstart.song-completed';
+};
 
 @Injectable()
 export class CompletedSongService {
@@ -52,7 +54,7 @@ export class CompletedSongService {
     const event: SyncStartSongCompletedEvent = {
       id: request.completionId,
       type: 'syncstart.song-completed',
-      aggregateId: String(request.tournamentId),
+      tournamentId: request.tournamentId,
       payload: request,
     };
     const effect = await this.dataSource.transaction((manager) => this.handle(manager, event));
@@ -62,21 +64,20 @@ export class CompletedSongService {
 
   async handle(
     manager: EntityManager,
-    event: EventEnvelope,
+    event: SyncStartSongCompletedEvent,
   ): Promise<LobbySongCompletedEffect> {
-    const completedEvent = event as SyncStartSongCompletedEvent;
     const matchIds = new Set<number>();
     const warnings: string[] = [];
 
-    for (const completedScore of completedEvent.payload.scores) {
+    for (const completedScore of event.payload.scores) {
       if (completedScore.exScore == null) {
-        warnings.push(this.missingExScoreWarning(completedEvent, completedScore));
+        warnings.push(this.missingExScoreWarning(event, completedScore));
         continue;
       }
 
       const result = await this.persistScore(
         manager,
-        completedEvent.payload,
+        event.payload,
         completedScore,
       );
       if (result.warning) warnings.push(result.warning);
@@ -89,7 +90,7 @@ export class CompletedSongService {
     });
     return {
       matchUpdates: matches.map((match) => ({
-        tournamentId: completedEvent.payload.tournamentId,
+        tournamentId: event.payload.tournamentId,
         divisionId: match.phaseGroup.phase.division.id,
         phaseId: match.phaseGroup.phase.id,
         phaseGroupId: match.phaseGroup.id,
@@ -99,16 +100,17 @@ export class CompletedSongService {
     };
   }
 
-  async afterCommit(event: EventEnvelope, result: unknown): Promise<void> {
-    const completed = event as SyncStartSongCompletedEvent;
-    const effect = result as LobbySongCompletedEffect;
-    for (const warning of effect.warnings) {
-      await this.publish(completed.payload.tournamentId, 'ui.warning', {
+  async afterCommit(
+    event: SyncStartSongCompletedEvent,
+    result: LobbySongCompletedEffect,
+  ): Promise<void> {
+    for (const warning of result.warnings) {
+      await this.publish(event.payload.tournamentId, 'ui.warning', {
         message: warning,
       });
     }
-    for (const matchUpdate of effect.matchUpdates) {
-      await this.publish(completed.payload.tournamentId, 'ui.match-changed', {
+    for (const matchUpdate of result.matchUpdates) {
+      await this.publish(event.payload.tournamentId, 'ui.match-changed', {
         ...matchUpdate,
       });
     }
@@ -315,7 +317,7 @@ export class CompletedSongService {
     type: string,
     payload: unknown,
   ): Promise<void> {
-    const event: LiveEventEnvelope = { type, tournamentId, payload };
+    const event: EventEnvelope = { type, tournamentId, payload };
     return this.liveTransport.publish(event);
   }
 }

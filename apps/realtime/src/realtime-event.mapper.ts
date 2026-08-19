@@ -1,5 +1,4 @@
 import type {
-  LiveEventEnvelope,
   LobbyConnectionDto,
   LobbyMatchUpdateDto,
   LobbyPlayerReadyDto,
@@ -7,6 +6,7 @@ import type {
   LobbySongSelectedDto,
   SyncStartConnectionStatusDto,
 } from '@tournament-manager/contracts';
+import type { SequencedLiveEventEnvelope } from '@tournament-manager/live-messaging';
 
 export type RealtimePath = '/uiupdatehub' | '/lobbygateway' | '/livematchgateway';
 
@@ -27,7 +27,7 @@ type LiveMatchState = {
 };
 
 export function mapRealtimeEvent(
-  source: LiveEventEnvelope,
+  source: SequencedLiveEventEnvelope,
   path: RealtimePath,
   previousLiveMatch?: LiveMatchState,
 ): RealtimeMessage | null {

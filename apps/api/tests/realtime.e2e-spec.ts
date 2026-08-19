@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import { RedisLiveEventPublisher } from '@tournament-manager/live-messaging';
-import type { LiveEventEnvelope } from '@tournament-manager/contracts';
+import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { WebSocket } from 'ws';
 import { RealtimeModule } from '../../realtime/src/realtime.module';
 
@@ -82,7 +82,7 @@ describe('realtime service extraction', () => {
     reconnected.close();
   });
 
-  async function publish(event: Omit<LiveEventEnvelope, 'sequence'>): Promise<void> {
+  async function publish(event: EventEnvelope): Promise<void> {
     await publisher.publish(event);
   }
 });

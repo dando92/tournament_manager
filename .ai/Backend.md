@@ -54,7 +54,7 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Volatile live state is recovered from SyncStart snapshots where supported.
 - Do not model replaceable GUI invalidations as durable outbox events.
 
-`@tournament-manager/contracts` owns transport-neutral DTOs and live envelopes. `@tournament-manager/live-messaging` owns only publisher/subscriber ports and Redis Pub/Sub adapters. HTTP and WebSocket adapters remain application-local.
+`@tournament-manager/contracts` owns transport-neutral SyncStart DTOs and internal HTTP request contracts. `@tournament-manager/live-messaging` owns generic event envelopes, envelope validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports. HTTP and WebSocket adapters remain application-local.
 
 ## SyncStart Communication
 

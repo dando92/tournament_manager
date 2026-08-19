@@ -1,8 +1,11 @@
 import { Inject, Injectable, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost } from '@nestjs/core';
-import type { LiveEventEnvelope } from '@tournament-manager/contracts';
-import { LIVE_EVENT_SUBSCRIBER, type LiveEventSubscriber } from '@tournament-manager/live-messaging';
+import {
+  LIVE_EVENT_SUBSCRIBER,
+  type LiveEventSubscriber,
+  type SequencedLiveEventEnvelope,
+} from '@tournament-manager/live-messaging';
 import type { IncomingMessage } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { mapRealtimeEvent, RealtimeMessage, RealtimePath } from './realtime-event.mapper';
@@ -67,7 +70,7 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnModuleDestroy 
     });
   }
 
-  private forward(event: LiveEventEnvelope): void {
+  private forward(event: SequencedLiveEventEnvelope): void {
     if (typeof event.sequence !== 'number') event.sequence = (this.lastSequence.get(event.tournamentId) ?? 0) + 1;
     this.lastSequence.set(event.tournamentId, event.sequence);
     const lobbyPayload = event.payload as { lobbyId?: string; isActive?: boolean };

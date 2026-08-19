@@ -1,8 +1,8 @@
-import type { LiveEventEnvelope } from '@tournament-manager/contracts';
+import type { SequencedLiveEventEnvelope } from '@tournament-manager/live-messaging';
 import { mapRealtimeEvent } from '@realtime/realtime-event.mapper';
 
 describe('mapRealtimeEvent', () => {
-  const update: LiveEventEnvelope = {
+  const update: SequencedLiveEventEnvelope = {
     type: 'ui.match-changed',
     tournamentId: 7,
     sequence: 12,
@@ -26,7 +26,7 @@ describe('mapRealtimeEvent', () => {
   });
 
   it('maps SyncStart telemetry without domain calculations', () => {
-    const selected: LiveEventEnvelope = {
+    const selected: SequencedLiveEventEnvelope = {
       type: 'syncstart.song-selected',
       tournamentId: 7,
       sequence: 13,

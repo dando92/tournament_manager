@@ -60,9 +60,9 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 
 - `packages/scoring`: scoring-system identifiers, pure score calculations, and their provider registry.
 - `packages/persistence` uses scoring-system identifiers as TypeScript field types while PostgreSQL stores their stable string values.
-- `packages/contracts`: transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
+- `packages/contracts`: transport-neutral SyncStart DTOs and internal HTTP request contracts.
 - `packages/persistence`: PostgreSQL entity metadata and NestJS repository registration.
-- `packages/live-messaging`: live-message publisher/subscriber ports and Redis Pub/Sub adapters.
+- `packages/live-messaging`: generic event envelopes, validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports.
 - `packages/startgg`: Start.gg GraphQL client, queries, mutations, provider types, parsing, pagination, rate limiting, and provider error normalization.
 
 Start.gg application orchestration, HTTP DTOs, authorization, database writes, mappings, UI invalidation, and synchronous match reporting remain inside the API.
@@ -76,7 +76,7 @@ Business and protocol logic depends on behavior-oriented interfaces rather than 
 - API depends on `SyncStartClient` for commands and snapshots;
 - SyncStart depends on `CompletedSongSink` for API submission.
 
-Redis Pub/Sub implements the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. Realtime WebSockets implement `BrowserEventBroadcaster`. Plain DTOs and envelopes come from `packages/contracts`; transport packages do not redefine them.
+Redis Pub/Sub and the in-memory test transport implement the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. Realtime WebSockets implement `BrowserEventBroadcaster`. SyncStart DTOs come from `packages/contracts`; generic envelopes and transport abstractions come from `packages/live-messaging`.
 
 SyncStart protocol dispatch uses focused `LobbyLifecycleObserver`, `LiveMatchObserver`, and `CompletedSongObserver` interfaces. Concrete observers propagate normalized messages through the appropriate port. Unit tests use in-memory fakes or spies and require no Redis, HTTP, or WebSocket runtime.
 

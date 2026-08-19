@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type {
-  LiveEventEnvelope,
   LobbyConnectionDto,
   LobbyMatchUpdateDto,
   LobbyPlayerReadyDto,
@@ -13,6 +12,7 @@ import type {
 } from "@tournament-manager/contracts";
 import {
   LIVE_EVENT_PUBLISHER,
+  type EventEnvelope,
   LiveEventPublisher,
 } from '@tournament-manager/live-messaging';
 import type { ILobbyObserver } from "./protocol";
@@ -100,7 +100,7 @@ export class SyncStartEventsPublisher implements ILobbyObserver {
     tournamentId: number,
     payload: unknown,
   ): Promise<void> {
-    const event: LiveEventEnvelope = { type, tournamentId, payload };
+    const event: EventEnvelope = { type, tournamentId, payload };
     return this.live.publish(event);
   }
 }

@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { LiveEventEnvelope } from '@tournament-manager/contracts';
-import { LIVE_EVENT_PUBLISHER, type LiveEventPublisher } from '@tournament-manager/live-messaging';
+import {
+  type EventEnvelope,
+  LIVE_EVENT_PUBLISHER,
+  type LiveEventPublisher,
+} from '@tournament-manager/live-messaging';
 import { UiUpdateContextService } from './ui-update-context.service';
 
 @Injectable()
@@ -47,7 +50,7 @@ export class UiUpdatePublisher {
   }
 
   private publish(type: string, tournamentId: number, payload: unknown): Promise<void> {
-    const event: LiveEventEnvelope = { type, tournamentId, payload };
+    const event: EventEnvelope = { type, tournamentId, payload };
     return this.transport.publish(event);
   }
 }

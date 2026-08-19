@@ -43,9 +43,9 @@ apps/
 
 packages/
   application/     Reusable pure application calculations when genuinely shared
-  contracts/       Transport-neutral internal DTOs and live envelopes
+  contracts/       Transport-neutral SyncStart DTOs and internal HTTP request contracts
   persistence/     Shared PostgreSQL entity metadata and repository registration
-  live-messaging/  Replaceable-message ports and Redis Pub/Sub adapters
+  live-messaging/  Envelopes, ports, validation, and replaceable-message transports
   startgg/         Provider client, GraphQL protocol, types, parsing, pagination, and rate limiting
 ```
 
@@ -61,7 +61,7 @@ Application and protocol logic must not import Redis clients, WebSocket gateways
 - `CompletedSongSink` for SyncStart-to-API completed-song submission;
 - `BrowserEventBroadcaster` for Realtime WebSocket delivery.
 
-`@tournament-manager/contracts` owns transport-neutral DTOs and live envelopes. `@tournament-manager/live-messaging` owns publisher/subscriber ports and Redis Pub/Sub adapters. HTTP and WebSocket adapters remain in the application that owns their lifecycle.
+`@tournament-manager/contracts` owns transport-neutral SyncStart DTOs and internal HTTP request contracts. `@tournament-manager/live-messaging` owns generic envelopes, validation, publisher/subscriber ports, and Redis or in-memory transports. HTTP and WebSocket adapters remain in the application that owns their lifecycle.
 
 SyncStart protocol events use focused observer interfaces instead of one interface with many optional callbacks:
 
@@ -77,18 +77,11 @@ Do not add an application-wide event bus, generic mediator, or speculative abstr
 
 This section is prescriptive enough to guide implementation. Deviate only when existing code or tests demonstrate a concrete incompatibility, and record that decision before introducing a different abstraction.
 
-### Shared contracts
+### Shared SyncStart contracts
 
-Keep `packages/contracts` free of NestJS, Redis, TypeORM, and WebSocket dependencies. Define plain TypeScript types for:
+Keep `packages/contracts` free of NestJS, Redis, TypeORM, and WebSocket dependencies. Define plain TypeScript types for SyncStart DTOs and internal HTTP requests, such as:
 
 ```ts
-export interface LiveEventEnvelope<TPayload = unknown> {
-  type: string;
-  tournamentId: number;
-  payload: TPayload;
-  sequence?: number;
-}
-
 export interface CompletedSongRequest {
   completionId: string;
   tournamentId: number;
@@ -99,17 +92,6 @@ export interface CompletedSongRequest {
   scores: CompletedPlayerScore[];
 }
 
-export interface ConfigureTournamentRequest {
-  tournamentId: number;
-  syncstartUrl: string;
-}
-
-export interface SyncStartSnapshot {
-  tournamentId: number;
-  connection: SyncStartConnectionStatusDto;
-  lobbies: LobbyConnectionDto[];
-  liveMatches: LobbyMatchUpdateDto[];
-}
 ```
 
 Reuse existing normalized DTOs where their current shapes are adequate. Do not expose TypeORM entities, Redis payload types, raw SyncStart frames, or NestJS HTTP classes from the contracts package.
@@ -124,10 +106,15 @@ packages/live-messaging/
     ports/
       live-event-publisher.ts
       live-event-subscriber.ts
-    redis/
-      redis-live-event-publisher.ts
-      redis-live-event-subscriber.ts
-      redis-live-messaging.options.ts
+    event-envelope.ts
+    is-event-envelope.ts
+    transports/
+      in-memory/
+        in-memory-live-event-transport.ts
+      redis/
+        redis-live-event-publisher.ts
+        redis-live-event-subscriber.ts
+        redis-live-event.config.ts
     tokens.ts
     index.ts
 ```
@@ -136,17 +123,17 @@ Ports:
 
 ```ts
 export interface LiveEventPublisher {
-  publish(event: LiveEventEnvelope): Promise<void>;
+  publish(event: EventEnvelope): Promise<void>;
 }
 
 export interface LiveEventSubscriber {
   subscribe(
-    handler: (event: LiveEventEnvelope) => void | Promise<void>,
+    handler: (event: SequencedLiveEventEnvelope) => void | Promise<void>,
   ): Promise<() => Promise<void>>;
 }
 ```
 
-Export stable NestJS injection tokens such as `LIVE_EVENT_PUBLISHER` and `LIVE_EVENT_SUBSCRIBER`. The Redis adapters receive host, port, channel, and optional sequence configuration through explicit options. Application logic injects the port token, never a Redis class.
+Export stable NestJS injection tokens such as `LIVE_EVENT_PUBLISHER` and `LIVE_EVENT_SUBSCRIBER`. The Redis adapters receive host, port, and channel configuration through `ConfigService`. Application logic injects the port token, never a Redis class. Tests may bind both ports to `InMemoryLiveEventTransport`.
 
 Keep separate Redis publisher and subscriber connections because Redis subscription mode has a distinct lifecycle. Validate only the transport envelope at this trusted internal boundary. Preserve tournament sequencing only if existing browser compatibility tests require it; do not build durable replay.
 
@@ -482,7 +469,7 @@ Exit gate:
 
 ### Phase 3 — Reduce eventing to Pub/Sub and remove processor
 
-1. Replace `packages/eventing` with `@tournament-manager/live-messaging`, containing only publisher/subscriber ports and Redis Pub/Sub adapters; keep envelopes in `packages/contracts`.
+1. Replace `packages/eventing` with `@tournament-manager/live-messaging`, containing generic envelopes, publisher/subscriber ports, and Redis Pub/Sub adapters; keep SyncStart DTOs in `packages/contracts`.
 2. Publish API invalidations and SyncStart telemetry directly to Pub/Sub.
 3. Keep Realtime as the only frontend WebSocket surface.
 4. Add or retain the SyncStart live snapshot endpoint needed for reconnect recovery.

@@ -49,6 +49,14 @@
 - Removed stale processor, Streams, outbox, inbox, retry, dead-letter, and retention procedures from local operations documentation.
 - Passed clean-stack verification and a second complete verification after restarting with PostgreSQL and Redis volumes retained.
 
+### Live messaging boundary refinement
+
+- Moved generic event envelopes and their validation from `@tournament-manager/contracts` into `@tournament-manager/live-messaging`. Contracts now contain only SyncStart DTOs and internal HTTP request contracts.
+- Defined `EventEnvelope`, `IdentifiedEventEnvelope`, and `SequencedLiveEventEnvelope` around the shared tournament scope; completed-song processing uses the identified variant for idempotency.
+- Organized Redis adapters under `transports/redis` and added `InMemoryLiveEventTransport`, which implements both publisher and subscriber ports for Redis-free tests.
+- Updated application imports, package dependencies, architecture documentation, and envelope/in-memory transport tests.
+- Verification passed: builds and type lint for contracts, live-messaging, API, SyncStart, and Realtime; `npm run test:contract`; and `npm run test:unit` (all workspace unit suites passed). API lint completed with its nine pre-existing warnings and no errors.
+
 ## Verification
 
 ```text
