@@ -14,7 +14,7 @@ import {
   LIVE_EVENT_PUBLISHER,
   type EventEnvelope,
   LiveEventPublisher,
-} from '@tournament-manager/live-messaging';
+} from "@tournament-manager/live-messaging";
 import type { ILobbyObserver } from "./protocol";
 
 @Injectable()
@@ -83,11 +83,26 @@ export class SyncStartEventsPublisher implements ILobbyObserver {
     );
   }
   async OnSongCompleted(event: LobbySongCompletedDto): Promise<void> {
-    const response = await fetch(`${this.config.getOrThrow<string>('API_INTERNAL_URL')}/internal/syncstart/completed-songs`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-service-token': this.config.getOrThrow<string>('INTERNAL_SERVICE_TOKEN') },
-      body: JSON.stringify({ ...event, completionId: `${event.tournamentId}:${event.lobbyId}:${event.song.songPath}:${event.scores.map((score) => `${score.playerId}:${score.exScore}`).join(',')}` }),
-    });
-    if (!response.ok) throw new Error(`Completed-song submission failed with HTTP ${response.status}`);
+    const response = await fetch(
+      `${this.config.getOrThrow<string>("API_INTERNAL_URL")}/internal/syncstart/completed-songs`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-internal-service-token": this.config.getOrThrow<string>(
+            "INTERNAL_SERVICE_TOKEN",
+          ),
+        },
+        body: JSON.stringify({
+          ...event,
+          completionId: `${event.tournamentId}:${event.lobbyId}:${event.song.songPath}:${event.scores.map((score) => `${score.playerId}:${score.exScore}`).join(",")}`,
+        }),
+      },
+    );
+    if (!response.ok)
+      throw new Error(
+        `Completed-song submission failed with HTTP ${response.status}`,
+      );
     await this.publishLive(
       "syncstart.song-completed-live",
       event.tournamentId,

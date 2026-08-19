@@ -5,5 +5,7 @@ export class HealthController {
   @Get("live") liveness() {
     return { status: "ok" };
   }
-  @Get("ready") readiness() { return { status: "ready", dependencies: { redis: { status: "up" } } }; }
+  @Get("ready") readiness() {
+    return { status: "ready", dependencies: { redis: { status: "up" } } };
+  }
 }

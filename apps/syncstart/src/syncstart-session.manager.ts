@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  OnApplicationShutdown,
-} from "@nestjs/common";
+import { Injectable, OnApplicationShutdown } from "@nestjs/common";
 import type {
   LobbyConnectionDto,
   SyncStartCommandPayload,
@@ -20,15 +17,11 @@ type LobbySummary = {
 };
 
 @Injectable()
-export class SyncStartSessionManager
-  implements OnApplicationShutdown
-{
+export class SyncStartSessionManager implements OnApplicationShutdown {
   private readonly connectors = new Map<number, SyncStartConnector>();
   private readonly lobbyMeta = new Map<string, LobbyMeta>();
 
-  constructor(
-    private readonly events: SyncStartEventsPublisher,
-  ) {}
+  constructor(private readonly events: SyncStartEventsPublisher) {}
 
   async execute(command: SyncStartCommandPayload): Promise<unknown> {
     switch (command.action) {
@@ -118,9 +111,7 @@ export class SyncStartSessionManager
     this.lobbyMeta.delete(this.key(tournamentId, code));
   }
 
-  private async listLobbies(
-    tournamentId: number,
-  ): Promise<{
+  private async listLobbies(tournamentId: number): Promise<{
     status: { isActive: boolean; isConnected: boolean };
     lobbies: LobbySummary[];
   }> {

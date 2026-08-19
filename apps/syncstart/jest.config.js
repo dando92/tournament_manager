@@ -1,7 +1,7 @@
 module.exports = {
-  rootDir: '.',
-  testEnvironment: 'node',
-  testRegex: 'tests/unit/.*\\.spec\\.ts$',
-  transform: { '^.+\\.ts$': 'ts-jest' },
-  moduleNameMapper: { '^@syncstart/(.*)$': '<rootDir>/src/$1' },
+  rootDir: ".",
+  testEnvironment: "node",
+  testRegex: "tests/unit/.*\\.spec\\.ts$",
+  transform: { "^.+\\.ts$": "ts-jest" },
+  moduleNameMapper: { "^@syncstart/(.*)$": "<rootDir>/src/$1" },
 };
