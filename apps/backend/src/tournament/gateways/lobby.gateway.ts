@@ -7,12 +7,11 @@ import {
 import { IncomingMessage } from 'http';
 import { Server as WsServer, WebSocket } from 'ws';
 import {
-  ILobbyObserver,
   LobbyConnectionDto,
   LobbyPlayerReadyDto,
   LobbySongSelectedDto,
   SyncStartConnectionStatusDto,
-} from '@syncstart/index';
+} from '@tournament-manager/contracts';
 import { ActiveLobbyDto, LobbyCardStateDto } from './syncstart-gateway.types';
 
 type CachedLobbyState = {
@@ -26,7 +25,7 @@ type CachedLobbyState = {
     origin: '*',
   },
 })
-export class LobbyGateway implements OnGatewayInit, OnGatewayConnection, ILobbyObserver {
+export class LobbyGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   server: WsServer;
 

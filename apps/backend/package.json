@@ -111,7 +111,6 @@
       "^@match-manager/(.*)$": "<rootDir>/match-manager/$1",
       "^@persistence/(.*)$": "<rootDir>/persistence/$1",
       "^@player/(.*)$": "<rootDir>/tournament/player/$1",
-      "^@syncstart/(.*)$": "<rootDir>/syncstart/$1",
       "^@tournament/(.*)$": "<rootDir>/tournament/$1",
       "^@account/(.*)$": "<rootDir>/account/$1"
     }

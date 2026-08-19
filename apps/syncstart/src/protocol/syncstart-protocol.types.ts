@@ -16,15 +16,15 @@ export type SyncStartJudgments = {
 };
 
 export type SyncStartLobbyPlayer = {
-  playerId: 'P1' | 'P2';
+  playerId: "P1" | "P2";
   profileName: string;
   screenName:
-    | 'NoScreen'
-    | 'ScreenSelectMusic'
-    | 'ScreenGameplay'
-    | 'ScreenPlayerOptions'
-    | 'ScreenEvaluation'
-    | 'ScreenEvaluationStage';
+    | "NoScreen"
+    | "ScreenSelectMusic"
+    | "ScreenGameplay"
+    | "ScreenPlayerOptions"
+    | "ScreenEvaluation"
+    | "ScreenEvaluationStage";
   ready: boolean;
   judgments?: SyncStartJudgments;
   score?: number;

@@ -1,4 +1,4 @@
-import { WebSocket } from 'ws';
+import { WebSocket } from "ws";
 
 export type LobbyConnectionStatus = {
   isActive: boolean;
@@ -26,6 +26,7 @@ export class LobbyConnection {
   private connected = false;
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private messageChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly syncstartUrl: string,
@@ -47,13 +48,15 @@ export class LobbyConnection {
     this.clearReconnectTimer();
     this.closeCurrentSocket();
     this.dispatchClose({ isActive: false, isConnected: false }).catch((err) =>
-      console.error(`[LobbyConnection] Close callback failed: ${err?.message ?? err}`),
+      console.error(
+        `[LobbyConnection] Close callback failed: ${err?.message ?? err}`,
+      ),
     );
   }
 
   Send(message: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.connected) {
-      throw new Error('WebSocket is not connected');
+      throw new Error("WebSocket is not connected");
     }
     this.ws.send(message);
   }
@@ -68,7 +71,9 @@ export class LobbyConnection {
 
   private openSocket(rejectInitialFailure: boolean): Promise<void> {
     const url = this.syncstartUrl;
-    console.log(`[LobbyConnection] Opening WebSocket to ${url} (${this.options.label})`);
+    console.log(
+      `[LobbyConnection] Opening WebSocket to ${url} (${this.options.label})`,
+    );
 
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
@@ -82,12 +87,12 @@ export class LobbyConnection {
         this.connected = false;
         if (rejectInitialFailure) this.active = false;
         ws.close();
-        const error = new Error('Connection timeout');
+        const error = new Error("Connection timeout");
         this.dispatchError(error);
         reject(error);
       }, this.options.connectTimeoutMs ?? 10000);
 
-      ws.on('open', () => {
+      ws.on("open", () => {
         if (this.ws !== ws) return;
         if (settled) return;
         opened = true;
@@ -99,12 +104,12 @@ export class LobbyConnection {
         resolve();
       });
 
-      ws.on('message', (data: Buffer) => {
+      ws.on("message", (data: Buffer) => {
         if (this.ws !== ws) return;
         this.dispatchMessage(data.toString());
       });
 
-      ws.on('close', (code, reason) => {
+      ws.on("close", (code, reason) => {
         if (this.ws !== ws) return;
         clearTimeout(timeout);
         this.ws = null;
@@ -113,7 +118,9 @@ export class LobbyConnection {
         const reasonText = reason?.toString() || undefined;
         if (!opened && rejectInitialFailure) {
           this.active = false;
-          const error = new Error(`Connection refused, code=${code} reason=${reasonText ?? '(no reason)'}`);
+          const error = new Error(
+            `Connection refused, code=${code} reason=${reasonText ?? "(no reason)"}`,
+          );
           if (!settled) {
             settled = true;
             reject(error);
@@ -132,7 +139,7 @@ export class LobbyConnection {
         this.dispatchClose({ ...this.status(), code, reason: reasonText });
       });
 
-      ws.on('error', (error) => {
+      ws.on("error", (error) => {
         if (this.ws !== ws) return;
         const err = error instanceof Error ? error : new Error(String(error));
         this.dispatchError(err);
@@ -150,11 +157,15 @@ export class LobbyConnection {
   private scheduleReconnect(): void {
     this.clearReconnectTimer();
     const delay = this.options.reconnectDelayMs ?? 5000;
-    console.log(`[LobbyConnection] Scheduling reconnect in ${delay}ms (${this.options.label})`);
+    console.log(
+      `[LobbyConnection] Scheduling reconnect in ${delay}ms (${this.options.label})`,
+    );
     this.reconnectTimer = setTimeout(() => {
       if (!this.active) return;
       this.openSocket(false).catch((err) =>
-        console.error(`[LobbyConnection] Reconnect failed (${this.options.label}): ${err?.message ?? err}`),
+        console.error(
+          `[LobbyConnection] Reconnect failed (${this.options.label}): ${err?.message ?? err}`,
+        ),
       );
     }, delay);
   }
@@ -180,14 +191,21 @@ export class LobbyConnection {
 
   private dispatchOpen(): void {
     Promise.resolve(this.options.onOpen?.()).catch((err) =>
-      console.error(`[LobbyConnection] Open callback failed: ${err?.message ?? err}`),
+      console.error(
+        `[LobbyConnection] Open callback failed: ${err?.message ?? err}`,
+      ),
     );
   }
 
   private dispatchMessage(message: string): void {
-    Promise.resolve(this.options.onMessage?.(message)).catch((err) =>
-      console.error(`[LobbyConnection] Message callback failed: ${err?.message ?? err}`),
-    );
+    this.messageChain = this.messageChain
+      .then(() => this.options.onMessage?.(message))
+      .then(() => undefined)
+      .catch((err) => {
+        console.error(
+          `[LobbyConnection] Message callback failed: ${err?.message ?? err}`,
+        );
+      });
   }
 
   private dispatchClose(event: LobbyConnectionCloseEvent): Promise<void> {
@@ -196,7 +214,9 @@ export class LobbyConnection {
 
   private dispatchError(error: Error): void {
     Promise.resolve(this.options.onError?.(error)).catch((err) =>
-      console.error(`[LobbyConnection] Error callback failed: ${err?.message ?? err}`),
+      console.error(
+        `[LobbyConnection] Error callback failed: ${err?.message ?? err}`,
+      ),
     );
   }
 }

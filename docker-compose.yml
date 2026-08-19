@@ -56,6 +56,9 @@ services:
       REDIS_PORT: 6379
       EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
       EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-processor}
+      SYNCSTART_COMMAND_STREAM: ${SYNCSTART_COMMAND_STREAM:-tournament-manager.syncstart.commands}
+      SYNCSTART_CONSUMER_GROUP: ${SYNCSTART_CONSUMER_GROUP:-tournament-manager-syncstart}
+      SYNCSTART_COMMAND_TIMEOUT_MS: ${SYNCSTART_COMMAND_TIMEOUT_MS:-15000}
       LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
       OUTBOX_RELAY_IDLE_INTERVAL_MS: ${OUTBOX_RELAY_IDLE_INTERVAL_MS:-200}
       EVENT_CONSUMER_BLOCK_MS: ${EVENT_CONSUMER_BLOCK_MS:-500}
@@ -89,6 +92,8 @@ services:
         condition: service_completed_successfully
       processor:
         condition: service_healthy
+      syncstart:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health/ready"]
       interval: 5s
@@ -115,6 +120,33 @@ services:
       timeout: 3s
       retries: 18
       start_period: 10s
+
+  syncstart:
+    build:
+      context: .
+      dockerfile: apps/syncstart/Dockerfile
+    restart: unless-stopped
+    environment: *application-environment
+    depends_on:
+      redis:
+        condition: service_healthy
+      syncstart-simulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3002/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 10s
+
+  syncstart-simulator:
+    build:
+      context: .
+      dockerfile: apps/syncstart/Dockerfile
+    restart: unless-stopped
+    command: ["node", "apps/syncstart/dist/src/testing/simulator-main.js"]
+    environment:
+      SYNCSTART_SIMULATOR_PORT: 19000
 
   frontend:
     build:

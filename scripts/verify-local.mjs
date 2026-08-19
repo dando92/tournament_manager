@@ -39,6 +39,21 @@ if (!(processorReadiness.status === 'ready'
   throw new Error('processor readiness returned an unexpected response');
 }
 console.log('PASS: processor readiness');
+function readSyncStartHealth(path) {
+  return execFileSync(
+    'docker',
+    ['compose', 'exec', '-T', 'syncstart', 'wget', '--quiet', '--output-document=-', `http://127.0.0.1:3002${path}`],
+    { encoding: 'utf8' },
+  );
+}
+const syncStartLiveness = JSON.parse(readSyncStartHealth('/health/live'));
+if (syncStartLiveness.status !== 'ok') throw new Error('SyncStart liveness returned an unexpected response');
+console.log('PASS: SyncStart liveness');
+const syncStartReadiness = JSON.parse(readSyncStartHealth('/health/ready'));
+if (!(syncStartReadiness.status === 'ready' && syncStartReadiness.dependencies.redis.status === 'up')) {
+  throw new Error('SyncStart readiness returned an unexpected response');
+}
+console.log('PASS: SyncStart readiness');
 await expectResponse('Swagger document', `${apiUrl}/api-docs-json`, (body) => JSON.parse(body).openapi !== undefined);
 await expectResponse('deterministic local seed', `${apiUrl}/tournaments/public`, (body) => {
   const tournaments = JSON.parse(body);

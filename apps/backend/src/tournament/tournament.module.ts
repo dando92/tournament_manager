@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '@auth/auth.module';
 import { PersistenceModule } from '@persistence/persistence.module';
-import { SyncStartModule } from '@syncstart/index';
 import { AccountModule } from '@account/account.module';
 import { StartggModule } from '../integrations/startgg/startgg.module';
 import { EventingModule } from '../eventing/eventing.module';
@@ -15,7 +14,6 @@ import { TournamentOpenGuard } from './guards/tournament-open.guard';
     imports: [
         AuthModule,
         PersistenceModule,
-        SyncStartModule,
         AccountModule,
 		StartggModule,
         EventingModule,

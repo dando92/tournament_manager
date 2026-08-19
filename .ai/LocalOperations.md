@@ -17,7 +17,7 @@ Install workspace dependencies once after cloning or changing the lockfile:
 npm ci
 ```
 
-Build and start PostgreSQL, Redis, the migration runner, processor, API, and frontend:
+Build and start PostgreSQL, Redis, the migration runner, processor, SyncStart service, deterministic SyncStart simulator, API, and frontend:
 
 ```text
 npm run local:up
@@ -40,12 +40,15 @@ Local endpoints:
 - API liveness: `http://localhost:3000/health/live`
 - API readiness: `http://localhost:3000/health/ready`
 - Processor liveness and readiness: internal container endpoints on port `3001`, reported by `npm run local:status` and `npm run verify:local`
+- SyncStart liveness and readiness: internal container endpoints on port `3002`, reported by `npm run verify:local`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
 Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates or updates the application schema from versioned migrations before API readiness. TypeORM schema synchronization is disabled.
 
 The processor runs the outbox relay, durable consumer, stateless handlers, and transport-retention worker. Durable events use the `tournament-manager.events` Stream and `tournament-manager-processor` consumer group by default; exhausted messages are visible in `tournament-manager.events.dead-letter`. Replaceable live events use the `tournament-manager.live` Pub/Sub channel. These names may be overridden with `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL`.
+
+The SyncStart service consumes commands from `tournament-manager.syncstart.commands` with the `tournament-manager-syncstart` consumer group. Override these with `SYNCSTART_COMMAND_STREAM` and `SYNCSTART_CONSUMER_GROUP`; `SYNCSTART_COMMAND_TIMEOUT_MS` controls the API wait for interactive command results. The local seed points to the deterministic `syncstart-simulator` container, so protocol development never requires an external SyncStart server.
 
 Transport timing and retention are deploy-time configuration, so changing them does not require rebuilding the image. `OUTBOX_RELAY_IDLE_INTERVAL_MS`, `EVENT_CONSUMER_BLOCK_MS`, and `EVENT_RECLAIM_IDLE_MS` control eventing loops. `TOURNAMENT_TRANSPORT_RETENTION_DAYS`, `TRANSPORT_RETENTION_SWEEP_INTERVAL_MS`, and `TRANSPORT_RETENTION_BATCH_SIZE` control closed-tournament cleanup. A process restart or rolling restart is required after changing environment values.
 
@@ -65,7 +68,7 @@ Follow logs for the complete stack:
 npm run local:logs
 ```
 
-Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `processor`, `backend`, or `frontend`.
+Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `processor`, `syncstart`, `syncstart-simulator`, `backend`, or `frontend`.
 
 ## Shutdown and Restart
 
@@ -78,7 +81,7 @@ npm run local:down
 Run `npm run local:up` again to restart with the retained named volumes. Restart only the application containers with:
 
 ```text
-docker compose restart processor backend frontend
+docker compose restart processor syncstart backend frontend
 ```
 
 ## Backup and Restore
@@ -121,6 +124,7 @@ The current pre-production schema baseline intentionally does not upgrade databa
 - If PostgreSQL or Redis is stopped, `/health/live` remains available while `/health/ready` returns `503` and identifies the failed dependency.
 - After the dependency restarts, Compose and the API health checks restore readiness without deleting volumes.
 - Outbox rows remain pending while the processor or Redis is unavailable. After the processor and Redis are available, the relay publishes them; pending consumer entries are reclaimed after a processor restart.
+- SyncStart commands remain in their dedicated Stream while the service is stopped. On restart it consumes pending commands and rebuilds configured connectors and lobby sessions from its Redis operational state.
 - Multiple processor replicas share the configured consumer group and retain business-level exactly-once effects through inbox uniqueness. For a temporary local scale check, run `docker compose up --detach --scale processor=2 --no-recreate`, then return to one replica with the same command and `--scale processor=1`.
 - Inspect `event_outbox.last_error` and `publish_attempts` for relay failures and the configured `.dead-letter` Stream for messages that exhausted consumer retries.
 - A successful retention sweep records `tournament.transportPurgedAt`. Until that value is set, failed PostgreSQL or Redis cleanup is retried on a later sweep.

@@ -1,4 +1,4 @@
-import { LobbyConnectionDto, SyncStartConnectionStatusDto } from '@syncstart/index';
+import { LobbyConnectionDto, SyncStartConnectionStatusDto } from '@tournament-manager/contracts';
 
 export type ActiveLobbyDto = LobbyConnectionDto;
 export type SyncStartStatusDto = SyncStartConnectionStatusDto;

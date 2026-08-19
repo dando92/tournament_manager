@@ -5,19 +5,19 @@ import {
   LobbyJudgmentsDto,
   LobbyLivePlayerDto,
   LobbySongDto,
-} from './lobby-observer.interface';
-import { LobbyEventDispatcher } from './lobby-event.dispatcher';
-import { LobbyConnection, LobbyConnectionCloseEvent } from './lobby-connection';
+} from "./lobby-observer.interface";
+import { LobbyEventDispatcher } from "./lobby-event.dispatcher";
+import { LobbyConnection, LobbyConnectionCloseEvent } from "./lobby-connection";
 import {
   CreateLobbyRequestDto,
   LobbyConnectionResultDto,
   SpectateLobbyRequestDto,
   SyncStartLobbySummaryDto,
-} from './syncstart-connector.types';
+} from "./syncstart-connector.types";
 import {
   SyncStartLobbyPlayer,
   SyncStartLobbyStatePayload,
-} from './syncstart-protocol.types';
+} from "./syncstart-protocol.types";
 
 type SyncStartMessage<T = unknown> = {
   event: string;
@@ -29,8 +29,7 @@ type SearchLobbyResponse = {
 };
 
 type LobbySessionMode =
-  | { type: 'create' }
-  | { type: 'spectate'; lobbyCode: string };
+  { type: "create" } | { type: "spectate"; lobbyCode: string };
 
 type PendingLobbyConnection = {
   resolve: (result: LobbyConnectionResultDto) => void;
@@ -55,7 +54,7 @@ type LobbySession = {
   currentSocketConnectedNotified: boolean;
   previousSongKey: string | null;
   readyByPlayerKey: Map<string, boolean>;
-  screenByPlayerKey: Map<string, SyncStartLobbyPlayer['screenName']>;
+  screenByPlayerKey: Map<string, SyncStartLobbyPlayer["screenName"]>;
   lastCompletedSignature: string | null;
 };
 
@@ -73,29 +72,33 @@ export class SyncStartConnector {
     this.dispatcher = new LobbyEventDispatcher(observers);
   }
 
-  async CreateLobby(request: CreateLobbyRequestDto): Promise<LobbyConnectionResultDto> {
+  async CreateLobby(
+    request: CreateLobbyRequestDto,
+  ): Promise<LobbyConnectionResultDto> {
     const session = this.createLobbySession(
-      { type: 'create' },
+      { type: "create" },
       request.tournamentId,
       request.lobbyName,
-      request.password ?? '',
+      request.password ?? "",
     );
     const result = await this.connectLobbySession(session);
     this.connections.set(result.lobbyCode, session);
     return result;
   }
 
-  async SpectateLobby(request: SpectateLobbyRequestDto): Promise<LobbyConnectionResultDto> {
+  async SpectateLobby(
+    request: SpectateLobbyRequestDto,
+  ): Promise<LobbyConnectionResultDto> {
     const normalizedLobbyCode = request.lobbyCode.toUpperCase();
     if (this.connections.has(normalizedLobbyCode)) {
       throw new Error(`Lobby ${normalizedLobbyCode} is already connected`);
     }
 
     const session = this.createLobbySession(
-      { type: 'spectate', lobbyCode: normalizedLobbyCode },
+      { type: "spectate", lobbyCode: normalizedLobbyCode },
       request.tournamentId,
       request.lobbyName,
-      request.password ?? '',
+      request.password ?? "",
     );
     this.connections.set(normalizedLobbyCode, session);
 
@@ -113,10 +116,12 @@ export class SyncStartConnector {
   }
 
   async ChangeSong(): Promise<void> {
-    throw new Error('ChangeSong is not implemented');
+    throw new Error("ChangeSong is not implemented");
   }
 
-  async ConnectToServer(tournamentId: number): Promise<{ isActive: boolean; isConnected: boolean }> {
+  async ConnectToServer(
+    tournamentId: number,
+  ): Promise<{ isActive: boolean; isConnected: boolean }> {
     this.serverTournamentId = tournamentId;
     if (!this.serverConnection) {
       this.serverConnection = new LobbyConnection(this.syncstartUrl, {
@@ -124,7 +129,9 @@ export class SyncStartConnector {
         onOpen: () => this.dispatchServerStatus(),
         onMessage: (message) => this.handleServerMessage(message),
         onClose: () => {
-          this.rejectPendingLobbySearch(new Error('SyncStart server connection closed'));
+          this.rejectPendingLobbySearch(
+            new Error("SyncStart server connection closed"),
+          );
           return this.dispatchServerStatus();
         },
         onError: (error) => {
@@ -147,7 +154,7 @@ export class SyncStartConnector {
   }
 
   DisconnectFromServer(): { isActive: boolean; isConnected: boolean } {
-    this.rejectPendingLobbySearch(new Error('SyncStart server disconnected'));
+    this.rejectPendingLobbySearch(new Error("SyncStart server disconnected"));
     this.serverConnection?.Disconnect();
     this.serverConnection = null;
     return this.serverStatus();
@@ -155,24 +162,24 @@ export class SyncStartConnector {
 
   SearchLobbies(): Promise<SyncStartLobbySummaryDto[]> {
     if (!this.serverConnection?.IsConnected()) {
-      return Promise.reject(new Error('SyncStart server is not connected'));
+      return Promise.reject(new Error("SyncStart server is not connected"));
     }
 
     if (this.pendingLobbySearch) {
-      return Promise.reject(new Error('Lobby search is already in progress'));
+      return Promise.reject(new Error("Lobby search is already in progress"));
     }
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingLobbySearch = null;
-        reject(new Error('Lobby search timeout'));
+        reject(new Error("Lobby search timeout"));
       }, 10000);
 
       this.pendingLobbySearch = { resolve, reject, timeout };
       try {
         this.serverConnection?.Send(
           JSON.stringify({
-            event: 'searchLobby',
+            event: "searchLobby",
             data: { temporary: false },
           }),
         );
@@ -218,7 +225,7 @@ export class SyncStartConnector {
     let session: LobbySession;
     const connection = new LobbyConnection(this.syncstartUrl, {
       label: `lobby mode=${mode.type}`,
-      autoReconnect: mode.type === 'spectate',
+      autoReconnect: mode.type === "spectate",
       onOpen: async () => {
         session.currentSocketConnectedNotified = false;
         await this.onLobbySocketOpen(session);
@@ -236,18 +243,20 @@ export class SyncStartConnector {
       tournamentId,
       lobbyName,
       password,
-      currentLobbyCode: mode.type === 'spectate' ? mode.lobbyCode : null,
+      currentLobbyCode: mode.type === "spectate" ? mode.lobbyCode : null,
       pendingConnect: null,
       currentSocketConnectedNotified: false,
       previousSongKey: null,
       readyByPlayerKey: new Map<string, boolean>(),
-      screenByPlayerKey: new Map<string, SyncStartLobbyPlayer['screenName']>(),
+      screenByPlayerKey: new Map<string, SyncStartLobbyPlayer["screenName"]>(),
       lastCompletedSignature: null,
     };
     return session;
   }
 
-  private async connectLobbySession(session: LobbySession): Promise<LobbyConnectionResultDto> {
+  private async connectLobbySession(
+    session: LobbySession,
+  ): Promise<LobbyConnectionResultDto> {
     const pendingResult = this.waitForInitialLobbyState(session);
     const connectPromise = session.connection.Connect();
     await this.dispatchLobbyActive(session);
@@ -274,12 +283,14 @@ export class SyncStartConnector {
     });
   }
 
-  private waitForInitialLobbyState(session: LobbySession): Promise<LobbyConnectionResultDto> {
+  private waitForInitialLobbyState(
+    session: LobbySession,
+  ): Promise<LobbyConnectionResultDto> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         session.pendingConnect = null;
         session.connection.Disconnect();
-        reject(new Error('SyncStart lobby state timeout'));
+        reject(new Error("SyncStart lobby state timeout"));
       }, 10000);
 
       session.pendingConnect = { resolve, reject, timeout };
@@ -287,10 +298,10 @@ export class SyncStartConnector {
   }
 
   private async onLobbySocketOpen(session: LobbySession): Promise<void> {
-    if (session.mode.type === 'create') {
+    if (session.mode.type === "create") {
       session.connection.Send(
         JSON.stringify({
-          event: 'createLobby',
+          event: "createLobby",
           data: {
             machine: {},
             password: session.password,
@@ -303,29 +314,39 @@ export class SyncStartConnector {
     await this.notifyConnected(session, session.mode.lobbyCode);
     session.connection.Send(
       JSON.stringify({
-        event: 'spectateLobby',
+        event: "spectateLobby",
         data: {
           code: session.mode.lobbyCode,
           password: session.password,
-          spectator: { profileName: 'TournamentManager' },
+          spectator: { profileName: "TournamentManager" },
         },
       }),
     );
   }
 
-  private async handleLobbyMessage(session: LobbySession, message: string): Promise<void> {
+  private async handleLobbyMessage(
+    session: LobbySession,
+    message: string,
+  ): Promise<void> {
     const payload = this.parseMessage(message);
     if (!payload) return;
 
-    if (payload.event === 'lobbyState') {
-      await this.handleLobbyState(session, payload.data as SyncStartLobbyStatePayload);
+    if (payload.event === "lobbyState") {
+      await this.handleLobbyState(
+        session,
+        payload.data as SyncStartLobbyStatePayload,
+      );
       return;
     }
 
-    if (payload.event === 'clientDisconnected' && session.connection.IsActive()) {
-      const reason = (payload.data as { reason?: string })?.reason ?? '(no reason)';
+    if (
+      payload.event === "clientDisconnected" &&
+      session.connection.IsActive()
+    ) {
+      const reason =
+        (payload.data as { reason?: string })?.reason ?? "(no reason)";
       console.warn(
-        `[SyncStartConnector] clientDisconnected, reason="${reason}" (lobbyCode=${session.currentLobbyCode ?? 'unknown'})`,
+        `[SyncStartConnector] clientDisconnected, reason="${reason}" (lobbyCode=${session.currentLobbyCode ?? "unknown"})`,
       );
       session.connection.Disconnect();
     }
@@ -364,7 +385,9 @@ export class SyncStartConnector {
     const lobbyCode = session.currentLobbyCode;
     this.rejectPendingLobbyConnect(
       session,
-      new Error(`Connection closed, code=${event.code ?? 'unknown'} reason=${event.reason ?? '(no reason)'}`),
+      new Error(
+        `Connection closed, code=${event.code ?? "unknown"} reason=${event.reason ?? "(no reason)"}`,
+      ),
     );
 
     if (!lobbyCode) return;
@@ -382,7 +405,12 @@ export class SyncStartConnector {
 
   private async handleServerMessage(message: string): Promise<void> {
     const response = this.parseMessage<SearchLobbyResponse>(message);
-    if (!response || response.event !== 'lobbySearched' || !this.pendingLobbySearch) return;
+    if (
+      !response ||
+      response.event !== "lobbySearched" ||
+      !this.pendingLobbySearch
+    )
+      return;
 
     const pending = this.pendingLobbySearch;
     this.pendingLobbySearch = null;
@@ -390,11 +418,15 @@ export class SyncStartConnector {
     pending.resolve(response.data?.lobbies ?? []);
   }
 
-  private parseMessage<T = unknown>(message: string): SyncStartMessage<T> | null {
+  private parseMessage<T = unknown>(
+    message: string,
+  ): SyncStartMessage<T> | null {
     try {
       return JSON.parse(message) as SyncStartMessage<T>;
     } catch {
-      console.warn(`[SyncStartConnector] Unparseable message: ${message.slice(0, 200)}`);
+      console.warn(
+        `[SyncStartConnector] Unparseable message: ${message.slice(0, 200)}`,
+      );
       return null;
     }
   }
@@ -457,7 +489,8 @@ export class SyncStartConnector {
 
     for (const { player, playerKey } of playerTransitions) {
       const knownPlayer =
-        session.readyByPlayerKey.has(playerKey) || session.screenByPlayerKey.has(playerKey);
+        session.readyByPlayerKey.has(playerKey) ||
+        session.screenByPlayerKey.has(playerKey);
       if (knownPlayer) {
         continue;
       }
@@ -472,7 +505,7 @@ export class SyncStartConnector {
     }
 
     const gameplayPlayers = lobbyState.players.filter(
-      (player) => player.screenName === 'ScreenGameplay',
+      (player) => player.screenName === "ScreenGameplay",
     );
     for (const player of gameplayPlayers) {
       const playerKey = this.playerStateKey(player);
@@ -498,10 +531,13 @@ export class SyncStartConnector {
 
     const playerMovedToEvaluation = playerTransitions.some(
       ({ player, previousScreen }) =>
-        previousScreen === 'ScreenGameplay' && this.isEvaluationScreen(player.screenName),
+        previousScreen === "ScreenGameplay" &&
+        this.isEvaluationScreen(player.screenName),
     );
     if (song && playerMovedToEvaluation) {
-      const scores = lobbyState.players.map((player) => this.toCompletedScoreDto(player));
+      const scores = lobbyState.players.map((player) =>
+        this.toCompletedScoreDto(player),
+      );
       const signature = this.completedSignature(song, scores);
       if (signature !== session.lastCompletedSignature) {
         await this.dispatcher.OnSongCompleted({
@@ -518,7 +554,10 @@ export class SyncStartConnector {
     }
   }
 
-  private async notifyConnected(session: LobbySession, lobbyCode: string): Promise<void> {
+  private async notifyConnected(
+    session: LobbySession,
+    lobbyCode: string,
+  ): Promise<void> {
     if (session.currentSocketConnectedNotified) return;
     session.currentSocketConnectedNotified = true;
     await this.dispatcher.OnConnected({
@@ -538,10 +577,14 @@ export class SyncStartConnector {
   }
 
   private currentIdentity(session: LobbySession): LobbyIdentityDto | null {
-    return session.currentLobbyCode ? this.identity(session, session.currentLobbyCode) : null;
+    return session.currentLobbyCode
+      ? this.identity(session, session.currentLobbyCode)
+      : null;
   }
 
-  private toSongDto(lobby: SyncStartLobbyStatePayload): LobbySongDto | undefined {
+  private toSongDto(
+    lobby: SyncStartLobbyStatePayload,
+  ): LobbySongDto | undefined {
     if (!lobby.songInfo) return undefined;
     return {
       songPath: lobby.songInfo.songPath,
@@ -563,7 +606,9 @@ export class SyncStartConnector {
     };
   }
 
-  private toCompletedScoreDto(player: SyncStartLobbyPlayer): LobbyCompletedScoreDto {
+  private toCompletedScoreDto(
+    player: SyncStartLobbyPlayer,
+  ): LobbyCompletedScoreDto {
     return {
       playerId: player.playerId,
       playerName: this.normalizePlayerName(player.profileName),
@@ -573,7 +618,9 @@ export class SyncStartConnector {
     };
   }
 
-  private toJudgmentsDto(player: SyncStartLobbyPlayer): LobbyJudgmentsDto | undefined {
+  private toJudgmentsDto(
+    player: SyncStartLobbyPlayer,
+  ): LobbyJudgmentsDto | undefined {
     if (!player.judgments) return undefined;
     return {
       fantasticPlus: player.judgments.fantasticPlus,
@@ -590,18 +637,29 @@ export class SyncStartConnector {
   }
 
   private normalizePlayerName(playerName: string): string {
-    return playerName.replace(/\[DS\]/g, '').replace(/\s+/g, ' ').trim();
+    return playerName
+      .replace(/\[DS\]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private playerStateKey(player: SyncStartLobbyPlayer): string {
     return `${player.playerId}|${this.normalizePlayerName(player.profileName)}`;
   }
 
-  private isEvaluationScreen(screenName: SyncStartLobbyPlayer['screenName']): boolean {
-    return screenName === 'ScreenEvaluation' || screenName === 'ScreenEvaluationStage';
+  private isEvaluationScreen(
+    screenName: SyncStartLobbyPlayer["screenName"],
+  ): boolean {
+    return (
+      screenName === "ScreenEvaluation" ||
+      screenName === "ScreenEvaluationStage"
+    );
   }
 
-  private completedSignature(song: LobbySongDto, scores: LobbyCompletedScoreDto[]): string {
+  private completedSignature(
+    song: LobbySongDto,
+    scores: LobbyCompletedScoreDto[],
+  ): string {
     return JSON.stringify({
       songPath: song.songPath,
       scores: scores
@@ -622,4 +680,4 @@ export type {
   LobbyConnectionResultDto,
   SpectateLobbyRequestDto,
   SyncStartLobbySummaryDto,
-} from './syncstart-connector.types';
+} from "./syncstart-connector.types";

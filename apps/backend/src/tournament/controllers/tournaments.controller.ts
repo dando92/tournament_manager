@@ -35,7 +35,7 @@ export class TournamentsController {
     async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<TournamentResponseDto> {
         const tournament = await this.tournamentManager.create(dto, req.user?.id);
         if (dto.syncstartUrl) {
-            this.lobbyManager.OnTournamentCreated(tournament.id, dto.syncstartUrl);
+            await this.lobbyManager.OnTournamentCreated(tournament.id, dto.syncstartUrl);
         }
         return tournament;
     }
@@ -85,7 +85,7 @@ export class TournamentsController {
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<TournamentResponseDto> {
         const { tournament, previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
         if (dto.syncstartUrl !== undefined && dto.syncstartUrl !== previousSyncstartUrl) {
-            this.lobbyManager.OnTournamentUrlChanged(Number(id), dto.syncstartUrl);
+            await this.lobbyManager.OnTournamentUrlChanged(Number(id), dto.syncstartUrl);
         }
         return tournament;
     }
@@ -94,7 +94,7 @@ export class TournamentsController {
     @Post(':id/close')
     async close(@Param('id') id: number): Promise<TournamentResponseDto> {
         const tournament = await this.tournamentManager.close(Number(id));
-        this.lobbyManager.OnTournamentClosed(Number(id));
+        await this.lobbyManager.OnTournamentClosed(Number(id));
         return tournament;
     }
 
@@ -102,7 +102,7 @@ export class TournamentsController {
     @Post(':id/reopen')
     async reopen(@Param('id') id: number): Promise<TournamentResponseDto> {
         const tournament = await this.tournamentManager.reopen(Number(id));
-        this.lobbyManager.OnTournamentReopened(Number(id), tournament.syncstartUrl ?? '');
+        await this.lobbyManager.OnTournamentReopened(Number(id), tournament.syncstartUrl ?? '');
         return tournament;
     }
 
@@ -219,7 +219,7 @@ export class TournamentsController {
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/lobbies/server/disconnect')
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    disconnectSyncStartServer(@Param('id') id: number) {
+    async disconnectSyncStartServer(@Param('id') id: number) {
         return this.lobbyManager.DisconnectSyncStartServer(Number(id));
     }
 
@@ -247,8 +247,8 @@ export class TournamentsController {
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/lobbies/:lobbyId/disconnect')
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    disconnectLobby(@Param('id') id: number, @Param('lobbyId') lobbyId: string) {
-        this.lobbyManager.DisconnectLobby(Number(id), lobbyId);
+    async disconnectLobby(@Param('id') id: number, @Param('lobbyId') lobbyId: string) {
+        await this.lobbyManager.DisconnectLobby(Number(id), lobbyId);
         return { ok: true };
     }
 }

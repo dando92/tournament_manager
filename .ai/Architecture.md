@@ -53,7 +53,7 @@ Current manager migration guidance:
 - `MatchWorkflowManager` and `AdvancementManager` remain reusable application logic invoked by API commands or processor handlers.
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
-Phase 4 established a common registered-consumer lifecycle for all durable events. Phase 5 moved that lifecycle, the relay, retention, and the extraction-ready handlers into `apps/processor`; the API no longer executes durable consumers. Shared transport interfaces, Redis adapters, and outbox components now live in `packages/eventing`. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. SyncStart connection/session ownership remains in the current backend until Phase 6; browser gateway caches and the temporary Pub/Sub-to-WebSocket bridge remain replaceable state until Phase 7.
+Phase 4 established a common registered-consumer lifecycle for all durable events. Phase 5 moved that lifecycle, the relay, retention, and the extraction-ready handlers into `apps/processor`; the API no longer executes durable consumers. Shared transport interfaces, Redis adapters, and outbox components now live in `packages/eventing`. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. Phase 6 moved SyncStart protocol, connector, reconnection, and lobby-session ownership into `apps/syncstart`. Browser gateway caches and the Pub/Sub-to-WebSocket bridge remain replaceable API state until Phase 7.
 
 ### SyncStart
 
@@ -63,6 +63,8 @@ Phase 4 established a common registered-consumer lifecycle for all durable event
 - Publishes critical SyncStart outcomes to Redis Streams.
 - Publishes replaceable high-frequency telemetry to Redis Pub/Sub.
 - Does not contain frontend DTOs, UI routing, bracket logic, or persistence orchestration.
+- Uses the dedicated `tournament-manager.syncstart.commands` Stream and `tournament-manager-syncstart` consumer group by default. API command outcomes and protocol telemetry share the live channel; completed songs also enter the main durable application Stream.
+- Stores only desired connector configuration and lobby reconnection specifications in Redis so process restarts can reconstruct volatile connections. PostgreSQL remains authoritative for tournament and result data.
 
 ### UI Realtime
 

@@ -81,7 +81,7 @@ Managers remain application-layer use cases. Event handlers should invoke shared
 - Replaceable live events use the separate Pub/Sub adapter. Subscribers must recover missed messages from a newer update or authoritative HTTP snapshot.
 - `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
 
-The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the processor consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event. Existing synchronous controller and SyncStart behavior remains in place.
+The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the processor consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event.
 
 Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
 
@@ -107,3 +107,13 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 - A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
 - Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.
 - Internal Redis payloads are trusted after minimal envelope parsing. Incompatible deployments discard retained transport work instead of supporting old message shapes.
+
+## Extracted SyncStart Boundary
+
+- `apps/syncstart` exclusively owns the SyncStart WebSocket protocol, message parsing, reconnection, connector instances, and volatile lobby sessions. No SyncStart protocol code runs in the API.
+- The API publishes `syncstart.command` envelopes to a dedicated Redis Stream. Interactive HTTP commands await a correlated live result; lifecycle configuration commands return after durable `XADD`.
+- The service publishes normalized song completion to the main durable event Stream and replaceable connection, ready-state, song, score, and progress telemetry to Redis Pub/Sub.
+- Desired connector URLs and spectated-lobby reconnection specifications are service-owned operational state in Redis. They rebuild connections after a process restart and do not replace PostgreSQL tournament or result persistence.
+- Command idempotency markers and completed outcomes are retained in Redis. A completed redelivery reuses its outcome; an interrupted command with an indeterminate external outcome is not executed a second time.
+- The API temporarily subscribes to SyncStart telemetry and forwards it through the existing browser gateways. Phase 7 removes that bridge when browser connections move to `apps/realtime`.
+- Protocol frames are serialized per connection before parsing and event derivation, preventing adjacent duplicate completion frames from racing the completion signature.

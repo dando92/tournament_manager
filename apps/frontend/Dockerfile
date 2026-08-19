@@ -5,6 +5,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json apps/backend/package.json
+COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --workspace=tournament-viewer
 COPY apps/frontend apps/frontend

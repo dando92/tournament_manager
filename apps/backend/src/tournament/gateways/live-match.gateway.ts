@@ -7,12 +7,11 @@ import {
 import { IncomingMessage } from 'http';
 import { Server as WsServer, WebSocket } from 'ws';
 import {
-  ILobbyObserver,
   LobbyConnectionDto,
   LobbyMatchUpdateDto,
   LobbySongCompletedDto,
   LobbySongSelectedDto,
-} from '@syncstart/index';
+} from '@tournament-manager/contracts';
 import { LiveMatchStateDto } from './syncstart-gateway.types';
 
 type CachedLiveMatchState = {
@@ -26,7 +25,7 @@ type CachedLiveMatchState = {
     origin: '*',
   },
 })
-export class LiveMatchGateway implements OnGatewayInit, OnGatewayConnection, ILobbyObserver {
+export class LiveMatchGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   server: WsServer;
 

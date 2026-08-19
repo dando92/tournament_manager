@@ -18,7 +18,6 @@
       "@match/*": ["../backend/src/tournament/match/*"],
       "@persistence/*": ["../backend/src/persistence/*"],
       "@player/*": ["../backend/src/tournament/player/*"],
-      "@syncstart/*": ["../backend/src/syncstart/*"],
       "@tournament/*": ["../backend/src/tournament/*"],
       "@account/*": ["../backend/src/account/*"]
     },

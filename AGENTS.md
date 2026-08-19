@@ -52,6 +52,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 - `apps/backend`: Current NestJS backend and source of the migration.
 - `apps/processor`: Independently deployable stateless event processor and outbox relay.
+- `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/frontend`: Current React and Vite web application.
 - `packages/application`: Application logic shared by API and processor entrypoints.
 - `packages/contracts`: Internal durable and live event contracts.

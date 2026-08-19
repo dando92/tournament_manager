@@ -9,18 +9,60 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 6 — SyncStart Service Extraction (not started).
+- Active phase: Phase 7 — UI Realtime Service Extraction (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
 - Phase 3 state: complete; its exit gate passed on 2026-08-18.
 - Phase 4 state: complete; its exit gate passed on 2026-08-19.
 - Phase 5 state: complete; its exit gate passed on 2026-08-19.
+- Phase 6 state: complete; its exit gate passed on 2026-08-19.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
-- Next action: begin Phase 6 with the SyncStart service shell and deterministic protocol simulator, then move connector ownership and volatile lobby sessions out of the API one vertical command/outcome slice at a time.
+- Next action: begin Phase 7 by extracting browser WebSocket ownership and replacing the temporary API Pub/Sub bridge with the realtime service.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 6 checkpoint 1 — SyncStart service extraction
+
+- Created the independently buildable and deployable `apps/syncstart` service and moved all SyncStart protocol parsing, outbound WebSocket ownership, reconnection, connector instances, and lobby-session maps out of the API.
+- Added a dedicated durable command Stream and consumer group. API lifecycle operations publish after durable acceptance; interactive lobby operations correlate command outcomes over the live channel.
+- Published normalized completed songs to the main durable event Stream and replaceable connection, lobby, ready-state, song, score, judgment, and progress telemetry through Redis Pub/Sub.
+- Added service-owned Redis operational state for configured connector URLs and desired lobby sessions so restarts reconstruct volatile connections without duplicating authoritative tournament or result persistence.
+- Persisted command idempotency markers and outcomes in Redis; redelivery reuses completed outcomes and refuses to repeat an external effect left indeterminate by a process interruption.
+- Kept the existing browser gateways as a temporary API-side Pub/Sub bridge for Phase 7; the API no longer imports or executes SyncStart protocol code.
+- Added a deterministic protocol simulator used in tests and as a local container. Covered valid search and lobby flows, malformed frames, duplicate completion frames, disconnect, reconnect, command idempotency, and result normalization.
+- Serialized incoming frames per connection after the duplicate simulator scenario exposed a race in the previous adapter.
+- Added SyncStart liveness/readiness checks to the local verification contract and confirmed a command queued while the service was stopped was reclaimed, applied, and acknowledged after restart.
+
+Verification result:
+
+```text
+npm run verify
+PASS: backend and frontend lint (existing warnings only)
+PASS: 28 backend unit tests and 5 SyncStart unit/protocol tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: contracts, application, eventing, backend, processor, SyncStart, and frontend builds
+
+npm run local:up
+PASS: SyncStart service and deterministic simulator images built
+PASS: complete retained-volume stack healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API, processor, and SyncStart liveness/readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+
+SyncStart downtime recovery
+PASS: command added while SyncStart was stopped remained in Redis Streams
+PASS: restarted service applied the command and reduced consumer-group pending count to zero
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
 
 ### Phase 5 checkpoint 4 — Tournament-created handler simplification
 
@@ -572,7 +614,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 6 with the SyncStart service shell and deterministic protocol simulator, then move connector ownership and volatile lobby sessions out of the API one vertical command/outcome slice at a time.
+Begin Phase 7 with the realtime service shell, move browser WebSocket ownership out of the API, and add reconnect, sequence-gap, and HTTP snapshot recovery coverage.
 
 ## Remaining Phase 0 Work
 
@@ -581,7 +623,7 @@ Begin Phase 6 with the SyncStart service shell and deterministic protocol simula
 ## Approved Deferred Coverage
 
 - Start.gg must remain intact and currently functional, without migration tests. Its future approach will be decided after the architecture migration.
-- SyncStart integration and protocol testing is deferred until the separate SyncStart service is implemented in Phase 6.
+- SyncStart integration and protocol testing is implemented in Phase 6 through the deterministic simulator.
 - Browser WebSocket event names and responsibilities remain inventoried in [BaselineInventory.md](BaselineInventory.md); network, reconnect, and recovery tests are deferred to the realtime extraction in Phase 7.
 
 ## Handoff Rules

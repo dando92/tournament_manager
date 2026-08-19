@@ -252,6 +252,14 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 6 — SyncStart Service Extraction
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-19.
+- `apps/syncstart` owns protocol parsing, outbound WebSockets, reconnection, connectors, lobby sessions, command consumption, outcomes, and telemetry.
+- The API contains no SyncStart protocol or connector implementation; its temporary Phase 7 bridge publishes durable commands and forwards Pub/Sub telemetry to the existing browser gateways.
+- The deterministic simulator covers valid, malformed, duplicate, disconnect, reconnect, search, and completed-song scenarios without external infrastructure.
+- Redis operational state restores configured connectors and desired lobby sessions after service restart; commands issued during downtime remain durable and are reclaimed.
+
 ### Work
 
 - Create `apps/syncstart` and move connector ownership, protocol parsing, reconnection, lobby sessions, and volatile connection state into it.

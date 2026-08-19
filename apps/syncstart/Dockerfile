@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1
-
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -12,12 +11,10 @@ COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci
 COPY packages packages
-COPY apps/backend apps/backend
-COPY apps/processor apps/processor
+COPY apps/syncstart apps/syncstart
 RUN npm run build --workspace=@tournament-manager/contracts \
-  && npm run build --workspace=@tournament-manager/application \
   && npm run build --workspace=@tournament-manager/eventing \
-  && npm run build --workspace=@tournament-manager/processor
+  && npm run build --workspace=@tournament-manager/syncstart
 
 FROM node:22-alpine
 WORKDIR /app
@@ -31,9 +28,8 @@ COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci --omit=dev
 COPY --from=builder /app/packages/contracts/dist packages/contracts/dist
-COPY --from=builder /app/packages/application/dist packages/application/dist
 COPY --from=builder /app/packages/eventing/dist packages/eventing/dist
-COPY --from=builder /app/apps/processor/dist apps/processor/dist
+COPY --from=builder /app/apps/syncstart/dist apps/syncstart/dist
 ENV NODE_ENV=production
-EXPOSE 3001
-CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/processor"]
+EXPOSE 3002
+CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/syncstart"]
