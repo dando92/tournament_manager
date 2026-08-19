@@ -2,7 +2,7 @@
 
 ## Purpose and Status
 
-This document defines the approved simplified target architecture. The current processor, Redis Streams, outbox, inbox, and durable-event implementation is transitional and will be removed through [MigrationPlan.md](MigrationPlan.md).
+This document defines the implemented simplified architecture. Redis Streams, outbox, inbox, and durable-event processing are not part of the runtime.
 
 ## Topology
 

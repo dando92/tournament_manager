@@ -54,13 +54,12 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `apps/api`: NestJS HTTP API, synchronous application entrypoints, and application-owned request/response integrations.
 - `apps/migrations`: One-shot PostgreSQL migration runner.
 - `apps/local-fixtures`: Optional one-shot local fixture application.
-- `apps/processor`: Transitional durable event processor to be removed by the replacement migration.
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
 - `apps/frontend`: Current React and Vite web application.
 - `packages/application`: Pure reusable application calculations when genuinely shared.
 - `packages/contracts`: Transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
-- `packages/eventing`: Transitional durable-event package to be removed by the replacement migration.
+- `packages/live-messaging`: Redis Pub/Sub live-message ports and adapters.
 - `packages/live-messaging`: Target live-message publisher/subscriber ports and Redis Pub/Sub adapters.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.

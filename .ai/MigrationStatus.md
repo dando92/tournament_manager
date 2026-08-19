@@ -4,9 +4,9 @@
 
 - Last updated: 2026-08-19.
 - Active plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- State: Phase 1 complete.
-- Current runtime: migrations, local fixtures, and Start.gg provider code are independently owned; the transitional durable-event architecture remains until its replacement in Phases 2 through 4.
-- Next action: Phase 2 — replace Redis command/event flows with authenticated internal HTTP.
+- State: Phase 5 review complete; local-stack final verification remains.
+- Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
+- Next action: run clean local-stack and retained-volume verification, then mark the migration complete.
 
 ## Completed Checkpoints
 
@@ -25,6 +25,13 @@
 - Created `@tournament-manager/startgg` and moved its GraphQL client, operations, provider types, parsing, pagination, rate limiting, and response mapping out of the API. API orchestration and HTTP DTOs remain in place.
 - Removed `AppLogger` and `PostgresTournamentPersistence`; `TournamentService` now owns its creation transaction directly.
 - Added the migrations image to continuous delivery and updated workspace, Docker, runtime configuration, architecture checks, and local-operation documentation.
+
+### Phases 2 through 5 review
+
+- API-to-SyncStart commands and SyncStart-to-API completed songs use authenticated internal HTTP.
+- Redis Pub/Sub carries replaceable live messages through `@tournament-manager/live-messaging`; processor, Streams, outbox, inbox, retries, dead letters, and retention code were removed.
+- Deployment topology, CI matrix, local checks, and service images no longer include the processor.
+- Final code parity verification passed for API unit tests, contract tests, PostgreSQL/Redis e2e tests, workspace builds, and architecture boundaries. Existing lint warnings remain non-blocking.
 
 ## Verification
 
@@ -51,6 +58,9 @@ PASS: architecture boundaries verified
 
 docker compose build migrations local-fixtures
 PASS: both images compile; a concurrent local Compose build reported a non-code tag-export conflict for the already-created local-fixtures image.
+
+npm run verify
+PASS: architecture check, lint (warnings only), contract tests, unit tests, e2e tests, and workspace builds.
 ```
 
 ## Handoff Rule

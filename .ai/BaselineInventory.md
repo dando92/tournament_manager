@@ -35,7 +35,7 @@ The current runtime has three browser event families:
 - The SyncStart command consumer translates durable commands into session operations and publishes protocol outcomes.
 - `apps/realtime` owns browser subscriptions, event routing, and replaceable snapshots.
 - The Start.gg integration performs synchronous GraphQL request/response imports from tournament controllers.
-- `apps/processor` currently owns the transactional outbox relay, durable consumer handling, retries, inbox de-duplication, dead-letter behavior, and retention.
+- Completed-song persistence runs synchronously in the API. Redis Pub/Sub messages are replaceable telemetry and UI invalidations only.
 
 ## Critical User Journeys
 

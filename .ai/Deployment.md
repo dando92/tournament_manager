@@ -4,7 +4,7 @@
 
 The current deployment is pre-production and contains no production data. GitHub Actions is the release control plane, GitHub Container Registry stores immutable images, and the `testing` GitHub environment deploys to the existing self-hosted Docker runner. This target has no provider-specific application dependency and can run on a free self-hosted machine or free-tier Docker host.
 
-The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.yml). It runs pinned PostgreSQL and Redis containers with named volumes and consumes API, processor, SyncStart, realtime, and frontend images tagged only with the Git commit SHA. A reverse proxy or tunnel may expose the loopback-bound API, realtime, and frontend ports; that edge component is outside the application contract.
+The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.yml). It runs pinned PostgreSQL and Redis containers with named volumes and consumes migrations, API, SyncStart, realtime, and frontend images tagged only with the Git commit SHA. A reverse proxy or tunnel may expose the loopback-bound API, realtime, and frontend ports; that edge component is outside the application contract.
 
 Production is not declared. Before production use, replace the pre-production reset/restore policy with approved forward-migration, compatibility, backup-retention, rollback, and disaster-recovery requirements.
 
@@ -47,7 +47,7 @@ The testing promotion then:
 3. starts PostgreSQL and Redis;
 4. creates a transient pre-migration database backup;
 5. runs the API migration entrypoint once;
-6. replaces processor, SyncStart, both realtime replicas, API, and frontend in dependency order;
+6. replaces SyncStart, both realtime replicas, API, and frontend in dependency order;
 7. waits for readiness and runs public smoke tests;
 8. deletes the transient backup after success.
 

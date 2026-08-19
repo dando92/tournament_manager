@@ -17,7 +17,7 @@ Install workspace dependencies once after cloning or changing the lockfile:
 npm ci
 ```
 
-Build and start PostgreSQL, Redis, the migration runner, processor, SyncStart service, deterministic SyncStart simulator, two realtime replicas, API, and frontend:
+Build and start PostgreSQL, Redis, the migration runner, optional local fixtures, SyncStart service, two realtime replicas, API, and frontend:
 
 ```text
 npm run local:up
@@ -48,14 +48,14 @@ Local endpoints:
 
 Readiness reports PostgreSQL, Redis, and migration-runner status separately. The migration runner creates or updates the application schema from versioned migrations before API readiness. TypeORM schema synchronization is disabled.
 
-The processor runs the outbox relay, durable consumer, stateless handlers, and transport-retention worker. Durable events use the `tournament-manager.events` Stream and `tournament-manager-processor` consumer group by default; exhausted messages are visible in `tournament-manager.events.dead-letter`. Replaceable live events use the `tournament-manager.live` Pub/Sub channel. These names may be overridden with `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL`.
+Replaceable live events use the `tournament-manager.live` Redis Pub/Sub channel. API-to-SyncStart commands and completed-song submissions use authenticated internal HTTP.
 
-The SyncStart service consumes commands from `tournament-manager.syncstart.commands` with the `tournament-manager-syncstart` consumer group. Override these with `SYNCSTART_COMMAND_STREAM` and `SYNCSTART_CONSUMER_GROUP`; `SYNCSTART_COMMAND_TIMEOUT_MS` controls the API wait for interactive command results. The local seed points to the deterministic `syncstart-simulator` container, so protocol development never requires an external SyncStart server.
+The bundled SyncStart simulator is optional and starts through the `simulator` Compose profile; a host or remote WebSocket URL may be supplied through `LOCAL_FIXTURE_SYNCSTART_URL`.
 
 The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
 The frontend container reads `PUBLIC_API_URL`, `PUBLIC_REALTIME_URL`, and `PUBLIC_AUTH_MODE` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
 
-Transport timing and retention are deploy-time configuration, so changing them does not require rebuilding the image. `OUTBOX_RELAY_IDLE_INTERVAL_MS`, `EVENT_CONSUMER_BLOCK_MS`, and `EVENT_RECLAIM_IDLE_MS` control eventing loops. `TOURNAMENT_TRANSPORT_RETENTION_DAYS`, `TRANSPORT_RETENTION_SWEEP_INTERVAL_MS`, and `TRANSPORT_RETENTION_BATCH_SIZE` control closed-tournament cleanup. A process restart or rolling restart is required after changing environment values.
+`LIVE_EVENT_CHANNEL` and internal HTTP settings are deploy-time configuration. A process restart or rolling restart is required after changing environment values.
 
 The local stack runs the one-shot `local-fixtures` application and creates an idempotent `Local E2E Tournament` fixture by default. Override `LOCAL_FIXTURE_TOURNAMENT_NAME` in `.env`. Set `LOCAL_FIXTURE_SYNCSTART_URL` to a reachable host or remote SyncStart WebSocket URL; leave it empty to create the fixture without SyncStart. The bundled simulator is optional and starts only with `docker compose --profile simulator up`.
 
@@ -73,7 +73,7 @@ Follow logs for the complete stack:
 npm run local:logs
 ```
 
-Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `processor`, `syncstart`, `syncstart-simulator`, `realtime-a`, `realtime-b`, `api`, or `frontend`.
+Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `local-fixtures`, `syncstart`, `syncstart-simulator`, `realtime-a`, `realtime-b`, `api`, or `frontend`.
 
 ## Shutdown and Restart
 
@@ -86,7 +86,7 @@ npm run local:down
 Run `npm run local:up` again to restart with the retained named volumes. Restart only the application containers with:
 
 ```text
-docker compose restart processor syncstart realtime-a realtime-b api frontend
+docker compose restart syncstart realtime-a realtime-b api frontend
 ```
 
 ## Backup and Restore

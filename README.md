@@ -1,25 +1,26 @@
 # Tournament Manager
 
-Tournament Manager is a self-contained monorepo for managing tournaments. Its current runtime contains independently deployable API, event processor, SyncStart, browser realtime, and frontend applications. The processor and durable-event infrastructure are transitional; the approved replacement topology is documented in [Architecture](.ai/Architecture.md) and sequenced in the [Migration Plan](.ai/MigrationPlan.md).
+Tournament Manager is a self-contained monorepo for managing tournaments. It contains independently deployable API, migrations, SyncStart, browser realtime, local fixtures, and frontend applications.
 
 ## Repository Structure
 
 ```text
 apps/
   api/        NestJS HTTP API, synchronous use cases, and current migration ownership
-  processor/  Transitional durable event handlers, outbox relay, and retention
+  migrations/ One-shot PostgreSQL migrations
+  local-fixtures/ Optional deterministic local data
   syncstart/  SyncStart protocol and connection ownership
   realtime/   Browser WebSocket fan-out and snapshots
   frontend/   React and Vite web application
 packages/
   application/  Stateless shared application logic
   contracts/    Internal durable and live contracts
-  eventing/     Transitional PostgreSQL outbox and Redis transports
+  live-messaging/ Redis Pub/Sub live-message transport
   persistence/  Shared PostgreSQL entity metadata
 .ai/         Project architecture and design documentation
 ```
 
-The API owns Start.gg request/response behavior; the SyncStart app owns its protocol and connections. `apps/migrations`, `apps/local-fixtures`, and `packages/startgg` are now independent workspaces. Later phases introduce `packages/live-messaging`, then remove the processor and `packages/eventing`. No external projects or Git submodules are required.
+The API owns Start.gg request/response behavior; the SyncStart app owns its protocol and connections. Redis Pub/Sub carries replaceable live messages only. No external projects or Git submodules are required.
 
 ## Requirements
 
