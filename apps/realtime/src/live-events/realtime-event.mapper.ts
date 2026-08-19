@@ -7,16 +7,9 @@ import type {
   SyncStartConnectionStatusDto,
 } from '@tournament-manager/contracts';
 import type { SequencedLiveEventEnvelope } from '@tournament-manager/live-messaging';
+import type { RealtimeMessage, RealtimePath } from '../realtime-message';
 
-export type RealtimePath = '/uiupdatehub' | '/lobbygateway' | '/livematchgateway';
-
-export type RealtimeMessage = {
-  event: string;
-  data: unknown;
-  sequence: number;
-};
-
-type LiveMatchState = {
+export type LiveMatchState = {
   tournamentId: number;
   lobbyId: string;
   lobbyName: string;
@@ -27,15 +20,14 @@ type LiveMatchState = {
 };
 
 export function mapRealtimeEvent(
-  source: SequencedLiveEventEnvelope,
+  source: SequencedLiveEventEnvelope & { sequence: number },
   path: RealtimePath,
   previousLiveMatch?: LiveMatchState,
-): RealtimeMessage | null {
-  if (typeof source.sequence !== 'number') return null;
+): RealtimeMessage {
   const sequenceOnly = (): RealtimeMessage => ({
     event: 'RealtimeSequence',
     data: { tournamentId: source.tournamentId },
-    sequence: source.sequence!,
+    sequence: source.sequence,
   });
 
   if (path === '/uiupdatehub') {

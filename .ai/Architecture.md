@@ -41,6 +41,8 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 - Is the only browser WebSocket surface.
 - Subscribes to Redis Pub/Sub and forwards messages to tournament-scoped clients.
 - Performs no domain mutation and owns no authoritative application state.
+- Uses `RealtimeEventService` as the subscription and routing coordinator, `WebSocketBrowserEventBroadcaster` as the browser transport owner, and one `TournamentRealtimeState` per observed tournament and replica for replaceable sequencing and snapshots.
+- Keeps replica-local tournament projections independent and reconstructible; they never determine replica ownership or require client affinity.
 - Recovers persisted state through API snapshots and volatile live state through SyncStart snapshots.
 - May run multiple replicas because every replica receives the same Pub/Sub messages.
 
@@ -77,7 +79,7 @@ Business and protocol logic depends on behavior-oriented interfaces rather than 
 - API depends on `SyncStartClient` for commands and snapshots;
 - SyncStart depends on `CompletedSongSink` for API submission.
 
-Redis Pub/Sub and the in-memory test transport implement the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. Realtime WebSockets implement `BrowserEventBroadcaster`. SyncStart DTOs come from `packages/contracts`; generic envelopes and transport abstractions come from `packages/live-messaging`.
+Redis Pub/Sub and the in-memory test transport implement the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. `WebSocketBrowserEventBroadcaster` implements `BrowserEventBroadcaster` and owns the HTTP upgrade and browser-connection lifecycle. `TournamentRealtimeState` owns the replaceable local projection consumed through `RealtimeSnapshotReader`; `RealtimeEventService` coordinates these ports without inspecting their internal state. SyncStart DTOs come from `packages/contracts`; generic envelopes and transport abstractions come from `packages/live-messaging`.
 
 SyncStart protocol dispatch uses the `ILobbyObserver` contract. The SyncStart application supplies a `LobbyCatalog` projection and a live-event publisher; the protocol package remains independent of NestJS, Redis, and internal HTTP. Protocol unit tests use the deterministic simulator and require no application runtime.
 

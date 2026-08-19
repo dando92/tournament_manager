@@ -60,6 +60,9 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - API and SyncStart depend on `LiveEventPublisher`, implemented by a Redis Pub/Sub adapter.
 - Realtime depends on `LiveEventSubscriber` and `BrowserEventBroadcaster`.
 - Realtime maps and forwards messages but performs no domain queries or calculations.
+- `RealtimeEventService` owns subscription lifecycle and routing only. `WebSocketBrowserEventBroadcaster` owns the browser WebSocket server and scoped client connections.
+- Each replica-local `TournamentRealtimeState` owns one tournament's replaceable sequence, snapshots, and live-match transitions. `TournamentRealtimeRegistry` creates and locates those independent projections; none of this state is authoritative or shared between replicas.
+- The realtime event mapper remains a pure function. The state owner resolves an optional incoming sequence without mutating the subscribed envelope.
 - Publishers must provide the tournament scope and complete payload needed for routing.
 - Subscribers recover missed persisted state through API HTTP snapshots.
 - Volatile live state is recovered from SyncStart snapshots where supported.
