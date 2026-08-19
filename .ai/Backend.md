@@ -13,12 +13,11 @@
 ## Object-Oriented Ownership
 
 - Model a domain or integration concept that has state or a lifecycle as an object that owns both that state and the valid transitions that change it.
-- Choose state-ownership boundaries with the service's scaling model in mind. A class must not own state in a way that prevents the required replication or partitioning of the service; introduce distributed coordination only when the approved scaling requirements need it.
 - Keep coordinators focused on object creation, lookup, composition, routing, and shutdown. A coordinator must not interpret or mutate another object's internal state.
 - Place protocol interpretation and state-transition detection in focused stateful objects. Keep transport lifecycle, event dispatch, and application side effects behind separate responsibilities and narrow interfaces.
 - Inject infrastructure dependencies and factories so each object's behavior can be tested without starting its real transport or service.
 - Do not introduce classes around stateless calculations solely to appear object-oriented; pure functions remain appropriate when there is no identity, owned state, or lifecycle.
-- Apply this ownership model by default to new development. When changing an existing component, assess whether its state and transitions can be moved behind clearer ownership boundaries as part of the scoped work. Refactor incrementally when this improves cohesion and testability without introducing unrelated churn or speculative abstractions.
+- Apply this ownership model by default to new development. When changing an existing component, assess whether its state and transitions can be moved behind clearer ownership boundaries as part of the scoped work. When an ownership boundary affects the service's required scalability, choose an owner scope compatible with the required replication or partitioning; introduce distributed coordination only when an approved requirement needs it. Refactor incrementally when this improves cohesion and testability without introducing unrelated churn or speculative abstractions.
 
 The SyncStart protocol package is the reference implementation: `LobbyConnection` owns transport lifecycle, `LobbyStateInterpreter` owns snapshot-transition memory, `LobbySession` owns one lobby, `SyncStartServerSession` owns server connection and request correlation, and `SyncStartClient` coordinates those stateful objects. The application binds them to a `TournamentSyncStartRuntime` whose ownership key is `tournamentId`.
 
