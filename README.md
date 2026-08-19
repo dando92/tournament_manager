@@ -1,17 +1,25 @@
 # Tournament Manager
 
-Tournament Manager is a self-contained monorepo for managing tournaments. It includes a NestJS backend and a React frontend, together with the integrations implemented by the backend.
+Tournament Manager is a self-contained monorepo for managing tournaments. It contains independently deployable API, event processor, SyncStart, browser realtime, and frontend applications.
 
 ## Repository Structure
 
 ```text
 apps/
-  backend/   NestJS API, persistence, WebSocket gateways, and integrations
-  frontend/  React and Vite web application
+  api/        NestJS HTTP API and migrations
+  processor/  Durable event handlers, outbox relay, and retention
+  syncstart/  SyncStart protocol and connection ownership
+  realtime/   Browser WebSocket fan-out and snapshots
+  frontend/   React and Vite web application
+packages/
+  application/  Stateless shared application logic
+  contracts/    Internal durable and live contracts
+  eventing/     PostgreSQL outbox and Redis transports
+  persistence/  Shared PostgreSQL entity metadata
 .ai/         Project architecture and design documentation
 ```
 
-The Start.gg and SyncStart integrations are part of the backend. No external projects or Git submodules are required.
+The API owns Start.gg request/response behavior; the SyncStart app owns its protocol and connections. No external projects or Git submodules are required.
 
 ## Requirements
 
@@ -34,7 +42,7 @@ npm run dev:dependencies
 npm run dev
 ```
 
-- Backend API: `http://localhost:3000`
+- API: `http://localhost:3000`
 - Swagger UI: `http://localhost:3000/api-docs`
 - Frontend: `http://localhost:5173`
 
@@ -49,7 +57,7 @@ npm run local:up
 ```
 
 - Frontend: `http://localhost`
-- Backend API: `http://localhost:3000`
+- API: `http://localhost:3000`
 - Swagger UI: `http://localhost:3000/api-docs`
 
 Inspect and verify it with:
@@ -67,4 +75,4 @@ Stop it without deleting data with `npm run local:down`. See [Local Platform Ope
 npm run verify
 ```
 
-This runs linting, backend unit tests, PostgreSQL-backed behavioral e2e tests, and all workspace builds. Start the development dependencies first. Run `npm run verify:local` against the complete Compose stack for PostgreSQL, Redis, migrations, API, Swagger, seed, and frontend verification.
+This checks architecture boundaries, lints every workspace, runs every app unit suite, executes PostgreSQL/Redis-backed e2e tests, and builds all workspaces. Start the development dependencies first. Run `npm run verify:local` against the complete Compose stack for service readiness, migrations, API, realtime, Swagger, seed, and frontend verification.

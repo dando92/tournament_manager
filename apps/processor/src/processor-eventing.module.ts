@@ -6,7 +6,7 @@ import {
   PostgresOutboxPersistence,
   RedisEventTransport,
 } from '@tournament-manager/eventing';
-import { PersistenceModule } from '@backend/persistence/persistence.module';
+import { PersistenceModule } from '@tournament-manager/persistence';
 import { OutboxRelayService } from '@processor/eventing/outbox-relay.service';
 import { DurableEventConsumerService } from '@processor/eventing/durable-event-consumer.service';
 import { EventingRunnerService } from '@processor/eventing/eventing-runner.service';
@@ -16,6 +16,7 @@ import { PostgresEventRetentionPersistence } from '@processor/eventing/postgres-
 import { EventConsumerRegistry } from '@processor/eventing/event-consumer.registry';
 import { TournamentCreatedHandler } from '@processor/tournament-created.handler';
 import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handler';
+import { PostgresAdvisoryLock } from '@processor/persistence/postgres-advisory-lock';
 
 @Module({
   imports: [PersistenceModule],
@@ -29,6 +30,7 @@ import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handl
     EventRetentionService,
     PostgresEventTransaction,
     PostgresEventRetentionPersistence,
+    PostgresAdvisoryLock,
     PostgresOutboxPersistence,
     EventConsumerRegistry,
     ScoringSystemProvider,

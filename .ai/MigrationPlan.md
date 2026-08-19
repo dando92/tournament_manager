@@ -303,10 +303,20 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ## Phase 8 — Final Monorepo Boundaries and Cleanup
 
+### Progress
+
+- Complete. Exit gate passed on 2026-08-19.
+- The HTTP service is finalized as `apps/api`; no application imports another application's source tree.
+- Shared PostgreSQL entity metadata and repository registration live in `packages/persistence`, while contracts and application code remain infrastructure-free.
+- Every app keeps production code in `src/` and app-owned tests in the sibling `tests/` directory; root unit verification runs every app suite.
+- Architecture dependency checks enforce workspace direction, app isolation, the app layout, and infrastructure-free application/contracts packages.
+- Obsolete API WebSocket test setup, backend workspace names, container names, aliases, and operational documentation were removed.
+
 ### Work
 
 - Finalize `apps/api`, `apps/processor`, `apps/syncstart`, `apps/realtime`, and `apps/frontend`.
 - Finalize shared `application`, `contracts`, and `eventing` packages with explicit dependency boundaries.
+- Move application tests out of `src` into a sibling `tests` directory in each app. Update Jest configuration, TypeScript configuration, path aliases, Docker build inputs, and root verification commands so every app keeps the `src/` and `tests/` layout and remains independently testable.
 - Remove superseded gateways, observers, compatibility adapters, old entrypoints, and obsolete environment variables.
 - Add architecture dependency checks so transport and persistence details cannot leak into domain code.
 - Update all operational and developer documentation to describe only the supported topology.
@@ -314,11 +324,16 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 ### Exit gate
 
 - Every application builds and tests independently and as part of the complete stack.
+- No app-owned test file remains nested under `src`; app test suites are discoverable from the sibling `tests` directory.
 - No removed database or legacy in-process event path remains.
 - Dependency-boundary tests pass.
 - A clean checkout passes `npm ci`, `npm run verify`, `npm run local:up`, and `npm run verify:local` using the documented procedure.
 
 ## Phase 9 — Continuous Delivery and Deployment Validation
+
+### Progress
+
+- Not started.
 
 ### Work
 

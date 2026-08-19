@@ -72,7 +72,7 @@ Follow logs for the complete stack:
 npm run local:logs
 ```
 
-Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `processor`, `syncstart`, `syncstart-simulator`, `realtime-a`, `realtime-b`, `backend`, or `frontend`.
+Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `processor`, `syncstart`, `syncstart-simulator`, `realtime-a`, `realtime-b`, `api`, or `frontend`.
 
 ## Shutdown and Restart
 
@@ -85,7 +85,7 @@ npm run local:down
 Run `npm run local:up` again to restart with the retained named volumes. Restart only the application containers with:
 
 ```text
-docker compose restart processor syncstart realtime-a realtime-b backend frontend
+docker compose restart processor syncstart realtime-a realtime-b api frontend
 ```
 
 ## Backup and Restore

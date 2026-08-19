@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Entities } from '@persistence/entities';
-import { PersistenceModule } from '@backend/persistence/persistence.module';
-import { HealthModule } from '@backend/health/health.module';
+import { Entities, PersistenceModule } from '@tournament-manager/persistence';
+import { HealthModule } from '@processor/health/health.module';
 import { ProcessorEventingModule } from '@processor/processor-eventing.module';
 
 @Module({

@@ -4,8 +4,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/application/package.json packages/application/package.json
+COPY packages/persistence/package.json packages/persistence/package.json
 COPY packages/eventing/package.json packages/eventing/package.json
-COPY apps/backend/package.json apps/backend/package.json
+COPY apps/api/package.json apps/api/package.json
 COPY apps/processor/package.json apps/processor/package.json
 COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/realtime/package.json apps/realtime/package.json
@@ -22,8 +23,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/application/package.json packages/application/package.json
+COPY packages/persistence/package.json packages/persistence/package.json
 COPY packages/eventing/package.json packages/eventing/package.json
-COPY apps/backend/package.json apps/backend/package.json
+COPY apps/api/package.json apps/api/package.json
 COPY apps/processor/package.json apps/processor/package.json
 COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/realtime/package.json apps/realtime/package.json

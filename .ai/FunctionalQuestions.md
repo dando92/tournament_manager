@@ -20,7 +20,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Status: Deferred.
 - Observed behavior: `FinalsCalculator` sorts the supplied standings array in place and can award the point to a failed score when its percentage is higher than a successful score.
 - Question: Should every successful score rank ahead of every failed score in finals, regardless of percentage?
-- Evidence: `apps/backend/src/tournament/services/scoring-systems/scoring-systems.spec.ts` characterizes the current behavior.
+- Evidence: `apps/api/tests/unit/tournament/services/scoring-systems/scoring-systems.spec.ts` characterizes the current behavior.
 - Migration rule: Preserve the observed behavior until this question is resolved.
 
 ### FQ-002 — Lobby code uniqueness across tournaments
@@ -28,7 +28,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Status: Deferred.
 - Observed behavior: `LobbyManager` stores metadata in a process-wide map keyed only by normalized lobby code. The same active code can therefore collide across two tournaments.
 - Question: Is a lobby code globally unique, or should lobby identity be scoped by tournament and code?
-- Evidence: `apps/backend/src/tournament/services/lobby-manager.service.ts` uses `Map<string, LobbyMeta>`.
+- Evidence: `apps/api/src/tournament/services/lobby-manager.service.ts` maps the API command bridge by normalized lobby code; SyncStart owns connector/session state.
 - Migration rule: Do not choose a new identity scope during service extraction without resolving this question.
 
 ### FQ-003 — Tournament creation configuration fields

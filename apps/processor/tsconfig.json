@@ -8,18 +8,10 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "..",
+    "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@backend/*": ["../backend/src/*"],
-      "@processor/*": ["src/*"],
-      "@auth/*": ["../backend/src/auth/*"],
-      "@bracket/*": ["../backend/src/tournament/bracket/*"],
-      "@match/*": ["../backend/src/tournament/match/*"],
-      "@persistence/*": ["../backend/src/persistence/*"],
-      "@player/*": ["../backend/src/tournament/player/*"],
-      "@tournament/*": ["../backend/src/tournament/*"],
-      "@account/*": ["../backend/src/account/*"]
+      "@processor/*": ["src/*"]
     },
     "skipLibCheck": true,
     "strict": false

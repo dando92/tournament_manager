@@ -20,6 +20,7 @@ packages/
   application/  Reusable managers and application use cases
   contracts/    Versioned commands, domain events, and UI events
   eventing/     Outbox, inbox, Redis Streams, and Redis Pub/Sub adapters
+  persistence/  Shared PostgreSQL entity metadata and repository registration
 ```
 
 All applications remain in the same monorepo but must be independently buildable and deployable as Docker containers.
@@ -54,6 +55,8 @@ Current manager migration guidance:
 - Move individual event-driven use cases, not entire manager classes by naming convention.
 
 Phase 4 established a common registered-consumer lifecycle for all durable events. Phase 5 moved that lifecycle, the relay, retention, and the extraction-ready handlers into `apps/processor`; the API no longer executes durable consumers. Shared transport interfaces, Redis adapters, and outbox components now live in `packages/eventing`. Each consumer owns its inbox identity and event type; `PostgresEventTransaction` records inbox progress and invokes the consumer body in one transaction, followed by optional post-commit effects. Both `tournament.created` and `syncstart.song-completed` use this path without event-specific branching in the consumer loop. Phase 6 moved SyncStart protocol, connector, reconnection, and lobby-session ownership into `apps/syncstart`. Phase 7 moved all inbound browser WebSockets, Pub/Sub fan-out, replaceable gateway snapshots, and connection state into `apps/realtime`; the API contains no gateway or live-subscriber bridge.
+
+Phase 8 renamed the HTTP application to `apps/api` and removed all runtime source imports between applications. API and processor share only published workspace packages. PostgreSQL entity metadata is isolated in `packages/persistence`; the application and contracts packages remain free of NestJS, TypeORM, and Redis dependencies. Every app keeps production code in `src/` and app-owned tests in the sibling `tests/` directory. `npm run check:architecture` enforces these boundaries.
 
 ### SyncStart
 

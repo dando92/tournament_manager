@@ -50,7 +50,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 ## Repository Architecture
 
-- `apps/backend`: Current NestJS backend and source of the migration.
+- `apps/api`: NestJS HTTP API, synchronous application entrypoints, migrations, and application-owned request/response integrations.
 - `apps/processor`: Independently deployable stateless event processor and outbox relay.
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
@@ -58,6 +58,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `packages/application`: Application logic shared by API and processor entrypoints.
 - `packages/contracts`: Internal durable and live event contracts.
 - `packages/eventing`: Shared outbox and Redis transport interfaces and adapters.
+- `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration used by API and processor.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.

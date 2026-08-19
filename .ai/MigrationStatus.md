@@ -9,7 +9,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 ## Current Position
 
 - Last updated: 2026-08-19.
-- Active phase: Phase 8 — Final Monorepo Boundaries and Cleanup (not started).
+- Active phase: Phase 9 — Continuous Delivery and Deployment Validation (not started).
 - Phase 0 state: complete; its exit gate passed on 2026-08-18.
 - Phase 1 state: complete; its exit gate passed on 2026-08-18.
 - Phase 2 state: complete; its exit gate passed on 2026-08-18.
@@ -18,12 +18,52 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 5 state: complete; its exit gate passed on 2026-08-19.
 - Phase 6 state: complete; its exit gate passed on 2026-08-19.
 - Phase 7 state: complete; its exit gate passed on 2026-08-19.
+- Phase 8 state: complete; its exit gate passed on 2026-08-19.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
-- Next action: begin Phase 8 by finalizing monorepo dependency boundaries and removing remaining migration-era compatibility structure.
+- Next action: implement Phase 9 CI verification, immutable image publication, migration/deployment/readiness/smoke gates, and documented rollback behavior.
 - Pending technical review: the proposed four-port eventing decomposition (`DurableEventPublisher`, `DurableEventConsumer`, `RealTimeEventPublisher`, and `RealTimeEventSubscriber`) is documented in `Architecture.md`. It is not approved and must not be implemented before user review.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
+
+### Phase 8 checkpoint 1 — Final monorepo boundaries and cleanup
+
+- Renamed the NestJS HTTP workspace and Compose service from `backend` to `api`, including Docker inputs, commands, documentation, and removal of the obsolete container during startup.
+- Moved every app-owned unit and e2e test from `src` or `test` into a sibling `tests` tree and updated Jest, TypeScript, root commands, and Docker build inputs.
+- Added independent processor and frontend unit suites so root unit verification executes tests for all five applications.
+- Extracted shared PostgreSQL entity metadata and repository registration to `packages/persistence`; API and processor no longer import each other's source or declare an application-to-application dependency.
+- Gave processor its own health module and retained the processor-owned advisory lock with the retention worker.
+- Added `npm run check:architecture` to enforce the workspace dependency graph, app source isolation, sibling test layout, and infrastructure-free contracts/application packages.
+- Removed the obsolete WebSocket adapter from API e2e setup and deleted migration-era aliases and paths.
+- Updated architecture, backend, local operations, repository, API, and functional-question documentation to describe only the supported topology.
+
+Verification result:
+
+```text
+npm run verify
+PASS: architecture dependency checks
+PASS: all workspace lint and type checks (existing warnings only)
+PASS: 28 API, 1 processor, 5 SyncStart, 3 realtime, and 1 frontend unit tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: contracts, application, persistence, eventing, API, processor, SyncStart, realtime, and frontend builds
+
+npm run local:up
+PASS: every image rebuilt from the final workspace topology
+PASS: obsolete backend container removed
+PASS: retained-volume migrations completed and all services became healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 19 PostgreSQL/Redis-backed e2e tests
+PASS: API, processor, SyncStart, and two realtime replica health checks
+PASS: migrations, Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing API and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+- npm and container builds report existing deprecated transitive packages and dependency vulnerabilities; no breaking automatic audit fix was applied.
 
 ### Phase 7 checkpoint 1 — UI realtime service extraction
 
@@ -650,7 +690,7 @@ Known non-blocking output:
 
 ## Next Recommended Checkpoint
 
-Begin Phase 8 by reviewing workspace dependencies and service-owned files, then remove migration-era compatibility structure while preserving the complete local verification gate.
+Begin Phase 9 by replacing the legacy image-only workflow with required verification and immutable image publication, then add provider-neutral migration, deployment, readiness, smoke, promotion, and rollback contracts.
 
 ## Remaining Phase 0 Work
 

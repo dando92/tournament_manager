@@ -19,7 +19,7 @@ import {
   Score,
   Song,
   Standing,
-} from '@persistence/entities';
+} from '@tournament-manager/persistence';
 import {
   EventConsumer,
   EventConsumerRegistry,

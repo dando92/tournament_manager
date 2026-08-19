@@ -41,7 +41,7 @@ The backend uses the following architectural layers:
 
 ## Location and Integrations
 
-The current backend is located in `apps/backend` and is the source of the service extraction defined in `Architecture.md`. Its current module boundaries must not be treated as final deployment boundaries.
+The HTTP API is located in `apps/api`. Durable handlers, SyncStart connections, and browser WebSockets live exclusively in their dedicated applications. API and processor share entity metadata through `packages/persistence`; no application imports another application's source tree.
 
 Local configuration is loaded from the repository-root `.env` file. The `local` configuration must start the complete application and its PostgreSQL and Redis dependencies through Docker Compose without requiring cloud services. Local startup requirements are defined in [Architecture.md](Architecture.md).
 
@@ -49,8 +49,8 @@ Local configuration is loaded from the repository-root `.env` file. The `local` 
 
 - `GET /health/live` reports process liveness and must not depend on external services.
 - `GET /health/ready` reports PostgreSQL, Redis, and migration-runner readiness separately and returns HTTP `503` while any required dependency is unavailable.
-- Docker Compose runs the migration entrypoint to completion before starting the backend.
-- The migration runner applies versioned application-schema migrations before backend startup, and readiness remains unavailable if it does not complete.
+- Docker Compose runs the API-owned migration entrypoint to completion before starting the application services.
+- The migration runner applies versioned application-schema migrations before API and processor startup, and readiness remains unavailable if it does not complete.
 - Optional local seed data must be deterministic and idempotent. It is enabled only through `LOCAL_SEED_ENABLED=true`.
 - Operational procedures are defined in [LocalOperations.md](LocalOperations.md).
 
