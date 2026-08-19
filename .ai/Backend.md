@@ -10,6 +10,17 @@
 - Use configured `@` aliases for project imports.
 - Keep application and protocol logic unit-testable without Redis, HTTP servers, or WebSockets by injecting transport ports. Application-owned outbound HTTP adapters use NestJS `HttpService` rather than direct global `fetch` calls.
 
+## Object-Oriented Ownership
+
+- Model a domain or integration concept that has state or a lifecycle as an object that owns both that state and the valid transitions that change it.
+- Keep coordinators focused on object creation, lookup, composition, routing, and shutdown. A coordinator must not interpret or mutate another object's internal state.
+- Place protocol interpretation and state-transition detection in focused stateful objects. Keep transport lifecycle, event dispatch, and application side effects behind separate responsibilities and narrow interfaces.
+- Inject infrastructure dependencies and factories so each object's behavior can be tested without starting its real transport or service.
+- Do not introduce classes around stateless calculations solely to appear object-oriented; pure functions remain appropriate when there is no identity, owned state, or lifecycle.
+- Apply this ownership model by default to new development. When changing an existing component, assess whether its state and transitions can be moved behind clearer ownership boundaries as part of the scoped work. Refactor incrementally when this improves cohesion and testability without introducing unrelated churn or speculative abstractions.
+
+The SyncStart protocol package is the reference implementation: `LobbyConnection` owns transport lifecycle, `LobbyStateInterpreter` owns snapshot-transition memory, `LobbySession` owns one lobby, and `SyncStartClient` coordinates server and session objects.
+
 ## Technologies
 
 - NestJS and TypeScript for API, SyncStart, Realtime, migrations, and local fixtures.
