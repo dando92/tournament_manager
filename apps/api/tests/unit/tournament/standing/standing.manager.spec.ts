@@ -4,7 +4,7 @@ import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
 
 import { ScoreService } from '@tournament/services/score.service';
-import { ScoringSystemProvider } from '@tournament/services/scoring-systems/ScoringSystemProvider';
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { StandingManager } from '@tournament/standing/standing.manager';
 import { StandingService } from '@tournament/standing/standing.service';
 
@@ -25,7 +25,7 @@ function score(id: number, scorePlayer: Player, percentage: number): Score {
 function match(players: Player[], standings: Standing[] = []): Match {
   return {
     id: 20,
-    scoringSystem: 'TestScoringSystem',
+    scoringSystem: 'EurocupScoreCalculator',
     entrants: players.map((entrantPlayer, index) => ({
       id: index + 1,
       type: 'player',
@@ -110,7 +110,7 @@ describe('StandingManager', () => {
 
     await manager.AddScoreToMatch(currentMatch, secondScore);
 
-    expect(scoringSystemProvider.getScoringSystem).toHaveBeenCalledWith('TestScoringSystem');
+    expect(scoringSystemProvider.getScoringSystem).toHaveBeenCalledWith('EurocupScoreCalculator');
     expect(scoringSystem.recalc).toHaveBeenCalledWith(currentMatch.rounds[0].standings);
     expect(standingService.update).toHaveBeenNthCalledWith(1, 200, { points: 2 });
     expect(standingService.update).toHaveBeenNthCalledWith(2, 201, { points: 1 });

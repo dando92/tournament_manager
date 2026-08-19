@@ -28,6 +28,8 @@ Redis Streams, transactional outbox, consumer inbox, processor workers, retries,
 - Migrations own schema rollout as a one-shot application.
 - Local fixtures own optional local-only deterministic data.
 
+`@tournament-manager/scoring` owns scoring-system identifiers, pure calculations, and the scoring provider registry. Persistence may depend on those domain identifiers for entity field types; scoring must remain independent of TypeORM and application services. Bracket implementations remain API-owned because they orchestrate API services and persistence operations rather than providing pure shared calculations.
+
 Detailed ownership and communication flows are defined in [Architecture.md](Architecture.md).
 
 ## Database Access and Transactions

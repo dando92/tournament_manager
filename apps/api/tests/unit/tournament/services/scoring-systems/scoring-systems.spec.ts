@@ -1,7 +1,6 @@
 import { Standing } from '@tournament-manager/persistence';
 
-import { EurocupScoreCalculator } from '@tournament/services/scoring-systems/EurocupScoreCalculator';
-import { FinalsCalculator } from '@tournament/services/scoring-systems/FinalsCalculator';
+import { EurocupScoreCalculator, FinalsCalculator } from '@tournament-manager/scoring';
 
 function standing(percentage: number, isFailed = false, points = 0): Standing {
   return {

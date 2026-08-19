@@ -5,7 +5,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
-COPY packages/application/package.json packages/application/package.json
+COPY packages/scoring/package.json packages/scoring/package.json
 COPY packages/persistence/package.json packages/persistence/package.json
 COPY packages/live-messaging/package.json packages/live-messaging/package.json
 COPY packages/startgg/package.json packages/startgg/package.json

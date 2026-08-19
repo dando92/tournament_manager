@@ -4,7 +4,7 @@ import { AddSongToMatchDto, CommitMatchResultDto, CreateMatchDto, CreateMatchWit
 import { Match } from '@tournament-manager/persistence';
 import { MatchManager } from '@match/services/match.manager';
 import { MatchService } from '@match/services/match.service';
-import { ScoringSystemProvider } from '@tournament/services/scoring-systems/ScoringSystemProvider';
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import type { ScoringSystemType } from '@tournament-manager/scoring';
 import {
     Division,
     Entrant,
@@ -890,7 +891,7 @@ export class StartggService {
         fallbackPhase: Phase,
         entrantByExternalId: Map<string, Entrant>,
         mappingCache: StartggMappingCache,
-        defaultScoringSystem: string,
+        defaultScoringSystem: ScoringSystemType,
     ): Promise<ImportedMatchSyncResult> {
         const existingMatchIds = sets
             .map((set) => this.findMappingInCache(mappingCache, 'match', 'set', set.id)?.localId)

@@ -5,8 +5,13 @@ import {
   IsOptional,
   IsString,
   IsBoolean,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  SCORING_SYSTEM_TYPES,
+  type ScoringSystemType,
+} from '@tournament-manager/scoring';
 
 export class CreateMatchDto {
   @ApiProperty({ description: 'The name of the match', example: 'Match 1' })
@@ -34,10 +39,10 @@ export class CreateMatchDto {
   @IsNumber()
   phaseGroupId: number;
 
-  @ApiProperty({ description: 'Which scoring system shall be used', example: 'Eurocup2025' })
+  @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Which scoring system shall be used' })
   @IsNotEmpty()
-  @IsString()
-  scoringSystem: string;
+  @IsIn(SCORING_SYSTEM_TYPES)
+  scoringSystem: ScoringSystemType;
 
 }
 
@@ -67,10 +72,10 @@ export class UpdateMatchDto {
   @IsNumber()
   phaseGroupId?: number;
 
-  @ApiProperty({ description: 'Which scoring system shall be used', example: 'Eurocup2025' })
+  @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Which scoring system shall be used' })
   @IsOptional()
-  @IsString()
-  scoringSystem: string;
+  @IsIn(SCORING_SYSTEM_TYPES)
+  scoringSystem: ScoringSystemType;
 
 }
 
@@ -96,8 +101,8 @@ export class CreateMatchWithSongsDto {
   phaseGroupId: number;
 
   @IsNotEmpty()
-  @IsString()
-  scoringSystem: string;
+  @IsIn(SCORING_SYSTEM_TYPES)
+  scoringSystem: ScoringSystemType;
 
   @IsOptional()
   @IsNumber()

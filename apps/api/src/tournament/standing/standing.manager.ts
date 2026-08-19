@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Inject, NotFoundException } from "@nestjs/common";
 import { CreateScoreDto, CreateStandingDto, UpdateStandingDto } from '../dtos';
 import { Match, Player, Score } from '@tournament-manager/persistence';
-import { ScoringSystemProvider } from "../services/scoring-systems/ScoringSystemProvider";
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';

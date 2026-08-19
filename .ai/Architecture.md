@@ -58,7 +58,8 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 
 ## Package Boundaries
 
-- `packages/application`: pure reusable application calculations when genuinely shared.
+- `packages/scoring`: scoring-system identifiers, pure score calculations, and their provider registry.
+- `packages/persistence` uses scoring-system identifiers as TypeScript field types while PostgreSQL stores their stable string values.
 - `packages/contracts`: transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
 - `packages/persistence`: PostgreSQL entity metadata and NestJS repository registration.
 - `packages/live-messaging`: live-message publisher/subscriber ports and Redis Pub/Sub adapters.

@@ -68,7 +68,7 @@ export type MatchListDto = {
     name: string;
     subtitle: string;
     notes: string;
-    scoringSystem: string;
+    scoringSystem: ScoringSystemType;
     active: boolean;
     entrants: MatchListEntrantDto[];
     rounds: MatchListRoundDto[];
@@ -76,3 +76,4 @@ export type MatchListDto = {
     matchResult?: MatchListResultDto | null;
     phaseGroupId: number;
 };
+import type { ScoringSystemType } from '@tournament-manager/scoring';

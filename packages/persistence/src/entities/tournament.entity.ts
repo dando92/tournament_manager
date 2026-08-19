@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
+import type { ScoringSystemType } from '@tournament-manager/scoring';
 
 import { Division } from './division.entity';
 import { Song } from './song.entity';
@@ -37,7 +38,7 @@ export class Tournament {
   availableSetupsCount: number;
 
   @Column({ default: 'EurocupScoreCalculator' })
-  defaultScoringSystem: string;
+  defaultScoringSystem: ScoringSystemType;
 
   @OneToMany(() => Division, (division) => division.tournament, { cascade: true })
   divisions: Division[]

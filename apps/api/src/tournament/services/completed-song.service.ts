@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ScoringSystemProvider } from '@tournament-manager/application';
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import {
   CompletedSongRequest,
   EventEnvelope,

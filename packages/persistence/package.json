@@ -9,6 +9,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@tournament-manager/scoring": "0.0.1",
     "@nestjs/common": "^11.1.18",
     "@nestjs/typeorm": "^11.0.1",
     "typeorm": "^0.3.28"

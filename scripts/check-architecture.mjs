@@ -76,8 +76,8 @@ if (/type=raw,value=(latest|testing)/.test(deliveryWorkflow)) {
 
 const allowedDependencies = new Map([
   ['@tournament-manager/contracts', []],
-  ['@tournament-manager/application', []],
-  ['@tournament-manager/persistence', []],
+  ['@tournament-manager/scoring', []],
+  ['@tournament-manager/persistence', ['@tournament-manager/scoring']],
   ['@tournament-manager/live-messaging', ['@tournament-manager/contracts']],
   ['@tournament-manager/startgg', []],
   ['@tournament-manager/migrations', ['@tournament-manager/persistence']],
@@ -87,7 +87,7 @@ const allowedDependencies = new Map([
     '@tournament-manager/persistence',
   ]],
   ['@tournament-manager/api', [
-    '@tournament-manager/application',
+    '@tournament-manager/scoring',
     '@tournament-manager/contracts',
     '@tournament-manager/live-messaging',
     '@tournament-manager/persistence',
@@ -106,7 +106,7 @@ const allowedDependencies = new Map([
 
 for (const workspace of [
   'packages/contracts',
-  'packages/application',
+  'packages/scoring',
   'packages/persistence',
   'packages/live-messaging',
   'packages/startgg',
@@ -123,7 +123,7 @@ for (const workspace of [
 
 for (const path of [
   ...filesBelow(join(root, 'packages', 'contracts', 'src')),
-  ...filesBelow(join(root, 'packages', 'application', 'src')),
+  ...filesBelow(join(root, 'packages', 'scoring', 'src')),
 ]) {
   const source = readFileSync(path, 'utf8');
   if (/from\s+['"](?:typeorm|redis|@nestjs\/)/.test(source)) {

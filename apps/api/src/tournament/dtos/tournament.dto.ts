@@ -3,10 +3,15 @@ import {
     IsNumber,
     IsOptional,
     IsString,
+    IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { TournamentStatus } from '@tournament-manager/persistence';
+import {
+    SCORING_SYSTEM_TYPES,
+    type ScoringSystemType,
+} from '@tournament-manager/scoring';
 
 export class TournamentStaffDto {
     @ApiProperty({ example: 'd9c42b76-3c5f-4d2f-8f4c-32a2d93b24ff', description: 'Staff account id.' })
@@ -39,8 +44,8 @@ export class TournamentResponseDto {
     @ApiProperty({ example: 2, description: 'Number of match setups available for this tournament.' })
     availableSetupsCount: number;
 
-    @ApiProperty({ example: 'EurocupScoreCalculator', description: 'Default scoring system for newly created matches.' })
-    defaultScoringSystem: string;
+    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.' })
+    defaultScoringSystem: ScoringSystemType;
 
     @ApiProperty({ type: () => [TournamentStaffDto], description: 'Tournament staff.' })
     staff: TournamentStaffDto[];
@@ -71,8 +76,8 @@ export class TournamentConfigurationDto {
     @ApiProperty({ example: 2, description: 'Number of match setups available for this tournament.' })
     availableSetupsCount: number;
 
-    @ApiProperty({ example: 'EurocupScoreCalculator', description: 'Default scoring system for newly created matches.' })
-    defaultScoringSystem: string;
+    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.' })
+    defaultScoringSystem: ScoringSystemType;
 }
 
 export class CreateTournamentDto {
@@ -102,9 +107,9 @@ export class CreateTournamentDto {
     availableSetupsCount?: number;
 
     @IsOptional()
-    @IsString()
-    @ApiProperty({ description: 'Default scoring system for newly created matches.', required: false })
-    defaultScoringSystem?: string;
+    @IsIn(SCORING_SYSTEM_TYPES)
+    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.', required: false })
+    defaultScoringSystem?: ScoringSystemType;
 }
 
 export class UpdateTournamentDto {
@@ -134,7 +139,7 @@ export class UpdateTournamentDto {
     availableSetupsCount?: number;
 
     @IsOptional()
-    @IsString()
-    @ApiProperty({ description: 'Default scoring system for newly created matches.', required: false })
-    defaultScoringSystem?: string;
+    @IsIn(SCORING_SYSTEM_TYPES)
+    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.', required: false })
+    defaultScoringSystem?: ScoringSystemType;
 }

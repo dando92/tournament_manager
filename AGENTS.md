@@ -57,7 +57,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
 - `apps/frontend`: Current React and Vite web application.
-- `packages/application`: Pure reusable application calculations when genuinely shared.
+- `packages/scoring`: Scoring-system identifiers, pure score calculations, and their provider registry.
 - `packages/contracts`: Transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
 - `packages/live-messaging`: Live-message publisher/subscriber ports and Redis Pub/Sub adapters.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.

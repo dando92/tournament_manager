@@ -8,6 +8,7 @@ import {
   ManyToMany,
   JoinTable,
   JoinColumn } from 'typeorm';
+import type { ScoringSystemType } from '@tournament-manager/scoring';
 
 import { Round } from './round.entity'
 import { Entrant } from './entrant.entity'
@@ -29,7 +30,7 @@ export class Match {
   notes: string;
 
   @Column()
-  scoringSystem: string;
+  scoringSystem: ScoringSystemType;
 
   @Column({ default: false })
   active: boolean;

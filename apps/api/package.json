@@ -30,7 +30,7 @@
     "migration:run:prod": "npm run migration:run:prod --workspace=@tournament-manager/migrations"
   },
   "dependencies": {
-    "@tournament-manager/application": "0.0.1",
+    "@tournament-manager/scoring": "0.0.1",
     "@tournament-manager/contracts": "0.0.1",
     "@tournament-manager/live-messaging": "0.0.1",
     "@tournament-manager/persistence": "0.0.1",

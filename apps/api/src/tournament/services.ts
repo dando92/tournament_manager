@@ -6,7 +6,7 @@ import { MatchResultService } from "@match/services/match-result.service";
 import { SongRoller } from "./services/song.roller";
 import { StandingManager } from "./standing/standing.manager";
 import { StandingService } from "./standing/standing.service";
-import { ScoringSystemProvider } from "./services/scoring-systems/ScoringSystemProvider";
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { BracketSystemProvider } from "@bracket/BracketSystemProvider";
 import { BracketManager } from "@bracket/bracket.manager";
 import { LobbyManager } from "./services/lobby-manager.service";
