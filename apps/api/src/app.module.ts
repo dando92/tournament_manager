@@ -11,7 +11,6 @@ import { AccountModule } from '@account/account.module';
 import { AuthService } from '@auth/services';
 import { AuthController } from '@auth/controllers';
 import { HealthModule } from './health/health.module';
-import { LocalSeedModule } from './local-seed/local-seed.module';
 
 @Module({
   imports: [
@@ -41,7 +40,6 @@ import { LocalSeedModule } from './local-seed/local-seed.module';
     AccountModule,
     TournamentModule,
     HealthModule,
-    LocalSeedModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

@@ -1,6 +1,6 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-import { createMigrationDataSource } from '../../src/database/migration-data-source';
+import { createMigrationDataSource } from '../../../migrations/src/migration-data-source';
 import { Entities } from '@tournament-manager/persistence';
 
 const databaseHost = process.env.DATABASE_HOST ?? '127.0.0.1';

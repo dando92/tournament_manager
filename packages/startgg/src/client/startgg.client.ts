@@ -4,7 +4,6 @@ import {
     Injectable,
     Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
     EventEntrantsResponse,
     EventSetsResponse,
@@ -13,7 +12,7 @@ import {
     PhaseGroupsByPhaseResponse,
     PhaseGroupSetsResponse,
     PhaseSeedsResponse,
-} from './responses';
+} from '../responses';
 import {
     StartggEntrantNode,
     StartggBracketSetGameDataInput,
@@ -22,14 +21,14 @@ import {
     StartggReportedSetNode,
     StartggSeedNode,
     StartggSetNode,
-} from './startgg.types';
-import { EVENT_ENTRANTS_QUERY } from './queries/event-entrants.query';
-import { EVENT_SETS_QUERY } from './queries/event-sets.query';
-import { GET_EVENT_BY_SLUG_QUERY } from './queries/get-event-by-slug.query';
-import { PHASE_GROUPS_BY_PHASE_QUERY } from './queries/phase-groups-by-phase.query';
-import { PHASE_GROUP_SETS_QUERY } from './queries/phase-group-sets.query';
-import { PHASE_SEEDS_QUERY } from './queries/phase-seeds.query';
-import { REPORT_BRACKET_SET_MUTATION } from './queries/report-bracket-set.mutation';
+} from '../startgg.types';
+import { EVENT_ENTRANTS_QUERY } from '../operations/queries/event-entrants.query';
+import { EVENT_SETS_QUERY } from '../operations/queries/event-sets.query';
+import { GET_EVENT_BY_SLUG_QUERY } from '../operations/queries/get-event-by-slug.query';
+import { PHASE_GROUPS_BY_PHASE_QUERY } from '../operations/queries/phase-groups-by-phase.query';
+import { PHASE_GROUP_SETS_QUERY } from '../operations/queries/phase-group-sets.query';
+import { PHASE_SEEDS_QUERY } from '../operations/queries/phase-seeds.query';
+import { REPORT_BRACKET_SET_MUTATION } from '../operations/queries/report-bracket-set.mutation';
 
 type GraphqlResponse<T> = {
     data?: T;
@@ -40,6 +39,12 @@ type ReportBracketSetResponse = {
     reportBracketSet?: StartggReportedSetNode[] | null;
 };
 
+export interface StartggClientOptions {
+    endpoint?: string;
+    perPage?: number;
+    minIntervalMs?: number;
+}
+
 @Injectable()
 export class StartggClient {
     private readonly logger = new Logger(StartggClient.name);
@@ -48,10 +53,10 @@ export class StartggClient {
     private readonly minIntervalMs: number;
     private lastRequestAt = 0;
 
-    constructor(private readonly configService: ConfigService) {
-        this.endpoint = this.configService.get<string>('STARTGG_API_URL') ?? 'https://api.start.gg/gql/alpha';
-        this.perPage = Number(this.configService.get<string>('STARTGG_PER_PAGE') ?? 64);
-        this.minIntervalMs = Number(this.configService.get<string>('STARTGG_MIN_INTERVAL_MS') ?? 1000);
+    constructor(options: StartggClientOptions = {}) {
+        this.endpoint = options.endpoint ?? 'https://api.start.gg/gql/alpha';
+        this.perPage = options.perPage ?? 64;
+        this.minIntervalMs = options.minIntervalMs ?? 1000;
     }
 
     async getEventBySlug(slug: string, accessToken: string): Promise<StartggEventNode> {

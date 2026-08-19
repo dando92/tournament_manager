@@ -29,9 +29,9 @@ import { TournamentService } from '@tournament/services/tournament.service';
 import { CreateDivisionDto, CreatePhaseDto } from '@tournament/dtos';
 import { AdvancementRuleService } from '@tournament/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/services/phase-group.service';
-import { StartggClient } from './startgg.client';
-import { StartggImportDto, StartggImportPreviewDto } from './startgg.dto';
 import {
+    StartggClient,
+    StartggBracketSetGameDataInput,
     StartggEntrantNode,
     StartggEventSnapshot,
     StartggPhaseGroupNode,
@@ -39,8 +39,8 @@ import {
     StartggPhaseNode,
     StartggReportedSetNode,
     StartggSetNode,
-    StartggBracketSetGameDataInput,
-} from './startgg.types';
+} from '@tournament-manager/startgg';
+import { StartggImportDto, StartggImportPreviewDto } from './startgg.dto';
 
 type AuthUser = {
     id: string;

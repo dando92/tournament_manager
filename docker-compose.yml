@@ -37,9 +37,8 @@ services:
   migrations:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/migrations/Dockerfile
     restart: "no"
-    command: ["npm", "run", "migration:run:prod", "--workspace=@tournament-manager/api"]
     environment: &application-environment
       NODE_ENV: production
       AUTH_MODE: local
@@ -69,8 +68,8 @@ services:
       STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
       STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
       STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
-      LOCAL_SEED_ENABLED: ${LOCAL_SEED_ENABLED:-true}
-      LOCAL_SEED_TOURNAMENT_NAME: ${LOCAL_SEED_TOURNAMENT_NAME:-Local E2E Tournament}
+      LOCAL_FIXTURE_TOURNAMENT_NAME: ${LOCAL_FIXTURE_TOURNAMENT_NAME:-Local E2E Tournament}
+      LOCAL_FIXTURE_SYNCSTART_URL: ${LOCAL_FIXTURE_SYNCSTART_URL:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,6 +88,8 @@ services:
       redis:
         condition: service_healthy
       migrations:
+        condition: service_completed_successfully
+      local-fixtures:
         condition: service_completed_successfully
       processor:
         condition: service_healthy
@@ -130,8 +131,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      syncstart-simulator:
-        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3002/health/ready"]
       interval: 5s
@@ -144,9 +143,26 @@ services:
       context: .
       dockerfile: apps/syncstart/Dockerfile
     restart: unless-stopped
+    profiles: ["simulator"]
     command: ["node", "apps/syncstart/dist/src/testing/simulator-main.js"]
     environment:
       SYNCSTART_SIMULATOR_PORT: 19000
+
+  local-fixtures:
+    build:
+      context: .
+      dockerfile: apps/local-fixtures/Dockerfile
+    restart: "no"
+    environment: *application-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      syncstart:
+        condition: service_healthy
 
   realtime-a:
     build:

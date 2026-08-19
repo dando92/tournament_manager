@@ -52,8 +52,8 @@ Tournament Manager is a self-contained, provider-independent application for man
 ## Repository Architecture
 
 - `apps/api`: NestJS HTTP API, synchronous application entrypoints, and application-owned request/response integrations.
-- `apps/migrations`: Target one-shot PostgreSQL migration runner; it will be extracted from the API during the replacement migration.
-- `apps/local-fixtures`: Target optional one-shot local fixture application; it will replace API bootstrap seeding.
+- `apps/migrations`: One-shot PostgreSQL migration runner.
+- `apps/local-fixtures`: Optional one-shot local fixture application.
 - `apps/processor`: Transitional durable event processor to be removed by the replacement migration.
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
@@ -63,7 +63,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `packages/eventing`: Transitional durable-event package to be removed by the replacement migration.
 - `packages/live-messaging`: Target live-message publisher/subscriber ports and Redis Pub/Sub adapters.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
-- `packages/startgg`: Target provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
+- `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.

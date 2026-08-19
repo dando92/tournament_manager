@@ -6,7 +6,7 @@ const realtimeUrls = [
   process.env.LOCAL_REALTIME_URL ?? `http://127.0.0.1:${process.env.REALTIME_PORT ?? 3003}`,
   process.env.LOCAL_REALTIME_REPLICA_URL ?? `http://127.0.0.1:${process.env.REALTIME_REPLICA_PORT ?? 3004}`,
 ];
-const seedName = process.env.LOCAL_SEED_TOURNAMENT_NAME ?? 'Local E2E Tournament';
+const seedName = process.env.LOCAL_FIXTURE_TOURNAMENT_NAME ?? 'Local E2E Tournament';
 
 async function expectResponse(label, url, predicate = () => true) {
   const response = await fetch(url);

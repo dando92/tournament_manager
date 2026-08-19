@@ -34,7 +34,6 @@ import {
 import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handler';
 import { ScoringSystemProvider } from '@tournament/services/scoring-systems/ScoringSystemProvider';
 import { TournamentService } from '@tournament/services/tournament.service';
-import { PostgresTournamentPersistence } from '@tournament/services/postgres-tournament.persistence';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -457,7 +456,8 @@ describe('Eventing reliability (e2e)', () => {
     return new TournamentService(
       dataSource.getRepository(Tournament),
       dataSource.getRepository(Song),
-      new PostgresTournamentPersistence(dataSource, eventOutbox),
+      dataSource,
+      eventOutbox,
     );
   }
 

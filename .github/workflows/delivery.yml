@@ -101,6 +101,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: migrations
+            dockerfile: apps/migrations/Dockerfile
           - name: api
             dockerfile: apps/api/Dockerfile
           - name: processor

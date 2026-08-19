@@ -19,7 +19,7 @@ packages/
 .ai/         Project architecture and design documentation
 ```
 
-The API owns Start.gg request/response behavior; the SyncStart app owns its protocol and connections. Later migration phases extract `apps/migrations`, `apps/local-fixtures`, `packages/live-messaging`, and `packages/startgg`, then remove the processor and `packages/eventing`. No external projects or Git submodules are required.
+The API owns Start.gg request/response behavior; the SyncStart app owns its protocol and connections. `apps/migrations`, `apps/local-fixtures`, and `packages/startgg` are now independent workspaces. Later phases introduce `packages/live-messaging`, then remove the processor and `packages/eventing`. No external projects or Git submodules are required.
 
 ## Requirements
 

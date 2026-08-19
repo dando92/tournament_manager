@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,8 +12,8 @@ import {
 } from '@tournament-manager/eventing';
 
 @Injectable()
-export class LocalSeedService implements OnApplicationBootstrap {
-  private readonly logger = new Logger(LocalSeedService.name);
+export class LocalFixturesService {
+  private readonly logger = new Logger(LocalFixturesService.name);
 
   constructor(
     @InjectRepository(Tournament)
@@ -23,11 +23,9 @@ export class LocalSeedService implements OnApplicationBootstrap {
     private readonly eventTransport: DurableEventTransport,
   ) {}
 
-  async onApplicationBootstrap(): Promise<void> {
-    if (this.config.get('LOCAL_SEED_ENABLED') !== 'true') return;
-
+  async apply(): Promise<void> {
     const name =
-      this.config.get('LOCAL_SEED_TOURNAMENT_NAME') ?? 'Local E2E Tournament';
+      this.config.get('LOCAL_FIXTURE_TOURNAMENT_NAME') ?? 'Local E2E Tournament';
     const existing = await this.tournaments.findOneBy({ name });
     if (existing) {
       this.logger.log(`Local seed already exists (tournament ${existing.id}).`);
@@ -37,7 +35,7 @@ export class LocalSeedService implements OnApplicationBootstrap {
 
     const tournament = this.tournaments.create({
       name,
-      syncstartUrl: 'ws://syncstart-simulator:19000',
+      syncstartUrl: this.config.get('LOCAL_FIXTURE_SYNCSTART_URL'),
       availableSetupsCount: 2,
       defaultScoringSystem: 'EurocupScoreCalculator',
     });
@@ -49,6 +47,7 @@ export class LocalSeedService implements OnApplicationBootstrap {
   }
 
   private async configureSyncStart(tournament: Tournament): Promise<void> {
+    if (!tournament.syncstartUrl) return;
     const event: SyncStartCommandEvent = {
       id: randomUUID(),
       type: 'syncstart.command',

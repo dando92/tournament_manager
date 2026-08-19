@@ -29,7 +29,6 @@ x-application-environment: &application-environment
   STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
   STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
   STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
-  LOCAL_SEED_ENABLED: ${LOCAL_SEED_ENABLED:-false}
 
 services:
   postgres:
@@ -60,9 +59,8 @@ services:
       retries: 12
 
   migrations:
-    image: ${IMAGE_REGISTRY}/tournament-manager-api:${RELEASE_SHA}
+    image: ${IMAGE_REGISTRY}/tournament-manager-migrations:${RELEASE_SHA}
     restart: "no"
-    command: ["npm", "run", "migration:run:prod", "--workspace=@tournament-manager/api"]
     environment: *application-environment
     depends_on:
       postgres:

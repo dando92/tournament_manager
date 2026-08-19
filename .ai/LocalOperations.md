@@ -57,7 +57,7 @@ The frontend container reads `PUBLIC_API_URL`, `PUBLIC_REALTIME_URL`, and `PUBLI
 
 Transport timing and retention are deploy-time configuration, so changing them does not require rebuilding the image. `OUTBOX_RELAY_IDLE_INTERVAL_MS`, `EVENT_CONSUMER_BLOCK_MS`, and `EVENT_RECLAIM_IDLE_MS` control eventing loops. `TOURNAMENT_TRANSPORT_RETENTION_DAYS`, `TRANSPORT_RETENTION_SWEEP_INTERVAL_MS`, and `TRANSPORT_RETENTION_BATCH_SIZE` control closed-tournament cleanup. A process restart or rolling restart is required after changing environment values.
 
-The local stack creates an idempotent `Local E2E Tournament` fixture by default. Set `LOCAL_SEED_ENABLED=false` to disable it or override `LOCAL_SEED_TOURNAMENT_NAME` in `.env`.
+The local stack runs the one-shot `local-fixtures` application and creates an idempotent `Local E2E Tournament` fixture by default. Override `LOCAL_FIXTURE_TOURNAMENT_NAME` in `.env`. Set `LOCAL_FIXTURE_SYNCSTART_URL` to a reachable host or remote SyncStart WebSocket URL; leave it empty to create the fixture without SyncStart. The bundled simulator is optional and starts only with `docker compose --profile simulator up`.
 
 ## Status and Logs
 

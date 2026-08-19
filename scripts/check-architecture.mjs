@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 
 const root = process.cwd();
 const errors = [];
-const apps = ['api', 'processor', 'syncstart', 'realtime', 'frontend'];
+const apps = ['api', 'migrations', 'local-fixtures', 'processor', 'syncstart', 'realtime', 'frontend'];
 
 function filesBelow(directory) {
   if (!existsSync(directory)) return [];
@@ -43,7 +43,7 @@ for (const app of apps) {
 }
 
 const deploymentCompose = readFileSync(join(root, 'deploy', 'docker-compose.yml'), 'utf8');
-for (const app of apps) {
+for (const app of apps.filter((app) => app !== 'local-fixtures')) {
   const imageName = app === 'api' ? 'api' : app;
   if (!deploymentCompose.includes(`tournament-manager-${imageName}:\${RELEASE_SHA}`)) {
     errors.push(`deployment image for ${app} must use the immutable RELEASE_SHA tag`);
@@ -79,11 +79,19 @@ const allowedDependencies = new Map([
   ['@tournament-manager/application', []],
   ['@tournament-manager/persistence', []],
   ['@tournament-manager/eventing', ['@tournament-manager/contracts']],
+  ['@tournament-manager/startgg', []],
+  ['@tournament-manager/migrations', ['@tournament-manager/persistence']],
+  ['@tournament-manager/local-fixtures', [
+    '@tournament-manager/contracts',
+    '@tournament-manager/eventing',
+    '@tournament-manager/persistence',
+  ]],
   ['@tournament-manager/api', [
     '@tournament-manager/application',
     '@tournament-manager/contracts',
     '@tournament-manager/eventing',
     '@tournament-manager/persistence',
+    '@tournament-manager/startgg',
   ]],
   ['@tournament-manager/processor', [
     '@tournament-manager/application',
@@ -107,6 +115,7 @@ for (const workspace of [
   'packages/application',
   'packages/persistence',
   'packages/eventing',
+  'packages/startgg',
   ...apps.map((app) => `apps/${app}`),
 ]) {
   const pkg = packageJson(workspace);

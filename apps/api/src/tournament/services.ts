@@ -28,7 +28,6 @@ import { UiUpdateContextService } from '@match/services/ui-update-context.servic
 import { StartggService } from '../integrations/startgg/startgg.service';
 import { AdvancementRuleService } from './services/advancement-rule.service';
 import { AdvancementRuleManager } from './services/advancement-rule.manager';
-import { PostgresTournamentPersistence } from './services/postgres-tournament.persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
 export { MatchManager };
@@ -94,7 +93,6 @@ export const Services = [
     StartggService,
     AdvancementRuleService,
     AdvancementRuleManager,
-    PostgresTournamentPersistence,
     UiUpdatePublisher,
 
     TournamentService,

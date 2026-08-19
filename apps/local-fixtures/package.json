@@ -1,0 +1,25 @@
+{
+  "name": "@tournament-manager/local-fixtures",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@tournament-manager/contracts": "0.0.1",
+    "@tournament-manager/eventing": "0.0.1",
+    "@tournament-manager/persistence": "0.0.1",
+    "@nestjs/common": "^11.1.18",
+    "@nestjs/config": "^4.0.3",
+    "@nestjs/core": "^11.1.18",
+    "@nestjs/typeorm": "^11.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^0.3.28"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
