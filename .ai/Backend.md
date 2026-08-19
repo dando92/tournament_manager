@@ -1,127 +1,84 @@
 # Backend Architecture and Coding Rules
 
-## NestJS Architecture
+## General Rules
 
-The backend uses the following architectural layers:
-
-- **Controllers:** Define API routes and contain almost no application logic. Controllers encapsulate and delegate to services or managers. They must not access or inject repositories.
-- **Controller routes:** Route inputs must be mapped through DTOs instead of individual native parameters. A native parameter is allowed only when the route accepts a single value, such as `id: number`.
-- **Managers:** Implement application logic and complex orchestration. Managers must not access or inject repositories. They use the appropriate services whenever they need to retrieve or update database data. Managers also transform database entities into DTOs for the view.
-- **Services:** Provide CRUD access to the database. Services encapsulate repositories and all database access, and return plain database entities that managers decouple from the presentation layer.
-- **Entities:** Represent database entities.
-- **Gateways:** Provide real-time view updates through WebSockets.
-- **DTOs:** Define data exchanged with the view, both incoming and outgoing.
-
-## Maintainability
-
-- Prefer the smallest explicit implementation that satisfies the current requirement.
-- Ask the user before introducing substantial architectural or concurrency complexity. Do not add speculative protection for rare manual-operation races.
-- Keep classes, functions, fixtures, and test helpers focused and locally understandable.
-- Split long handlers and functions into small operations with semantically meaningful names so the orchestration reads as a clear sequence of steps.
-- Use descriptive names and straightforward control flow instead of implicit conventions or premature generic abstractions.
-- Extract shared code only when it removes real duplication or establishes an approved architectural boundary.
-- Keep characterization tests readable as behavior documentation for future maintainers.
-- Do not mix architectural migration with unrelated cleanup or functional changes.
-- Use configured `@` aliases for imports across directories, applications, and packages. Do not use relative path traversal for project modules.
+- Keep implementations as simple as reasonably possible for approved requirements.
+- Keep API managers and services stateless; PostgreSQL owns authoritative application state.
+- Connection adapters may own volatile connection and correlation state.
+- Do not introduce durable messaging, distributed locks, or asynchronous workflows without an explicit requirement.
+- Keep controllers thin and application orchestration explicit.
+- Use configured `@` aliases for project imports.
+- Keep application and protocol logic unit-testable without Redis, HTTP servers, or WebSockets by injecting transport ports.
 
 ## Technologies
 
-- Node.js 22
-- TypeScript
-- NestJS 11
-- TypeORM
-- PostgreSQL-compatible persistence
-- Redis Streams for durable event transport
-- Redis Pub/Sub for replaceable live events
-- PostgreSQL is the only supported database in the target architecture.
-- SQLite and MariaDB configuration, dependencies, adapters, and migration paths are not supported.
-- TypeORM schema synchronization is disabled in every environment. Versioned PostgreSQL migrations are the only application-schema mechanism.
-- The initial migration targets an empty pre-production database. Existing test databases are reset instead of carrying compatibility code into the baseline.
-- Native WebSockets through NestJS gateways
+- NestJS and TypeScript for API, SyncStart, Realtime, migrations, and local fixtures.
+- TypeORM and PostgreSQL for authoritative persistence.
+- Redis Pub/Sub for replaceable live-message fan-out only.
+- Native WebSockets for the external SyncStart protocol and browser Realtime connections.
+- Internal HTTP for API/SyncStart request-response communication and snapshots.
 
-## Location and Integrations
+Redis Streams, transactional outbox, consumer inbox, processor workers, retries, dead letters, and transport retention are not part of the approved target.
 
-The HTTP API is located in `apps/api`. Durable handlers, SyncStart connections, and browser WebSockets live exclusively in their dedicated applications. API and processor share entity metadata through `packages/persistence`; no application imports another application's source tree.
+## Application Boundaries
 
-Local configuration is loaded from the repository-root `.env` file. The `local` configuration must start the complete application and its PostgreSQL and Redis dependencies through Docker Compose without requiring cloud services. Local startup requirements are defined in [Architecture.md](Architecture.md).
+- API owns synchronous HTTP use cases, database transactions, and Start.gg application orchestration.
+- SyncStart owns protocol connections, connectors, lobby sessions, and volatile live state.
+- Realtime owns browser WebSockets and scoped fan-out.
+- Migrations own schema rollout as a one-shot application.
+- Local fixtures own optional local-only deterministic data.
 
-## Health and Local Bootstrap
-
-- `GET /health/live` reports process liveness and must not depend on external services.
-- `GET /health/ready` reports PostgreSQL, Redis, and migration-runner readiness separately and returns HTTP `503` while any required dependency is unavailable.
-- Docker Compose runs the API-owned migration entrypoint to completion before starting the application services.
-- The migration runner applies versioned application-schema migrations before API and processor startup, and readiness remains unavailable if it does not complete.
-- Optional local seed data must be deterministic and idempotent. It is enabled only through `LOCAL_SEED_ENABLED=true`.
-- Operational procedures are defined in [LocalOperations.md](LocalOperations.md).
-
-## Target Backend Boundaries
-
-The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).
-
-Managers remain application-layer use cases. Event handlers should invoke shared managers or services when the behavior is reused. A processor-only transactional handler may use repositories from its supplied transaction `EntityManager`; it does not need a separate persistence class merely to contain queries. Keep the orchestration explicit and split long flows into focused, semantically named methods.
+Detailed ownership and communication flows are defined in [Architecture.md](Architecture.md).
 
 ## Database Access and Transactions
 
-- Queries belong with the code that owns and explains the behavior. A dedicated persistence class is optional and must be justified by reuse, a replaceable interface, or substantial infrastructure-specific behavior; it is not required simply to separate queries from a handler or use case.
-- Within an explicit transaction, obtain every participating repository from the supplied transaction `EntityManager`. Do not use an injected repository inside that transaction because it may use a different connection.
-- Direct SQL is allowed where PostgreSQL capabilities or required query semantics are not expressed adequately by TypeORM. Keep it localized in a clearly named method or infrastructure component.
-- Prefer readable orchestration over extra classes: decompose a long transactional flow into small semantic methods before introducing another layer.
-- PostgreSQL advisory-lock SQL and session acquisition/release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM session primitives; application code must not depend on it directly.
-- Do not present PostgreSQL advisory locks as a generic distributed-lock abstraction. PostgreSQL is an approved explicit infrastructure dependency, while provider independence means independence from a particular cloud provider rather than database-engine portability.
-- Do not require every ordinary tournament mutation to open a transaction and lock the tournament row. Mutations check the lifecycle state at entry; the rare race in which a mutation overlaps manual closure is accepted during pre-production to avoid spreading locking complexity across all write paths. Revisit this tradeoff before production only if the stronger invariant is required.
-- Use one global advisory lock to elect a single retention sweep across service replicas. Do not coordinate retention with manual close or reopen operations through locks or repeated eligibility checks.
+- Use `DataSource.transaction()` directly in the service that owns a multi-write invariant.
+- Obtain every repository used inside a transaction from its `EntityManager`.
+- Do not create a persistence class solely to wrap one transaction or move a query out of a service.
+- Direct SQL is allowed when PostgreSQL-specific behavior is clearer than a TypeORM equivalent; keep it localized and named.
+- TypeORM schema synchronization is disabled in every environment.
+- Versioned PostgreSQL migrations are the only schema mechanism.
+- The current pre-production database is disposable and may be reset to a clean baseline.
 
-## Eventing Inside the Existing Backend
+`PostgresTournamentPersistence` is superseded. Tournament creation and its required transaction belong directly in `TournamentService`.
 
-- Durable contracts are explicit internal envelopes in `packages/contracts`. They contain only event ID, type, aggregate ID, and payload, and never expose TypeORM entities.
-- PostgreSQL `event_outbox` rows are written in the same transaction as their domain change. Publishing directly to Redis from a domain transaction is not allowed.
-- The relay publishes durable events to the configured Redis Stream and marks outbox rows only after Redis acknowledges `XADD`. A crash between those operations may duplicate delivery, so consumers must remain idempotent.
-- Durable consumers use Redis consumer groups and insert an `event_inbox` row in the same PostgreSQL transaction as their business effect. Inbox identity is the stable handler name plus event ID.
-- Failed events remain pending for another consumer to reclaim. Retry count is bounded; exhausted events are acknowledged only after being copied to the `.dead-letter` stream with the reason, attempt count, and failure time.
-- Replaceable live events use the separate Pub/Sub adapter. Subscribers must recover missed messages from a newer update or authoritative HTTP snapshot.
-- `EVENT_STREAM`, `EVENT_CONSUMER_GROUP`, and `LIVE_EVENT_CHANNEL` configure provider-independent Redis destinations. Their defaults are suitable for the local stack.
+## Live Messages
 
-The first migrated Phase 3 slice is `tournament.created`. Tournament creation and its outbox record commit atomically; the processor consumer creates the idempotent `tournament_event_projection` and publishes a replaceable `tournament.snapshot-changed` live event.
+- API and SyncStart depend on `LiveEventPublisher`, implemented by a Redis Pub/Sub adapter.
+- Realtime depends on `LiveEventSubscriber` and `BrowserEventBroadcaster`.
+- Realtime maps and forwards messages but performs no domain queries or calculations.
+- Publishers must provide the tournament scope and complete payload needed for routing.
+- Subscribers recover missed persisted state through API HTTP snapshots.
+- Volatile live state is recovered from SyncStart snapshots where supported.
+- Do not model replaceable GUI invalidations as durable outbox events.
 
-Tournament-scoped events always use the tournament ID as their aggregate ID. The Redis adapter atomically indexes Stream and dead-letter entry IDs by aggregate so retention never scans a complete Stream. A closed tournament rejects mutating HTTP use cases with `409 Conflict`; reads and the explicit reopen operation remain available.
+`@tournament-manager/contracts` owns transport-neutral DTOs and live envelopes. `@tournament-manager/live-messaging` owns only publisher/subscriber ports and Redis Pub/Sub adapters. HTTP and WebSocket adapters remain application-local.
 
-`EventRetentionService` runs only inside the processor with the other eventing workers. It purges all transport data after the configured continuously-closed period, including unpublished outbox rows and dead letters. Database deletion is batched, Redis pending entries are acknowledged before deletion, and one global advisory lock prevents concurrent sweeps across replicas. Retention deliberately does not lock against or recheck rare concurrent manual lifecycle operations. `PostgresEventRetentionPersistence` owns the retention SQL and `PostgresAdvisoryLock` owns the session-scoped global lock mechanics.
+## SyncStart Communication
 
-## Extracted Processor Boundary
+- API sends connection and lobby commands through authenticated internal HTTP endpoints.
+- SyncStart sends normalized completed songs to an authenticated idempotent API endpoint.
+- The API applies score, standing, match, and advancement behavior synchronously.
+- Completed-song delivery is best effort. Manual score entry is the approved recovery for an occasional loss.
+- SyncStart may use simple bounded in-memory retry, but must not add a persistent queue without approval.
+- SyncStart protocol dispatch uses focused `LobbyLifecycleObserver`, `LiveMatchObserver`, and `CompletedSongObserver` interfaces. Avoid one observer containing many optional callbacks.
+- API-to-SyncStart code depends on `SyncStartClient`; completed-song propagation depends on `CompletedSongSink`. Unit tests use fakes or spies.
 
-- `apps/processor` owns the outbox relay, durable Redis Streams consumer loop, inbox transaction lifecycle, retry/dead-letter behavior, retention sweep, and registered stateless handlers.
-- The API owns durable and prepared live-event producers, but it does not maintain browser WebSockets, execute durable handlers, or relay outbox work.
-- `packages/application` contains reusable scoring calculations used from both synchronous API paths and processor handlers.
-- `packages/contracts` contains the shared internal message types.
-- `packages/eventing` contains the transport interfaces, Redis adapter, outbox service, and PostgreSQL outbox adapter shared by API producers and processor workers.
-- API and processor use independent entrypoints, images, health checks, and logs. Processor health is internal to the Compose network so multiple replicas can run without host-port conflicts.
+## Start.gg
 
-## Stateless Handler Registration
+- `@tournament-manager/startgg` owns provider protocol details only: GraphQL client, operations, types, parsing, pagination, rate limiting, and normalized provider errors.
+- API owns authorization, HTTP DTOs, import/report orchestration, database writes, mappings, and UI invalidation.
+- Reporting remains synchronous during this migration.
 
-- `EventConsumerRegistry` registers one current consumer per event type without coupling the eventing runner to tournament modules.
-- Every `EventConsumer` owns its stable inbox `identity`, event type, transactional `handle`, and optional post-commit effect. `PostgresEventTransaction` performs the standard inbox insertion and invokes the concrete handler inside the same transaction; duplicate events never enter the handler body.
-- `tournament.created` uses the same registry and transaction path as every other durable event. The event loop contains no event-specific branches.
-- The Phase 4 `syncstart.song-completed` producer publishes the normalized external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
-- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then the handler applies its processor-only score and standing orchestration through focused, semantically named methods using repositories from the supplied transaction `EntityManager`. Query separation into a dedicated class is not required. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
-- `PostgresTournamentPersistence` owns the tournament-creation transaction and obtains the tournament repository from its transaction `EntityManager`; it writes the `tournament.created` outbox event through the focused outbox adapter in that same transaction.
-- A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
-- Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.
-- Internal Redis payloads are trusted after minimal envelope parsing. Incompatible deployments discard retained transport work instead of supporting old message shapes.
+## Health and Bootstrap
 
-## Extracted SyncStart Boundary
+- `GET /health/live` reports process liveness without external dependencies.
+- `GET /health/ready` reports required runtime dependencies and returns `503` when unavailable.
+- The migration application must complete before dependent services start; runtime health does not compare migration manifests.
+- Optional local fixtures are deterministic and idempotent.
+- `LOCAL_FIXTURE_SYNCSTART_URL` optionally configures a simulator, host, or remote SyncStart server.
 
-- `apps/syncstart` exclusively owns the SyncStart WebSocket protocol, message parsing, reconnection, connector instances, and volatile lobby sessions. No SyncStart protocol code runs in the API.
-- The API publishes `syncstart.command` envelopes to a dedicated Redis Stream. Interactive HTTP commands await a correlated live result; lifecycle configuration commands return after durable `XADD`.
-- The service publishes normalized song completion to the main durable event Stream and replaceable connection, ready-state, song, score, and progress telemetry to Redis Pub/Sub.
-- Desired connector URLs and spectated-lobby reconnection specifications are service-owned operational state in Redis. They rebuild connections after a process restart and do not replace PostgreSQL tournament or result persistence.
-- Command idempotency markers and completed outcomes are retained in Redis. A completed redelivery reuses its outcome; an interrupted command with an indeterminate external outcome is not executed a second time.
-- `apps/realtime` subscribes directly to SyncStart telemetry and prepared UI events. The API no longer imports gateway implementations or forwards Pub/Sub telemetry.
-- Protocol frames are serialized per connection before parsing and event derivation, preventing adjacent duplicate completion frames from racing the completion signature.
+## Logging
 
-## Extracted Realtime Boundary
-
-- `apps/realtime` owns the three browser-compatible WebSocket paths, tournament subscriptions, scoped fan-out, replaceable snapshots, and its own health endpoints.
-- Two local replicas subscribe independently to Redis Pub/Sub. Every live publication receives one atomic per-tournament Redis sequence, so all replicas expose the same ordering.
-- Every scoped connection receives sequence markers even for events outside its compatibility path. This detects missed Pub/Sub messages without leaking another event payload or tournament scope.
-- API and processor publishers resolve database identifiers into prepared UI payloads before publication. Realtime maps transport events to browser DTOs but performs no queries or domain calculations.
-- Realtime restart loses connections and local caches only. HTTP APIs remain available and authoritative while both replicas are stopped.
+- Use the standard NestJS logger and write container logs to stdout/stderr.
+- Do not maintain a custom file logger unless a future explicit operational requirement justifies one.

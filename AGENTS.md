@@ -7,9 +7,9 @@ Tournament Manager is a self-contained, provider-independent application for man
 ## Scope and Requirements
 
 - Keep the application isolated from the legacy container repository and unrelated projects.
-- Migrate the current backend into independently deployable API, event processor, SyncStart, and UI realtime services.
+- Simplify the backend into independently deployable API, SyncStart, UI realtime, migration, and frontend applications.
 - Keep application logic stateless; only connection adapters may keep volatile in-memory state.
-- Use PostgreSQL as the authoritative transactional store and Redis as the provider-independent event transport.
+- Use PostgreSQL as the authoritative transactional store and Redis Pub/Sub only for replaceable live-message fan-out.
 - Keep application-owned integrations within the service that owns their lifecycle.
 - Do not add Git submodules unless a future requirement explicitly justifies an external source dependency.
 - Maintain a `local` configuration that starts the complete application stack with one command through Docker Compose.
@@ -51,15 +51,19 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 ## Repository Architecture
 
-- `apps/api`: NestJS HTTP API, synchronous application entrypoints, migrations, and application-owned request/response integrations.
-- `apps/processor`: Independently deployable stateless event processor and outbox relay.
+- `apps/api`: NestJS HTTP API, synchronous application entrypoints, and application-owned request/response integrations.
+- `apps/migrations`: Target one-shot PostgreSQL migration runner; it will be extracted from the API during the replacement migration.
+- `apps/local-fixtures`: Target optional one-shot local fixture application; it will replace API bootstrap seeding.
+- `apps/processor`: Transitional durable event processor to be removed by the replacement migration.
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
 - `apps/frontend`: Current React and Vite web application.
-- `packages/application`: Application logic shared by API and processor entrypoints.
-- `packages/contracts`: Internal durable and live event contracts.
-- `packages/eventing`: Shared outbox and Redis transport interfaces and adapters.
-- `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration used by API and processor.
+- `packages/application`: Pure reusable application calculations when genuinely shared.
+- `packages/contracts`: Transport-neutral internal HTTP DTOs and replaceable live-message envelopes.
+- `packages/eventing`: Transitional durable-event package to be removed by the replacement migration.
+- `packages/live-messaging`: Target live-message publisher/subscriber ports and Redis Pub/Sub adapters.
+- `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
+- `packages/startgg`: Target provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.

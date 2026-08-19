@@ -54,3 +54,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should any realtime paths require a JWT, or should all tournament-scoped update feeds remain public read surfaces?
 - Evidence: the removed Phase 6 gateway implementations had no authentication guard; `apps/realtime/src/realtime.gateway.ts` validates path and tournament scope but deliberately does not introduce a new access restriction.
 - Migration rule: Preserve anonymous read access until the product access policy is explicitly resolved.
+
+### FQ-006 — Start.gg reporting flag is ignored
+
+- Status: Deferred.
+- Observed behavior: `CommitMatchResultDto.publishToStartgg` is documented as optional and defaults to false, but `MatchWorkflowManager.CommitMatchResult` always calls `StartggService.reportCompletedMatch` after local completion.
+- Question: Should Start.gg reporting occur only when `publishToStartgg` is true, or should reporting remain automatic for every mapped match?
+- Evidence: compare `apps/api/src/tournament/match/dtos/match.dto.ts` with `apps/api/src/tournament/match/services/match-workflow.manager.ts`.
+- Migration rule: Preserve the current synchronous behavior while extracting `@tournament-manager/startgg`; do not resolve the flag semantics as part of the architectural migration.

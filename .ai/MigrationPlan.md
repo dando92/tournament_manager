@@ -1,378 +1,562 @@
-# Architecture Migration Work Plan
+# Simplified Architecture Migration Plan
 
-## Goal
+## Objective
 
-Migrate Tournament Manager from the current NestJS backend into the target API, processor, SyncStart, realtime, and frontend topology without losing the ability to run and verify the complete application after any completed phase.
+Simplify Tournament Manager around the scaling boundary that actually requires isolation: SyncStart connection and lobby state. Preserve the independently deployable API, SyncStart, realtime, frontend, and database-migration applications while removing durable event infrastructure that is not justified by the product's recovery requirements.
 
-This plan implements the decisions in [Architecture.md](Architecture.md). It is intentionally incremental: a phase may start only when the preceding phase passes its exit gate.
+The target topology is:
 
-## Non-Negotiable Delivery Rules
+```text
+Browser --HTTP----------> API
+Browser --WebSocket-----> Realtime
+API --internal HTTP-----> SyncStart
+SyncStart --internal HTTP> API
+API/SyncStart --Pub/Sub-> Redis -> Realtime replicas
+SyncStart --WebSocket---> external SyncStart server
+```
 
-- The default branch must remain buildable, runnable, and testable after every merge.
-- Each change must preserve a complete working path. Do not merge a producer before its required consumer, or remove an old path before the replacement passes parity tests.
-- Migrate one vertical behavior slice at a time. A slice includes its contract, producer, transport, consumer, persistence, UI effect, and tests.
-- Every phase must add or update automated tests before its legacy implementation is removed.
-- Fix regressions in the current phase. Do not defer them to a later migration phase.
-- Keep local testing independent from cloud providers. Neon and managed Redis may be deployment targets, but never local test requirements.
-- Use production-equivalent PostgreSQL, Redis, containers, migrations, protocols, and event contracts locally.
-- The current pre-production data is disposable, so migration work should prefer a clean schema baseline over compatibility with test-only databases.
-- After the user explicitly declares production use, destructive persistence changes require a tested forward migration and, where feasible, a rollback or restore procedure.
+## Approved Principles
 
-## Execution and Commit Protocol
+- The API owns synchronous tournament, match, standings, advancement, authentication, and request/response integration use cases.
+- API managers and services may remain in-process when they are stateless and use PostgreSQL as authoritative state.
+- SyncStart owns all SyncStart protocol connections, connector instances, lobby sessions, and volatile live-match state.
+- Realtime is the only browser WebSocket endpoint. It owns browser connections and scoped fan-out, but not authoritative tournament state.
+- Redis is used only for replaceable Pub/Sub fan-out from API and SyncStart to every realtime replica.
+- Redis Streams, transactional outbox, consumer inbox, retries, dead letters, event retention, and the processor application are removed.
+- Losing an occasional completed-song notification during a failure is an accepted product tradeoff. Tournament staff can enter the missing score manually.
+- The internal API endpoint receiving completed songs is idempotent to avoid inexpensive duplicate-processing failures; no persistent delivery queue is required.
+- SyncStart initially runs as one state-owning replica. Sharding or failover requires a future explicit requirement and design approval.
+- PostgreSQL remains the only authoritative transactional store.
+- The existing container, immutable-image, health-check, and deployment approach is retained and simplified for the smaller application set.
+- Pre-production data is disposable, so the database migrations may be replaced with a clean baseline.
 
-- Use [MigrationStatus.md](MigrationStatus.md) as the durable handoff record. Read it before starting migration work and update it after every completed checkpoint.
-- Contributors and coding agents may create local Git commits without asking for separate approval at each step.
-- Commit at coherent, reviewable checkpoints: a protected behavior slice, a test-infrastructure increment, a migration, or another independently verifiable unit of work.
-- Before committing, run the verification appropriate to the changed scope and record the command and result in `MigrationStatus.md`.
-- Keep commits focused. Do not include unrelated user changes, secrets, generated runtime data, known regressions, or a producer whose required consumer is not available.
-- A phase may span multiple commits. Passing a checkpoint does not imply that the phase exit gate has passed.
-- Commit messages must be in English and describe the completed outcome.
+## Target Workspaces
 
-## Required Developer Commands
+```text
+apps/
+  api/             HTTP API and synchronous application use cases
+  migrations/      One-shot PostgreSQL migration runner
+  local-fixtures/  Optional one-shot local development fixtures
+  syncstart/       SyncStart protocol, connections, lobby state, and live state
+  realtime/        Browser WebSockets and scoped fan-out
+  frontend/        React application
 
-The migration must progressively establish and preserve these repository-root commands:
+packages/
+  application/     Reusable pure application calculations when genuinely shared
+  contracts/       Transport-neutral internal DTOs and live envelopes
+  persistence/     Shared PostgreSQL entity metadata and repository registration
+  live-messaging/  Replaceable-message ports and Redis Pub/Sub adapters
+  startgg/         Provider client, GraphQL protocol, types, parsing, pagination, and rate limiting
+```
+
+`apps/processor` and `packages/eventing` are removed. `@tournament-manager/live-messaging` replaces only the small Pub/Sub behavior that remains.
+
+## Testable Ports and Adapters
+
+Application and protocol logic must not import Redis clients, WebSocket gateways, or concrete HTTP clients. Use small behavior-oriented ports:
+
+- `LiveEventPublisher` for API and SyncStart replaceable messages;
+- `LiveEventSubscriber` for Realtime intake;
+- `SyncStartClient` for API-to-SyncStart commands and snapshots;
+- `CompletedSongSink` for SyncStart-to-API completed-song submission;
+- `BrowserEventBroadcaster` for Realtime WebSocket delivery.
+
+`@tournament-manager/contracts` owns transport-neutral DTOs and live envelopes. `@tournament-manager/live-messaging` owns publisher/subscriber ports and Redis Pub/Sub adapters. HTTP and WebSocket adapters remain in the application that owns their lifecycle.
+
+SyncStart protocol events use focused observer interfaces instead of one interface with many optional callbacks:
+
+- `LobbyLifecycleObserver`;
+- `LiveMatchObserver`;
+- `CompletedSongObserver`.
+
+The protocol dispatcher invokes the relevant observer collection. Concrete observers translate normalized protocol events into `LiveEventPublisher` calls or `CompletedSongSink` calls. Unit tests inject in-memory fakes or spies and do not start Redis, HTTP servers, or WebSockets.
+
+Do not add an application-wide event bus, generic mediator, or speculative abstraction. Introduce a port only at a real transport or ownership boundary.
+
+## Implementation Blueprint
+
+This section is prescriptive enough to guide implementation. Deviate only when existing code or tests demonstrate a concrete incompatibility, and record that decision before introducing a different abstraction.
+
+### Shared contracts
+
+Keep `packages/contracts` free of NestJS, Redis, TypeORM, and WebSocket dependencies. Define plain TypeScript types for:
+
+```ts
+export interface LiveEventEnvelope<TPayload = unknown> {
+  type: string;
+  tournamentId: number;
+  payload: TPayload;
+  sequence?: number;
+}
+
+export interface CompletedSongRequest {
+  completionId: string;
+  tournamentId: number;
+  lobbyId: string;
+  lobbyName: string;
+  lobbyCode: string;
+  song: CompletedSongData;
+  scores: CompletedPlayerScore[];
+}
+
+export interface ConfigureTournamentRequest {
+  tournamentId: number;
+  syncstartUrl: string;
+}
+
+export interface SyncStartSnapshot {
+  tournamentId: number;
+  connection: SyncStartConnectionStatusDto;
+  lobbies: LobbyConnectionDto[];
+  liveMatches: LobbyMatchUpdateDto[];
+}
+```
+
+Reuse existing normalized DTOs where their current shapes are adequate. Do not expose TypeORM entities, Redis payload types, raw SyncStart frames, or NestJS HTTP classes from the contracts package.
+
+### Live messaging package
+
+Create this target structure:
+
+```text
+packages/live-messaging/
+  src/
+    ports/
+      live-event-publisher.ts
+      live-event-subscriber.ts
+    redis/
+      redis-live-event-publisher.ts
+      redis-live-event-subscriber.ts
+      redis-live-messaging.options.ts
+    tokens.ts
+    index.ts
+```
+
+Ports:
+
+```ts
+export interface LiveEventPublisher {
+  publish(event: LiveEventEnvelope): Promise<void>;
+}
+
+export interface LiveEventSubscriber {
+  subscribe(
+    handler: (event: LiveEventEnvelope) => void | Promise<void>,
+  ): Promise<() => Promise<void>>;
+}
+```
+
+Export stable NestJS injection tokens such as `LIVE_EVENT_PUBLISHER` and `LIVE_EVENT_SUBSCRIBER`. The Redis adapters receive host, port, channel, and optional sequence configuration through explicit options. Application logic injects the port token, never a Redis class.
+
+Keep separate Redis publisher and subscriber connections because Redis subscription mode has a distinct lifecycle. Validate only the transport envelope at this trusted internal boundary. Preserve tournament sequencing only if existing browser compatibility tests require it; do not build durable replay.
+
+### API-to-SyncStart port
+
+Place the port and HTTP adapter under the API integration directory:
+
+```text
+apps/api/src/integrations/syncstart/
+  syncstart-client.ts
+  http-syncstart.client.ts
+  syncstart-client.module.ts
+```
+
+```ts
+export interface SyncStartClient {
+  configureTournament(input: ConfigureTournamentRequest): Promise<void>;
+  closeTournament(tournamentId: number): Promise<void>;
+  connectServer(tournamentId: number): Promise<ConnectionStatus>;
+  disconnectServer(tournamentId: number): Promise<ConnectionStatus>;
+  listLobbies(tournamentId: number): Promise<TournamentLobbiesDto>;
+  connectLobby(input: ConnectLobbyRequest): Promise<ConnectedLobby>;
+  createLobby(input: CreateLobbyRequest): Promise<ConnectedLobby>;
+  disconnectLobby(tournamentId: number, lobbyId: string): Promise<void>;
+  getSnapshot(tournamentId: number): Promise<SyncStartSnapshot>;
+}
+```
+
+`HttpSyncStartClient` uses platform `fetch`, a configurable base URL, a short configurable timeout, and the internal service token. It maps non-success responses to clear NestJS gateway exceptions at the adapter boundary. Unit tests inject a fake `SyncStartClient`.
+
+### SyncStart internal HTTP surface
+
+Add an internal controller in `apps/syncstart` with routes equivalent to:
+
+```text
+PUT    /internal/tournaments/:tournamentId/configuration
+DELETE /internal/tournaments/:tournamentId/configuration
+POST   /internal/tournaments/:tournamentId/server/connect
+DELETE /internal/tournaments/:tournamentId/server/disconnect
+GET    /internal/tournaments/:tournamentId/lobbies
+POST   /internal/tournaments/:tournamentId/lobbies/connect
+POST   /internal/tournaments/:tournamentId/lobbies
+DELETE /internal/tournaments/:tournamentId/lobbies/:lobbyId
+GET    /internal/tournaments/:tournamentId/snapshot
+```
+
+Controllers validate DTOs and invoke one SyncStart application service. That service owns connector lookup and lobby state; it does not know about HTTP response objects.
+
+Protect every internal route with a small shared-token guard using `INTERNAL_SERVICE_TOKEN`. Keep these ports private to the container network and do not expose them through the public reverse proxy.
+
+### SyncStart restart bootstrap
+
+SyncStart volatile state disappears on restart. Rebuild desired connectors through a simple API bootstrap query instead of Redis state:
+
+```text
+GET /internal/syncstart/tournaments
+```
+
+The API returns open tournaments with a configured SyncStart URL. On startup, SyncStart calls this endpoint and recreates connectors. Lobby spectating state does not need durable restoration unless parity tests require it. Do not add polling or distributed ownership.
+
+### Completed-song submission
+
+Define the SyncStart-side port and HTTP adapter:
+
+```ts
+export interface CompletedSongSink {
+  submit(song: CompletedSongRequest): Promise<void>;
+}
+```
+
+```text
+apps/syncstart/src/api/
+  completed-song.sink.ts
+  http-completed-song.sink.ts
+```
+
+The adapter calls `POST /internal/syncstart/completed-songs`. The API controller authenticates and validates the request, then calls one `CompletedSongService`. Move the existing operations from `LobbySongCompletedHandler` into that service:
+
+1. resolve tournament, lobby, song, players, and active match;
+2. create or reuse score records;
+3. create or update standings;
+4. recalculate completed rounds;
+5. apply characterized match-completion and advancement behavior;
+6. commit the PostgreSQL transaction;
+7. publish replaceable match invalidations and warnings after commit.
+
+Reprocessing the same `completionId` must not create duplicate standings. Prefer existing natural lookup/upsert behavior keyed by resolved match round, player, and song. Do not recreate a generic inbox table. If the current schema cannot provide this cheaply, record the limitation and preserve the approved best-effort behavior.
+
+### SyncStart protocol observers
+
+Use three focused observer roles:
+
+```ts
+export interface LobbyLifecycleObserver {
+  onConnectionStatus(event: ConnectionStatusEvent): Promise<void>;
+  onLobbyChanged(event: LobbyConnectionEvent): Promise<void>;
+  onPlayerReady(event: PlayerReadyEvent): Promise<void>;
+}
+
+export interface LiveMatchObserver {
+  onSongSelected(event: SongSelectedEvent): Promise<void>;
+  onMatchUpdated(event: MatchUpdatedEvent): Promise<void>;
+  onSongCompletedLive(event: SongCompletedEvent): Promise<void>;
+}
+
+export interface CompletedSongObserver {
+  onSongCompleted(event: SongCompletedEvent): Promise<void>;
+}
+```
+
+The dispatcher has explicit observer collections and invokes only the relevant collection. Implement a telemetry observer that maps lifecycle/live events to `LiveEventPublisher`, and a persistence observer that maps completed songs to `CompletedSongSink`.
+
+The connector parses raw frames and produces normalized events; it does not import Redis or HTTP adapters. Observer tests use recording fakes. Preserve serialized frame handling and completion de-duplication already implemented in the connector.
+
+### API live publication
+
+Retain `UiUpdatePublisher` behavior but make it depend on `LiveEventPublisher`. It may query `UiUpdateContextService` to prepare the complete browser payload before publishing. Do not route GUI invalidations through SyncStart, a processor, an outbox, or an application-wide event bus.
+
+### Realtime intake and browser delivery
+
+Target structure:
+
+```text
+apps/realtime/src/
+  live-events/
+    realtime-event.service.ts
+    realtime-event.mapper.ts
+  browser/
+    browser-event-broadcaster.ts
+    websocket-browser-event.broadcaster.ts
+  snapshots/
+    api-snapshot.client.ts
+    syncstart-snapshot.client.ts
+```
+
+`RealtimeEventService` subscribes through `LiveEventSubscriber`, maps internal envelopes to existing browser event names, and calls `BrowserEventBroadcaster`. The WebSocket gateway implements the broadcaster and owns connections and tournament subscriptions.
+
+Keep mapping and routing unit-testable with recording fakes. Browser reconnect loads persisted state from API snapshots and volatile live state from the SyncStart snapshot endpoint. Realtime does not query PostgreSQL directly.
+
+### Internal HTTP authentication and configuration
+
+Use these explicit settings:
+
+```text
+INTERNAL_SERVICE_TOKEN
+API_INTERNAL_URL
+SYNCSTART_INTERNAL_URL
+INTERNAL_HTTP_TIMEOUT_MS
+LIVE_EVENT_CHANNEL
+REDIS_HOST
+REDIS_PORT
+```
+
+Fail startup when required hosted configuration is absent. Local Compose may provide deterministic development defaults. Never log the token or include it in DTOs.
+
+### Migrations implementation
+
+Create:
+
+```text
+apps/migrations/
+  src/
+    migration-data-source.ts
+    run-migrations.ts
+    migrations/
+  package.json
+  tsconfig.json
+  Dockerfile
+```
+
+Move migration scripts and tests from the API. After durable schema removal, replace the pre-production history with one reviewed baseline containing application tables only. Remove `event_outbox`, `event_inbox`, `tournament_event_projection`, retention indexes, and compatibility code.
+
+### Local fixtures implementation
+
+Create a one-shot NestJS application context in `apps/local-fixtures`. It uses `packages/persistence` repositories directly and creates the deterministic tournament idempotently by name. It does not import API source or duplicate HTTP controllers.
+
+If `LOCAL_FIXTURE_SYNCSTART_URL` is present, persist it on the fixture tournament. SyncStart discovers it through the startup bootstrap API after services start. If absent, create the tournament without SyncStart configuration. Keep simulator startup in an optional Compose profile or override.
+
+### Start.gg package implementation
+
+Create:
+
+```text
+packages/startgg/
+  src/
+    client/
+      startgg.client.ts
+    operations/
+      queries/
+      mutations/
+    responses/
+    startgg.types.ts
+    startgg.errors.ts
+    index.ts
+```
+
+The package must not import API services, tournament DTOs, repositories, entities, authorization types, or `UiUpdatePublisher`. Inject configuration into the client constructor or module options. Keep `StartggService` in the API and change only its client import and injection.
+
+### Unit-test expectations
+
+At minimum, add transport-free unit tests proving:
+
+- API tournament/lobby orchestration calls a fake `SyncStartClient` with normalized input;
+- SyncStart controllers delegate to connector/session application services;
+- protocol events reach the correct focused observers;
+- completed songs reach a fake `CompletedSongSink` once after connector de-duplication;
+- the API completed-song service preserves the old processor handler's business effects;
+- `UiUpdatePublisher` emits complete payloads through a fake `LiveEventPublisher`;
+- Realtime maps subscribed events and invokes a fake `BrowserEventBroadcaster` with the correct tournament scope;
+- Start.gg application tests inject a fake provider client.
+
+Use integration tests only for concrete Redis Pub/Sub, internal HTTP wiring, PostgreSQL transactions, and WebSocket compatibility.
+
+## Communication Contracts
+
+### API to SyncStart
+
+Use internal HTTP request/response endpoints for operations that need an immediate result, including:
+
+- configure or close a tournament connection;
+- connect or disconnect the SyncStart server;
+- list, create, connect, or disconnect lobbies.
+
+Failures are returned synchronously to the API. Do not add a command Stream, correlation channel, persistent command state, or distributed workflow.
+
+### SyncStart to API
+
+SyncStart calls an authenticated internal API endpoint when a song completes. The API executes the existing score, standing, recalculation, match, and advancement behavior synchronously and idempotently.
+
+Best-effort bounded in-memory retry is allowed only if it remains simple. A process restart may lose an unpersisted score; manual entry is the accepted recovery path.
+
+### API and SyncStart to Realtime
+
+API and SyncStart publish replaceable live messages to Redis Pub/Sub. Every realtime replica subscribes to the same channel and forwards scoped messages to connected browsers.
+
+- API publishes tournament-structure and match invalidations after synchronous mutations.
+- SyncStart publishes connection, lobby, song, score, judgment, progress, and warning telemetry.
+- Missed persisted-state invalidations recover through API HTTP snapshots.
+- Realtime obtains current volatile live state from a SyncStart internal snapshot endpoint when reconnect recovery requires it.
+
+## Start.gg Boundary
+
+Create `@tournament-manager/startgg` containing only provider-facing code:
+
+- GraphQL client;
+- queries and mutations;
+- provider request and response types;
+- parsing and pagination;
+- rate limiting and provider error normalization.
+
+Keep inside `apps/api`:
+
+- `StartggService` application orchestration;
+- HTTP DTOs and authorization;
+- tournament database writes and mappings;
+- UI invalidation;
+- synchronous completed-match reporting.
+
+Do not convert Start.gg request/response behavior into asynchronous event processing as part of this migration. Track the currently ignored `publishToStartgg` flag as a separate functional question rather than silently changing behavior.
+
+## Migrations and Local Fixtures
+
+### `apps/migrations`
+
+- Move migration ownership and the executable runner out of `apps/api`.
+- Build and run it as a one-shot application before API startup.
+- Replace the pre-production schema history with a clean baseline after durable event tables are removed.
+- API and SyncStart readiness must not attempt to compare migration manifests. Deployment ordering is the migration-completion guarantee; runtime readiness checks only runtime dependencies.
+
+### `apps/local-fixtures`
+
+- Move deterministic local fixture creation out of API bootstrap.
+- Run it only in the local Compose topology and allow it to be disabled.
+- Create fixtures idempotently through the same API/application behavior used by ordinary tournament creation where practical.
+- Make SyncStart configuration optional through `LOCAL_FIXTURE_SYNCSTART_URL`.
+- Do not require the bundled simulator. A host or remote SyncStart server must be reachable through an ordinary configured WebSocket URL.
+- Keep the simulator available as an optional local profile or override.
+
+## Approved Cleanup
+
+- Remove `AppLogger` and use the standard NestJS logger writing to container stdout/stderr.
+- Remove `PostgresTournamentPersistence`.
+- Put the tournament creation transaction directly in `TournamentService`.
+- Use small private event/payload factory functions such as `tournamentCreatedEvent` only where a replaceable live message is actually propagated. Do not build a speculative domain-event catalog.
+- Remove the technical `tournament_event_projection` and all outbox, inbox, relay, retention, advisory-lock, retry, and dead-letter code.
+- Remove obsolete durable-event configuration and operational documentation.
+
+## Execution Phases
+
+### Phase 0 — Rebaseline and protect behavior
+
+1. Replace the superseded architecture and migration documentation.
+2. Reset the migration status record.
+3. Keep existing behavioral tests for tournament, match, standings, advancement, SyncStart protocol, realtime routing, deployment, and frontend runtime configuration.
+4. Add focused characterization only where a planned simplification lacks coverage.
+
+Exit gate:
+
+- the current branch still passes the verification appropriate to documentation-only changes;
+- the simplified target and accepted reliability tradeoffs are explicit.
+
+### Phase 1 — Extract independent support workspaces
+
+1. Create `apps/migrations` and move the TypeORM data source, migrations, runner, scripts, image ownership, and tests.
+2. Create `apps/local-fixtures` and remove `LocalSeedService` from API bootstrap.
+3. Make the simulator optional and verify a configured host or remote SyncStart URL is accepted.
+4. Create `@tournament-manager/startgg` and move provider-facing code without changing API behavior.
+5. Remove `AppLogger`.
+6. Remove `PostgresTournamentPersistence` and place the transaction in `TournamentService`.
+
+Exit gate:
+
+- API behavior is unchanged;
+- migrations and optional fixtures run independently;
+- Start.gg behavior remains synchronous and intact;
+- workspace lint, tests, builds, and local smoke checks pass.
+
+### Phase 2 — Replace Redis command/event flows with internal HTTP
+
+1. Add authenticated internal SyncStart command endpoints.
+2. Replace API command-Stream publication and command-result correlation with an internal HTTP client.
+3. Add the idempotent completed-song endpoint in the API.
+4. Move completed-song score, standing, recalculation, match, and advancement orchestration from the processor into that API use case.
+5. Add a SyncStart client for submitting normalized completed songs to the API.
+6. Preserve protocol DTO mapping and observable behavior.
+
+Exit gate:
+
+- tournament and lobby commands retain request/response behavior;
+- completed songs persist through the API;
+- the processor is no longer needed for business behavior;
+- failure and manual-recovery behavior matches the approved tradeoff.
+
+### Phase 3 — Reduce eventing to Pub/Sub and remove processor
+
+1. Replace `packages/eventing` with `@tournament-manager/live-messaging`, containing only publisher/subscriber ports and Redis Pub/Sub adapters; keep envelopes in `packages/contracts`.
+2. Publish API invalidations and SyncStart telemetry directly to Pub/Sub.
+3. Keep Realtime as the only frontend WebSocket surface.
+4. Add or retain the SyncStart live snapshot endpoint needed for reconnect recovery.
+5. Remove `apps/processor`, Redis Streams, outbox, inbox, projections, retries, dead letters, retention, and their tests/configuration.
+6. Replace migrations with the approved clean pre-production baseline.
+7. Keep transport-free unit tests for API publishers, SyncStart observers, completed-song submission, Realtime mapping, and browser broadcasting.
+
+Exit gate:
+
+- two realtime replicas receive the same Pub/Sub messages;
+- persisted state recovers through API snapshots;
+- volatile live state recovers through SyncStart within the explicitly supported behavior;
+- no durable-event runtime or schema artifact remains.
+
+### Phase 4 — Simplify operations and deployment
+
+1. Remove processor images, health checks, environment variables, deployment stages, and operational procedures.
+2. Update local and hosted Compose for API, migrations, SyncStart, Realtime, frontend, PostgreSQL, and Redis.
+3. Keep `apps/local-fixtures` and the simulator local-only and optional.
+4. Update CI/CD image matrices, smoke checks, recovery procedures, architecture checks, and documentation.
+
+Exit gate:
+
+- clean local startup and retained-volume restart pass;
+- production-equivalent deployment validation passes with the reduced service set;
+- no removed workspace or durable-event setting is referenced.
+
+### Phase 5 — Final parity review
+
+1. Compare the simplified runtime against the characterized pre-migration user journeys.
+2. Verify match completion/reopening, advancement invalidation, SyncStart lobby/live flows, and Start.gg integration boundaries.
+3. Record suspected pre-existing behavior defects in `FunctionalQuestions.md`; do not silently broaden migration scope.
+4. Remove temporary compatibility code and finalize documentation.
+
+Exit gate:
+
+- all approved parity journeys pass;
+- the complete repository verification and local-stack verification pass;
+- `MigrationStatus.md` identifies no remaining implementation step.
+
+## Verification Rules
+
+Each checkpoint must run verification proportional to its scope and record exact commands and results in [MigrationStatus.md](MigrationStatus.md).
+
+The final gate includes:
 
 ```text
 npm ci
-npm run local:up          # Build and start the complete local stack
-npm run local:status      # Show service health and migration status
-npm run local:logs        # Inspect the complete stack
-npm run local:down        # Stop the stack without deleting persistent data
-npm run local:reset       # Explicitly delete and recreate local data
-npm run test:unit         # Fast isolated tests
-npm run test:integration  # PostgreSQL and Redis integration tests
-npm run test:e2e          # Complete API, event, WebSocket, and UI workflows
-npm run verify            # Lint, type-check, unit tests, and builds
-npm run verify:local      # Health checks, migrations, integration tests, and e2e tests
+npm run verify
+npm run local:up
+npm run verify:local
 ```
 
-These are target command contracts. A command becomes mandatory from the phase that introduces it. `local:reset` must always be explicit and must never be part of normal startup.
-
-## Permanent Test Layers
-
-### Unit tests
-
-Cover managers, use cases, domain rules, event mapping, contract validation, and idempotency decisions without network dependencies.
-
-### Integration tests
-
-Run against real PostgreSQL and Redis containers. Cover repositories, migrations, transactions, outbox relay, Streams consumer groups, inbox deduplication, retries, dead-letter handling, and Pub/Sub adapters.
-
-### Contract tests
-
-Validate external inputs before mapping them to internal command, domain-event, UI-event, and SyncStart contracts. Internal Redis messages use only minimal envelope validation and must never expose database entities.
-
-### End-to-end tests
-
-Exercise the deployed local containers through public HTTP and WebSocket interfaces. At minimum they must cover:
-
-- local authentication and authorization;
-- tournament, division, participant, song, phase, and match management;
-- standings calculation and bracket advancement;
-- lobby lifecycle and persisted song results;
-- Start.gg integration through a deterministic stub server;
-- SyncStart behavior through a deterministic protocol simulator;
-- durable event delivery, duplicate delivery, consumer restart, and Redis recovery;
-- browser realtime updates, disconnect, reconnect, sequence-gap detection, and HTTP snapshot recovery;
-- frontend loading and one critical user journey through a browser smoke test.
-
-### Operational smoke tests
-
-Verify health endpoints, readiness dependencies, migrations, clean startup, restart with retained volumes, graceful shutdown, and recovery after temporarily stopping PostgreSQL, Redis, or an event consumer.
-
-## Phase 0 — Baseline and Safety Net
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-18.
-- Root `npm run verify` command established.
-- Placeholder e2e test replaced with the first behavioral tournament-management workflow and reusable fixtures.
-- Focused standings calculation and persistence-orchestration characterization tests added.
-- Focused bracket advancement, phase-group completion, and reversal characterization tests added.
-- Focused match completion, result orchestration, reopening, and activation characterization tests added.
-- Focused lobby state and SyncStart connector-orchestration characterization tests added without real network access.
-- Behavioral score and match-result persistence coverage added against the isolated current local database.
-- Clean `npm ci` installation followed by the complete root verification command passed.
-- Current route, realtime, integration, and workflow inventory recorded in [BaselineInventory.md](BaselineInventory.md).
-- Participant and tournament-structure behavioral coverage added; no Phase 0 work remains within the approved scope.
-
-### Work
-
-- Inventory current HTTP routes, WebSocket messages, scheduled or observer-driven behavior, integrations, and critical user journeys.
-- Replace the placeholder NestJS e2e test with behavioral tests for the current application.
-- Add focused unit tests around standings, bracket advancement, match workflow, lobby state, and result persistence before moving those behaviors.
-- Keep the Start.gg integration unchanged and out of automated migration coverage. Its future behavior and test strategy will be decided after the architecture migration.
-- Keep the SyncStart integration unchanged and out of automated migration coverage until the dedicated service extraction in Phase 6.
-- Maintain the browser WebSocket message inventory for later realtime extraction. Automated browser WebSocket coverage is deferred to Phase 7.
-- Make `npm run verify` reliable at the repository root.
-
-### Exit gate
-
-- Current frontend and backend build successfully.
-- Lint, unit tests, and behavioral backend e2e tests pass from a clean install.
-- The in-scope critical workflows have automated coverage. Start.gg, SyncStart protocol, and browser WebSocket exclusions remain documented with their future decision or implementation phase.
-- No production behavior has been intentionally changed.
-
-## Phase 1 — Reproducible Local Platform
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-18.
-- The root local lifecycle and verification command contracts are established.
-- PostgreSQL 16.4 and Redis 7.4.0 run with named volumes and health checks.
-- API liveness and dependency-specific readiness are available; the migration runner gates API startup.
-- Deterministic, idempotent local seed data and real PostgreSQL/Redis integration tests are available.
-- Fresh startup, application restart, retained-volume restart, and dependency outage recovery passed.
-- Startup, status, logs, shutdown, backup, restore, recovery, and explicit reset are documented.
-
-### Work
-
-- Add PostgreSQL and Redis to Docker Compose with pinned image versions, named volumes, and health checks.
-- Introduce the one-command `local` stack and the local verification commands.
-- Add service health and readiness endpoints. Readiness must distinguish unavailable PostgreSQL and Redis.
-- Add automatic database migration execution before application readiness.
-- Provide deterministic seed data or fixtures for local e2e tests.
-- Document startup, status, logs, shutdown, backup, restore, and explicit reset procedures.
-
-### Exit gate
-
-- A clean machine with Node.js, npm, Docker, and Docker Compose can start the complete stack without a cloud account.
-- `npm run local:up` followed by `npm run verify:local` passes.
-- Fresh-volume startup, retained-volume restart, and application restart pass.
-- Frontend, API, Swagger, PostgreSQL, and Redis readiness can be verified locally.
-
-## Phase 2 — PostgreSQL-Only Persistence
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-18.
-- The initial versioned migration creates the complete application schema from an empty PostgreSQL database.
-- TypeORM schema synchronization is disabled in every runtime and test path.
-- Behavioral and migration tests run exclusively against isolated PostgreSQL databases.
-- SQLite and MariaDB runtime branches, dependencies, scripts, and documentation have been removed.
-- Compatibility with the disposable pre-production schema is intentionally excluded by user decision; existing test databases must be reset.
-
-### Work
-
-- Create a versioned PostgreSQL migration for a clean application schema; disable TypeORM schema synchronization.
-- Run repository and application integration tests exclusively against PostgreSQL.
-- Validate migration creation, idempotency, and entity-schema equivalence against an empty PostgreSQL database.
-- Switch every local and test path to PostgreSQL.
-- Remove SQLite and MariaDB configuration branches, dependencies, documentation, and scripts after PostgreSQL parity passes.
-
-### Exit gate
-
-- Empty-database creation, migration idempotency, and entity-schema equivalence pass.
-- All critical behavioral tests pass against PostgreSQL.
-- No runtime or test dependency on `sqlite3`, `mysql2`, SQLite, or MariaDB remains.
-- The complete local stack still passes `npm run verify:local`.
-
-## Phase 3 — Contracts and Eventing Inside the Existing Backend
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-18.
-- Durable and replaceable-live event envelopes and provider-independent transport interfaces are established inside the existing backend. Phase 4 later simplified internal messages to current-only, unversioned contracts.
-- PostgreSQL outbox, inbox, and first-slice projection tables are managed through a versioned migration.
-- The Redis Streams relay and consumer group support at-least-once delivery, pending-message reclaim, bounded retry, dead-letter handling, and failure metadata.
-- Redis Pub/Sub is implemented separately and tested for fan-out, missed-message semantics, and later-update recovery.
-- The low-risk `tournament.created` slice commits atomically with its outbox row and produces an idempotent projection without removing legacy synchronous behavior.
-- Tournament lifecycle and bounded transport retention are complete: manual close makes a tournament read-only, reopen cancels pending retention, and a replica-safe worker deletes all PostgreSQL and Redis transport state after the configured closed period.
-
-### Work
-
-- Create shared internal event contracts and provider-independent eventing interfaces.
-- Add PostgreSQL outbox and consumer inbox tables through migrations.
-- Implement the outbox relay, Redis Streams adapter, consumer groups, bounded retry, dead-letter stream, and failure metadata.
-- Implement Redis Pub/Sub separately for replaceable live events.
-- Keep the first producers and consumers inside the existing backend so transport reliability can be tested before service extraction.
-- Migrate one low-risk event slice first, then expand only after its failure tests pass.
-
-### Exit gate
-
-- A domain change and its outbox record commit atomically.
-- Relay restart does not lose events; duplicate delivery does not duplicate business effects.
-- Consumer restart, Redis outage and recovery, poison-message retry, and dead-letter behavior pass automated tests.
-- Pub/Sub tests demonstrate fan-out and explicitly confirm that missed replaceable messages are recovered by a later update or snapshot.
-- Legacy synchronous behavior remains available for every slice not yet migrated.
-
-## Phase 4 — Stateless Event Handlers
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-19.
-- Lifecycle, outbox, inbox, relay, and retention database operations have explicit transaction ownership; the global retention lock is centralized in `PostgresAdvisoryLock`. The earlier blanket requirement to isolate queries in dedicated persistence classes was removed after Phase 5 review.
-- The authoritative SyncStart completed-song observer path is replaced by a durable internal event and a registered stateless handler.
-- Score and standing persistence, round recalculation, inbox progress, warnings, and match UI invalidation for the completed-song slice are committed or derived without process-local authoritative state.
-- Duplicate delivery, abandoned pending-message reclaim, consumer restart, PostgreSQL effects, Redis delivery, and existing end-to-end behavior are covered.
-- Inbox insertion and consumer execution share one common PostgreSQL transaction wrapper; every event, including `tournament.created`, is resolved through the same consumer registry.
-- The superseded `StandingManager` observer path has been removed. Match completion, bracket advancement, match state, and Start.gg reporting remain explicit synchronous application use cases; they were not converted speculatively because no observer-driven workflow requires that change.
-- Lobby connector/session maps and gateway snapshots remain deliberately volatile connection-adapter state for extraction in Phases 6 and 7, not authoritative workflow progress.
-
-### Work
-
-- Keep lifecycle and eventing transaction boundaries explicit and obtain repositories from each transaction's `EntityManager`. Use dedicated persistence or infrastructure classes only when justified by reuse, a replaceable boundary, or specialized infrastructure behavior. Centralize the global retention-sweep advisory lock in a dedicated infrastructure class.
-- Convert observer-driven behavior into explicit handlers one use case at a time.
-- Keep managers and reusable application use cases independent from controllers, transports, and repositories.
-- Migrate standings, bracket advancement, match state, result persistence, projections, lobby state, notifications, cache invalidation, and UI-event conversion as separate vertical slices.
-- Persist workflow progress and make each handler idempotent through inbox and business invariants.
-- Keep Start.gg request/response behavior synchronous unless a specific workflow is intentionally converted to a durable command.
-
-### Exit gate
-
-- Each migrated slice passes unit, PostgreSQL integration, Redis delivery, duplicate-delivery, and end-to-end parity tests.
-- Replaying an already processed event produces no additional business effect.
-- Stopping and restarting the handler loses no durable work.
-- No handler depends on process-local authoritative state.
-
-## Phase 5 — Processor Extraction
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-19.
-- `apps/processor` builds and runs through its own entrypoint, health checks, Docker image, configuration, and logs.
-- The outbox relay, durable consumer lifecycle, retention worker, consumer registry, and both extraction-ready handlers execute only in the processor.
-- Internal event contracts, reusable scoring calculations, and shared outbox/Redis transport components live in the `contracts`, `application`, and `eventing` npm workspace packages.
-- Post-commit UI effects cross the process boundary through Redis Pub/Sub and are forwarded by the API's temporary live subscriber until Phase 7.
-- Container verification covered a stopped processor with pending outbox work, restart recovery with one business effect, and two concurrent processor replicas with one business effect.
-
-### Work
-
-- Create `apps/processor` and move only the already-tested stateless handlers and outbox relay into it.
-- Move reusable managers and use cases required by both API and processor into shared application packages.
-- Give API and processor independent entrypoints, configuration, health checks, Docker images, and logs.
-- Remove migrated handler execution from the API only after the processor path passes the same tests.
-
-### Exit gate
-
-- API and processor build and run independently.
-- With the processor stopped, durable events remain pending; after restart, processing resumes exactly once at the business level.
-- Multiple processor replicas do not duplicate business effects.
-- Existing HTTP behavior and the complete local e2e suite remain green.
-
-## Phase 6 — SyncStart Service Extraction
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-19.
-- `apps/syncstart` owns protocol parsing, outbound WebSockets, reconnection, connectors, lobby sessions, command consumption, outcomes, and telemetry.
-- The API contains no SyncStart protocol or connector implementation; its temporary Phase 7 bridge publishes durable commands and forwards Pub/Sub telemetry to the existing browser gateways.
-- The deterministic simulator covers valid, malformed, duplicate, disconnect, reconnect, search, and completed-song scenarios without external infrastructure.
-- Redis operational state restores configured connectors and desired lobby sessions after service restart; commands issued during downtime remain durable and are reclaimed.
-
-### Work
-
-- Create `apps/syncstart` and move connector ownership, protocol parsing, reconnection, lobby sessions, and volatile connection state into it.
-- Consume durable commands and publish durable outcomes through Redis Streams.
-- Publish replaceable high-frequency telemetry through Redis Pub/Sub.
-- Keep tournament rules, persistence orchestration, frontend DTOs, and bracket logic outside this service.
-- Use the SyncStart simulator for normal, malformed, disconnected, reconnecting, and duplicate scenarios.
-
-### Exit gate
-
-- SyncStart can be stopped and restarted without losing durable commands or corrupting lobby state.
-- Reconnection and command idempotency pass automated tests.
-- Live telemetry reaches subscribers while the durable result path still succeeds during subscriber outages.
-- The full tournament flow passes without SyncStart code running inside the API.
-
-## Phase 7 — UI Realtime Service Extraction
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-19.
-- `apps/realtime` owns browser WebSocket paths, tournament scoping, fan-out, replaceable snapshots, health, and replica-local connection state.
-- Redis assigns one atomic live sequence per tournament before Pub/Sub fan-out, and two local realtime replicas expose identical scoped ordering without cross-tournament leakage.
-- The API no longer contains WebSocket gateways or the temporary Pub/Sub forwarding bridge; UI publishers prepare their browser payloads before transport.
-- The frontend reconnects with bounded backoff and reloads HTTP snapshots after disconnect or sequence gaps.
-- Realtime replica outage and restart leave the authoritative HTTP application usable.
-
-### Work
-
-- Create `apps/realtime` and move browser WebSocket authentication, rooms, subscriptions, and fan-out into it.
-- Consume prepared UI events; do not move domain calculations into realtime.
-- Use Redis Pub/Sub to distribute replaceable live updates across realtime replicas.
-- Add scoped sequence numbers where ordered incremental UI delivery is required.
-- Update the frontend to reconnect and reload an HTTP snapshot after disconnect or sequence gap.
-
-### Exit gate
-
-- Two local realtime replicas deliver the correct scoped events without cross-tournament leakage.
-- Browser disconnect, reconnect, missed Pub/Sub message, sequence gap, and snapshot recovery pass e2e tests.
-- Restarting realtime loses only connections and replaceable messages, never authoritative state.
-- The complete application remains usable through HTTP while realtime is unavailable.
-
-## Phase 8 — Final Monorepo Boundaries and Cleanup
-
-### Progress
-
-- Complete. Exit gate passed on 2026-08-19.
-- The HTTP service is finalized as `apps/api`; no application imports another application's source tree.
-- Shared PostgreSQL entity metadata and repository registration live in `packages/persistence`, while contracts and application code remain infrastructure-free.
-- Every app keeps production code in `src/` and app-owned tests in the sibling `tests/` directory; root unit verification runs every app suite.
-- Architecture dependency checks enforce workspace direction, app isolation, the app layout, and infrastructure-free application/contracts packages.
-- Obsolete API WebSocket test setup, backend workspace names, container names, aliases, and operational documentation were removed.
-
-### Work
-
-- Finalize `apps/api`, `apps/processor`, `apps/syncstart`, `apps/realtime`, and `apps/frontend`.
-- Finalize shared `application`, `contracts`, and `eventing` packages with explicit dependency boundaries.
-- Move application tests out of `src` into a sibling `tests` directory in each app. Update Jest configuration, TypeScript configuration, path aliases, Docker build inputs, and root verification commands so every app keeps the `src/` and `tests/` layout and remains independently testable.
-- Remove superseded gateways, observers, compatibility adapters, old entrypoints, and obsolete environment variables.
-- Add architecture dependency checks so transport and persistence details cannot leak into domain code.
-- Update all operational and developer documentation to describe only the supported topology.
-
-### Exit gate
-
-- Every application builds and tests independently and as part of the complete stack.
-- No app-owned test file remains nested under `src`; app test suites are discoverable from the sibling `tests` directory.
-- No removed database or legacy in-process event path remains.
-- Dependency-boundary tests pass.
-- A clean checkout passes `npm ci`, `npm run verify`, `npm run local:up`, and `npm run verify:local` using the documented procedure.
-
-## Phase 9 — Continuous Delivery and Deployment Validation
-
-### Progress
-
-- Implementation complete; the local delivery-adapter gate passed on 2026-08-19. Remote activation requires the documented GitHub environment secrets, branch protection, and first `main` workflow run.
-- The frontend image now receives public API, realtime, and authentication configuration at container startup, so environment changes do not rebuild or retag the tested image.
-- Pull requests run architecture, lint/type, contract, unit, PostgreSQL/Redis e2e, build, and complete Docker-stack gates.
-- Merges to `main` publish five SHA-only GHCR images with provenance and SBOM metadata, then promote those exact tags through a provider-neutral Docker Compose adapter.
-- Testing promotion applies migrations once, waits for every service, runs public smoke tests, and restores both the prior database snapshot and prior immutable image set after failure.
-
-### Work
-
-- Add GitHub Actions for immutable image builds, lint, type-checking, unit, integration, contract, and e2e tests.
-- Publish images tagged with the Git commit SHA only after all required checks pass.
-- Add migration, deployment, readiness, smoke-test, and rollback stages.
-- Keep provider configuration in deployment adapters and environment configuration.
-- Validate the chosen free-tier deployment without changing local or application contracts.
-
-### Exit gate
-
-- Pull requests cannot merge when required verification fails.
-- A merge to `main` deploys the exact tested images, applies migrations once, verifies readiness, and runs smoke tests.
-- A failed migration, readiness check, or smoke test prevents promotion and has a documented recovery path.
-- The same images can still be run and fully tested with the local configuration.
-
-## Per-Slice Completion Checklist
-
-A migrated behavior is complete only when all applicable items are true:
-
-- ownership and contract are documented;
-- unit and contract tests pass;
-- PostgreSQL transaction and migration behavior pass;
-- outbox/inbox and duplicate-delivery behavior pass for durable events;
-- Redis outage and restart behavior pass where applicable;
-- HTTP and WebSocket end-to-end behavior pass;
-- frontend snapshot and reconnect behavior pass where applicable;
-- health, logs, correlation IDs, and failure visibility are present;
-- local startup and the complete regression suite remain green;
-- the superseded path is removed only after parity is proven.
-
-## Current Baseline Risks
-
-- The backend e2e suite protects authentication, basic tournament management, PostgreSQL persistence, and schema creation, but the remaining critical tournament workflows are not yet covered.
-- Extracted-service test infrastructure does not yet exist; it will be introduced only after the Phase 4 stateless-handler gate.
-- The current clean-baseline policy is valid only while all deployments remain explicitly pre-production and disposable.
-
-All migration implementation phases are complete. Phase 9 remote activation and its first observed `main` promotion remain repository/environment operations documented in [Deployment.md](Deployment.md).
+Also verify directly:
+
+- optional fixture startup with no SyncStart URL;
+- fixture startup against the simulator when enabled;
+- configuration of a host or remote SyncStart URL;
+- API-to-SyncStart internal commands;
+- completed-song submission to the API;
+- Pub/Sub fan-out to multiple realtime replicas;
+- browser recovery from API and SyncStart snapshots;
+- Start.gg package boundary and unchanged API behavior;
+- migration and deployment execution without processor or durable-event artifacts.
+
+## Explicit Non-Goals
+
+- Exactly-once or at-least-once completed-score delivery.
+- Durable command queues.
+- Automatic recovery of every transient SyncStart result.
+- Multi-replica SyncStart ownership, sharding, or failover.
+- Database-per-service decomposition.
+- An API containing no application logic.
+- Replacing managers solely to create service boundaries.
+- A complete domain-event taxonomy.
+- Asynchronous Start.gg reporting.
+- An application-wide event bus or generic mediator.

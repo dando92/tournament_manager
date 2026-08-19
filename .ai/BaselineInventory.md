@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This document records the behavior that must remain available while the monolithic backend is migrated. It is a Phase 0 inventory, not a target architecture specification. Target ownership remains defined in [Architecture.md](Architecture.md).
+This document records the behavior that must remain available while the durable-event runtime is replaced. It is a Phase 0 inventory, not a target architecture specification. Target ownership remains defined in [Architecture.md](Architecture.md).
 
 ## HTTP Surface
 
-The current NestJS backend exposes these route groups:
+The current API exposes these route groups:
 
 - `auth`: password and local API-key login, current-account details, and permissions.
 - `user`: registration, account listing, profile updates, and administrator-managed flags.
@@ -17,25 +17,25 @@ The current NestJS backend exposes these route groups:
 - `matches`: match creation, assignment, song selection, activation, result lifecycle, and queries by division or phase group.
 - `advancement-rules` and `bracket`: advancement configuration and supported bracket types.
 
-The route decorators in `apps/backend/src` are the authoritative detailed inventory until versioned HTTP contracts are introduced.
+The route decorators in `apps/api/src` are the authoritative detailed inventory until internal HTTP contracts are extracted.
 
 ## Realtime Surface
 
-The backend currently owns three native WebSocket gateways:
+The current runtime has three browser event families:
 
 - UI updates publish `TournamentUpdate`, `DivisionUpdate`, `PhaseUpdate`, `PhaseGroupUpdate`, `MatchUpdate`, and `UiWarning`.
 - Lobby updates publish SyncStart connection, lobby connection, song selection, and player readiness events scoped by tournament.
 - Live match updates publish song selection, incremental match state, song completion, and disconnection state scoped by tournament.
 
-These messages are process-local broadcasts and are not yet versioned contracts. They must remain in place until the Phase 7 replacement passes parity and recovery tests.
+`apps/realtime` is already the browser WebSocket endpoint. It receives replaceable messages through the existing Redis transport and maps them to these browser event families. Their names, tournament scope, and sequence behavior must remain compatible while the durable transport is replaced.
 
 ## Observer-Driven and Integration Behavior
 
-- `LobbyManager` owns current SyncStart connector and lobby connection state.
-- `StandingManager`, `LobbyGateway`, and `LiveMatchGateway` observe SyncStart lobby events.
-- `UiUpdateGateway` broadcasts changes invoked by current match workflows.
+- `apps/syncstart` owns current SyncStart connectors, lobby connection state, and protocol parsing.
+- The SyncStart command consumer translates durable commands into session operations and publishes protocol outcomes.
+- `apps/realtime` owns browser subscriptions, event routing, and replaceable snapshots.
 - The Start.gg integration performs synchronous GraphQL request/response imports from tournament controllers.
-- No Redis transport, transactional outbox, consumer inbox, bounded retry, or dead-letter handling exists yet.
+- `apps/processor` currently owns the transactional outbox relay, durable consumer handling, retries, inbox de-duplication, dead-letter behavior, and retention.
 
 ## Critical User Journeys
 
@@ -58,7 +58,7 @@ The migration safety net must cover these journeys before their implementation m
 | Bracket and match workflow | Focused advancement, completion, reopening, and reversal unit coverage | Add behavioral persistence tests |
 | Score persistence and standings | Focused calculation coverage and behavioral persistence coverage | Expand through complete match journeys |
 | Start.gg import | Excluded by approved scope | Leave unchanged; decide future approach after migration |
-| SyncStart lifecycle | Focused internal lobby-state orchestration only | Defer integration and protocol tests to Phase 6 |
-| Browser realtime recovery | Event inventory only | Defer network and recovery coverage to Phase 7 |
+| SyncStart lifecycle | Protocol connector and command-consumer unit tests; deterministic simulator coverage | Preserve normalized protocol inputs and completed-song behavior before Phase 2 |
+| Browser realtime recovery | Realtime mapper unit tests and service-extraction e2e coverage | Preserve browser event names, tournament scope, and sequence behavior before Phase 3 |
 
-The first representative request and response inputs are stored in `apps/backend/test/fixtures/tournament-management.json`. Additional parity fixtures must be added with each protected vertical slice.
+The representative request and response inputs are stored in `apps/api/tests/fixtures/tournament-management.json`. Add focused characterization only when a planned simplification would otherwise lack coverage.
