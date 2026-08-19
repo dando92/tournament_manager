@@ -14,22 +14,11 @@ x-application-environment: &application-environment
   DATABASE_SSL: "false"
   REDIS_HOST: redis
   REDIS_PORT: 6379
-  EVENT_STREAM: ${EVENT_STREAM:-tournament-manager.events}
-  EVENT_CONSUMER_GROUP: ${EVENT_CONSUMER_GROUP:-tournament-manager-processor}
-  SYNCSTART_COMMAND_STREAM: ${SYNCSTART_COMMAND_STREAM:-tournament-manager.syncstart.commands}
-  SYNCSTART_CONSUMER_GROUP: ${SYNCSTART_CONSUMER_GROUP:-tournament-manager-syncstart}
-  SYNCSTART_COMMAND_TIMEOUT_MS: ${SYNCSTART_COMMAND_TIMEOUT_MS:-15000}
   INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
   SYNCSTART_INTERNAL_URL: ${SYNCSTART_INTERNAL_URL:-http://syncstart:3002}
   API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3000}
   INTERNAL_HTTP_TIMEOUT_MS: ${INTERNAL_HTTP_TIMEOUT_MS:-5000}
   LIVE_EVENT_CHANNEL: ${LIVE_EVENT_CHANNEL:-tournament-manager.live}
-  OUTBOX_RELAY_IDLE_INTERVAL_MS: ${OUTBOX_RELAY_IDLE_INTERVAL_MS:-200}
-  EVENT_CONSUMER_BLOCK_MS: ${EVENT_CONSUMER_BLOCK_MS:-500}
-  EVENT_RECLAIM_IDLE_MS: ${EVENT_RECLAIM_IDLE_MS:-250}
-  TOURNAMENT_TRANSPORT_RETENTION_DAYS: ${TOURNAMENT_TRANSPORT_RETENTION_DAYS:-10}
-  TRANSPORT_RETENTION_SWEEP_INTERVAL_MS: ${TRANSPORT_RETENTION_SWEEP_INTERVAL_MS:-21600000}
-  TRANSPORT_RETENTION_BATCH_SIZE: ${TRANSPORT_RETENTION_BATCH_SIZE:-1000}
   STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
   STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
   STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
@@ -69,21 +58,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
-  processor:
-    image: ${IMAGE_REGISTRY}/tournament-manager-processor:${RELEASE_SHA}
-    restart: unless-stopped
-    environment: *application-environment
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/health/ready"]
-      interval: 5s
-      timeout: 3s
-      retries: 18
 
   syncstart:
     image: ${IMAGE_REGISTRY}/tournament-manager-syncstart:${RELEASE_SHA}

@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 
 const root = process.cwd();
 const errors = [];
-const apps = ['api', 'migrations', 'local-fixtures', 'processor', 'syncstart', 'realtime', 'frontend'];
+const apps = ['api', 'migrations', 'local-fixtures', 'syncstart', 'realtime', 'frontend'];
 
 function filesBelow(directory) {
   if (!existsSync(directory)) return [];
@@ -78,34 +78,28 @@ const allowedDependencies = new Map([
   ['@tournament-manager/contracts', []],
   ['@tournament-manager/application', []],
   ['@tournament-manager/persistence', []],
-  ['@tournament-manager/eventing', ['@tournament-manager/contracts']],
+  ['@tournament-manager/live-messaging', ['@tournament-manager/contracts']],
   ['@tournament-manager/startgg', []],
   ['@tournament-manager/migrations', ['@tournament-manager/persistence']],
   ['@tournament-manager/local-fixtures', [
     '@tournament-manager/contracts',
-    '@tournament-manager/eventing',
+    '@tournament-manager/live-messaging',
     '@tournament-manager/persistence',
   ]],
   ['@tournament-manager/api', [
     '@tournament-manager/application',
     '@tournament-manager/contracts',
-    '@tournament-manager/eventing',
+    '@tournament-manager/live-messaging',
     '@tournament-manager/persistence',
     '@tournament-manager/startgg',
   ]],
-  ['@tournament-manager/processor', [
-    '@tournament-manager/application',
-    '@tournament-manager/contracts',
-    '@tournament-manager/eventing',
-    '@tournament-manager/persistence',
-  ]],
   ['@tournament-manager/syncstart', [
     '@tournament-manager/contracts',
-    '@tournament-manager/eventing',
+    '@tournament-manager/live-messaging',
   ]],
   ['@tournament-manager/realtime', [
     '@tournament-manager/contracts',
-    '@tournament-manager/eventing',
+    '@tournament-manager/live-messaging',
   ]],
   ['tournament-viewer', []],
 ]);
@@ -114,7 +108,7 @@ for (const workspace of [
   'packages/contracts',
   'packages/application',
   'packages/persistence',
-  'packages/eventing',
+  'packages/live-messaging',
   'packages/startgg',
   ...apps.map((app) => `apps/${app}`),
 ]) {

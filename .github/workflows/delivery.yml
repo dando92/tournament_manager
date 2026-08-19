@@ -105,8 +105,6 @@ jobs:
             dockerfile: apps/migrations/Dockerfile
           - name: api
             dockerfile: apps/api/Dockerfile
-          - name: processor
-            dockerfile: apps/processor/Dockerfile
           - name: syncstart
             dockerfile: apps/syncstart/Dockerfile
           - name: realtime
@@ -194,7 +192,7 @@ jobs:
             echo "PREVIOUS_RELEASE_SHA=$previous_sha" >> "$GITHUB_ENV"
           fi
       - name: Pull exact release images
-        run: docker compose -f deploy/docker-compose.yml pull migrations processor syncstart realtime-a realtime-b api frontend
+        run: docker compose -f deploy/docker-compose.yml pull migrations syncstart realtime-a realtime-b api frontend
       - name: Start stateful dependencies
         run: docker compose -f deploy/docker-compose.yml up --detach --wait postgres redis
       - name: Back up pre-production database
@@ -208,7 +206,7 @@ jobs:
       - name: Deploy application services
         run: |
           set -eu
-          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait processor syncstart realtime-a realtime-b
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait syncstart realtime-a realtime-b
           docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait api
           docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait frontend
       - name: Smoke test release
@@ -217,7 +215,7 @@ jobs:
         if: failure() && env.PREVIOUS_RELEASE_SHA == '' && env.BACKUP_READY == 'true'
         run: |
           set -eu
-          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart processor || true
+          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart || true
           docker compose -f deploy/docker-compose.yml exec -T postgres \
             psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d postgres \
               -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\" WITH (FORCE)" \
@@ -229,7 +227,7 @@ jobs:
         if: failure() && env.PREVIOUS_RELEASE_SHA != '' && env.BACKUP_READY == 'true'
         run: |
           set -eu
-          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart processor
+          docker compose -f deploy/docker-compose.yml stop frontend api realtime-a realtime-b syncstart
           docker compose -f deploy/docker-compose.yml exec -T postgres \
             psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d postgres \
               -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\" WITH (FORCE)" \
@@ -238,8 +236,8 @@ jobs:
             docker compose -f deploy/docker-compose.yml exec -T postgres \
               psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d "$DATABASE_NAME"
           export RELEASE_SHA="$PREVIOUS_RELEASE_SHA"
-          docker compose -f deploy/docker-compose.yml pull processor syncstart realtime-a realtime-b api frontend
-          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait processor syncstart realtime-a realtime-b
+          docker compose -f deploy/docker-compose.yml pull syncstart realtime-a realtime-b api frontend
+          docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait syncstart realtime-a realtime-b
           docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait api
           docker compose -f deploy/docker-compose.yml up --detach --no-deps --wait frontend
           node scripts/smoke-deployment.mjs
