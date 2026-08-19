@@ -36,6 +36,7 @@
 ### Object-oriented ownership design rule
 
 - Recorded the SyncStart ownership model as the default for new backend development: stateful concepts own their state and transitions, while coordinators own composition and lifecycle coordination.
+- Consolidated scalability guidance into one class-design constraint: state ownership must remain compatible with the service's required replication or partitioning model, without prescribing deployment operations or premature distributed coordination.
 - Existing components are evaluated for incremental adoption when touched; the rule does not mandate unrelated rewrites or class wrappers around stateless pure functions.
 
 ### Backend internal HTTP client standard
