@@ -102,6 +102,82 @@ Multi-event workflows must persist their state in PostgreSQL. In-memory workflow
 
 Redis is part of the target architecture from the first eventing implementation.
 
+### Proposed Eventing Port Decomposition — Pending Review
+
+Status: proposal only. This decomposition is scheduled for user review and must not be implemented until explicitly approved.
+
+The proposed design replaces broad event-transport dependencies at application call sites with four narrow, composition-based ports:
+
+```text
+DurableEventPublisher
+DurableEventConsumer
+RealTimeEventPublisher
+RealTimeEventSubscriber
+```
+
+Application services would receive only the capability they use through dependency injection. They must not inherit from transport base classes, wrap themselves in a common superclass, or depend on a single unrestricted `EventBus`. Redis implementations may share connection lifecycle and low-level protocol utilities internally, while their public ports remain separate.
+
+Proposed responsibilities:
+
+- `DurableEventPublisher` publishes an internal durable envelope to a configured Stream and returns the transport-assigned message ID.
+- `DurableEventConsumer` owns common Redis consumer-group mechanics such as group creation, reads, stale-message reclaim, acknowledgment, transport retry, and graceful shutdown.
+- `RealTimeEventPublisher` publishes replaceable live envelopes to a configured Pub/Sub channel.
+- `RealTimeEventSubscriber` manages Pub/Sub subscription lifecycle and dispatches received live envelopes to a supplied listener.
+
+The durable consumer abstraction must separate transport mechanics from application processing policy. The shared Redis consumer must not impose one persistence or idempotency model on every service:
+
+```text
+Shared durable transport lifecycle
+  -> Processor policy: PostgreSQL Inbox + business transaction + bounded retry/dead letter
+  -> SyncStart policy: Redis command idempotency + external connector effect handling
+```
+
+Durable production must preserve the distinction between database-originated and externally originated events:
+
+```text
+Database transaction
+  -> OutboxEventProducer
+  -> PostgreSQL outbox
+  -> Outbox relay
+  -> DurableEventPublisher
+  -> Redis Stream
+
+External outcome or service command
+  -> DurableEventPublisher
+  -> Redis Stream
+```
+
+`OutboxEventProducer` remains a separate transactional boundary and must not be replaced with direct Redis publication. The outbox relay may use `DurableEventPublisher`, but application code performing a PostgreSQL domain transaction must continue writing the domain change and outbox row atomically.
+
+If approved, the expected package organization is:
+
+```text
+packages/eventing/
+  durable/
+    durable-event-publisher
+    durable-event-consumer
+    redis-durable-event-publisher
+    redis-durable-event-consumer
+  realtime/
+    realtime-event-publisher
+    realtime-event-subscriber
+    redis-realtime-event-publisher
+    redis-realtime-event-subscriber
+  outbox/
+    outbox-event-producer
+    outbox-relay
+  redis/
+    redis-client-lifecycle
+```
+
+Review questions before approval:
+
+- Whether the consumer port should represent only a single read/reclaim/ack operation or own the complete long-running loop.
+- Whether publisher destination names belong in each call or in injected per-service configuration.
+- Whether Redis publisher and subscriber implementations should share one internal client-lifecycle component or retain independently owned clients.
+- Whether existing retry and dead-letter operations remain part of the durable consumer transport port or become an explicit processing-policy collaborator.
+- The incremental migration order from the current combined `RedisEventTransport` without changing behavior.
+
 ### Durable Events and Commands
 
 Durable traffic uses Redis Streams and consumer groups. Examples include SyncStart connection commands, lobby lifecycle changes, completed songs, recorded results, completed matches, and bracket advancement.

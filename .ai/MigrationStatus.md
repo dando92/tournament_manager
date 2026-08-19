@@ -19,6 +19,7 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 - Phase 6 state: complete; its exit gate passed on 2026-08-19.
 - The API no longer executes durable handlers, the outbox relay, or transport retention.
 - Next action: begin Phase 7 by extracting browser WebSocket ownership and replacing the temporary API Pub/Sub bridge with the realtime service.
+- Pending technical review: the proposed four-port eventing decomposition (`DurableEventPublisher`, `DurableEventConsumer`, `RealTimeEventPublisher`, and `RealTimeEventSubscriber`) is documented in `Architecture.md`. It is not approved and must not be implemented before user review.
 - Approved Phase 0 exclusions: no Start.gg integration tests, no SyncStart integration or protocol tests, and no browser WebSocket network tests.
 
 ## Completed Checkpoints
