@@ -8,7 +8,7 @@
 - Do not introduce durable messaging, distributed locks, or asynchronous workflows without an explicit requirement.
 - Keep controllers thin and application orchestration explicit.
 - Use configured `@` aliases for project imports.
-- Keep application and protocol logic unit-testable without Redis, HTTP servers, or WebSockets by injecting transport ports.
+- Keep application and protocol logic unit-testable without Redis, HTTP servers, or WebSockets by injecting transport ports. Application-owned outbound HTTP adapters use NestJS `HttpService` rather than direct global `fetch` calls.
 
 ## Technologies
 

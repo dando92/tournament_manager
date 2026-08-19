@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { HttpModule } from "@nestjs/axios";
 import { ConfigModule } from "@nestjs/config";
 import {
   LIVE_EVENT_PUBLISHER,
@@ -13,6 +14,7 @@ import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
 
 @Module({
   imports: [
+    HttpModule,
     ConfigModule.forRoot({
       envFilePath: ["../../.env", ".env"],
       isGlobal: true,
