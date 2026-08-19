@@ -232,7 +232,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 - Complete. Exit gate passed on 2026-08-19.
 - `apps/processor` builds and runs through its own entrypoint, health checks, Docker image, configuration, and logs.
 - The outbox relay, durable consumer lifecycle, retention worker, consumer registry, and both extraction-ready handlers execute only in the processor.
-- Internal event contracts and reusable scoring calculations are shared through dedicated npm workspace packages.
+- Internal event contracts, reusable scoring calculations, and shared outbox/Redis transport components live in the `contracts`, `application`, and `eventing` npm workspace packages.
 - Post-commit UI effects cross the process boundary through Redis Pub/Sub and are forwarded by the API's temporary live subscriber until Phase 7.
 - Container verification covered a stopped processor with pending outbox work, restart recovery with one business effect, and two concurrent processor replicas with one business effect.
 

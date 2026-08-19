@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { SyncStartSongCompletedEvent } from '../../contracts/events';
+import { SyncStartSongCompletedEvent } from '@tournament-manager/contracts';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventTransport,
-} from '../../eventing/eventing.interfaces';
+} from '@tournament-manager/eventing';
 import { ILobbyObserver, LobbySongCompletedDto } from '@syncstart/index';
 
 @Injectable()

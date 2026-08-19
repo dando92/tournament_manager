@@ -12,6 +12,9 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths" : {
+      "@backend/*": ["./src/*"],
+      "@processor/*": ["../processor/src/*"],
+      "@test/*": ["./test/*"],
       "@auth/*" : ["./src/auth/*"],
       "@backwards-compat/*" : ["./src/backwards-compat/*"],
       "@bracket/*" : ["./src/tournament/bracket/*"],

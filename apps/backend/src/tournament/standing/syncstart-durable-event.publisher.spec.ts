@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { DurableEventTransport } from '../../eventing/eventing.interfaces';
+import { DurableEventTransport } from '@tournament-manager/eventing';
 import { SyncStartDurableEventPublisher } from './syncstart-durable-event.publisher';
 
 describe('SyncStartDurableEventPublisher', () => {

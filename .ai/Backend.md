@@ -21,6 +21,7 @@ The backend uses the following architectural layers:
 - Extract shared code only when it removes real duplication or establishes an approved architectural boundary.
 - Keep characterization tests readable as behavior documentation for future maintainers.
 - Do not mix architectural migration with unrelated cleanup or functional changes.
+- Use configured `@` aliases for imports across directories, applications, and packages. Do not use relative path traversal for project modules.
 
 ## Technologies
 
@@ -56,7 +57,7 @@ Local configuration is loaded from the repository-root `.env` file. The `local` 
 
 The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).
 
-Managers remain application-layer use cases. Event handlers in the processor may invoke managers or services but must not access repositories directly.
+Managers remain application-layer use cases. Event handlers should invoke shared managers or services when the behavior is reused. A processor-only transactional handler may use repositories from its supplied transaction `EntityManager` when a separate persistence class would add no replaceable interface or shared boundary; keep that orchestration explicit and split into focused methods.
 
 ## Persistence Boundaries
 
@@ -91,6 +92,7 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 - The API owns durable producers and the temporary Pub/Sub-to-WebSocket forwarding bridge, but it does not execute durable handlers or relay outbox work.
 - `packages/application` contains reusable scoring calculations used from both synchronous API paths and processor handlers.
 - `packages/contracts` contains the shared internal message types.
+- `packages/eventing` contains the transport interfaces, Redis adapter, outbox service, and PostgreSQL outbox adapter shared by API producers and processor workers.
 - API and processor use independent entrypoints, images, health checks, and logs. Processor health is internal to the Compose network so multiple replicas can run without host-port conflicts.
 
 ## Stateless Handler Registration
@@ -99,7 +101,7 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 - Every `EventConsumer` owns its stable inbox `identity`, event type, transactional `handle`, and optional post-commit effect. `PostgresEventTransaction` performs the standard inbox insertion and invokes the concrete handler inside the same transaction; duplicate events never enter the handler body.
 - `tournament.created` uses the same registry and transaction path as every other durable event. The event loop contains no event-specific branches.
 - The Phase 4 `syncstart.song-completed` producer publishes the normalized external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
-- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then its PostgreSQL adapter applies score and standing effects using repositories from the transaction `EntityManager`. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
+- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then the handler applies its processor-only score and standing orchestration through focused methods using repositories from the supplied transaction `EntityManager`. A separate persistence class is intentionally omitted because it had no interface, alternate implementation, or reuse. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
 - `PostgresTournamentPersistence` owns the tournament-creation transaction and obtains the tournament repository from its transaction `EntityManager`; it writes the `tournament.created` outbox event through the focused outbox adapter in that same transaction.
 - A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
 - Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.

@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { DurableEventConsumerService } from './durable-event-consumer.service';
-import { OutboxRelayService } from './outbox-relay.service';
+import { DurableEventConsumerService } from '@processor/eventing/durable-event-consumer.service';
+import { OutboxRelayService } from '@processor/eventing/outbox-relay.service';
 
 @Injectable()
 export class EventingRunnerService

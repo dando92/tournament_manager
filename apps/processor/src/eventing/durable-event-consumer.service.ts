@@ -5,9 +5,9 @@ import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventMessage,
   DurableEventTransport,
-} from '../../../backend/src/eventing/eventing.interfaces';
-import { PostgresEventTransaction } from './postgres-event-transaction';
-import { EventConsumerRegistry } from './event-consumer.registry';
+} from '@tournament-manager/eventing';
+import { PostgresEventTransaction } from '@processor/eventing/postgres-event-transaction';
+import { EventConsumerRegistry } from '@processor/eventing/event-consumer.registry';
 
 @Injectable()
 export class DurableEventConsumerService {

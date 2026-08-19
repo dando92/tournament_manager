@@ -7,9 +7,12 @@
   "testRegex": ".e2e-spec.ts$",
   "setupFiles": ["<rootDir>/setup-env.ts"],
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.ts$": "ts-jest"
   },
   "moduleNameMapper": {
+    "^@backend/(.*)$": "<rootDir>/../src/$1",
+    "^@processor/(.*)$": "<rootDir>/../../processor/src/$1",
+    "^@test/(.*)$": "<rootDir>/$1",
     "^@auth/(.*)$": "<rootDir>/../src/auth/$1",
     "^@backwards-compat/(.*)$": "<rootDir>/../src/backwards-compat/$1",
     "^@bracket/(.*)$": "<rootDir>/../src/tournament/bracket/$1",

@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/contracts",
     "packages/application",
+    "packages/eventing",
     "apps/backend",
     "apps/processor",
     "apps/frontend"

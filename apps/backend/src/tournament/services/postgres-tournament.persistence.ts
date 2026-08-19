@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Tournament } from '@persistence/entities';
-import { NewEvent, OutboxService } from '../../eventing/outbox.service';
+import { NewEvent, OutboxService } from '@tournament-manager/eventing';
 
 @Injectable()
 export class PostgresTournamentPersistence {

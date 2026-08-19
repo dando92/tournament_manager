@@ -1,4 +1,7 @@
-import { EventEnvelope, LiveEventEnvelope } from '../contracts/events';
+import {
+  EventEnvelope,
+  LiveEventEnvelope,
+} from '@tournament-manager/contracts';
 
 export const DURABLE_EVENT_TRANSPORT = Symbol('DURABLE_EVENT_TRANSPORT');
 export const LIVE_EVENT_TRANSPORT = Symbol('LIVE_EVENT_TRANSPORT');

@@ -17,6 +17,7 @@
     "@nestjs/typeorm": "^11.0.1",
     "@tournament-manager/application": "0.0.1",
     "@tournament-manager/contracts": "0.0.1",
+    "@tournament-manager/eventing": "0.0.1",
     "pg": "^8.13.3",
     "redis": "^5.8.2",
     "reflect-metadata": "^0.2.2",

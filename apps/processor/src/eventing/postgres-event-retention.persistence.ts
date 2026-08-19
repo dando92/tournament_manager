@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
-import { PostgresAdvisoryLock } from '../../../backend/src/persistence/postgres-advisory-lock';
+import { PostgresAdvisoryLock } from '@backend/persistence/postgres-advisory-lock';
 
 interface RetentionCandidate {
   id: number;

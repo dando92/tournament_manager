@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEnvelope } from '@tournament-manager/contracts';
-import { EventConsumer } from './event-consumer.registry';
+import { EventConsumer } from '@processor/eventing/event-consumer.registry';
 
 @Injectable()
 export class PostgresEventTransaction {

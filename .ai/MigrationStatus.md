@@ -22,6 +22,39 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Completed Checkpoints
 
+### Phase 5 checkpoint 2 — Shared eventing boundary and handler simplification
+
+- Added the documented `packages/eventing` workspace and moved the transport interfaces, Redis adapter, outbox service, and PostgreSQL outbox adapter used by both API and processor into it.
+- Replaced relative project-module imports in the extracted API/processor/eventing area with configured `@` aliases and added alias resolution for builds and tests.
+- Removed `PostgresLobbySongCompletedPersistence`, which had no interface, alternate implementation, or reuse.
+- Kept the completed-song transaction orchestration in `LobbySongCompletedHandler` and split it into named participant, song, match, score, standing, and recalculation operations.
+- Preserved the existing transaction boundary, persistence order, warning behavior, live post-commit effects, and inbox idempotency.
+
+Verification result:
+
+```text
+npm run verify
+PASS: application, contracts, eventing, backend, processor, and frontend lint (existing warnings only)
+PASS: 34 unit tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: application, contracts, eventing, backend, processor, and frontend builds
+
+npm run local:up
+PASS: API and processor images rebuilt with the shared eventing package
+PASS: PostgreSQL, Redis, migrations, processor, API, and frontend healthy
+
+npm run verify:local
+PASS: 2 PostgreSQL and Redis platform integration tests
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+PASS: API and processor liveness/readiness
+PASS: Swagger, deterministic seed, and frontend smoke checks
+```
+
+Known non-blocking output:
+
+- Existing backend and frontend lint warnings remain.
+- Vite reports the existing large JavaScript chunk warning.
+
 ### Phase 5 checkpoint 1 — Independent processor extraction
 
 - Added `apps/processor` with an independent NestJS entrypoint, dependency readiness endpoints, Docker image, runtime configuration, and logs.

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ProcessorModule } from './processor.module';
+import { ProcessorModule } from '@processor/processor.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(ProcessorModule);

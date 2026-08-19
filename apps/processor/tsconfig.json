@@ -11,6 +11,8 @@
     "rootDir": "..",
     "baseUrl": ".",
     "paths": {
+      "@backend/*": ["../backend/src/*"],
+      "@processor/*": ["src/*"],
       "@auth/*": ["../backend/src/auth/*"],
       "@bracket/*": ["../backend/src/tournament/bracket/*"],
       "@match/*": ["../backend/src/tournament/match/*"],

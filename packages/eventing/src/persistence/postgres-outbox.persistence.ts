@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { EventEnvelope } from '../contracts/events';
+import { EventEnvelope } from '@tournament-manager/contracts';
 
 export interface OutboxRow {
   id: string;

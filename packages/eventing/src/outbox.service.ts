@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { EntityManager } from 'typeorm';
-import { EventEnvelope } from '../contracts/events';
-import { PostgresOutboxPersistence } from './postgres-outbox.persistence';
+import { EventEnvelope } from '@tournament-manager/contracts';
+import { PostgresOutboxPersistence } from '@eventing/persistence/postgres-outbox.persistence';
 
 export interface NewEvent<TPayload> {
   type: string;

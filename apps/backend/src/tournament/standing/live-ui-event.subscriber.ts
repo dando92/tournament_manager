@@ -5,11 +5,11 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LiveEventEnvelope } from '../../contracts/events';
+import { LiveEventEnvelope } from '@tournament-manager/contracts';
 import {
   LIVE_EVENT_TRANSPORT,
   LiveEventTransport,
-} from '../../eventing/eventing.interfaces';
+} from '@tournament-manager/eventing';
 import { UiUpdateGateway } from '@match/gateways/ui-update.gateway';
 
 @Injectable()

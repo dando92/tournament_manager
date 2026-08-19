@@ -55,6 +55,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `apps/frontend`: Current React and Vite web application.
 - `packages/application`: Application logic shared by API and processor entrypoints.
 - `packages/contracts`: Internal durable and live event contracts.
+- `packages/eventing`: Shared outbox and Redis transport interfaces and adapters.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The approved target structure and service boundaries are defined in `.ai/Architecture.md`. Do not treat the current directory structure as the target architecture.

@@ -9,12 +9,12 @@ import {
   EventEnvelope,
   isEventEnvelope,
   LiveEventEnvelope,
-} from '../contracts/events';
+} from '@tournament-manager/contracts';
 import {
   DurableEventMessage,
   DurableEventTransport,
   LiveEventTransport,
-} from './eventing.interfaces';
+} from '@eventing/interfaces';
 
 type RedisReply = unknown;
 

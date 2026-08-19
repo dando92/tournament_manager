@@ -10,12 +10,12 @@ import {
 import {
   EventConsumer,
   EventConsumerRegistry,
-} from './eventing/event-consumer.registry';
+} from '@processor/eventing/event-consumer.registry';
 import {
   LIVE_EVENT_TRANSPORT,
   LiveEventTransport,
-} from '../../backend/src/eventing/eventing.interfaces';
-import { PostgresTournamentCreatedPersistence } from './eventing/postgres-tournament-created.persistence';
+} from '@tournament-manager/eventing';
+import { PostgresTournamentCreatedPersistence } from '@processor/eventing/postgres-tournament-created.persistence';
 
 @Injectable()
 export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {

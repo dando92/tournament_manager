@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entities } from '@persistence/entities';
-import { PersistenceModule } from '../../backend/src/persistence/persistence.module';
-import { HealthModule } from '../../backend/src/health/health.module';
-import { ProcessorEventingModule } from './processor-eventing.module';
+import { PersistenceModule } from '@backend/persistence/persistence.module';
+import { HealthModule } from '@backend/health/health.module';
+import { ProcessorEventingModule } from '@processor/processor-eventing.module';
 
 @Module({
   imports: [

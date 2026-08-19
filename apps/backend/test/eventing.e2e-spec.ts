@@ -3,19 +3,21 @@ import { randomUUID } from 'node:crypto';
 import { createClient, RedisClientType } from 'redis';
 import { DataSource } from 'typeorm';
 
-import { EventEnvelope, LiveEventEnvelope } from '../src/contracts/events';
-import { DurableEventConsumerService } from '../../processor/src/eventing/durable-event-consumer.service';
-import { EventRetentionService } from '../../processor/src/eventing/event-retention.service';
-import { OutboxRelayService } from '../../processor/src/eventing/outbox-relay.service';
-import { OutboxService } from '../src/eventing/outbox.service';
-import { EventConsumerRegistry } from '../../processor/src/eventing/event-consumer.registry';
-import { PostgresEventTransaction } from '../../processor/src/eventing/postgres-event-transaction';
-import { PostgresEventRetentionPersistence } from '../../processor/src/eventing/postgres-event-retention.persistence';
-import { PostgresOutboxPersistence } from '../src/eventing/postgres-outbox.persistence';
-import { RedisEventTransport } from '../src/eventing/redis-event.transport';
-import { PostgresTournamentCreatedPersistence } from '../../processor/src/eventing/postgres-tournament-created.persistence';
-import { TournamentCreatedHandler } from '../../processor/src/tournament-created.handler';
-import { PostgresAdvisoryLock } from '../src/persistence/postgres-advisory-lock';
+import { EventEnvelope, LiveEventEnvelope } from '@tournament-manager/contracts';
+import {
+  OutboxService,
+  PostgresOutboxPersistence,
+  RedisEventTransport,
+} from '@tournament-manager/eventing';
+import { DurableEventConsumerService } from '@processor/eventing/durable-event-consumer.service';
+import { EventRetentionService } from '@processor/eventing/event-retention.service';
+import { OutboxRelayService } from '@processor/eventing/outbox-relay.service';
+import { EventConsumerRegistry } from '@processor/eventing/event-consumer.registry';
+import { PostgresEventTransaction } from '@processor/eventing/postgres-event-transaction';
+import { PostgresEventRetentionPersistence } from '@processor/eventing/postgres-event-retention.persistence';
+import { PostgresTournamentCreatedPersistence } from '@processor/eventing/postgres-tournament-created.persistence';
+import { TournamentCreatedHandler } from '@processor/tournament-created.handler';
+import { PostgresAdvisoryLock } from '@persistence/postgres-advisory-lock';
 import {
   Division,
   Entrant,
@@ -29,17 +31,16 @@ import {
   Song,
   Standing,
   Tournament,
-} from '../src/persistence/entities';
-import { LobbySongCompletedHandler } from '../../processor/src/lobby-song-completed.handler';
-import { PostgresLobbySongCompletedPersistence } from '../src/tournament/standing/postgres-lobby-song-completed.persistence';
-import { ScoringSystemProvider } from '../src/tournament/services/scoring-systems/ScoringSystemProvider';
-import { TournamentService } from '../src/tournament/services/tournament.service';
-import { PostgresTournamentPersistence } from '../src/tournament/services/postgres-tournament.persistence';
+} from '@persistence/entities';
+import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handler';
+import { ScoringSystemProvider } from '@tournament/services/scoring-systems/ScoringSystemProvider';
+import { TournamentService } from '@tournament/services/tournament.service';
+import { PostgresTournamentPersistence } from '@tournament/services/postgres-tournament.persistence';
 import {
   dropTestDatabase,
   getTestDatabaseName,
   resetMigratedTestDatabase,
-} from './support/postgres-test-database';
+} from '@test/support/postgres-test-database';
 
 describe('Eventing reliability (e2e)', () => {
   const database = getTestDatabaseName('eventing');
@@ -247,7 +248,6 @@ describe('Eventing reliability (e2e)', () => {
     };
     const handler = new LobbySongCompletedHandler(
       registry,
-      new PostgresLobbySongCompletedPersistence(),
       new ScoringSystemProvider(),
       config,
       liveTransport as never,

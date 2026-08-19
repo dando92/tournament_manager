@@ -9,8 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import {
   DURABLE_EVENT_TRANSPORT,
   DurableEventTransport,
-} from '../../../backend/src/eventing/eventing.interfaces';
-import { PostgresEventRetentionPersistence } from './postgres-event-retention.persistence';
+} from '@tournament-manager/eventing';
+import { PostgresEventRetentionPersistence } from '@processor/eventing/postgres-event-retention.persistence';
 
 @Injectable()
 export class EventRetentionService
