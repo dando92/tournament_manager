@@ -54,7 +54,7 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Volatile live state is recovered from SyncStart snapshots where supported.
 - Do not model replaceable GUI invalidations as durable outbox events.
 
-`@tournament-manager/contracts` owns transport-neutral SyncStart DTOs and internal HTTP request contracts. `@tournament-manager/live-messaging` owns generic event envelopes, envelope validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports. HTTP and WebSocket adapters remain application-local.
+`@tournament-manager/contracts` owns transport-neutral SyncStart DTOs and internal HTTP request contracts. `@tournament-manager/live-messaging` owns generic event envelopes, envelope validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports. `@tournament-manager/syncstart-protocol` owns the external SyncStart WebSocket adapter and deterministic simulator. HTTP adapters remain application-local.
 
 ## SyncStart Communication
 
@@ -63,7 +63,7 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - The API applies score, standing, match, and advancement behavior synchronously.
 - Completed-song delivery is best effort. Manual score entry is the approved recovery for an occasional loss.
 - SyncStart may use simple bounded in-memory retry, but must not add a persistent queue without approval.
-- SyncStart protocol dispatch uses focused `LobbyLifecycleObserver`, `LiveMatchObserver`, and `CompletedSongObserver` interfaces. Avoid one observer containing many optional callbacks.
+- The SyncStart application maps tournaments to independent protocol clients through `TournamentSyncStartRegistry`. `LobbyCatalog` is a volatile query projection updated by protocol events; it does not own connections or communicate with SyncStart.
 - API-to-SyncStart code depends on `SyncStartClient`; completed-song propagation depends on `CompletedSongSink`. Unit tests use fakes or spies.
 
 ## Start.gg

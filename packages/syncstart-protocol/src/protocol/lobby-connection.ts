@@ -1,5 +1,19 @@
 import { WebSocket } from "ws";
 
+export interface WebSocketTransport {
+  readyState: number;
+  send(message: string): void;
+  close(): void;
+  on(event: "open", listener: () => void): void;
+  on(event: "message", listener: (data: Buffer) => void): void;
+  on(event: "close", listener: (code: number, reason: Buffer) => void): void;
+  on(event: "error", listener: (error: Error) => void): void;
+}
+
+export type WebSocketFactory = (url: string) => WebSocketTransport;
+
+export const defaultWebSocketFactory: WebSocketFactory = (url) => new WebSocket(url);
+
 export type LobbyConnectionStatus = {
   isActive: boolean;
   isConnected: boolean;
@@ -24,13 +38,14 @@ export type LobbyConnectionOptions = {
 export class LobbyConnection {
   private active = false;
   private connected = false;
-  private ws: WebSocket | null = null;
+  private ws: WebSocketTransport | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private messageChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly syncstartUrl: string,
     private readonly options: LobbyConnectionOptions,
+    private readonly webSocketFactory: WebSocketFactory = defaultWebSocketFactory,
   ) {}
 
   Connect(): Promise<void> {
@@ -76,7 +91,7 @@ export class LobbyConnection {
     );
 
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(url);
+      const ws = this.webSocketFactory(url);
       this.ws = ws;
       let opened = false;
       let settled = false;

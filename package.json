@@ -7,13 +7,15 @@
     "packages/scoring",
     "packages/persistence",
     "packages/live-messaging",
+    "packages/syncstart-protocol",
     "packages/startgg",
     "apps/migrations",
     "apps/local-fixtures",
     "apps/api",
     "apps/syncstart",
     "apps/realtime",
-    "apps/frontend"
+    "apps/frontend",
+    "tools/syncstart-simulator"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

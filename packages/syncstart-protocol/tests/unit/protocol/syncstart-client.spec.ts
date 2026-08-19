@@ -1,8 +1,7 @@
-import type { ILobbyObserver } from "@syncstart/protocol/lobby-observer.interface";
-import { SyncStartConnector } from "@syncstart/protocol/syncstart-connector";
-import { SyncStartProtocolSimulator } from "@syncstart/testing/syncstart-protocol.simulator";
+import { type ILobbyObserver, SyncStartClient } from "../../../src";
+import { SyncStartProtocolSimulator } from "../../../../../tools/syncstart-simulator/src/syncstart-protocol.simulator";
 
-describe("SyncStartConnector protocol boundary", () => {
+describe("SyncStartClient protocol boundary", () => {
   jest.setTimeout(15000);
   let simulator: SyncStartProtocolSimulator;
 
@@ -17,7 +16,7 @@ describe("SyncStartConnector protocol boundary", () => {
       OnGoingMatchUpdate: jest.fn(),
       OnSongCompleted: jest.fn(),
     };
-    const connector = new SyncStartConnector(await simulator.url(), [observer]);
+    const connector = new SyncStartClient(await simulator.url(), [observer]);
     await connector.SpectateLobby({
       tournamentId: 7,
       lobbyName: "Finals",
@@ -42,7 +41,7 @@ describe("SyncStartConnector protocol boundary", () => {
 
   it("searches lobbies through the deterministic server protocol", async () => {
     simulator = new SyncStartProtocolSimulator();
-    const connector = new SyncStartConnector(await simulator.url(), []);
+    const connector = new SyncStartClient(await simulator.url(), []);
     await connector.ConnectToServer(7);
     await expect(connector.SearchLobbies()).resolves.toEqual([
       {
@@ -60,7 +59,7 @@ describe("SyncStartConnector protocol boundary", () => {
       disconnectFirstLobbyConnection: true,
     });
     const observer: ILobbyObserver = { OnConnected: jest.fn() };
-    const connector = new SyncStartConnector(await simulator.url(), [observer]);
+    const connector = new SyncStartClient(await simulator.url(), [observer]);
     await connector.SpectateLobby({
       tournamentId: 7,
       lobbyName: "Finals",

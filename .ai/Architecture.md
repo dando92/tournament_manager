@@ -63,6 +63,7 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 - `packages/contracts`: transport-neutral SyncStart DTOs and internal HTTP request contracts.
 - `packages/persistence`: PostgreSQL entity metadata and NestJS repository registration.
 - `packages/live-messaging`: generic event envelopes, validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports.
+- `packages/syncstart-protocol`: external SyncStart WebSocket protocol client, lobby connection primitives, protocol DTOs, normalized lobby events, and deterministic simulator. It depends only on contracts and WebSocket transport.
 - `packages/startgg`: Start.gg GraphQL client, queries, mutations, provider types, parsing, pagination, rate limiting, and provider error normalization.
 
 Start.gg application orchestration, HTTP DTOs, authorization, database writes, mappings, UI invalidation, and synchronous match reporting remain inside the API.
@@ -78,7 +79,7 @@ Business and protocol logic depends on behavior-oriented interfaces rather than 
 
 Redis Pub/Sub and the in-memory test transport implement the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. Realtime WebSockets implement `BrowserEventBroadcaster`. SyncStart DTOs come from `packages/contracts`; generic envelopes and transport abstractions come from `packages/live-messaging`.
 
-SyncStart protocol dispatch uses focused `LobbyLifecycleObserver`, `LiveMatchObserver`, and `CompletedSongObserver` interfaces. Concrete observers propagate normalized messages through the appropriate port. Unit tests use in-memory fakes or spies and require no Redis, HTTP, or WebSocket runtime.
+SyncStart protocol dispatch uses the `ILobbyObserver` contract. The SyncStart application supplies a `LobbyCatalog` projection and a live-event publisher; the protocol package remains independent of NestJS, Redis, and internal HTTP. Protocol unit tests use the deterministic simulator and require no application runtime.
 
 Do not introduce a generic application event bus. Ports exist only where code crosses a transport or service-ownership boundary.
 

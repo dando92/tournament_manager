@@ -48,6 +48,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - [Deferred functional questions](.ai/FunctionalQuestions.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
+- [SyncStart protocol refactoring decisions](.ai/SyncStartRefactoring.md)
 
 ## Repository Architecture
 
@@ -60,6 +61,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - `packages/scoring`: Scoring-system identifiers, pure score calculations, and their provider registry.
 - `packages/contracts`: Transport-neutral SyncStart DTOs and internal HTTP request contracts.
 - `packages/live-messaging`: Event envelopes, validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports.
+- `packages/syncstart-protocol`: SyncStart WebSocket protocol client, lobby connection primitives, normalized protocol events, and deterministic simulator.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `.ai`: Project architecture, coding, and design decisions.

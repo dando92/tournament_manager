@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { SyncStartSessionManager } from "./syncstart-session.manager";
+import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
 
 @Injectable()
 class InternalTokenGuard implements CanActivate {
@@ -30,53 +30,38 @@ class InternalTokenGuard implements CanActivate {
 @Controller("internal/tournaments")
 @UseGuards(InternalTokenGuard)
 export class InternalController {
-  constructor(private readonly sessions: SyncStartSessionManager) {}
+  constructor(private readonly tournaments: TournamentSyncStartRegistry) {}
   @Put(":tournamentId/configuration") configure(
     @Param("tournamentId") id: string,
     @Body() body: { syncstartUrl: string },
   ) {
-    return this.sessions.execute({
-      action: "configure-tournament",
-      tournamentId: Number(id),
-      syncstartUrl: body.syncstartUrl,
-    });
+    this.tournaments.configure(Number(id), body.syncstartUrl);
+    return { configured: Boolean(body.syncstartUrl) };
   }
   @Delete(":tournamentId/configuration") close(
     @Param("tournamentId") id: string,
   ) {
-    return this.sessions.execute({
-      action: "close-tournament",
-      tournamentId: Number(id),
-    });
+    this.tournaments.close(Number(id));
+    return { closed: true };
   }
   @Post(":tournamentId/server/connect") connect(
     @Param("tournamentId") id: string,
   ) {
-    return this.sessions.execute({
-      action: "connect-server",
-      tournamentId: Number(id),
-    });
+    return this.tournaments.connectServer(Number(id));
   }
   @Delete(":tournamentId/server/disconnect") disconnect(
     @Param("tournamentId") id: string,
   ) {
-    return this.sessions.execute({
-      action: "disconnect-server",
-      tournamentId: Number(id),
-    });
+    return this.tournaments.disconnectServer(Number(id));
   }
   @Get(":tournamentId/lobbies") lobbies(@Param("tournamentId") id: string) {
-    return this.sessions.execute({
-      action: "list-lobbies",
-      tournamentId: Number(id),
-    });
+    return this.tournaments.listLobbies(Number(id));
   }
   @Post(":tournamentId/lobbies/connect") connectLobby(
     @Param("tournamentId") id: string,
     @Body() body: { lobbyName: string; lobbyCode: string; password?: string },
   ) {
-    return this.sessions.execute({
-      action: "connect-lobby",
+    return this.tournaments.connectLobby({
       tournamentId: Number(id),
       ...body,
     });
@@ -85,8 +70,7 @@ export class InternalController {
     @Param("tournamentId") id: string,
     @Body() body: { lobbyName: string; password?: string },
   ) {
-    return this.sessions.execute({
-      action: "create-lobby",
+    return this.tournaments.createLobby({
       tournamentId: Number(id),
       ...body,
     });
@@ -95,10 +79,7 @@ export class InternalController {
     @Param("tournamentId") id: string,
     @Param("lobbyId") lobbyId: string,
   ) {
-    return this.sessions.execute({
-      action: "disconnect-lobby",
-      tournamentId: Number(id),
-      lobbyId,
-    });
+    this.tournaments.disconnectLobby(Number(id), lobbyId);
+    return { ok: true };
   }
 }

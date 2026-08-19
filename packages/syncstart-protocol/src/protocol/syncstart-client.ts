@@ -1,10 +1,6 @@
 import {
   ILobbyObserver,
-  LobbyCompletedScoreDto,
   LobbyIdentityDto,
-  LobbyJudgmentsDto,
-  LobbyLivePlayerDto,
-  LobbySongDto,
 } from "./lobby-observer.interface";
 import { LobbyEventDispatcher } from "./lobby-event.dispatcher";
 import { LobbyConnection, LobbyConnectionCloseEvent } from "./lobby-connection";
@@ -14,10 +10,9 @@ import {
   SpectateLobbyRequestDto,
   SyncStartLobbySummaryDto,
 } from "./syncstart-connector.types";
-import {
-  SyncStartLobbyPlayer,
-  SyncStartLobbyStatePayload,
-} from "./syncstart-protocol.types";
+import { SyncStartLobbyStatePayload } from "./syncstart-protocol.types";
+import type { WebSocketFactory } from "./lobby-connection";
+import { LobbySession, type LobbySessionMode, type PendingLobbyConnection } from "./lobby-session";
 
 type SyncStartMessage<T = unknown> = {
   event: string;
@@ -28,37 +23,13 @@ type SearchLobbyResponse = {
   lobbies?: SyncStartLobbySummaryDto[];
 };
 
-type LobbySessionMode =
-  { type: "create" } | { type: "spectate"; lobbyCode: string };
-
-type PendingLobbyConnection = {
-  resolve: (result: LobbyConnectionResultDto) => void;
-  reject: (error: Error) => void;
-  timeout: ReturnType<typeof setTimeout>;
-};
-
 type PendingLobbySearch = {
   resolve: (lobbies: SyncStartLobbySummaryDto[]) => void;
   reject: (error: Error) => void;
   timeout: ReturnType<typeof setTimeout>;
 };
 
-type LobbySession = {
-  mode: LobbySessionMode;
-  connection: LobbyConnection;
-  tournamentId: number;
-  lobbyName?: string;
-  password: string;
-  currentLobbyCode: string | null;
-  pendingConnect: PendingLobbyConnection | null;
-  currentSocketConnectedNotified: boolean;
-  previousSongKey: string | null;
-  readyByPlayerKey: Map<string, boolean>;
-  screenByPlayerKey: Map<string, SyncStartLobbyPlayer["screenName"]>;
-  lastCompletedSignature: string | null;
-};
-
-export class SyncStartConnector {
+export class SyncStartClient {
   private readonly dispatcher: LobbyEventDispatcher;
   private serverConnection: LobbyConnection | null = null;
   private serverTournamentId: number | null = null;
@@ -68,6 +39,7 @@ export class SyncStartConnector {
   constructor(
     private readonly syncstartUrl: string,
     observers: ILobbyObserver[],
+    private readonly webSocketFactory?: WebSocketFactory,
   ) {
     this.dispatcher = new LobbyEventDispatcher(observers);
   }
@@ -137,7 +109,7 @@ export class SyncStartConnector {
         onError: (error) => {
           this.rejectPendingLobbySearch(error);
         },
-      });
+      }, this.webSocketFactory);
     }
 
     if (this.serverConnection.IsConnected()) return this.serverStatus();
@@ -237,20 +209,13 @@ export class SyncStartConnector {
       },
     });
 
-    session = {
+    session = new LobbySession(
       mode,
       connection,
       tournamentId,
       lobbyName,
       password,
-      currentLobbyCode: mode.type === "spectate" ? mode.lobbyCode : null,
-      pendingConnect: null,
-      currentSocketConnectedNotified: false,
-      previousSongKey: null,
-      readyByPlayerKey: new Map<string, boolean>(),
-      screenByPlayerKey: new Map<string, SyncStartLobbyPlayer["screenName"]>(),
-      lastCompletedSignature: null,
-    };
+    );
     return session;
   }
 
@@ -346,7 +311,7 @@ export class SyncStartConnector {
       const reason =
         (payload.data as { reason?: string })?.reason ?? "(no reason)";
       console.warn(
-        `[SyncStartConnector] clientDisconnected, reason="${reason}" (lobbyCode=${session.currentLobbyCode ?? "unknown"})`,
+        `[SyncStartClient] clientDisconnected, reason="${reason}" (lobbyCode=${session.currentLobbyCode ?? "unknown"})`,
       );
       session.connection.Disconnect();
     }
@@ -425,7 +390,7 @@ export class SyncStartConnector {
       return JSON.parse(message) as SyncStartMessage<T>;
     } catch {
       console.warn(
-        `[SyncStartConnector] Unparseable message: ${message.slice(0, 200)}`,
+        `[SyncStartClient] Unparseable message: ${message.slice(0, 200)}`,
       );
       return null;
     }
@@ -468,89 +433,11 @@ export class SyncStartConnector {
   ): Promise<void> {
     const lobbyCode = lobbyState.code.toUpperCase();
     const identity = this.identity(session, lobbyCode);
-    const song = this.toSongDto(lobbyState);
-    const playerTransitions = lobbyState.players.map((player) => {
-      const playerKey = this.playerStateKey(player);
-      return {
-        player,
-        playerKey,
-        previousScreen: session.screenByPlayerKey.get(playerKey),
-      };
-    });
-
-    if (song) {
-      const songKey = `${song.songPath}|${song.title}`;
-      if (songKey !== session.previousSongKey) {
-        session.previousSongKey = songKey;
-        session.lastCompletedSignature = null;
-        await this.dispatcher.OnSongSelected({ ...identity, song });
-      }
-    }
-
-    for (const { player, playerKey } of playerTransitions) {
-      const knownPlayer =
-        session.readyByPlayerKey.has(playerKey) ||
-        session.screenByPlayerKey.has(playerKey);
-      if (knownPlayer) {
-        continue;
-      }
-
-      session.readyByPlayerKey.set(playerKey, false);
-      await this.dispatcher.OnPlayerReady({
-        ...identity,
-        playerId: player.playerId,
-        playerName: this.normalizePlayerName(player.profileName),
-        ready: false,
-      });
-    }
-
-    const gameplayPlayers = lobbyState.players.filter(
-      (player) => player.screenName === "ScreenGameplay",
-    );
-    for (const player of gameplayPlayers) {
-      const playerKey = this.playerStateKey(player);
-      const previousReady = session.readyByPlayerKey.get(playerKey);
-      if (previousReady !== player.ready) {
-        session.readyByPlayerKey.set(playerKey, player.ready);
-        await this.dispatcher.OnPlayerReady({
-          ...identity,
-          playerId: player.playerId,
-          playerName: this.normalizePlayerName(player.profileName),
-          ready: player.ready,
-        });
-      }
-    }
-
-    if (gameplayPlayers.length > 0) {
-      await this.dispatcher.OnGoingMatchUpdate({
-        ...identity,
-        song,
-        players: gameplayPlayers.map((player) => this.toLivePlayerDto(player)),
-      });
-    }
-
-    const playerMovedToEvaluation = playerTransitions.some(
-      ({ player, previousScreen }) =>
-        previousScreen === "ScreenGameplay" &&
-        this.isEvaluationScreen(player.screenName),
-    );
-    if (song && playerMovedToEvaluation) {
-      const scores = lobbyState.players.map((player) =>
-        this.toCompletedScoreDto(player),
-      );
-      const signature = this.completedSignature(song, scores);
-      if (signature !== session.lastCompletedSignature) {
-        await this.dispatcher.OnSongCompleted({
-          ...identity,
-          song,
-          scores,
-        });
-        session.lastCompletedSignature = signature;
-      }
-    }
-
-    for (const { player, playerKey } of playerTransitions) {
-      session.screenByPlayerKey.set(playerKey, player.screenName);
+    for (const transition of session.stateInterpreter.interpret(lobbyState)) {
+      if (transition.type === "song-selected") await this.dispatcher.OnSongSelected({ ...identity, song: transition.song });
+      if (transition.type === "player-ready") await this.dispatcher.OnPlayerReady({ ...identity, playerId: transition.playerId, playerName: transition.playerName, ready: transition.ready });
+      if (transition.type === "match-update") await this.dispatcher.OnGoingMatchUpdate({ ...identity, song: transition.song, players: transition.players });
+      if (transition.type === "song-completed") await this.dispatcher.OnSongCompleted({ ...identity, song: transition.song, scores: transition.scores });
     }
   }
 
@@ -582,98 +469,15 @@ export class SyncStartConnector {
       : null;
   }
 
-  private toSongDto(
-    lobby: SyncStartLobbyStatePayload,
-  ): LobbySongDto | undefined {
-    if (!lobby.songInfo) return undefined;
-    return {
-      songPath: lobby.songInfo.songPath,
-      title: lobby.songInfo.title,
-      artist: lobby.songInfo.artist,
-      songLength: lobby.songInfo.songLength,
-    };
-  }
-
-  private toLivePlayerDto(player: SyncStartLobbyPlayer): LobbyLivePlayerDto {
-    return {
-      playerId: player.playerId,
-      playerName: this.normalizePlayerName(player.profileName),
-      score: player.score ?? 0,
-      exScore: player.exScore,
-      isFailed: player.isFailed ?? false,
-      songProgression: player.songProgression,
-      judgments: this.toJudgmentsDto(player),
-    };
-  }
-
-  private toCompletedScoreDto(
-    player: SyncStartLobbyPlayer,
-  ): LobbyCompletedScoreDto {
-    return {
-      playerId: player.playerId,
-      playerName: this.normalizePlayerName(player.profileName),
-      score: player.score ?? 0,
-      exScore: player.exScore,
-      isFailed: player.isFailed ?? false,
-    };
-  }
-
-  private toJudgmentsDto(
-    player: SyncStartLobbyPlayer,
-  ): LobbyJudgmentsDto | undefined {
-    if (!player.judgments) return undefined;
-    return {
-      fantasticPlus: player.judgments.fantasticPlus,
-      fantastics: player.judgments.fantastics,
-      excellents: player.judgments.excellents,
-      greats: player.judgments.greats,
-      decents: player.judgments.decents ?? 0,
-      wayOffs: player.judgments.wayOffs ?? 0,
-      misses: player.judgments.misses,
-      minesHit: player.judgments.minesHit,
-      holdsHeld: player.judgments.holdsHeld,
-      totalHolds: player.judgments.totalHolds,
-    };
-  }
-
-  private normalizePlayerName(playerName: string): string {
-    return playerName
-      .replace(/\[DS\]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  private playerStateKey(player: SyncStartLobbyPlayer): string {
-    return `${player.playerId}|${this.normalizePlayerName(player.profileName)}`;
-  }
-
-  private isEvaluationScreen(
-    screenName: SyncStartLobbyPlayer["screenName"],
-  ): boolean {
-    return (
-      screenName === "ScreenEvaluation" ||
-      screenName === "ScreenEvaluationStage"
-    );
-  }
-
-  private completedSignature(
-    song: LobbySongDto,
-    scores: LobbyCompletedScoreDto[],
-  ): string {
-    return JSON.stringify({
-      songPath: song.songPath,
-      scores: scores
-        .map((score) => ({
-          playerId: score.playerId,
-          playerName: score.playerName,
-          score: score.score,
-          exScore: score.exScore,
-          isFailed: score.isFailed,
-        }))
-        .sort((a, b) => a.playerId.localeCompare(b.playerId)),
-    });
-  }
 }
+
+export type SyncStartClientFactory = (
+  syncstartUrl: string,
+  observers: ILobbyObserver[],
+) => SyncStartClient;
+
+export const defaultSyncStartClientFactory: SyncStartClientFactory =
+  (syncstartUrl, observers) => new SyncStartClient(syncstartUrl, observers);
 
 export type {
   CreateLobbyRequestDto,

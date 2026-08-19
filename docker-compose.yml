@@ -112,10 +112,9 @@ services:
   syncstart-simulator:
     build:
       context: .
-      dockerfile: apps/syncstart/Dockerfile
+      dockerfile: tools/syncstart-simulator/Dockerfile
     restart: unless-stopped
     profiles: ["simulator"]
-    command: ["node", "apps/syncstart/dist/src/testing/simulator-main.js"]
     environment:
       SYNCSTART_SIMULATOR_PORT: 19000
 

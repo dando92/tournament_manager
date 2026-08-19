@@ -7,7 +7,9 @@ import {
 import { HealthController } from "./health.controller";
 import { InternalController } from "./internal.controller";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
-import { SyncStartSessionManager } from "./syncstart-session.manager";
+import { LobbyCatalog } from "./lobby-catalog";
+import { CompletedSongSubmitter } from "./completed-song-submitter";
+import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
 
 @Module({
   imports: [
@@ -20,8 +22,10 @@ import { SyncStartSessionManager } from "./syncstart-session.manager";
   providers: [
     RedisLiveEventPublisher,
     { provide: LIVE_EVENT_PUBLISHER, useExisting: RedisLiveEventPublisher },
+    LobbyCatalog,
+    CompletedSongSubmitter,
     SyncStartEventsPublisher,
-    SyncStartSessionManager,
+    TournamentSyncStartRegistry,
   ],
 })
 export class SyncStartModule {}
