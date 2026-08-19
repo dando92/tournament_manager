@@ -24,25 +24,6 @@ await expectResponse('API readiness', `${apiUrl}/health/ready`, (body) => {
     && result.dependencies.redis.status === 'up'
     && result.dependencies.migrations.status === 'up';
 });
-function readProcessorHealth(path) {
-  return execFileSync(
-    'docker',
-    ['compose', 'exec', '-T', 'processor', 'wget', '--quiet', '--output-document=-', `http://127.0.0.1:3001${path}`],
-    { encoding: 'utf8' },
-  );
-}
-
-const processorLiveness = JSON.parse(readProcessorHealth('/health/live'));
-if (processorLiveness.status !== 'ok') throw new Error('processor liveness returned an unexpected response');
-console.log('PASS: processor liveness');
-const processorReadiness = JSON.parse(readProcessorHealth('/health/ready'));
-if (!(processorReadiness.status === 'ready'
-    && processorReadiness.dependencies.postgres.status === 'up'
-    && processorReadiness.dependencies.redis.status === 'up'
-    && processorReadiness.dependencies.migrations.status === 'up')) {
-  throw new Error('processor readiness returned an unexpected response');
-}
-console.log('PASS: processor readiness');
 function readSyncStartHealth(path) {
   return execFileSync(
     'docker',

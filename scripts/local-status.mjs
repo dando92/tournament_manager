@@ -33,7 +33,6 @@ for (const [index, realtimeUrl] of realtimeUrls.entries()) {
 try {
   const output = execFileSync(
     'docker',
-    ['compose', 'exec', '-T', 'processor', 'wget', '--quiet', '--output-document=-', 'http://127.0.0.1:3001/health/ready'],
     { encoding: 'utf8' },
   );
   const result = JSON.parse(output);
