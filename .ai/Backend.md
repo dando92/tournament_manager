@@ -16,7 +16,7 @@
 - TypeORM and PostgreSQL for authoritative persistence.
 - Redis Pub/Sub for replaceable live-message fan-out only.
 - Native WebSockets for the external SyncStart protocol and browser Realtime connections.
-- Internal HTTP for API/SyncStart request-response communication and snapshots.
+- Internal HTTP for API/SyncStart request-response communication and snapshots. Backend-to-backend HTTP calls use `@nestjs/axios` (`HttpModule` and injected `HttpService`) with `firstValueFrom`; the HTTP client must be mocked through dependency injection in unit tests.
 
 Redis Streams, transactional outbox, consumer inbox, processor workers, retries, dead letters, and transport retention are not part of the approved target.
 

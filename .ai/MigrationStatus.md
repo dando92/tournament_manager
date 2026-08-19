@@ -10,6 +10,10 @@
 
 ## Completed Checkpoints
 
+### Backend internal HTTP client standard
+
+- Recorded the approved standard for backend-to-backend HTTP: NestJS `HttpModule`, injected `HttpService`, and `firstValueFrom`; direct global `fetch` calls are not used by application-owned HTTP adapters.
+
 ### SyncStart outbound HTTP adapter
 
 - Replaced the direct global `fetch` call in `CompletedSongSubmitter` with injected NestJS `HttpService`; the application module imports `HttpModule` for runtime wiring and the existing unit test now mocks the injectable client.
