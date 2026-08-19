@@ -54,7 +54,7 @@ The bundled SyncStart simulator is optional and starts through the `simulator` C
 The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
 The frontend container reads `PUBLIC_API_URL`, `PUBLIC_REALTIME_URL`, and `PUBLIC_AUTH_MODE` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
 
-`LIVE_EVENT_CHANNEL` and internal HTTP settings are deploy-time configuration. A process restart or rolling restart is required after changing environment values.
+`LIVE_EVENT_CHANNEL` and internal HTTP settings are deploy-time configuration. A process restart is required after changing environment values. Hosted deployments use a maintenance window with platform traffic blocked and do not require rolling continuity.
 
 The local stack runs the one-shot `local-fixtures` application and creates an idempotent `Local E2E Tournament` fixture by default. Override `LOCAL_FIXTURE_TOURNAMENT_NAME` in `.env`. Set `LOCAL_FIXTURE_SYNCSTART_URL` to a reachable host or remote SyncStart WebSocket URL; leave it empty to create the fixture without SyncStart. The bundled simulator is optional and starts only with `docker compose --profile simulator up`.
 

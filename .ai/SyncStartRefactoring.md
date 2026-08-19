@@ -55,5 +55,6 @@ The package must preserve the existing protocol connection topology: one server 
 - `SyncStartServerSession` encapsulates server status and pending lobby searches instead of leaving that state in the coordinator.
 - `LobbyConnection` accepts a WebSocket factory, every session propagates it, and `TournamentSyncStartRegistry` receives an explicitly provided SyncStart-client factory.
 - The application currently has one state-owning SyncStart replica. A future horizontal deployment partitions ownership by `tournamentId`; distributed routing and failover are intentionally not implemented yet.
+- Planned deployments block the platform and may terminate every SyncStart connection. New processes reconstruct tournament runtimes and reconnect after startup; live owner handoff and overlapping protocol clients are not required for release continuity.
 - Build scripts remove `dist` before compiling and the architecture check protects the simulator's protocol-package boundary.
 - Focused unit coverage includes catalog projection and state interpretation; simulator tests remain protocol boundary tests.

@@ -8,6 +8,14 @@ The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.y
 
 Production is not declared. Before production use, replace the pre-production reset/restore policy with approved forward-migration, compatibility, backup-retention, rollback, and disaster-recovery requirements.
 
+## Maintenance Window
+
+Every deployment runs during an explicit maintenance window in which user access to the complete platform is blocked. Continuous availability, zero-downtime rollout, live connection handoff, and compatibility between the old and new application versions are not deployment requirements.
+
+The traffic-blocking mechanism belongs to the external edge or operator procedure because the reverse proxy and tunnel are outside the application contract. A promotion must start only after traffic has been blocked and must restore access only after either the new release or the rolled-back release has passed readiness and smoke checks. The concrete edge integration remains an operational configuration decision.
+
+PostgreSQL and Redis may remain running for migration, backup, and recovery operations while API, SyncStart, Realtime, and frontend traffic is unavailable. SyncStart connections and Realtime browser connections may be terminated and reconstructed after deployment; no cross-version state transfer is required.
+
 ## Required GitHub Configuration
 
 Create a `testing` environment and configure these secrets:
@@ -40,7 +48,7 @@ Pull requests to `main` run:
 
 A merge to `main` can continue only after both verification jobs pass. It builds and publishes five GHCR images with the full commit SHA as their only release tag. No `latest`, branch, or environment tag is published.
 
-The testing promotion then:
+After the operator has blocked platform traffic, the testing promotion then:
 
 1. captures the currently running immutable API image tag;
 2. pulls the exact new SHA-tagged images;
@@ -48,8 +56,10 @@ The testing promotion then:
 4. creates a transient pre-migration database backup;
 5. runs the API migration entrypoint once;
 6. replaces SyncStart, both realtime replicas, API, and frontend in dependency order;
-7. waits for readiness and runs public smoke tests;
+7. waits for readiness and runs deployment smoke tests from the runner or an operator-only maintenance bypass;
 8. deletes the transient backup after success.
+
+Traffic is restored only after step 8 succeeds. During rollback it remains blocked until the restored release passes its smoke checks.
 
 Frontend endpoint and authentication settings are written to `runtime-config.js` when its container starts. They are not compiled into the image, so the published frontend digest is portable between the local and testing configurations.
 
@@ -71,7 +81,7 @@ Validate deployment configuration without starting services:
 docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml config --quiet
 ```
 
-Run public smoke checks against a deployment:
+Run deployment smoke checks against an endpoint reachable by the runner or maintenance operator:
 
 ```text
 DEPLOY_API_URL=http://127.0.0.1:3000 \

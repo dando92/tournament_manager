@@ -37,6 +37,7 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 - Submits completed songs to the API over internal HTTP.
 - Publishes replaceable live telemetry through Redis Pub/Sub.
 - Runs as a single state-owning replica. A future multi-replica deployment must assign each `tournamentId` to exactly one logical owner and route all commands for that tournament to it; the assignment, lease, and failover mechanism remains deferred until explicitly required.
+- Planned deployments block the complete platform, terminate live connections, and reconstruct them after startup. SyncStart does not require connection handoff or overlapping old/new owners during a release.
 
 ### Realtime
 
@@ -121,6 +122,7 @@ These are not durable domain events and do not require an outbox or handler regi
 ## Deployment
 
 - API, migrations, SyncStart, Realtime, and frontend retain independent images and health checks.
+- Deployments use an explicit maintenance window with all user traffic blocked; zero-downtime and rolling cross-version compatibility are not requirements.
 - PostgreSQL and Redis remain provider-independent runtime dependencies.
 - Local and hosted environments use the same application images and protocols; local fixtures and the simulator are optional local-only additions.
 - Images remain immutable and identified by Git commit SHA.

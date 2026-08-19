@@ -10,6 +10,12 @@
 
 ## Completed Checkpoints
 
+### Deployment maintenance-window decision
+
+- Recorded that every deployment blocks user access to the complete platform until the new or rolled-back release passes readiness and smoke checks.
+- Removed zero-downtime, rolling cross-version compatibility, and live SyncStart connection handoff from the deployment requirements. PostgreSQL and Redis may remain available for migration and recovery while application traffic is blocked.
+- Kept the external traffic-blocking mechanism as an operational edge decision because the reverse proxy and tunnel are outside the application contract.
+
 ### SyncStart scalable ownership refinement
 
 - Bound each configured tournament to a replica-local `TournamentSyncStartRuntime` containing its protocol client, application observers, and focused lobby catalog; the registry now performs only creation, lookup, replacement, delegation, and shutdown.
