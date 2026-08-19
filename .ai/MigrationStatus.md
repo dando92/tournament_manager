@@ -22,6 +22,25 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Completed Checkpoints
 
+### Phase 5 checkpoint 4 — Tournament-created handler simplification
+
+- Removed `PostgresTournamentCreatedPersistence`, which existed only to move one projection query out of its handler.
+- Moved projection creation into the semantically named `createTournamentProjection` operation on `TournamentCreatedHandler`.
+- Kept the supplied transaction `EntityManager`, idempotent insert behavior, and post-commit live-event publication unchanged.
+
+Verification result:
+
+```text
+npm run lint --workspace=@tournament-manager/processor
+PASS: processor TypeScript checks
+
+npm run build --workspace=@tournament-manager/processor
+PASS: processor build and alias rewriting
+
+npm run test:e2e --workspace=tournament_manager_backend -- --runInBand
+PASS: 17 PostgreSQL/Redis-backed e2e tests
+```
+
 ### Phase 5 checkpoint 3 — Query-placement rule clarification
 
 - Removed the blanket requirement to place queries in separate persistence classes.

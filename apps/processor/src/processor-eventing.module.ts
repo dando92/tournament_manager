@@ -14,7 +14,6 @@ import { EventRetentionService } from '@processor/eventing/event-retention.servi
 import { PostgresEventTransaction } from '@processor/eventing/postgres-event-transaction';
 import { PostgresEventRetentionPersistence } from '@processor/eventing/postgres-event-retention.persistence';
 import { EventConsumerRegistry } from '@processor/eventing/event-consumer.registry';
-import { PostgresTournamentCreatedPersistence } from '@processor/eventing/postgres-tournament-created.persistence';
 import { TournamentCreatedHandler } from '@processor/tournament-created.handler';
 import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handler';
 
@@ -32,7 +31,6 @@ import { LobbySongCompletedHandler } from '@processor/lobby-song-completed.handl
     PostgresEventRetentionPersistence,
     PostgresOutboxPersistence,
     EventConsumerRegistry,
-    PostgresTournamentCreatedPersistence,
     ScoringSystemProvider,
     TournamentCreatedHandler,
     LobbySongCompletedHandler,

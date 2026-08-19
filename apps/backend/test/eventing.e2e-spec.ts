@@ -15,7 +15,6 @@ import { OutboxRelayService } from '@processor/eventing/outbox-relay.service';
 import { EventConsumerRegistry } from '@processor/eventing/event-consumer.registry';
 import { PostgresEventTransaction } from '@processor/eventing/postgres-event-transaction';
 import { PostgresEventRetentionPersistence } from '@processor/eventing/postgres-event-retention.persistence';
-import { PostgresTournamentCreatedPersistence } from '@processor/eventing/postgres-tournament-created.persistence';
 import { TournamentCreatedHandler } from '@processor/tournament-created.handler';
 import { PostgresAdvisoryLock } from '@persistence/postgres-advisory-lock';
 import {
@@ -485,7 +484,6 @@ describe('Eventing reliability (e2e)', () => {
     const registry = new EventConsumerRegistry();
     const handler = new TournamentCreatedHandler(
       registry,
-      new PostgresTournamentCreatedPersistence(),
       config,
       live,
     );

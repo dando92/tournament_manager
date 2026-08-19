@@ -15,7 +15,6 @@ import {
   LIVE_EVENT_TRANSPORT,
   LiveEventTransport,
 } from '@tournament-manager/eventing';
-import { PostgresTournamentCreatedPersistence } from '@processor/eventing/postgres-tournament-created.persistence';
 
 @Injectable()
 export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {
@@ -25,7 +24,6 @@ export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {
 
   constructor(
     private readonly registry: EventConsumerRegistry,
-    private readonly persistence: PostgresTournamentCreatedPersistence,
     private readonly config: ConfigService,
     @Inject(LIVE_EVENT_TRANSPORT)
     private readonly liveTransport: LiveEventTransport,
@@ -36,7 +34,10 @@ export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {
   }
 
   handle(manager: EntityManager, event: EventEnvelope): Promise<void> {
-    return this.persistence.apply(manager, event as TournamentCreatedEvent);
+    return this.createTournamentProjection(
+      manager,
+      event as TournamentCreatedEvent,
+    );
   }
 
   async afterCommit(event: EventEnvelope): Promise<void> {
@@ -57,5 +58,18 @@ export class TournamentCreatedHandler implements EventConsumer, OnModuleInit {
 
   private get liveChannel(): string {
     return this.config.get('LIVE_EVENT_CHANNEL') ?? 'tournament-manager.live';
+  }
+
+  private async createTournamentProjection(
+    manager: EntityManager,
+    event: TournamentCreatedEvent,
+  ): Promise<void> {
+    await manager.query(
+      `INSERT INTO tournament_event_projection
+          (tournament_id, created_event_id, name)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (tournament_id) DO NOTHING`,
+      [event.payload.tournamentId, event.id, event.payload.name],
+    );
   }
 }
