@@ -29,6 +29,7 @@ import { StartggService } from '../integrations/startgg/startgg.service';
 import { AdvancementRuleService } from './services/advancement-rule.service';
 import { AdvancementRuleManager } from './services/advancement-rule.manager';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { CompletedSongService } from './services/completed-song.service';
 
 export { MatchManager };
 export { AdvancementManager };
@@ -60,6 +61,7 @@ export { StartggService };
 export { AdvancementRuleService };
 export { AdvancementRuleManager };
 export { UiUpdatePublisher };
+export { CompletedSongService };
 
 export { StandingService };
 
@@ -94,6 +96,7 @@ export const Services = [
     AdvancementRuleService,
     AdvancementRuleManager,
     UiUpdatePublisher,
+    CompletedSongService,
 
     TournamentService,
     TournamentManager,

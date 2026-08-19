@@ -1,6 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { randomUUID } from "node:crypto";
 import type {
   LiveEventEnvelope,
   LobbyConnectionDto,
@@ -10,12 +9,9 @@ import type {
   LobbySongSelectedDto,
   SyncStartCommandResultPayload,
   SyncStartConnectionStatusDto,
-  SyncStartSongCompletedEvent,
   SyncStartTelemetryType,
 } from "@tournament-manager/contracts";
 import {
-  DURABLE_EVENT_TRANSPORT,
-  DurableEventTransport,
   LIVE_EVENT_TRANSPORT,
   LiveEventTransport,
 } from "@tournament-manager/eventing";
@@ -25,8 +21,6 @@ import type { ILobbyObserver } from "./protocol";
 export class SyncStartEventsPublisher implements ILobbyObserver {
   constructor(
     private readonly config: ConfigService,
-    @Inject(DURABLE_EVENT_TRANSPORT)
-    private readonly durable: DurableEventTransport,
     @Inject(LIVE_EVENT_TRANSPORT) private readonly live: LiveEventTransport,
   ) {}
 
@@ -89,16 +83,11 @@ export class SyncStartEventsPublisher implements ILobbyObserver {
     );
   }
   async OnSongCompleted(event: LobbySongCompletedDto): Promise<void> {
-    const durableEvent: SyncStartSongCompletedEvent = {
-      id: randomUUID(),
-      type: "syncstart.song-completed",
-      aggregateId: String(event.tournamentId),
-      payload: event,
-    };
-    await this.durable.publish(
-      this.config.get("EVENT_STREAM") ?? "tournament-manager.events",
-      durableEvent,
-    );
+    const response = await fetch(`${this.config.getOrThrow<string>('API_INTERNAL_URL')}/internal/syncstart/completed-songs`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-service-token': this.config.getOrThrow<string>('INTERNAL_SERVICE_TOKEN') },
+      body: JSON.stringify({ ...event, completionId: `${event.tournamentId}:${event.lobbyId}:${event.song.songPath}:${event.scores.map((score) => `${score.playerId}:${score.exScore}`).join(',')}` }),
+    });
+    if (!response.ok) throw new Error(`Completed-song submission failed with HTTP ${response.status}`);
     await this.publishLive(
       "syncstart.song-completed-live",
       event.tournamentId,

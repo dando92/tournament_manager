@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import {
-  DURABLE_EVENT_TRANSPORT,
   LIVE_EVENT_TRANSPORT,
   RedisEventTransport,
 } from "@tournament-manager/eventing";
@@ -22,7 +21,6 @@ import { SyncStartStateStore } from "./syncstart-state.store";
   controllers: [HealthController, InternalController],
   providers: [
     RedisEventTransport,
-    { provide: DURABLE_EVENT_TRANSPORT, useExisting: RedisEventTransport },
     { provide: LIVE_EVENT_TRANSPORT, useExisting: RedisEventTransport },
     SyncStartEventsPublisher,
     SyncStartStateStore,

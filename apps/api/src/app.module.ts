@@ -11,6 +11,7 @@ import { AccountModule } from '@account/account.module';
 import { AuthService } from '@auth/services';
 import { AuthController } from '@auth/controllers';
 import { HealthModule } from './health/health.module';
+import { InternalController } from './internal.controller';
 
 @Module({
   imports: [
@@ -41,7 +42,7 @@ import { HealthModule } from './health/health.module';
     TournamentModule,
     HealthModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, InternalController],
   providers: [AuthService],
 })
 export class AppModule {}

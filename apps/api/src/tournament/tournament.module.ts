@@ -5,6 +5,7 @@ import { AccountModule } from '@account/account.module';
 import { StartggModule } from '../integrations/startgg/startgg.module';
 import { EventingModule } from '../eventing/eventing.module';
 import { Services } from './services';
+import { CompletedSongService } from './services/completed-song.service';
 import { Controllers } from './controllers';
 import { TournamentAccessGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
 import { TournamentOpenGuard } from './guards/tournament-open.guard';
@@ -18,6 +19,7 @@ import { TournamentOpenGuard } from './guards/tournament-open.guard';
         EventingModule,
     ],
     providers: [...Services, TournamentAccessGuard, TournamentOpenGuard, AdminGuard, CreatorOrAdminGuard],
+    exports: [CompletedSongService],
     controllers: [...Controllers]
 })
 export class TournamentModule {}
