@@ -22,6 +22,16 @@ Functional ambiguities and suspected behavior defects are tracked separately in 
 
 ## Completed Checkpoints
 
+### Phase 5 checkpoint 3 — Query-placement rule clarification
+
+- Removed the blanket requirement to place queries in separate persistence classes.
+- Established that queries stay with the handler or use case that owns the behavior unless reuse, a replaceable interface, or substantial infrastructure-specific behavior justifies another class.
+- Kept the transaction safety rule that every repository used inside an explicit transaction comes from that transaction's `EntityManager`.
+- Added the readability rule that long handlers and functions are decomposed into small, semantically named operations.
+- Retained focused infrastructure classes where they have an independent purpose, such as Redis transport, outbox handling, retention, and PostgreSQL advisory-lock session management.
+
+Documentation-only decision update; runtime verification from Phase 5 checkpoint 2 remains current.
+
 ### Phase 5 checkpoint 2 — Shared eventing boundary and handler simplification
 
 - Added the documented `packages/eventing` workspace and moved the transport interfaces, Redis adapter, outbox service, and PostgreSQL outbox adapter used by both API and processor into it.

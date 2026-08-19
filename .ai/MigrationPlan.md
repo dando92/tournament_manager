@@ -201,7 +201,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 ### Progress
 
 - Complete. Exit gate passed on 2026-08-19.
-- Lifecycle, outbox, inbox, relay, and retention SQL is isolated in focused PostgreSQL persistence adapters; the global retention lock is centralized in `PostgresAdvisoryLock`.
+- Lifecycle, outbox, inbox, relay, and retention database operations have explicit transaction ownership; the global retention lock is centralized in `PostgresAdvisoryLock`. The earlier blanket requirement to isolate queries in dedicated persistence classes was removed after Phase 5 review.
 - The authoritative SyncStart completed-song observer path is replaced by a durable internal event and a registered stateless handler.
 - Score and standing persistence, round recalculation, inbox progress, warnings, and match UI invalidation for the completed-song slice are committed or derived without process-local authoritative state.
 - Duplicate delivery, abandoned pending-message reclaim, consumer restart, PostgreSQL effects, Redis delivery, and existing end-to-end behavior are covered.
@@ -211,7 +211,7 @@ Verify health endpoints, readiness dependencies, migrations, clean startup, rest
 
 ### Work
 
-- Before expanding event handlers, move lifecycle and eventing SQL behind focused PostgreSQL persistence adapters. Centralize the global retention-sweep advisory lock in a dedicated infrastructure class, keep atomic transactions inside adapters, and obtain repositories from each transaction's `EntityManager`.
+- Keep lifecycle and eventing transaction boundaries explicit and obtain repositories from each transaction's `EntityManager`. Use dedicated persistence or infrastructure classes only when justified by reuse, a replaceable boundary, or specialized infrastructure behavior. Centralize the global retention-sweep advisory lock in a dedicated infrastructure class.
 - Convert observer-driven behavior into explicit handlers one use case at a time.
 - Keep managers and reusable application use cases independent from controllers, transports, and repositories.
 - Migrate standings, bracket advancement, match state, result persistence, projections, lobby state, notifications, cache invalidation, and UI-event conversion as separate vertical slices.

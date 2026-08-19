@@ -17,6 +17,7 @@ The backend uses the following architectural layers:
 - Prefer the smallest explicit implementation that satisfies the current requirement.
 - Ask the user before introducing substantial architectural or concurrency complexity. Do not add speculative protection for rare manual-operation races.
 - Keep classes, functions, fixtures, and test helpers focused and locally understandable.
+- Split long handlers and functions into small operations with semantically meaningful names so the orchestration reads as a clear sequence of steps.
 - Use descriptive names and straightforward control flow instead of implicit conventions or premature generic abstractions.
 - Extract shared code only when it removes real duplication or establishes an approved architectural boundary.
 - Keep characterization tests readable as behavior documentation for future maintainers.
@@ -57,14 +58,14 @@ Local configuration is loaded from the repository-root `.env` file. The `local` 
 
 The approved target separates API, stateless event processing, SyncStart connections, and UI realtime delivery. Detailed ownership, event flows, reliability rules, and migration order are defined in [Architecture.md](Architecture.md).
 
-Managers remain application-layer use cases. Event handlers should invoke shared managers or services when the behavior is reused. A processor-only transactional handler may use repositories from its supplied transaction `EntityManager` when a separate persistence class would add no replaceable interface or shared boundary; keep that orchestration explicit and split into focused methods.
+Managers remain application-layer use cases. Event handlers should invoke shared managers or services when the behavior is reused. A processor-only transactional handler may use repositories from its supplied transaction `EntityManager`; it does not need a separate persistence class merely to contain queries. Keep the orchestration explicit and split long flows into focused, semantically named methods.
 
-## Persistence Boundaries
+## Database Access and Transactions
 
-- Controllers, guards, managers, and application use cases depend on focused persistence interfaces rather than `DataSource`, `QueryRunner`, TypeORM repositories, or database SQL.
-- PostgreSQL persistence adapters implement those interfaces. They normally use TypeORM repositories and query builders; direct SQL is allowed only inside an adapter when PostgreSQL capabilities or required query semantics are not expressed adequately by TypeORM.
-- An atomic operation opens its transaction inside the persistence adapter and obtains every participating repository from the transaction `EntityManager`. An injected repository must not be used inside that transaction because it may use a different connection.
-- Lifecycle, outbox, inbox, relay, and retention persistence are exposed through focused adapters rather than mixed into application services.
+- Queries belong with the code that owns and explains the behavior. A dedicated persistence class is optional and must be justified by reuse, a replaceable interface, or substantial infrastructure-specific behavior; it is not required simply to separate queries from a handler or use case.
+- Within an explicit transaction, obtain every participating repository from the supplied transaction `EntityManager`. Do not use an injected repository inside that transaction because it may use a different connection.
+- Direct SQL is allowed where PostgreSQL capabilities or required query semantics are not expressed adequately by TypeORM. Keep it localized in a clearly named method or infrastructure component.
+- Prefer readable orchestration over extra classes: decompose a long transactional flow into small semantic methods before introducing another layer.
 - PostgreSQL advisory-lock SQL and session acquisition/release behavior are centralized in a dedicated `PostgresAdvisoryLock` infrastructure class. This class may depend on TypeORM session primitives; application code must not depend on it directly.
 - Do not present PostgreSQL advisory locks as a generic distributed-lock abstraction. PostgreSQL is an approved explicit infrastructure dependency, while provider independence means independence from a particular cloud provider rather than database-engine portability.
 - Do not require every ordinary tournament mutation to open a transaction and lock the tournament row. Mutations check the lifecycle state at entry; the rare race in which a mutation overlaps manual closure is accepted during pre-production to avoid spreading locking complexity across all write paths. Revisit this tradeoff before production only if the stronger invariant is required.
@@ -101,7 +102,7 @@ Tournament-scoped events always use the tournament ID as their aggregate ID. The
 - Every `EventConsumer` owns its stable inbox `identity`, event type, transactional `handle`, and optional post-commit effect. `PostgresEventTransaction` performs the standard inbox insertion and invokes the concrete handler inside the same transaction; duplicate events never enter the handler body.
 - `tournament.created` uses the same registry and transaction path as every other durable event. The event loop contains no event-specific branches.
 - The Phase 4 `syncstart.song-completed` producer publishes the normalized external SyncStart outcome directly to Redis Streams. It does not use the PostgreSQL outbox because the outcome does not originate in a PostgreSQL transaction.
-- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then the handler applies its processor-only score and standing orchestration through focused methods using repositories from the supplied transaction `EntityManager`. A separate persistence class is intentionally omitted because it had no interface, alternate implementation, or reuse. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
+- `LobbySongCompletedHandler` is stateless. The common event transaction records the inbox entry, then the handler applies its processor-only score and standing orchestration through focused, semantically named methods using repositories from the supplied transaction `EntityManager`. Query separation into a dedicated class is not required. Match invalidations and best-effort warnings run only after commit. Match state is recoverable from the authoritative HTTP snapshot; warnings preserve the existing ephemeral notification behavior.
 - `PostgresTournamentPersistence` owns the tournament-creation transaction and obtains the tournament repository from its transaction `EntityManager`; it writes the `tournament.created` outbox event through the focused outbox adapter in that same transaction.
 - A failed Redis publication is retryable from the next SyncStart lobby-state update because the connector records its completion signature only after all observers accept the event.
 - Synchronous HTTP use cases in `MatchWorkflowManager` and `AdvancementManager` remain synchronous and stateless. Start.gg reporting remains on that request/response path.
