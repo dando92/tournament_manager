@@ -162,7 +162,7 @@ export interface SyncStartClient {
 }
 ```
 
-`HttpSyncStartClient` uses platform `fetch`, a configurable base URL, a short configurable timeout, and the internal service token. It maps non-success responses to clear NestJS gateway exceptions at the adapter boundary. Unit tests inject a fake `SyncStartClient`.
+`HttpSyncStartClient` uses injected NestJS `HttpService`, `firstValueFrom`, a configurable base URL, a short configurable timeout, and the internal service token. It maps non-success responses to clear NestJS gateway exceptions at the adapter boundary. `TournamentSyncStartService` depends only on the `SyncStartClient` port, and unit tests inject a fake implementation.
 
 ### SyncStart internal HTTP surface
 

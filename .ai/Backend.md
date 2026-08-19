@@ -78,7 +78,9 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Completed-song delivery is best effort. Manual score entry is the approved recovery for an occasional loss.
 - SyncStart may use simple bounded in-memory retry, but must not add a persistent queue without approval.
 - The SyncStart application maps tournaments to independent protocol clients through `TournamentSyncStartRegistry`. `LobbyCatalog` is a volatile query projection updated by protocol events; it does not own connections or communicate with SyncStart.
-- API-to-SyncStart code depends on `SyncStartClient`; completed-song propagation depends on `CompletedSongSink`. Unit tests use fakes or spies.
+- API tournament orchestration depends on the transport-neutral `SyncStartClient` port through `TournamentSyncStartService`. `HttpSyncStartClient` is the application-owned HTTP adapter selected by the API integration module; controllers and application services do not depend on that concrete class.
+- API startup reconciliation is isolated in `TournamentSyncStartBootstrap`; it reads authoritative tournament configuration and invokes `TournamentSyncStartService` without owning SyncStart runtime state.
+- Completed-song propagation depends on `CompletedSongSink`. Unit tests replace ports with fakes or spies.
 
 ## Start.gg
 

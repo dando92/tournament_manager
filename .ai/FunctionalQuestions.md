@@ -26,10 +26,10 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 ### FQ-002 — Lobby code uniqueness across tournaments
 
 - Status: Deferred.
-- Observed behavior: `LobbyManager` stores metadata in a process-wide map keyed only by normalized lobby code. The same active code can therefore collide across two tournaments.
+- Observed behavior: each `TournamentSyncStartRuntime` owns an independent `LobbyCatalog` keyed by normalized lobby code. Runtime lookup is keyed by `tournamentId`, so the effective application identity is tournament plus lobby code and equal codes cannot collide across tournaments.
 - Question: Is a lobby code globally unique, or should lobby identity be scoped by tournament and code?
-- Evidence: `apps/api/src/tournament/services/lobby-manager.service.ts` maps the API command bridge by normalized lobby code; SyncStart owns connector/session state.
-- Migration rule: Do not choose a new identity scope during service extraction without resolving this question.
+- Evidence: `apps/syncstart/src/tournament-syncstart-registry.ts`, `apps/syncstart/src/tournament-syncstart-runtime.ts`, and `apps/syncstart/src/lobby-catalog.ts` own the scoped runtime and projection state; the API owns no lobby state.
+- Migration rule: Preserve the current tournament-scoped behavior unless a product requirement explicitly establishes provider-global lobby identity.
 
 ### FQ-003 — Tournament creation configuration fields
 
@@ -62,3 +62,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should Start.gg reporting occur only when `publishToStartgg` is true, or should reporting remain automatic for every mapped match?
 - Evidence: compare `apps/api/src/tournament/match/dtos/match.dto.ts` with `apps/api/src/tournament/match/services/match-workflow.manager.ts`.
 - Migration rule: Preserve the current synchronous behavior while extracting `@tournament-manager/startgg`; do not resolve the flag semantics as part of the architectural migration.
+
+### FQ-007 — SyncStart isolated-restart reconciliation
+
+- Status: Deferred defect.
+- Observed behavior: `TournamentSyncStartBootstrap` pushes persisted configuration only when the API starts. If SyncStart restarts while the API remains running, its replica-local tournament runtimes are lost and are not recreated until the API restarts or a tournament configuration changes.
+- Expected behavior: an isolated SyncStart restart should recover configured open-tournament runtimes from the authoritative API bootstrap query.
+- Evidence: compare `apps/api/src/tournament/services/tournament-syncstart.bootstrap.ts` with `GET /internal/syncstart/tournaments` in `apps/api/src/internal.controller.ts`; SyncStart currently has no startup consumer for that endpoint.
+- Remediation rule: move startup reconciliation ownership to SyncStart and adjust Compose startup ordering in a separate operational change; do not introduce polling, durable messaging, or distributed coordination.

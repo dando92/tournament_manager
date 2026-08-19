@@ -9,7 +9,8 @@ import { StandingService } from "./standing/standing.service";
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { BracketSystemProvider } from "@bracket/BracketSystemProvider";
 import { BracketManager } from "@bracket/bracket.manager";
-import { LobbyManager } from "./services/lobby-manager.service";
+import { TournamentSyncStartService } from './services/tournament-syncstart.service';
+import { TournamentSyncStartBootstrap } from './services/tournament-syncstart.bootstrap';
 import { TournamentService } from "./services/tournament.service";
 import { TournamentManager } from "./services/tournament.manager";
 import { PlayerService } from "@player/player.service";
@@ -41,7 +42,8 @@ export { StandingManager };
 export { ScoringSystemProvider };
 export { BracketSystemProvider };
 export { BracketManager };
-export { LobbyManager };
+export { TournamentSyncStartService };
+export { TournamentSyncStartBootstrap };
 export { TournamentService };
 export { TournamentManager };
 export { PlayerService };
@@ -77,7 +79,8 @@ export const Services = [
     ScoringSystemProvider,
     BracketSystemProvider,
     BracketManager,
-    LobbyManager,
+    TournamentSyncStartService,
+    TournamentSyncStartBootstrap,
     PlayerService,
     PlayerManager,
 

@@ -2,13 +2,21 @@
 
 ## Current Position
 
-- Last updated: 2026-08-19.
+- Last updated: 2026-08-20.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
 - State: Migration complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: none; future work follows the normal product backlog and the deferred questions in [FunctionalQuestions.md](FunctionalQuestions.md).
 
 ## Completed Checkpoints
+
+### API-to-SyncStart client boundary refinement
+
+- Replaced the stateless `LobbyManager` transport bridge with a transport-neutral `SyncStartClient` port, module-selected `HttpSyncStartClient` adapter, and application-facing `TournamentSyncStartService`.
+- Moved route selection, authentication, timeout handling, response decoding, and gateway-error mapping into the HTTP adapter; controllers now invoke the application service and do not know the concrete transport.
+- Isolated persisted tournament reconciliation in `TournamentSyncStartBootstrap`, preserving the existing API startup behavior without assigning lobby or connection state to the API.
+- Added focused unit coverage for application delegation and normalization, HTTP routing and failure mapping, and startup reconciliation.
+- Verification passed with `npm run verify`: architecture boundaries, all workspace builds, lint with pre-existing warnings only, contract tests, all workspace unit tests, 11 API e2e tests, and the migration-runner e2e test.
 
 ### Deployment maintenance-window decision
 

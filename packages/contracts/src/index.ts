@@ -18,24 +18,50 @@ export interface SyncStartSongCompletedPayload {
   }>;
 }
 
-export type SyncStartCommandAction =
-  | "configure-tournament"
-  | "close-tournament"
-  | "connect-server"
-  | "disconnect-server"
-  | "list-lobbies"
-  | "connect-lobby"
-  | "create-lobby"
-  | "disconnect-lobby";
-
-export interface SyncStartCommandPayload {
-  action: SyncStartCommandAction;
+export interface ConfigureSyncStartTournamentRequest {
   tournamentId: number;
-  syncstartUrl?: string;
-  lobbyId?: string;
-  lobbyCode?: string;
-  lobbyName?: string;
-  password?: string;
+  syncstartUrl: string;
+}
+
+export interface ConnectSyncStartLobbyRequest {
+  tournamentId: number;
+  lobbyName: string;
+  lobbyCode: string;
+  password: string;
+}
+
+export interface CreateSyncStartLobbyRequest {
+  tournamentId: number;
+  lobbyName: string;
+  password: string;
+}
+
+export interface SyncStartServerStatusDto {
+  isActive: boolean;
+  isConnected: boolean;
+}
+
+export interface SyncStartLobbyStatusDto {
+  id: string;
+  name: string;
+  lobbyCode: string;
+  isPasswordProtected: boolean;
+  playerCount: number;
+  spectatorCount: number;
+}
+
+export interface SyncStartLobbiesDto {
+  status: SyncStartServerStatusDto;
+  lobbies: SyncStartLobbyStatusDto[];
+}
+
+export interface ConnectedSyncStartLobbyDto {
+  id: string;
+}
+
+export interface CreatedSyncStartLobbyDto {
+  lobbyId: string;
+  lobbyCode: string;
 }
 
 export interface SyncStartCommandResultPayload {

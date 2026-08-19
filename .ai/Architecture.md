@@ -79,7 +79,7 @@ Business and protocol logic depends on behavior-oriented interfaces rather than 
 
 - API and SyncStart depend on `LiveEventPublisher`;
 - Realtime depends on `LiveEventSubscriber` and `BrowserEventBroadcaster`;
-- API depends on `SyncStartClient` for commands and snapshots;
+- API tournament orchestration depends on the `SyncStartClient` port through `TournamentSyncStartService`; `HttpSyncStartClient` implements the port and owns internal HTTP details;
 - SyncStart depends on `CompletedSongSink` for API submission.
 
 Redis Pub/Sub and the in-memory test transport implement the live publisher/subscriber ports. Internal HTTP implements `SyncStartClient` and `CompletedSongSink`. `WebSocketBrowserEventBroadcaster` implements `BrowserEventBroadcaster` and owns the HTTP upgrade and browser-connection lifecycle. `TournamentRealtimeState` owns the replaceable local projection consumed through `RealtimeSnapshotReader`; `RealtimeEventService` coordinates these ports without inspecting their internal state. SyncStart DTOs come from `packages/contracts`; generic envelopes and transport abstractions come from `packages/live-messaging`.
