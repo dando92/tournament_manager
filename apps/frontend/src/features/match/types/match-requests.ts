@@ -1,3 +1,5 @@
+import { Match } from "@/features/match/types/Match";
+
 export interface CreateMatchRequest {
   phaseGroupId: number;
   divisionId?: number; // only needed for song rolling
@@ -44,5 +46,12 @@ export interface MatchPlayerPointsRequest {
 
 export interface CommitMatchResultRequest {
   playerPoints?: MatchPlayerPointsRequest[];
-  publishToStartgg?: boolean;
+}
+
+/** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */
+export type StartggReportStatus = "reported" | "skipped" | "failed";
+
+export interface CommitMatchResultResponse {
+  match: Match;
+  startggReport: StartggReportStatus;
 }

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchListDto } from '@match/dtos/match-list.dto';
-import { AddSongToMatchDto, CommitMatchResultDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { AddSongToMatchDto, CommitMatchResultDto, CommitMatchResultResponseDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@tournament-manager/persistence';
 import { MatchManager } from '@match/services/match.manager';
 import { MatchService } from '@match/services/match.service';
@@ -114,7 +114,7 @@ export class MatchesController {
 
     @Put(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async commitMatchResult(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: CommitMatchResultDto): Promise<MatchListDto | null> {
+    async commitMatchResult(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: CommitMatchResultDto): Promise<CommitMatchResultResponseDto> {
         return await this.matchManager.CommitMatchResult(Number(matchId), dto);
     }
 

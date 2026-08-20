@@ -4,6 +4,7 @@ import { Score } from "@/features/match/types/Standing";
 import {
   AddStandingToMatchRequest,
   CommitMatchResultRequest,
+  CommitMatchResultResponse,
   CreateMatchRequest,
 } from "@/features/match/types/match-requests";
 
@@ -219,9 +220,9 @@ export async function updateMatchActive(matchId: number, active: boolean): Promi
   }
 }
 
-export async function commitMatchResult(matchId: number, request?: CommitMatchResultRequest): Promise<Match> {
+export async function commitMatchResult(matchId: number, request?: CommitMatchResultRequest): Promise<CommitMatchResultResponse> {
   try {
-    const response = await axios.put<Match>(`matches/${matchId}/result`, request ?? {});
+    const response = await axios.put<CommitMatchResultResponse>(`matches/${matchId}/result`, request ?? {});
     return response.data;
   } catch (error) {
     console.error("Error committing match result:", error);

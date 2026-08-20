@@ -460,7 +460,12 @@ export class StartggService {
         return result;
     }
 
-    async reportCompletedMatch(matchId: number): Promise<StartggReportedSetNode[]> {
+    /**
+     * Reports a completed match to its mapped start.gg set.
+     * Returns null when the match is not linked to start.gg, which is the normal
+     * case for matches that were not imported from a start.gg event.
+     */
+    async reportCompletedMatch(matchId: number): Promise<StartggReportedSetNode[] | null> {
         const match = await this.matchRepository.findOne({
             where: { id: matchId },
             relations: {
@@ -490,7 +495,14 @@ export class StartggService {
             },
         });
         if (!setMapping) {
-            throw new BadRequestException(`Match ${match.id} is not mapped to a start.gg set`);
+            this.logger.debug(`Match ${match.id} is not mapped to a start.gg set, skipping report`);
+            return null;
+        }
+
+        const startggApiKey = match.phaseGroup?.phase?.division?.tournament?.startggApiKey?.trim();
+        if (!startggApiKey) {
+            this.logger.debug(`Match ${match.id} has no tournament start.gg API key configured, skipping report`);
+            return null;
         }
 
         const winnerPlayerId = this.resolveWinnerPlayerId(match);
@@ -507,12 +519,6 @@ export class StartggService {
             throw new BadRequestException(`Winning entrant ${winnerEntrant.id} is not mapped to a start.gg entrant`);
         }
 
-        const tournament = match.phaseGroup?.phase?.division?.tournament;
-        if (!tournament) {
-            throw new BadRequestException(`Unable to resolve tournament for match ${match.id}`);
-        }
-
-        const startggApiKey = this.getConfiguredStartggApiKey(tournament);
         const result = await this.startggClient.reportBracketSet(
             setMapping.externalId,
             winnerExternalEntrantId,

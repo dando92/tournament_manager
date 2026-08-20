@@ -54,13 +54,12 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Evidence: the removed Phase 6 gateway implementations had no authentication guard; `apps/realtime/src/realtime.gateway.ts` validates path and tournament scope but deliberately does not introduce a new access restriction.
 - Migration rule: Preserve anonymous read access until the product access policy is explicitly resolved.
 
-### FQ-006 — Start.gg reporting flag is ignored
+### FQ-006 — Start.gg reporting on match completion
 
-- Status: Deferred.
-- Observed behavior: `CommitMatchResultDto.publishToStartgg` is documented as optional and defaults to false, but `MatchWorkflowManager.CommitMatchResult` always calls `StartggService.reportCompletedMatch` after local completion.
-- Question: Should Start.gg reporting occur only when `publishToStartgg` is true, or should reporting remain automatic for every mapped match?
-- Evidence: compare `apps/api/src/tournament/competition/match/dtos/match.dto.ts` with `apps/api/src/tournament/competition/match/services/match-workflow.manager.ts`.
-- Migration rule: Preserve the current synchronous behavior while extracting `@tournament-manager/startgg`; do not resolve the flag semantics as part of the architectural migration.
+- Status: Resolved.
+- Observed behavior: `CommitMatchResultDto.publishToStartgg` was documented as optional and defaulting to false, but `MatchWorkflowManager.CommitMatchResult` always called `StartggService.reportCompletedMatch` after local completion. Because that method rejected any match without a start.gg set mapping, and no frontend caller set the flag, every match completion failed with `Match <id> is not mapped to a start.gg set` after the local result had already been persisted and advanced.
+- Decision: reporting is automatic and never blocks local completion. `StartggService.reportCompletedMatch` returns `null` when the match has no start.gg set mapping or the tournament has no start.gg API key, `MatchWorkflowManager` treats a provider failure as a non-fatal outcome, and the completion response carries a `startggReport` status of `reported`, `skipped`, or `failed` so the UI can state whether the result also reached start.gg. The `publishToStartgg` opt-in flag was removed from the API DTO and the frontend request type.
+- Implementation: `apps/api/src/integrations/startgg/startgg.service.ts`, `apps/api/src/tournament/competition/match/services/match-workflow.manager.ts`, `apps/api/src/tournament/competition/match/dtos/match.dto.ts`, and `apps/frontend/src/features/match/services/useMatches.ts`.
 
 ### FQ-007 — SyncStart isolated-restart reconciliation
 

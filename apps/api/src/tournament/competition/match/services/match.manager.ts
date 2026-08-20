@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { CreateRoundDto } from '@tournament/dtos';
-import { CommitMatchResultDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { CommitMatchResultDto, CommitMatchResultResponseDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@tournament-manager/persistence';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
@@ -97,9 +97,13 @@ export class MatchManager {
         return await this.GetMatchForView(matchId);
     }
 
-    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<MatchListDto | null> {
-        await this.matchWorkflowManager.CommitMatchResult(matchId, dto);
-        return await this.GetMatchForView(matchId);
+    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<CommitMatchResultResponseDto> {
+        const outcome = await this.matchWorkflowManager.CommitMatchResult(matchId, dto);
+
+        return {
+            match: await this.GetMatchForView(matchId),
+            startggReport: outcome.startggReport,
+        };
     }
 
     async ReopenMatchResult(matchId: number): Promise<MatchListDto | null> {

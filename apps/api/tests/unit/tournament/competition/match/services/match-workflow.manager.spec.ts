@@ -22,6 +22,16 @@ function standing(playerId: number, points: number): Standing {
   } as Standing;
 }
 
+function manualMatch(): Match {
+  return {
+    id: 10,
+    active: false,
+    entrants: [entrant(1, 101), entrant(2, 102)],
+    rounds: [],
+    matchResult: null,
+  } as Match;
+}
+
 describe('MatchWorkflowManager', () => {
   const matchService = {
     getMatch: jest.fn(),
@@ -48,6 +58,7 @@ describe('MatchWorkflowManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    startggService.reportCompletedMatch.mockResolvedValue([{ id: '1' }]);
   });
 
   it('aggregates populated round standings before persisting and advancing a result', async () => {
@@ -79,7 +90,35 @@ describe('MatchWorkflowManager', () => {
     expect(matchService.updateActive).toHaveBeenCalledWith(currentMatch.id, false);
     expect(advancementManager.AdvanceFromCompletedMatch).toHaveBeenCalledWith(currentMatch);
     expect(startggService.reportCompletedMatch).toHaveBeenCalledWith(currentMatch.id);
-    expect(result).toBe(reloadedMatch);
+    expect(result.match).toBe(reloadedMatch);
+    expect(result.startggReport).toBe('reported');
+  });
+
+  it('completes a match that start.gg reporting skips because it is not linked', async () => {
+    const currentMatch = manualMatch();
+    matchService.getMatch.mockResolvedValue(currentMatch);
+    matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] } as MatchResult);
+    startggService.reportCompletedMatch.mockResolvedValue(null);
+
+    const result = await manager.CommitMatchResult(currentMatch.id, {
+      playerPoints: [{ playerId: 101, points: 3 }],
+    });
+
+    expect(result.startggReport).toBe('skipped');
+  });
+
+  it('completes a match even when start.gg reporting fails', async () => {
+    const currentMatch = manualMatch();
+    matchService.getMatch.mockResolvedValue(currentMatch);
+    matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] } as MatchResult);
+    startggService.reportCompletedMatch.mockRejectedValue(new Error('start.gg unavailable'));
+
+    const result = await manager.CommitMatchResult(currentMatch.id, {
+      playerPoints: [{ playerId: 101, points: 3 }],
+    });
+
+    expect(matchResultService.upsertForMatch).toHaveBeenCalled();
+    expect(result.startggReport).toBe('failed');
   });
 
   it('rejects completion when any round is missing a player standing', async () => {

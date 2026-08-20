@@ -1,13 +1,20 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { CommitMatchResultDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { CommitMatchResultDto, StartggReportStatus, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match, MatchResultEntry } from '@tournament-manager/persistence';
 import { MatchResultService } from '@match/services/match-result.service';
 import { MatchService } from '@match/services/match.service';
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { StartggService } from '@api/integrations/startgg/startgg.service';
 
+export type CommitMatchResultOutcome = {
+    match: Match;
+    startggReport: StartggReportStatus;
+};
+
 @Injectable()
 export class MatchWorkflowManager {
+    private readonly logger = new Logger(MatchWorkflowManager.name);
+
     constructor(
         @Inject()
         private readonly matchService: MatchService,
@@ -29,7 +36,7 @@ export class MatchWorkflowManager {
         return await this.matchService.updateActive(matchId, dto.active);
     }
 
-    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<Match> {
+    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<CommitMatchResultOutcome> {
         const match = await this.matchService.getMatch(matchId);
         if (!match) throw new Error(`Match ${matchId} not found`);
 
@@ -49,8 +56,27 @@ export class MatchWorkflowManager {
         }
 
         await this.advancementManager.AdvanceFromCompletedMatch(match);
-        await this.startggService.reportCompletedMatch(match.id);
-        return await this.matchService.getMatch(match.id);
+        const startggReport = await this.reportCompletedMatchToStartgg(match.id);
+
+        return {
+            match: await this.matchService.getMatch(match.id),
+            startggReport,
+        };
+    }
+
+    /**
+     * Start.gg reporting is a best-effort side effect of a completed match: the local
+     * result is already persisted, so a missing link or a provider failure is reported
+     * back to the caller instead of failing the completion.
+     */
+    private async reportCompletedMatchToStartgg(matchId: number): Promise<StartggReportStatus> {
+        try {
+            const reported = await this.startggService.reportCompletedMatch(matchId);
+            return reported ? 'reported' : 'skipped';
+        } catch (error) {
+            this.logger.error(`Reporting match ${matchId} to start.gg failed: ${error instanceof Error ? error.message : String(error)}`);
+            return 'failed';
+        }
     }
 
     async ReopenMatchResult(matchId: number): Promise<Match> {

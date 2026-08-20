@@ -298,10 +298,16 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
 
   async function commitMatchResult(matchId: number, request?: CommitMatchResultRequest) {
     try {
-      const item = await MatchesApi.commitMatchResult(matchId, request);
-      dispatch({ type: "onRefreshMatch", payload: item });
-      setCachedMatch(item);
-      toast.success(request?.publishToStartgg ? "Match completed and reported to start.gg." : "Match completed.");
+      const { match, startggReport } = await MatchesApi.commitMatchResult(matchId, request);
+      dispatch({ type: "onRefreshMatch", payload: match });
+      setCachedMatch(match);
+      if (startggReport === "failed") {
+        toast.warn("Match completed, but reporting the result to start.gg failed.");
+      } else if (startggReport === "reported") {
+        toast.success("Match completed and reported to start.gg.");
+      } else {
+        toast.success("Match completed.");
+      }
     } catch (error) {
       toast.error("Error committing match result.");
       console.error("Error committing match result:", error);
