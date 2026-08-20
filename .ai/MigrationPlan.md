@@ -142,7 +142,7 @@ Keep separate Redis publisher and subscriber connections because Redis subscript
 Place the port and HTTP adapter under the API integration directory:
 
 ```text
-apps/api/src/integrations/syncstart/
+apps/api/src/tournament/syncstart/
   syncstart-client.ts
   http-syncstart.client.ts
   syncstart-client.module.ts

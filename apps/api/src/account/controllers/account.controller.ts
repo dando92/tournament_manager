@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { AccountService } from '../services';
+import { AccountService } from '../services/account.service';
 import { CreateAccountPlayerDto, AccountProfileDto } from '../dtos';
 
 import { JwtAuthGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';

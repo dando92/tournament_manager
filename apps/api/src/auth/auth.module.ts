@@ -4,9 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 
-import { AuthController } from './controllers';
+import { AuthController } from './controllers/auth.controller';
 import { LocalAuthGuard, AdminGuard } from './guards';
-import { AuthService } from './services';
+import { AuthService } from './services/auth.service';
 import { LocalStrategy } from './strategies';
 
 import { PersistenceModule } from '@tournament-manager/persistence';

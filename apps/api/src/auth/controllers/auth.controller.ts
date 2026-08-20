@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Get, Request, UseGuards, ValidationPipe } from '@nestjs/common';
-import { AuthService } from '../services';
+import { AuthService } from '../services/auth.service';
 import { LocalApiKeyLoginDto } from '../dtos';
 import { LocalAuthGuard, JwtAuthGuard } from '@auth/guards';
 

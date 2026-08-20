@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CompletedSongRequest } from '@tournament-manager/contracts';
 import { Tournament } from '@tournament-manager/persistence';
 import { Repository } from 'typeorm';
-import { CompletedSongService } from '@tournament/services/completed-song.service';
+import { CompletedSongService } from '@tournament/competition/services/completed-song.service';
 
 @Injectable()
 class InternalTokenGuard implements CanActivate {

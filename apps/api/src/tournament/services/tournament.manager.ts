@@ -8,8 +8,8 @@ import {
     TournamentOverviewDto,
     TournamentResponseDto,
     UpdateTournamentDto,
-} from '../dtos';
-import { DivisionService } from './division.service';
+} from '@tournament/dtos';
+import { DivisionService } from '@tournament/structure/services/division.service';
 import { TournamentService } from './tournament.service';
 import { ParticipantService } from './participant.service';
 import { PlayerService } from '@player/player.service';

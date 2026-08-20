@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Entrant, Player } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/services/division.service';
+import { DivisionService } from '@tournament/structure/services/division.service';
 import { PlayerService } from '@player/player.service';
 import { ParticipantService } from '@tournament/services/participant.service';
 import { EntrantService } from '@tournament/services/entrant.service';

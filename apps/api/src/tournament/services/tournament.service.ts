@@ -2,7 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Tournament, Song } from '@tournament-manager/persistence';
-import { CreateTournamentDto, UpdateTournamentDto } from '../dtos';
+import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 
 export interface MyTournamentRoles {
     isAdmin: boolean;

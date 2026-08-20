@@ -20,16 +20,16 @@ import {
     Player,
     Tournament,
 } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/services/division.service';
+import { DivisionService } from '@tournament/structure/services/division.service';
 import { EntrantService } from '@tournament/services/entrant.service';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantService } from '@tournament/services/participant.service';
-import { PhaseService } from '@tournament/services/phase.service';
+import { PhaseService } from '@tournament/structure/services/phase.service';
 import { PlayerService } from '@player/player.service';
 import { TournamentService } from '@tournament/services/tournament.service';
 import { CreateDivisionDto, CreatePhaseDto } from '@tournament/dtos';
-import { AdvancementRuleService } from '@tournament/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/services/phase-group.service';
+import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
 import {
     StartggClient,
     StartggBracketSetGameDataInput,

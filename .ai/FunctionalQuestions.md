@@ -60,7 +60,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Status: Deferred.
 - Observed behavior: `CommitMatchResultDto.publishToStartgg` is documented as optional and defaults to false, but `MatchWorkflowManager.CommitMatchResult` always calls `StartggService.reportCompletedMatch` after local completion.
 - Question: Should Start.gg reporting occur only when `publishToStartgg` is true, or should reporting remain automatic for every mapped match?
-- Evidence: compare `apps/api/src/tournament/match/dtos/match.dto.ts` with `apps/api/src/tournament/match/services/match-workflow.manager.ts`.
+- Evidence: compare `apps/api/src/tournament/competition/match/dtos/match.dto.ts` with `apps/api/src/tournament/competition/match/services/match-workflow.manager.ts`.
 - Migration rule: Preserve the current synchronous behavior while extracting `@tournament-manager/startgg`; do not resolve the flag semantics as part of the architectural migration.
 
 ### FQ-007 — SyncStart isolated-restart reconciliation
@@ -68,5 +68,5 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Status: Deferred defect.
 - Observed behavior: `TournamentSyncStartBootstrap` pushes persisted configuration only when the API starts. If SyncStart restarts while the API remains running, its replica-local tournament runtimes are lost and are not recreated until the API restarts or a tournament configuration changes.
 - Expected behavior: an isolated SyncStart restart should recover configured open-tournament runtimes from the authoritative API bootstrap query.
-- Evidence: compare `apps/api/src/tournament/services/tournament-syncstart.bootstrap.ts` with `GET /internal/syncstart/tournaments` in `apps/api/src/internal.controller.ts`; SyncStart currently has no startup consumer for that endpoint.
+- Evidence: compare `apps/api/src/tournament/syncstart/tournament-syncstart.bootstrap.ts` with `GET /internal/syncstart/tournaments` in `apps/api/src/internal.controller.ts`; SyncStart currently has no startup consumer for that endpoint.
 - Remediation rule: move startup reconciliation ownership to SyncStart and adjust Compose startup ordering in a separate operational change; do not introduce polling, durable messaging, or distributed coordination.

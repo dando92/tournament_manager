@@ -43,6 +43,14 @@ Redis Streams, transactional outbox, consumer inbox, processor workers, retries,
 
 Detailed ownership and communication flows are defined in [Architecture.md](Architecture.md).
 
+## API Code Organization
+
+- Organize API code by functional capability before technical role. The tournament feature groups competition structure, competition execution, SyncStart coordination, tournament management, and participant registration under focused directories.
+- Keep `TournamentModule` as the explicit composition root while these capabilities still share application services. Register controllers and providers directly in the module; do not hide the dependency graph behind aggregate `controllers.ts` or `services.ts` barrels.
+- Split HTTP controllers by use case surface even when they share the same route prefix. Tournament lifecycle, participant management, lobby control, and Start.gg import endpoints remain separate controllers.
+- Keep the existing manager class names until their application responsibilities are refactored. Directory restructuring alone must not rename classes or change behavior.
+- Keep API tests outside `src`. Unit tests mirror the source capability tree under `tests/unit`; complete HTTP tests live under `tests/e2e/<capability>`; infrastructure collaboration tests live under `tests/integration`; reusable test infrastructure remains under `tests/support`.
+
 ## Database Access and Transactions
 
 - Use `DataSource.transaction()` directly in the service that owns a multi-write invariant.

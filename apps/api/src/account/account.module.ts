@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { AccountService } from './services';
-import { AccountController } from './controllers';
+import { AccountService } from './services/account.service';
+import { AccountController } from './controllers/account.controller';
 import { PersistenceModule } from '@tournament-manager/persistence';
 import { AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
 
