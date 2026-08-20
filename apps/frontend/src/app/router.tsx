@@ -2,7 +2,6 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { PageTitleProvider } from "@/shared/context/PageTitleContext";
 import { SidebarProvider } from "@/shared/context/SidebarContext";
-import "./App.css";
 import ProtectedRoute from "@/shared/components/layout/ProtectedRoute";
 
 const MainLayout = lazy(() => import("@/app/MainLayout"));
