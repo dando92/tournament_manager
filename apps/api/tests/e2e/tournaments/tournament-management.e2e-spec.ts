@@ -82,10 +82,13 @@ describe('Tournament management (e2e)', () => {
       .expect(201);
 
     const tournamentId = createResponse.body.id;
+    // FQ-003: creation accepts only the name; configuration keeps its persisted defaults.
     expect(createResponse.body).toMatchObject({
       name: fixture.createTournament.name,
-      syncstartUrl: fixture.createTournament.syncstartUrl,
+      availableSetupsCount: 2,
+      defaultScoringSystem: 'EurocupScoreCalculator',
     });
+    expect(createResponse.body.syncstartUrl).toBe('ws://syncservice.groovestats.com:1337');
 
     await request(app.getHttpServer())
       .get(`/tournaments/${tournamentId}`)
@@ -106,6 +109,7 @@ describe('Tournament management (e2e)', () => {
         expect(body).toMatchObject({
           id: tournamentId,
           name: fixture.updateTournament.name,
+          syncstartUrl: fixture.updateTournament.syncstartUrl,
         });
       });
 

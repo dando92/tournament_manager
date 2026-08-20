@@ -28,8 +28,8 @@ export class TournamentsController {
     @Post()
     async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<TournamentResponseDto> {
         const tournament = await this.tournamentManager.create(dto, req.user?.id);
-        if (dto.syncstartUrl) {
-            await this.syncStart.configureTournament(tournament.id, dto.syncstartUrl);
+        if (tournament.syncstartUrl) {
+            await this.syncStart.configureTournament(tournament.id, tournament.syncstartUrl);
         }
         return tournament;
     }

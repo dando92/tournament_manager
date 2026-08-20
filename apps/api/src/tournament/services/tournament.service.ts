@@ -24,7 +24,6 @@ export class TournamentService {
     async create(dto: CreateTournamentDto, _ownerId?: string): Promise<Tournament> {
         const tournament = new Tournament();
         tournament.name = dto.name;
-        if (dto.syncstartUrl) tournament.syncstartUrl = dto.syncstartUrl;
         return this.dataSource.transaction(async (manager) => {
             const saved = await manager.getRepository(Tournament).save(tournament);
             return saved;

@@ -33,11 +33,10 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-003 — Tournament creation configuration fields
 
-- Status: Deferred.
-- Observed behavior: the creation DTO accepts `startggApiKey`, `availableSetupsCount`, and `defaultScoringSystem`, while `TournamentService.create` currently applies only `name` and `syncstartUrl`.
-- Question: Should all accepted creation fields be persisted immediately, or should some remain update-only configuration?
-- Evidence: compare `CreateTournamentDto` with `TournamentService.create`.
-- Migration rule: Preserve current creation behavior until this question is resolved.
+- Status: Resolved.
+- Observed behavior: the creation DTO accepted `syncstartUrl`, `startggApiKey`, `availableSetupsCount`, and `defaultScoringSystem`, while `TournamentService.create` applied only `name` and `syncstartUrl`. The remaining accepted fields were silently discarded.
+- Decision: creation takes the minimal set of information, which is the tournament name alone. Every other setting keeps its persisted entity default and is edited afterwards in the dedicated tournament configuration page, which is the single place where configuration is owned.
+- Implementation: `CreateTournamentDto` declares only `name`; `TournamentService.create` sets only the name; `TournamentsController.create` configures SyncStart from the tournament's persisted `syncstartUrl` instead of a creation field, so a new tournament always reaches SyncStart with its effective URL; the frontend creation modal asks for the name only and points to the configuration page.
 
 ### FQ-004 — Local administrator ownership persistence
 

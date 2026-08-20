@@ -12,13 +12,11 @@ type Props = {
 
 export default function CreateTournamentModal({ open, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
-  const [syncstartUrl, setSyncstartUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const handleClose = () => {
     setName("");
-    setSyncstartUrl("");
     setApiError(null);
     onClose();
   };
@@ -30,11 +28,8 @@ export default function CreateTournamentModal({ open, onClose, onCreated }: Prop
     setApiError(null);
     setLoading(true);
     try {
-      const body: { name: string; syncstartUrl?: string } = { name: trimmed };
-      if (syncstartUrl.trim()) body.syncstartUrl = syncstartUrl.trim();
-      const response = await axios.post<Tournament>("tournaments", body);
+      const response = await axios.post<Tournament>("tournaments", { name: trimmed });
       setName("");
-      setSyncstartUrl("");
       onCreated(response.data);
     } catch {
       setApiError("Failed to create tournament.");
@@ -82,16 +77,10 @@ export default function CreateTournamentModal({ open, onClose, onCreated }: Prop
             required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Syncstart Server URL</label>
-          <input
-            type="text"
-            value={syncstartUrl}
-            onChange={(e) => setSyncstartUrl(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            placeholder="ws://syncservice.groovestats.com:1337"
-          />
-        </div>
+        <p className="text-sm text-gray-500">
+          Syncstart, start.gg and scoring settings are configured after creation in the
+          tournament configuration page.
+        </p>
         {apiError && <p className="text-red-500 text-sm">{apiError}</p>}
       </form>
     </BaseModal>

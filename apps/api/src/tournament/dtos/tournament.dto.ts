@@ -80,6 +80,10 @@ export class TournamentConfigurationDto {
     defaultScoringSystem: ScoringSystemType;
 }
 
+/**
+ * Creation accepts only the tournament name (FQ-003). Every other field keeps its
+ * persisted default and is edited afterwards through the tournament configuration page.
+ */
 export class CreateTournamentDto {
     /**
      * The name of the tournament.
@@ -89,27 +93,6 @@ export class CreateTournamentDto {
     @IsNotEmpty()
     @ApiProperty({ example: 'UEFA Euro 2024', description: 'The name of the tournament.' })
     name: string;
-
-    @IsOptional()
-    @IsString()
-    @ApiProperty({ description: 'WebSocket URL of the syncstart server for this tournament.', required: false })
-    syncstartUrl?: string;
-
-    @IsOptional()
-    @IsString()
-    @ApiProperty({ description: 'start.gg API key for this tournament.', required: false })
-    startggApiKey?: string | null;
-
-    @IsOptional()
-    @IsNumber()
-    @Type(() => Number)
-    @ApiProperty({ description: 'Number of match setups available for this tournament.', required: false })
-    availableSetupsCount?: number;
-
-    @IsOptional()
-    @IsIn(SCORING_SYSTEM_TYPES)
-    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.', required: false })
-    defaultScoringSystem?: ScoringSystemType;
 }
 
 export class UpdateTournamentDto {
