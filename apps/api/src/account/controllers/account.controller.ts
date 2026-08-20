@@ -1,5 +1,4 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
 import { AccountService } from '../services/account.service';
 import { CreateAccountPlayerDto, AccountProfileDto } from '../dtos';
@@ -18,7 +17,6 @@ type AdminAccountDto = {
 export class AccountController {
     constructor(
         private readonly service: AccountService,
-        private readonly configService: ConfigService,
     ) { }
 
     private toCurrentAccountProfileDto(account: Account): AccountProfileDto {
@@ -43,9 +41,6 @@ export class AccountController {
 
     @Post()
     async create(@Body(new ValidationPipe()) dto: CreateAccountPlayerDto) {
-        if (this.configService.get<string>('AUTH_MODE') === 'local') {
-            throw new ForbiddenException('Registration is disabled in local mode');
-        }
         const account = await this.service.create(dto);
         return this.toCurrentAccountProfileDto(account);
     }

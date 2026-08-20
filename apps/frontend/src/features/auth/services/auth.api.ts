@@ -6,11 +6,6 @@ export async function login(username: string, password: string): Promise<{ acces
   return response.data;
 }
 
-export async function loginWithApiKey(apiKey: string): Promise<{ access_token: string }> {
-  const response = await axios.post<{ access_token: string }>("auth/login/local", { apiKey });
-  return response.data;
-}
-
 export async function register(username: string, email: string, password: string, playerName?: string): Promise<Account> {
   const response = await axios.post<Account>("user", { username, email, password, playerName });
   return response.data;

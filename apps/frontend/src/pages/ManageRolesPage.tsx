@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { AdminAccount } from "@/features/player/types/Account";
 import { toast } from "react-toastify";
 import RoleAccountItem from "@/features/admin/components/RoleAccountItem";
-import { isLocalMode } from "@/features/auth/services/auth-mode";
 
 export default function ManageRolesPage() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -17,8 +15,6 @@ export default function ManageRolesPage() {
       toast.error("Failed to load accounts.");
     }).finally(() => setLoading(false));
   }, []);
-
-  if (isLocalMode()) return <Navigate to="/" replace />;
 
   async function handleFlagChange(accountId: string, flag: "isAdmin" | "isTournamentCreator", value: boolean) {
     try {

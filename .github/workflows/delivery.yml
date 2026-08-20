@@ -151,10 +151,10 @@ jobs:
       DATABASE_USER: ${{ vars.DATABASE_USER || 'tournament_manager' }}
       DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
       DATABASE_NAME: ${{ vars.DATABASE_NAME || 'tournament_manager' }}
-      LOCAL_API_KEY: ${{ secrets.LOCAL_API_KEY }}
+      INITIAL_ADMIN_USERNAME: ${{ vars.INITIAL_ADMIN_USERNAME || 'admin' }}
+      INITIAL_ADMIN_PASSWORD: ${{ secrets.INITIAL_ADMIN_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
-      AUTH_MODE: ${{ vars.AUTH_MODE || 'local' }}
       DEPLOY_BIND_ADDRESS: ${{ vars.DEPLOY_BIND_ADDRESS || '127.0.0.1' }}
       DEPLOY_API_PORT: ${{ vars.DEPLOY_API_PORT || '3000' }}
       DEPLOY_REALTIME_PORT: ${{ vars.DEPLOY_REALTIME_PORT || '3003' }}
@@ -170,7 +170,7 @@ jobs:
         run: |
           set -eu
           test -n "$DATABASE_PASSWORD"
-          test -n "$LOCAL_API_KEY"
+          test -n "$INITIAL_ADMIN_PASSWORD"
           test -n "$JWT_SECRET"
           test -n "$CORS_ORIGINS"
           test -n "$PUBLIC_API_URL"

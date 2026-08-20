@@ -1,4 +1,5 @@
 import { createMigrationDataSource } from './migration-data-source';
+import { seedInitialAdmin } from './seed-initial-admin';
 
 async function run(): Promise<void> {
   const dataSource = createMigrationDataSource();
@@ -6,6 +7,7 @@ async function run(): Promise<void> {
   try {
     const applied = await dataSource.runMigrations({ transaction: 'all' });
     console.log(`Migration runner completed; ${applied.length} migration(s) applied.`);
+    await seedInitialAdmin(dataSource);
   } finally {
     await dataSource.destroy();
   }

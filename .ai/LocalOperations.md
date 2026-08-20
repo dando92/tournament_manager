@@ -52,9 +52,15 @@ Replaceable live events use the `tournament-manager.live` Redis Pub/Sub channel.
 The bundled SyncStart simulator is optional and starts through the `simulator` Compose profile; a host or remote WebSocket URL may be supplied through `LOCAL_FIXTURE_SYNCSTART_URL`.
 
 The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
-The frontend container reads `PUBLIC_API_URL`, `PUBLIC_REALTIME_URL`, and `PUBLIC_AUTH_MODE` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
+The frontend container reads `PUBLIC_API_URL` and `PUBLIC_REALTIME_URL` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
 
 `LIVE_EVENT_CHANNEL` and internal HTTP settings are deploy-time configuration. A process restart is required after changing environment values. Hosted deployments use a maintenance window with platform traffic blocked and do not require rolling continuity.
+
+## Signing In Locally
+
+The migration runner seeds an administrator account from `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` in the repository-root `.env`. Sign in through the normal login form with those credentials; local and deployed environments use the same authentication path and the same account model.
+
+The seed only creates the account when it does not already exist. Changing `INITIAL_ADMIN_PASSWORD` after the account exists has no effect; either change the password through the application or start from a clean database with `npm run local:reset`.
 
 The local stack runs the one-shot `local-fixtures` application and creates an idempotent `Local E2E Tournament` fixture by default. Override `LOCAL_FIXTURE_TOURNAMENT_NAME` in `.env`. Set `LOCAL_FIXTURE_SYNCSTART_URL` to a reachable host or remote SyncStart WebSocket URL; leave it empty to create the fixture without SyncStart. The bundled simulator is optional and starts only with `docker compose --profile simulator up`.
 

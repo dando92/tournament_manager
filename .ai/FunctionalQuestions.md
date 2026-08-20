@@ -41,11 +41,10 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-004 — Local administrator ownership persistence
 
-- Status: Deferred.
-- Observed behavior: local API-key authentication issues the synthetic account id `local-admin`, while tournament creation attempts to persist an owner participant through `AccountService.ensurePlayer`, which requires a database account.
-- Question: Should local mode create a persisted administrator account, omit persisted ownership, or use a different ownership model?
-- Evidence: compare `AuthService.loginWithApiKey`, `TournamentManager.create`, and `ParticipantService.ensureOwner`.
-- Migration rule: Do not redesign local ownership implicitly while moving authentication or persistence boundaries.
+- Status: Resolved.
+- Observed behavior: local API-key authentication issued the synthetic account id `local-admin`, which existed in no database table. Every query keyed on `Account.id` therefore received a non-uuid value; `TournamentService.getMyRoles` failed with a PostgreSQL uuid cast error, the frontend permission context swallowed the failure and fell back to an empty permission state, and all tournament editing controls disappeared.
+- Decision: local mode creates a persisted administrator account. The synthetic identity, the API-key login endpoint, and the `AUTH_MODE` deployment switch were removed; local and deployed environments now share one authentication path and one account model.
+- Implementation: the migration runner seeds an administrator account from `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` when no account with that username exists. Local runs read those values from the repository-root `.env`, deployed runs from deployment secrets. Authentication is `POST /auth/login` in every environment.
 
 ### FQ-005 — Browser realtime access policy
 

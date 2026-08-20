@@ -1,7 +1,6 @@
 export interface RuntimeConfig {
   apiUrl?: string;
   realtimeUrl?: string;
-  authMode?: 'local' | 'web';
 }
 
 declare global {
@@ -20,9 +19,4 @@ export function apiUrl(): string {
 
 export function realtimeUrl(): string {
   return runtimeConfig().realtimeUrl ?? import.meta.env.VITE_PUBLIC_REALTIME_URL ?? 'http://localhost:3003/';
-}
-
-export function authMode(): 'local' | 'web' {
-  const mode = runtimeConfig().authMode ?? import.meta.env.VITE_AUTH_MODE;
-  return mode === 'local' ? 'local' : 'web';
 }

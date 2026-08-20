@@ -1,6 +1,5 @@
-import { Body, Controller, Post, Get, Request, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Get, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
-import { LocalApiKeyLoginDto } from '../dtos';
 import { LocalAuthGuard, JwtAuthGuard } from '@auth/guards';
 
 @Controller('auth')
@@ -11,11 +10,6 @@ export class AuthController {
     @Post('login')
     async login(@Request() req) {
         return this.authService.login(req.user);
-    }
-
-    @Post('login/local')
-    async loginLocal(@Body(new ValidationPipe()) dto: LocalApiKeyLoginDto) {
-        return this.authService.loginWithApiKey(dto.apiKey);
     }
 
     @UseGuards(JwtAuthGuard)

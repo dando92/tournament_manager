@@ -20,7 +20,6 @@ import {
 } from "@/features/tournament/services/recentTournaments";
 import { useSidebar } from "@/shared/context/SidebarContext";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
-import { isLocalMode } from "@/features/auth/services/auth-mode";
 import { TOURNAMENT_TABS } from "@/features/tournament/config/tournamentTabs";
 
 function ScrollingText({ text }: { text: string }) {
@@ -230,7 +229,7 @@ export default function Sidebar() {
       <div className="flex-1" />
 
       <div className="flex flex-col gap-0.5 p-3 border-t border-white/10 shrink-0">
-        {isAdmin && !isLocalMode() && (
+        {isAdmin && (
           <SidebarLink
             to="/admin/roles"
             icon={faShield}
@@ -240,7 +239,7 @@ export default function Sidebar() {
             Manage Roles
           </SidebarLink>
         )}
-        {state.account && !isLocalMode() && (
+        {state.account && (
           <SidebarLink
             to="/account"
             icon={faUser}
@@ -268,7 +267,7 @@ export default function Sidebar() {
             }
             onClick={close}
           >
-            {isLocalMode() ? "Login" : "Login / Register"}
+            Login / Register
           </SidebarLink>
         )}
       </div>

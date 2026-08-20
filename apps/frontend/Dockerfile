@@ -27,7 +27,6 @@ COPY apps/frontend/runtime-config.template.js /etc/tournament-manager/runtime-co
 COPY apps/frontend/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
 ENV PUBLIC_API_URL=http://localhost:3000/ \
-    PUBLIC_REALTIME_URL=http://localhost:3003/ \
-    PUBLIC_AUTH_MODE=web
+    PUBLIC_REALTIME_URL=http://localhost:3003/
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

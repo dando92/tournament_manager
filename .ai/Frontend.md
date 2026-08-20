@@ -13,7 +13,7 @@
 
 The frontend is located in `apps/frontend` and is an npm workspace. It communicates with the API through HTTP and with `apps/realtime` through browser WebSockets.
 
-Vite loads build-time development defaults from the repository root. Container deployments inject public endpoints and authentication mode through `/runtime-config.js` at startup so one immutable image works in every environment.
+Vite loads build-time development defaults from the repository root. Container deployments inject public endpoints through `/runtime-config.js` at startup so one immutable image works in every environment.
 
 ## Realtime Recovery
 

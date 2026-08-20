@@ -2,8 +2,8 @@ name: tournament-manager-deployment
 
 x-application-environment: &application-environment
   NODE_ENV: production
-  AUTH_MODE: ${AUTH_MODE:-local}
-  LOCAL_API_KEY: ${LOCAL_API_KEY}
+  INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME}
+  INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
   JWT_SECRET: ${JWT_SECRET}
   CORS_ORIGINS: ${CORS_ORIGINS}
   DATABASE_HOST: postgres
@@ -125,7 +125,6 @@ services:
     environment:
       PUBLIC_API_URL: ${PUBLIC_API_URL}
       PUBLIC_REALTIME_URL: ${PUBLIC_REALTIME_URL}
-      PUBLIC_AUTH_MODE: ${AUTH_MODE:-local}
     depends_on:
       api:
         condition: service_healthy

@@ -21,7 +21,7 @@ PostgreSQL and Redis may remain running for migration, backup, and recovery oper
 Create a `testing` environment and configure these secrets:
 
 - `DATABASE_PASSWORD`
-- `LOCAL_API_KEY`
+- `INITIAL_ADMIN_PASSWORD`
 - `JWT_SECRET`
 
 Configure these environment variables:
@@ -29,7 +29,11 @@ Configure these environment variables:
 - `CORS_ORIGINS`
 - `PUBLIC_API_URL`
 - `PUBLIC_REALTIME_URL`
-- optionally `AUTH_MODE`, `DATABASE_USER`, `DATABASE_NAME`, bind address, public smoke URLs, and exposed ports listed in [deploy/.env.example](../deploy/.env.example)
+- optionally `INITIAL_ADMIN_USERNAME`, `DATABASE_USER`, `DATABASE_NAME`, bind address, public smoke URLs, and exposed ports listed in [deploy/.env.example](../deploy/.env.example)
+
+## Administrator Bootstrap
+
+The migration runner seeds the first administrator account from `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` after applying migrations. The seed is create-if-missing: an account that already exists is never modified, so an administrator password changed through the application survives later deployments. Rotating `INITIAL_ADMIN_PASSWORD` therefore does not reset an existing account; change the password through the application instead. Local and deployed environments use this same mechanism and the same `POST /auth/login` endpoint; only the source of the credentials differs.
 
 The self-hosted runner must have Node.js 22, Docker Engine or Docker Desktop, Docker Compose, Bash, persistent Docker volumes, and permission to pull repository packages from GHCR.
 

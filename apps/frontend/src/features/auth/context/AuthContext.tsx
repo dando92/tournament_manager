@@ -7,7 +7,6 @@ interface AuthContextValue {
   state: AuthState;
   actions: {
     login: (username: string, password: string) => Promise<Account>;
-    loginWithApiKey: (apiKey: string) => Promise<Account>;
     logout: () => void;
     register: (username: string, email: string, password: string, playerName?: string) => Promise<Account>;
     loadCurrentUser: () => Promise<void>;

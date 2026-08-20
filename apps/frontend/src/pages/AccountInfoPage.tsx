@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Navigate } from "react-router-dom";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
-import { isLocalMode } from "@/features/auth/services/auth-mode";
 import axios from "axios";
 import { btnPrimary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
@@ -82,7 +80,6 @@ export default function AccountInfoPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
 
-  if (isLocalMode()) return <Navigate to="/" replace />;
   if (!account) return null;
 
   async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
