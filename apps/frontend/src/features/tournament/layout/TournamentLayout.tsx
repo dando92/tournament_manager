@@ -4,6 +4,7 @@ import { TournamentLobbiesProvider } from "@/features/tournament/context/Tournam
 import { TournamentPageContextValue } from "@/features/tournament/context/TournamentPageContext";
 import { TournamentPageState } from "@/features/tournament/hooks/useTournamentPage";
 import { useTournamentLayout } from "@/features/tournament/hooks/useTournamentLayout";
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 type TournamentLayoutProps = {
@@ -53,7 +54,9 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 
-      <Outlet context={context} />
+      <Suspense fallback={null}>
+        <Outlet context={context} />
+      </Suspense>
     </>
   );
 

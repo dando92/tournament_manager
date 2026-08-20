@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { DIVISION_TABS, DivisionTabKey } from "@/features/division/config/divisionTabs";
 import { DivisionPageContextValue } from "@/features/division/context/DivisionPageContext";
@@ -48,7 +49,9 @@ export default function DivisionLayout({ context }: DivisionLayoutProps) {
         ))}
       </div>
 
-      <Outlet context={context} />
+      <Suspense fallback={null}>
+        <Outlet context={context} />
+      </Suspense>
     </div>
   );
 }
