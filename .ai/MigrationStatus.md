@@ -181,6 +181,15 @@
 - An active match's status glyph breathes, wrapped in `motion-safe`. It is the only animated state in the application, and `.ai/Design.md` records that as a rule.
 - Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors, `npx vite build` succeeds, `npm test` 5/5.
 
+### Match state moved to the list row
+
+- Moved the progress badge, the commit precondition and the commit button out of the match card and onto the list row: the row owns the state of a match, the card owns its contents. The row's right-hand slot has three faces — what is missing, the commit button once nothing is, then the completed badge.
+- Rebuilt the row as a div holding a select button rather than one button, since a commit button nested inside it was neither valid HTML nor keyboard reachable.
+- Made the hand-scoring store observable and cached, so the list can see a draft the card is writing; without it a match being scored by hand read as empty in the list. `buildCommitRequest` is shared, so the row and any future caller send the same shape.
+- The card header now carries only add player, add song and the overflow menu.
+- `MatchCard` no longer takes `onCommitMatchResult`. The parked bracket and round-robin views render cards, so re-wiring them will need a commit affordance of their own.
+- Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors, `npx vite build` succeeds, `npm test` 5/5.
+
 ## Verification
 
 ```text

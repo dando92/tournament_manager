@@ -113,7 +113,6 @@ export default function MatchList({
       }
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
       onUpdateMatchActive={actions.updateMatchActive}
-      onCommitMatchResult={actions.commitMatchResult}
       onReopenMatchResult={actions.reopenMatchResult}
       match={match}
     />

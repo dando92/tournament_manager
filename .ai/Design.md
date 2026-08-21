@@ -104,6 +104,13 @@ Progress fills the ring in four steps, which is what the ring was drawn for:
 `getMatchProgress` is the single source: the commit button derives from it, so
 the badge a viewer reads and the button they press cannot disagree.
 
+The row owns the **state** of a match and the card owns its **contents**, which
+is why commit lives on the row rather than in the card. The right-hand slot is
+one slot with three faces: the reason it cannot be committed yet while something
+is missing, the commit button itself once it can be, and the completed badge
+afterwards. What is left in the card header acts on the match — add a player,
+add a song, the overflow menu — and nothing there reports status.
+
 ## Selection is greyscale
 
 Selected rows and the active navigation item are `ui-selected` with a

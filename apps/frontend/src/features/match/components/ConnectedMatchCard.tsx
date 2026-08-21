@@ -77,7 +77,6 @@ export default function ConnectedMatchCard({
       }
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
       onUpdateMatchActive={actions.updateMatchActive}
-      onCommitMatchResult={actions.commitMatchResult}
       onReopenMatchResult={actions.reopenMatchResult}
     />
   );

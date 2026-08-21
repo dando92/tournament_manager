@@ -9,9 +9,8 @@ import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchEmptySlots from "@/features/match/components/MatchEmptySlots";
 import MatchTable from "@/features/match/components/MatchTable";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
-import { getCommitBlocker, getMatchCommitState, getMatchProgress } from "@/features/match/utils/matchStatus";
+import { getMatchCommitState } from "@/features/match/utils/matchStatus";
 import { useManualScoring } from "@/features/match/hooks/useManualScoring";
-import { CommitMatchResultRequest } from "@/features/match/types/match-requests";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
 type MatchCardProps = {
@@ -53,7 +52,6 @@ type MatchCardProps = {
   onDeleteStanding: (playerId: number, songId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
-  onCommitMatchResult?: (matchId: number, request?: CommitMatchResultRequest) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
 };
 
@@ -104,7 +102,6 @@ export default function MatchCard({
   onEditStanding,
   onUpdateMatchAdvancementRules,
   onUpdateMatchActive,
-  onCommitMatchResult,
   onReopenMatchResult,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
@@ -122,12 +119,7 @@ export default function MatchCard({
 
   const isHighlighted = match.id === highlight.matchId;
   const commitState = getMatchCommitState(match, manualPoints);
-  const progress = getMatchProgress(match, manualPoints);
   const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
-  const commitBlocker = getCommitBlocker(match, {
-    manualScoringEnabled: manualScoring.enabled,
-    manualPoints,
-  });
   const matchPlayers = entrantPlayers(match.entrants);
   const hasIncomingRoutes = (match.advancementRules ?? []).some(
     (rule) => rule.targetKind === "match" && rule.targetId === match.id,
@@ -201,16 +193,6 @@ export default function MatchCard({
     await onUpdateMatchActive?.(match.id, !match.active);
   }
 
-  async function commitMatch() {
-    if (!controls || commitState !== "Pending") return;
-
-    const playerPoints = match.rounds.length === 0
-      ? matchPlayers.map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
-      : undefined;
-    await onCommitMatchResult?.(match.id, { playerPoints });
-    manualScoring.clear();
-  }
-
   async function reopenMatch() {
     if (!controls || commitState !== "Completed") return;
     await onReopenMatchResult?.(match.id);
@@ -270,8 +252,6 @@ export default function MatchCard({
         match={match}
         controls={controls}
         commitState={commitState}
-        progress={progress}
-        commitBlocker={commitBlocker}
         showAddActions={!showEmptySlots}
         canAddSong={matchPlayers.length > 0}
         manualScoringEnabled={manualScoring.enabled}
@@ -284,7 +264,6 @@ export default function MatchCard({
         canEditAdvancementRules={controls && !editMode}
         onEditAdvancementRules={enterEditMode}
         onToggleActive={toggleActive}
-        onCommitMatch={commitMatch}
         onReopenMatch={reopenMatch}
       />
 

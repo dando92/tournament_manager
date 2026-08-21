@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalculator, faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/types/Match";
-import { getActiveLabel, getMatchProgressLabel, getMatchProgressStatus, type MatchProgress } from "@/features/match/utils/matchStatus";
+import { getActiveLabel } from "@/features/match/utils/matchStatus";
 import { btnSecondary } from "@/styles/buttonStyles";
-import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
@@ -13,9 +12,6 @@ type Props = {
   match: Match;
   controls: boolean;
   commitState: MatchCommitState;
-  progress: MatchProgress;
-  /** Null once the match can be committed; otherwise what is still missing. */
-  commitBlocker: string | null;
   /** Hidden while the match is still an empty skeleton, which offers its own slots. */
   showAddActions: boolean;
   canAddSong: boolean;
@@ -29,19 +25,13 @@ type Props = {
   canEditAdvancementRules?: boolean;
   onEditAdvancementRules?: () => void;
   onToggleActive: () => void;
-  onCommitMatch: () => void;
   onReopenMatch: () => void;
 };
-
-/** Vertical touch area on phones, where the compact button is under the touch-target size. */
-const touchAreaClass = "relative before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] sm:before:hidden";
 
 export default function MatchHeader({
   match,
   controls,
   commitState,
-  progress,
-  commitBlocker,
   showAddActions,
   canAddSong,
   manualScoringEnabled,
@@ -54,7 +44,6 @@ export default function MatchHeader({
   canEditAdvancementRules = false,
   onEditAdvancementRules,
   onToggleActive,
-  onCommitMatch,
   onReopenMatch,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
@@ -125,10 +114,8 @@ export default function MatchHeader({
         )}
       </div>
       <div className="flex shrink-0 items-center justify-end gap-3">
-        {/* Visible to everyone: how far the result is from final is not a
-            staff-only fact. Only the button that changes it is. */}
-        <StatusBadge status={getMatchProgressStatus(progress)} label={getMatchProgressLabel(progress)} />
-
+        {/* State and commit belong to the list row above, which is where a
+            match is scanned. What is left here acts on its contents. */}
         {controls && (
           <>
             {showAddActions && !isMatchEnded && (
@@ -144,66 +131,50 @@ export default function MatchHeader({
               </div>
             )}
 
-            {commitState !== "Completed" &&
-              (commitBlocker ? (
-                /* The precondition where the button would be, instead of a grey
-                   button that makes someone hunt for the reason. */
-                <span className="rounded-md border border-dashed border-ui-border-strong px-3 py-1.5 text-xs font-medium text-ui-text-mute">
-                  {commitBlocker}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onCommitMatch}
-                  className={`cursor-pointer rounded-md border border-state-pending/30 bg-state-pending/10 px-3 py-1.5 text-xs font-semibold text-ui-text-soft transition-colors hover:bg-state-pending/20 ${touchAreaClass}`}
-                >
-                  Commit
-                </button>
-              ))}
-          <ActionsMenu
-            title="Match actions"
-            items={[
-              {
-                key: "active",
-                label: match.active ? "Set not active" : "Set active",
-                icon: faTowerBroadcast,
-                disabled: !canToggleActive,
-                onSelect: onToggleActive,
-              },
-              {
-                key: "manual-scoring",
-                label: manualScoringEnabled ? "Score by songs" : "Score by hand",
-                icon: faCalculator,
-                hidden: isMatchEnded || match.rounds.length > 0,
-                onSelect: onToggleManualScoring,
-              },
-              {
-                key: "advancement",
-                label: "Edit advancement rules",
-                icon: faPenToSquare,
-                hidden: isMatchEnded || !canEditAdvancementRules,
-                onSelect: () => onEditAdvancementRules?.(),
-              },
-              {
-                key: "reopen",
-                label: "Re-open match",
-                icon: faRotateLeft,
-                hidden: commitState !== "Completed",
-                onSelect: onReopenMatch,
-              },
-              {
-                key: "delete",
-                label: "Delete match",
-                icon: faTrash,
-                danger: true,
-                onSelect: () => onDeleteMatch(match.id),
-                confirm: {
-                  message: `Delete match "${match.name}"? This cannot be undone.`,
-                  confirmText: "Delete match",
+            <ActionsMenu
+              title="Match actions"
+              items={[
+                {
+                  key: "active",
+                  label: match.active ? "Set not active" : "Set active",
+                  icon: faTowerBroadcast,
+                  disabled: !canToggleActive,
+                  onSelect: onToggleActive,
                 },
-              },
-            ]}
-          />
+                {
+                  key: "manual-scoring",
+                  label: manualScoringEnabled ? "Score by songs" : "Score by hand",
+                  icon: faCalculator,
+                  hidden: isMatchEnded || match.rounds.length > 0,
+                  onSelect: onToggleManualScoring,
+                },
+                {
+                  key: "advancement",
+                  label: "Edit advancement rules",
+                  icon: faPenToSquare,
+                  hidden: isMatchEnded || !canEditAdvancementRules,
+                  onSelect: () => onEditAdvancementRules?.(),
+                },
+                {
+                  key: "reopen",
+                  label: "Re-open match",
+                  icon: faRotateLeft,
+                  hidden: commitState !== "Completed",
+                  onSelect: onReopenMatch,
+                },
+                {
+                  key: "delete",
+                  label: "Delete match",
+                  icon: faTrash,
+                  danger: true,
+                  onSelect: () => onDeleteMatch(match.id),
+                  confirm: {
+                    message: `Delete match "${match.name}"? This cannot be undone.`,
+                    confirmText: "Delete match",
+                  },
+                },
+              ]}
+            />
           </>
         )}
       </div>
