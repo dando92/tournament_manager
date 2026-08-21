@@ -12,7 +12,7 @@ export class PhasesController {
     @Post()
     @RequireOpenTournament({ entity: 'division', location: 'body', field: 'divisionId' })
     async create(@Body(new ValidationPipe()) dto: CreatePhaseDto): Promise<Phase> {
-        return this.phaseService.create(dto);
+        return this.phaseService.createWithDefaultPhaseGroup(dto);
     }
 
     @Get(':id/entrants')

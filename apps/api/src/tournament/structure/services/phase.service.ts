@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Division, Entrant, Phase } from '@tournament-manager/persistence';
 import { CreatePhaseDto } from '@tournament/dtos';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { PhaseGroupService } from './phase-group.service';
 
 @Injectable()
 export class PhaseService {
@@ -12,8 +13,18 @@ export class PhaseService {
         private readonly phaseRepository: Repository<Phase>,
         @InjectRepository(Division)
         private readonly divisionRepository: Repository<Division>,
+        private readonly phaseGroupService: PhaseGroupService,
         private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
+
+    async createWithDefaultPhaseGroup(dto: CreatePhaseDto): Promise<Phase> {
+        const phase = await this.create(dto);
+        await this.phaseGroupService.createForPhase(phase.id, {
+            name: phase.name,
+            displayIdentifier: '1',
+        });
+        return phase;
+    }
 
     async create(dto: CreatePhaseDto): Promise<Phase> {
         const division = await this.divisionRepository.findOneBy({ id: dto.divisionId });
