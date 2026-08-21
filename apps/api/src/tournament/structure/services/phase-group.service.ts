@@ -244,6 +244,52 @@ export class PhaseGroupService {
         return phaseGroup.entrants ?? [];
     }
 
+    async syncDerivedEntrants(phaseGroupId: number): Promise<void> {
+        const phaseGroup = await this.phaseGroupRepository.findOne({
+            where: { id: phaseGroupId },
+            relations: { matches: { entrants: true } },
+        });
+        if (!phaseGroup) return;
+
+        const entrantIdsInMatches = new Set(
+            (phaseGroup.matches ?? []).flatMap((match) => (match.entrants ?? []).map((entrant) => entrant.id)),
+        );
+        const existingEntries = await this.phaseGroupEntrantRepository.find({
+            where: { phaseGroup: { id: phaseGroupId } },
+            relations: { entrant: true, sourceAdvancementRule: true },
+        });
+        const existingEntrantIds = new Set(existingEntries.map((entry) => entry.entrant.id));
+        let changed = false;
+
+        for (const entry of existingEntries) {
+            if (entrantIdsInMatches.has(entry.entrant.id)) continue;
+            // An entrant placed here by an advancement waits for its matches to be created, so it is not derived.
+            if (entry.sourceAdvancementRule) continue;
+            await this.phaseGroupEntrantRepository.remove(entry);
+            changed = true;
+        }
+
+        let nextSlot = await this.getNextSlot(phaseGroupId);
+        for (const entrantId of entrantIdsInMatches) {
+            if (existingEntrantIds.has(entrantId)) continue;
+
+            const entrant = await this.entrantRepository.findOneBy({ id: entrantId });
+            if (!entrant) continue;
+
+            const phaseGroupEntrant = new PhaseGroupEntrant();
+            phaseGroupEntrant.phaseGroup = phaseGroup;
+            phaseGroupEntrant.entrant = entrant;
+            phaseGroupEntrant.slot = nextSlot;
+            phaseGroupEntrant.seedNum = nextSlot;
+            phaseGroupEntrant.status = 'active';
+            await this.phaseGroupEntrantRepository.save(phaseGroupEntrant);
+            nextSlot += 1;
+            changed = true;
+        }
+
+        if (changed) await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
+    }
+
     private async getNextDisplayIdentifier(phaseId: number): Promise<string> {
         const taken = new Set(
             (await this.phaseGroupRepository.find({ where: { phase: { id: phaseId } } }))

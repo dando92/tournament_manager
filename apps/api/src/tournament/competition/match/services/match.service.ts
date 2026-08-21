@@ -5,6 +5,7 @@ import { Entrant, Match, PhaseGroup } from '@tournament-manager/persistence';
 import { CreateMatchDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
 
 @Injectable()
 export class MatchService {
@@ -17,6 +18,7 @@ export class MatchService {
         private readonly entrantRepository: Repository<Entrant>,
         private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
+        private readonly phaseGroupService: PhaseGroupService,
     ) {}
 
     async create(dto: CreateMatchDto): Promise<Match> {
@@ -51,6 +53,7 @@ export class MatchService {
         match.subtitle = dto.subtitle;
 
         const savedMatch = await this.matchRepository.save(match);
+        await this.phaseGroupService.syncDerivedEntrants(phaseGroup.id);
         await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(phaseGroup.id);
 
         return savedMatch;
@@ -169,7 +172,13 @@ export class MatchService {
         const match = await this.findOneBasic(id);
         if (!match) throw new Error(`Match with ID ${id} not found`);
 
+        const affectedPhaseGroupIds = new Set<number>();
+        const currentPhaseGroupId = await this.findPhaseGroupIdForMatch(id);
+        if (currentPhaseGroupId) affectedPhaseGroupIds.add(currentPhaseGroupId);
+        const membershipChanged = dto.entrantIds !== undefined || dto.phaseGroupId !== undefined;
+
         if (dto.phaseGroupId !== undefined) {
+            affectedPhaseGroupIds.add(dto.phaseGroupId);
             const phaseGroup = await this.phaseGroupRepository.findOne({
                 where: { id: dto.phaseGroupId },
                 relations: { phase: true },
@@ -195,6 +204,11 @@ export class MatchService {
 
         this.matchRepository.merge(match, dto);
         const updatedMatch = await this.matchRepository.save(match);
+        if (membershipChanged) {
+            for (const phaseGroupId of affectedPhaseGroupIds) {
+                await this.phaseGroupService.syncDerivedEntrants(phaseGroupId);
+            }
+        }
         await this.uiUpdateGateway.emitMatchUpdateByMatchId(updatedMatch.id);
         return updatedMatch;
     }
@@ -221,6 +235,15 @@ export class MatchService {
         await this.advancementRuleService.deleteInvolvingMatch(id);
 
         await this.matchRepository.remove(match);
+        if (phaseGroupId) await this.phaseGroupService.syncDerivedEntrants(phaseGroupId);
         await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
+    }
+
+    private async findPhaseGroupIdForMatch(id: number): Promise<number | undefined> {
+        const match = await this.matchRepository.findOne({
+            where: { id },
+            relations: { phaseGroup: true },
+        });
+        return match?.phaseGroup?.id;
     }
 }
