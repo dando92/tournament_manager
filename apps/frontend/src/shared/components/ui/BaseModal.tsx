@@ -21,7 +21,7 @@ export default function BaseModal({
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="fixed inset-0 z-[9999] overflow-y-auto" onClose={onClose}>
         <div className="min-h-screen px-4 text-center">
-          <Dialog.Overlay className="fixed inset-0 backdrop-blur-lg bg-gray-500 bg-opacity-60" />
+          <Dialog.Overlay className="fixed inset-0 backdrop-blur-lg bg-ui-text bg-opacity-60" />
           <span className="inline-block h-screen align-middle" aria-hidden="true">
             &#8203;
           </span>
@@ -35,16 +35,16 @@ export default function BaseModal({
             leaveTo="opacity-0 scale-95"
           >
             <div
-              className={`inline-block w-full ${maxWidth} p-6 my-8 text-left align-middle transition-all transform bg-white shadow-xl`}
+              className={`inline-block w-full ${maxWidth} p-6 my-8 text-left align-middle transition-all transform bg-ui-surface shadow-xl`}
             >
               {title && (
                 <div className="flex items-center justify-between mb-4">
-                  <Dialog.Title as="h3" className="text-lg font-semibold text-brand-700">
+                  <Dialog.Title as="h3" className="text-lg font-semibold text-ui-text">
                     {title}
                   </Dialog.Title>
                   <button
                     onClick={onClose}
-                    className="text-gray-500 hover:text-gray-600 text-xl font-bold"
+                    className="text-ui-text-mute hover:text-ui-text-soft text-xl font-bold"
                   >
                     ✕
                   </button>

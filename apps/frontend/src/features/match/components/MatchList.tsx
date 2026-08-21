@@ -125,7 +125,7 @@ export default function MatchList({
         onCreateMatch ? (
           <CreateCard label="Create match" onClick={onCreateMatch} />
         ) : (
-          <p className="text-center text-gray-500 text-sm py-8">No matches yet.</p>
+          <p className="text-center text-ui-text-mute text-sm py-8">No matches yet.</p>
         )
       ) : usesRoundRobinTable ? (
         <>
@@ -148,7 +148,7 @@ export default function MatchList({
       ) : (
         <>
           {bracketTreeUnavailable && (
-            <p className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="mb-3 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2 text-xs text-ui-text-soft">
               These matches carry no advancement rule between them, so there is no bracket to draw yet. They are listed
               as cards until one match feeds another.
             </p>

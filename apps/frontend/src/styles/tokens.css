@@ -1,0 +1,58 @@
+/*
+ * Design tokens.
+ *
+ * Values are RGB channels rather than hex so Tailwind's opacity modifiers keep
+ * working (`bg-ui-raised/60`). Every token is defined here for both themes, so
+ * adding the dark theme is a matter of setting `data-theme="dark"` on the root
+ * element — no component changes.
+ *
+ * The roles each token plays are documented in .ai/Design.md.
+ */
+
+:root {
+  /* Neutral scale. Hue 215, saturation held between 5% and 9%: a faint cool
+     cast, which is what makes a grey read as chosen rather than as the browser
+     default. Anything more saturated reads as blue-grey. */
+  --ui-canvas: 250 251 252;
+  --ui-surface: 255 255 255;
+  --ui-raised: 245 246 248;
+  --ui-selected: 233 235 239;
+  --ui-border: 226 229 233;
+  --ui-border-strong: 198 203 210;
+  --ui-text: 24 27 33;
+  --ui-text-soft: 79 85 95;
+  --ui-text-mute: 102 111 122;
+
+  /* State colours. These are only ever a glyph or a badge dot, never text and
+     never a surface, so the threshold that applies is the 3:1 for graphical
+     objects. That is what lets `running` be the brand colour at full strength
+     instead of a darkened version of it. */
+  --state-idle: 138 146 158;
+  --state-running: 31 141 222;
+  --state-pending: 194 118 26;
+  --state-done: 14 138 95;
+  --state-failed: 211 58 52;
+}
+
+/*
+ * Dark theme. The surfaces are Linear's published values; the neutral scale
+ * keeps the same 4-9% saturation on the way down. Inert until something sets
+ * the attribute, so the app stays light until a theme switch exists.
+ */
+:root[data-theme="dark"] {
+  --ui-canvas: 8 9 10;
+  --ui-surface: 15 16 17;
+  --ui-raised: 22 23 24;
+  --ui-selected: 35 37 42;
+  --ui-border: 28 30 33;
+  --ui-border-strong: 47 50 55;
+  --ui-text: 247 248 248;
+  --ui-text-soft: 167 172 180;
+  --ui-text-mute: 123 131 142;
+
+  --state-idle: 123 131 142;
+  --state-running: 61 165 232;
+  --state-pending: 224 163 60;
+  --state-done: 60 201 141;
+  --state-failed: 238 107 99;
+}

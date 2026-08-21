@@ -75,7 +75,7 @@ export default function ActionsMenu({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
           <div
-            className={`absolute top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white py-1 shadow-lg ${
+            className={`absolute top-full z-20 mt-1 min-w-[220px] rounded border border-ui-border bg-ui-surface py-1 shadow-lg ${
               align === "left" ? "left-0" : "right-0"
             }`}
           >
@@ -93,7 +93,7 @@ export default function ActionsMenu({
                   item.onSelect();
                 }}
                 className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
-                  item.danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
+                  item.danger ? "text-state-failed hover:bg-state-failed/10" : "text-ui-text-soft hover:bg-ui-raised"
                 } ${item.className ?? ""}`}
               >
                 <ItemIcon icon={item.icon} danger={item.danger} />
@@ -111,7 +111,7 @@ export default function ActionsMenu({
         maxWidth="max-w-md"
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-gray-600">{confirming?.confirm?.message}</p>
+          <p className="text-sm text-ui-text-soft">{confirming?.confirm?.message}</p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -136,7 +136,7 @@ export default function ActionsMenu({
 }
 
 function ItemIcon({ icon, danger }: { icon: ActionsMenuItem["icon"]; danger?: boolean }) {
-  const className = danger ? undefined : "text-brand-700";
+  const className = danger ? undefined : "text-ui-text-mute";
   if (icon && typeof icon === "object" && "iconName" in icon) {
     return <FontAwesomeIcon icon={icon as IconDefinition} className={className} />;
   }

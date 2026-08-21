@@ -61,7 +61,7 @@ export default function BracketsTab({
           onChanged={onDivisionChanged}
         />
       ) : state.phases.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-500">No bracket yet.</p>
+        <p className="py-8 text-center text-sm text-ui-text-mute">No bracket yet.</p>
       ) : (
         <div className="flex flex-col gap-5">
           {state.phases.map((phase) => (

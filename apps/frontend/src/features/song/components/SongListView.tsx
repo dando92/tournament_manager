@@ -39,7 +39,7 @@ export default function SongListView({ songs, packFilter, songSearch, canEdit, o
 
   if (filtered.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 text-sm italic">
+      <div className="text-center py-12 text-ui-text-mute text-sm italic">
         No songs match your search.
       </div>
     );
@@ -48,8 +48,8 @@ export default function SongListView({ songs, packFilter, songSearch, canEdit, o
   return (
     <div className="flex flex-col gap-3">
       {grouped.map(([pack, packSongs]) => (
-        <div key={pack} className="rounded-lg border border-gray-200 shadow-sm overflow-hidden bg-white">
-          <div className="px-3 py-2 bg-brand-700 text-white text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+        <div key={pack} className="rounded-lg border border-ui-border shadow-sm overflow-hidden bg-ui-surface">
+          <div className="flex items-center gap-2 border-b border-ui-border bg-ui-raised px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute">
             <span className="flex-1 truncate">{pack}</span>
             <span className="font-normal opacity-70 shrink-0">
               {packSongs.length} song{packSongs.length !== 1 ? "s" : ""}

@@ -17,18 +17,18 @@ export default function TournamentStatsPage() {
   } = useTournamentStatsPage(divisions);
 
   if (!loaded) {
-    return <p className="text-sm text-gray-500 italic">Loading stats...</p>;
+    return <p className="text-sm text-ui-text-mute italic">Loading stats...</p>;
   }
 
   if (playerScores.length === 0) {
-    return <p className="text-sm text-gray-500 italic">No scores recorded yet.</p>;
+    return <p className="text-sm text-ui-text-mute italic">No scores recorded yet.</p>;
   }
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-5xl mx-auto">
       <div>
-        <h2 className="text-brand-700 font-bold text-xl">Stats</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-ui-text font-bold text-xl">Stats</h2>
+        <p className="text-sm text-ui-text-mute">
           {playerScores.length} recorded score{playerScores.length !== 1 ? "s" : ""} across{" "}
           {groupedPlayers.length} player{groupedPlayers.length !== 1 ? "s" : ""}
         </p>
@@ -37,7 +37,7 @@ export default function TournamentStatsPage() {
       <TournamentStatsSearch search={search} onSearchChange={setSearch} />
 
       {groupedPlayers.length === 0 ? (
-        <p className="text-sm text-gray-500 italic">No players match your search.</p>
+        <p className="text-sm text-ui-text-mute italic">No players match your search.</p>
       ) : (
         <TournamentStatsPlayerList
           groupedPlayers={groupedPlayers}

@@ -36,7 +36,7 @@ export default function AddEditSongRollFields({
         <input
           value={difficultyInput}
           onChange={(event) => onDifficultyChange(event.target.value)}
-          className="border border-gray-300 px-2 py-2 mr-2 rounded-lg"
+          className="border border-ui-border-strong px-2 py-2 mr-2 rounded-lg"
           type="number"
           placeholder="Type difficulty"
         />

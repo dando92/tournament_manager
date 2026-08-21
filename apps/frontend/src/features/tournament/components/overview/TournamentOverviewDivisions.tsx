@@ -18,10 +18,10 @@ export default function TournamentOverviewDivisions({
   onCreateDivision,
 }: Props) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-ui-border bg-ui-surface p-5 shadow-sm">
       <div className="text-center">
-        <h2 className="text-lg font-bold text-gray-900">Divisions</h2>
-        <p className="text-sm text-gray-500">Quick access to each division page.</p>
+        <h2 className="text-lg font-bold text-ui-text">Divisions</h2>
+        <p className="text-sm text-ui-text-mute">Quick access to each division page.</p>
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {divisions.map((division) => (
@@ -38,7 +38,7 @@ export default function TournamentOverviewDivisions({
         {controls ? (
           <CreateCard label="Create division" onClick={onCreateDivision} className="min-h-[160px]" />
         ) : (
-          divisions.length === 0 && <p className="text-sm text-gray-500">No divisions yet.</p>
+          divisions.length === 0 && <p className="text-sm text-ui-text-mute">No divisions yet.</p>
         )}
       </div>
     </div>

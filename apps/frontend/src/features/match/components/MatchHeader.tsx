@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/types/Match";
-import { getActiveLabel, getCommitBadgeClass } from "@/features/match/utils/matchStatus";
+import { commitBadgeClass, getActiveLabel } from "@/features/match/utils/matchStatus";
+import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
@@ -73,7 +74,7 @@ export default function MatchHeader({
           {controls && isRenaming ? (
             <input
               ref={inputRef}
-              className="text-base font-semibold text-gray-800 border-b border-brand-700 outline-none bg-transparent w-40"
+              className="text-base font-semibold text-ui-text border-b border-ui-border-strong outline-none bg-transparent w-40"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={commitRename}
@@ -84,7 +85,7 @@ export default function MatchHeader({
             />
           ) : (
             <h3
-              className={`text-base font-semibold text-gray-800 ${controls ? "cursor-pointer hover:text-brand-700 transition-colors" : ""}`}
+              className={`text-base font-semibold text-ui-text ${controls ? "cursor-pointer hover:text-ui-text transition-colors" : ""}`}
               onClick={controls ? startRename : undefined}
               title={controls ? "Click to rename" : undefined}
             >
@@ -95,24 +96,25 @@ export default function MatchHeader({
             <button
               onClick={onOpenEditNotes}
               title={match.notes || "Add notes"}
-              className={`text-sm ${match.notes ? "text-amber-500 hover:text-amber-700" : "text-gray-500 hover:text-gray-700"}`}
+              className={`text-sm ${match.notes ? "text-state-pending hover:text-state-pending/80" : "text-ui-text-mute hover:text-ui-text-soft"}`}
             >
               <FontAwesomeIcon icon={faStickyNote} />
             </button>
           ) : match.notes ? (
-            <span title={match.notes} className="text-amber-400 cursor-help text-sm">
+            <span title={match.notes} className="text-state-pending cursor-help text-sm">
               <FontAwesomeIcon icon={faStickyNote} />
             </span>
           ) : null}
         </div>
         {match.subtitle && (
-          <p className="text-xs text-gray-500 mt-0.5">{match.subtitle}</p>
+          <p className="text-xs text-ui-text-mute mt-0.5">{match.subtitle}</p>
         )}
       </div>
       {controls && (
         <div className="flex items-center justify-end gap-3 shrink-0">
           {commitState === "Completed" ? (
-            <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${getCommitBadgeClass("Completed")}`}>
+            <span className={commitBadgeClass}>
+              <StatusIcon status="done" className="h-3 w-3" />
               Completed
             </span>
           ) : (
@@ -123,8 +125,8 @@ export default function MatchHeader({
               title={commitState === "Disabled" ? "Every score must be filled in before the match can be committed" : undefined}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${touchAreaClass} ${
                 commitState === "Disabled"
-                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-500"
-                  : "cursor-pointer border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  ? "cursor-not-allowed border-ui-border bg-ui-raised text-ui-text-mute"
+                  : "cursor-pointer border-state-pending/30 bg-state-pending/10 text-ui-text-soft hover:bg-state-pending/10"
               }`}
             >
               Commit

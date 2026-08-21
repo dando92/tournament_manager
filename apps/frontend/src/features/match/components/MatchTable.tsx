@@ -138,11 +138,11 @@ export default function MatchTable({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-ui-border shadow-sm">
         <table className="w-full text-sm border-collapse">
           {match.rounds.length === 0 && (
             <thead>
-              <tr className="bg-brand-700 text-white">
+              <tr className="bg-ui-raised text-[10px] uppercase tracking-wider text-ui-text-mute">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold">Player</th>
                 <th className="px-3 py-2.5 text-center font-semibold w-[160px]">Pts</th>
@@ -151,7 +151,7 @@ export default function MatchTable({
           )}
           {match.rounds.length > 0 && (
             <thead>
-              <tr className="bg-brand-700 text-white">
+              <tr className="bg-ui-raised text-[10px] uppercase tracking-wider text-ui-text-mute">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold w-[120px] sm:w-[160px]">Player</th>
                 {match.rounds.map((round, idx) => {
@@ -202,7 +202,7 @@ export default function MatchTable({
           <tbody>
             {!hasContent && (
               <tr>
-                <td colSpan={totalCols} className="px-3 py-6 text-center text-gray-500 text-sm">
+                <td colSpan={totalCols} className="px-3 py-6 text-center text-ui-text-mute text-sm">
                   No match data available
                 </td>
               </tr>
@@ -212,10 +212,10 @@ export default function MatchTable({
               const committedPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
               const points = committedPoints ?? manualPoints[player.id] ?? 0;
               return (
-                <tr key={player.id} className="border-t border-gray-100 odd:bg-white even:bg-gray-50">
+                <tr key={player.id} className="border-t border-ui-border odd:bg-ui-surface even:bg-ui-raised">
                   <td className="px-2 py-2 text-center w-8" />
                   <td className="px-3 py-2">
-                    <span className="font-medium text-gray-800">{player.playerName}</span>
+                    <span className="font-medium text-ui-text">{player.playerName}</span>
                   </td>
                   <td className="px-3 py-2">
                     {canEditMatchContent ? (
@@ -224,23 +224,23 @@ export default function MatchTable({
                           type="button"
                           disabled={points <= 0}
                           onClick={() => onManualPointsChange(player.id, Math.max(0, points - 1))}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected disabled:cursor-not-allowed disabled:opacity-40"
                           title="Decrease points"
                         >
                           <FontAwesomeIcon icon={faMinus} />
                         </button>
-                        <span className="w-8 text-center font-bold text-gray-700">{points}</span>
+                        <span className="w-8 text-center font-bold text-ui-text-soft">{points}</span>
                         <button
                           type="button"
                           onClick={() => onManualPointsChange(player.id, points + 1)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-100"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected"
                           title="Increase points"
                         >
                           <FontAwesomeIcon icon={faPlus} />
                         </button>
                       </div>
                     ) : (
-                      <div className="text-center font-bold text-gray-700">{points}</div>
+                      <div className="text-center font-bold text-ui-text-soft">{points}</div>
                     )}
                   </td>
                 </tr>
@@ -326,10 +326,10 @@ export default function MatchTable({
       {tooltip && createPortal(
         <div
           style={{ position: "fixed", left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)", zIndex: 9999 }}
-          className="bg-gray-800 text-white text-xs rounded px-2 py-1.5 whitespace-nowrap shadow-lg pointer-events-none"
+          className="bg-ui-text text-ui-surface text-xs rounded px-2 py-1.5 whitespace-nowrap shadow-lg pointer-events-none"
         >
           {tooltip.title}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ui-text" />
         </div>,
         document.body,
       )}

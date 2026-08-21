@@ -3,7 +3,8 @@ import { PhaseGroup } from "@/features/division/types/Phase";
 import { entrantPlayer } from "@/features/entrant/types/Entrant";
 import { Match } from "@/features/match/types/Match";
 import { Player } from "@/features/player/types/Player";
-import { getCommitBadgeClass, getCommitBadgeLabel, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { commitBadgeClass, getCommitBadgeLabel, getCommitStatus, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import StatusIcon from "@/shared/components/ui/StatusIcon";
 
 type RoundRobinMatchesViewProps = {
   matches: Match[];
@@ -43,12 +44,12 @@ function getPlayerPoints(match: Match, playerId: number): number {
 
 function getCellResultClass(cell: PairCell): string {
   if (!cell.committed || cell.rowPoints === cell.columnPoints) {
-    return "border-gray-200 bg-gray-100 text-gray-700";
+    return "border-ui-border bg-ui-selected text-ui-text-soft";
   }
 
   return cell.rowPoints > cell.columnPoints
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-    : "border-red-200 bg-red-50 text-red-700";
+    ? "border-state-done/30 bg-state-done/10 text-ui-text-soft"
+    : "border-state-failed/30 bg-state-failed/10 text-state-failed";
 }
 
 export default function RoundRobinMatchesView({
@@ -174,24 +175,24 @@ export default function RoundRobinMatchesView({
   }
 
   if (orderedPlayers.length === 0) {
-    return <p className="text-center text-gray-500 text-sm py-8">No round robin players yet.</p>;
+    return <p className="text-center text-ui-text-mute text-sm py-8">No round robin players yet.</p>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-md bg-white">
+      <div className="overflow-x-auto rounded-md bg-ui-surface">
         <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-white px-2 py-2 text-left text-xs font-semibold text-gray-700 sm:px-3 sm:py-3 sm:text-sm">
+              <th className="sticky left-0 z-10 bg-ui-surface px-2 py-2 text-left text-xs font-semibold text-ui-text-soft sm:px-3 sm:py-3 sm:text-sm">
                 <span className="sr-only">Players</span>
               </th>
               {orderedPlayers.map((player) => (
-                <th key={player.id} className="min-w-[92px] px-2 py-2 text-center text-xs font-semibold text-gray-800 sm:min-w-[160px] sm:px-3 sm:py-3 sm:text-sm">
+                <th key={player.id} className="min-w-[92px] px-2 py-2 text-center text-xs font-semibold text-ui-text sm:min-w-[160px] sm:px-3 sm:py-3 sm:text-sm">
                   {player.playerName}
                 </th>
               ))}
-              <th className="min-w-[72px] px-2 py-2 text-center text-xs font-semibold text-gray-700 sm:min-w-[110px] sm:px-3 sm:py-3 sm:text-sm">
+              <th className="min-w-[72px] px-2 py-2 text-center text-xs font-semibold text-ui-text-soft sm:min-w-[110px] sm:px-3 sm:py-3 sm:text-sm">
                 <span className="sr-only">Final results</span>
               </th>
             </tr>
@@ -202,13 +203,13 @@ export default function RoundRobinMatchesView({
 
               return (
                 <tr key={rowPlayer.id}>
-                  <th className="sticky left-0 z-10 max-w-[96px] truncate bg-white px-2 py-2 text-left text-xs font-semibold text-gray-800 sm:max-w-none sm:px-3 sm:py-3 sm:text-sm">
+                  <th className="sticky left-0 z-10 max-w-[96px] truncate bg-ui-surface px-2 py-2 text-left text-xs font-semibold text-ui-text sm:max-w-none sm:px-3 sm:py-3 sm:text-sm">
                     {rowPlayer.playerName}
                   </th>
                   {orderedPlayers.map((columnPlayer) => {
                     if (rowPlayer.id === columnPlayer.id) {
                       return (
-                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-gray-200 sm:h-24 sm:min-w-[160px]" />
+                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-ui-selected sm:h-24 sm:min-w-[160px]" />
                       );
                     }
 
@@ -217,7 +218,7 @@ export default function RoundRobinMatchesView({
 
                     if (!cell.match) {
                       return (
-                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-gray-100 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-gray-500 sm:h-24 sm:min-w-[160px] sm:px-3 sm:py-2 sm:text-xs">
+                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-ui-selected px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-ui-text-mute sm:h-24 sm:min-w-[160px] sm:px-3 sm:py-2 sm:text-xs">
                           No match available
                         </td>
                       );
@@ -233,16 +234,16 @@ export default function RoundRobinMatchesView({
                             setSelectedMatchId((current) => current === cell.match?.id ? null : cell.match?.id ?? null)
                           }
                           className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded border px-1 py-1 text-center transition-colors sm:gap-2 sm:px-2 sm:py-2 ${getCellResultClass(cell)} ${
-                            isSelected ? "border-brand-400 ring-2 ring-brand-300" : "hover:border-brand-300"
+                            isSelected ? "border-ui-border-strong ring-2 ring-ui-border-strong" : "hover:border-ui-border"
                           }`}
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
-                            <span className={`rounded border px-1 py-0 text-[8px] font-semibold leading-4 sm:px-1.5 sm:py-0.5 sm:text-[10px] ${
-                              cell.match.active ? "border-brand-200 bg-brand-50 text-brand-700" : "border-gray-200 bg-gray-50 text-gray-700"
-                            }`}>
+                            <span className={commitBadgeClass}>
+                              <StatusIcon status={cell.match.active ? "running" : "idle"} className="h-3 w-3" />
                               {cell.match.active ? "Active" : "Not active"}
                             </span>
-                            <span className={`rounded border px-1 py-0 text-[8px] font-semibold leading-4 sm:px-1.5 sm:py-0.5 sm:text-[10px] ${getCommitBadgeClass(commitState)}`}>
+                            <span className={commitBadgeClass}>
+                              <StatusIcon status={getCommitStatus(commitState)} className="h-3 w-3" />
                               {getCommitBadgeLabel(commitState)}
                             </span>
                           </div>
@@ -254,10 +255,10 @@ export default function RoundRobinMatchesView({
                     );
                   })}
                   <td className="px-2 py-2 text-center sm:px-3 sm:py-3">
-                    <div className="text-sm font-bold text-gray-900 sm:text-base">
+                    <div className="text-sm font-bold text-ui-text sm:text-base">
                       {rowStats?.wins ?? 0} - {rowStats?.losses ?? 0}
                     </div>
-                    <div className="mt-0.5 text-xs font-semibold text-gray-500 sm:mt-1 sm:text-sm">
+                    <div className="mt-0.5 text-xs font-semibold text-ui-text-mute sm:mt-1 sm:text-sm">
                       {rowStats?.pointsFor ?? 0} - {rowStats?.pointsAgainst ?? 0}
                     </div>
                   </td>

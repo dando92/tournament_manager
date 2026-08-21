@@ -14,22 +14,32 @@ export default {
       },
       colors: {
         /**
-         * Brand scale. A single hue (206deg) so every step reads as the same
-         * colour at a different weight. See .ai/Design.md for the role each
-         * step plays; do not introduce a second blue.
+         * Neutral scale. The chrome carries no hue at all: surfaces, borders,
+         * selection and text are all steps of this one ramp. Values live in
+         * src/styles/tokens.css so both themes share these class names.
          */
-        brand: {
-          50: "#F1F8FE",
-          100: "#D9EDFC",
-          200: "#B6DBF7",
-          300: "#84BEEB",
-          400: "#50A3E2",
-          500: "#1F8CE0",
-          600: "#1571B7",
-          700: "#135D96",
-          800: "#134C77",
-          900: "#153D5B",
-          950: "#0F1E2A",
+        ui: {
+          canvas: "rgb(var(--ui-canvas) / <alpha-value>)",
+          surface: "rgb(var(--ui-surface) / <alpha-value>)",
+          raised: "rgb(var(--ui-raised) / <alpha-value>)",
+          selected: "rgb(var(--ui-selected) / <alpha-value>)",
+          border: "rgb(var(--ui-border) / <alpha-value>)",
+          "border-strong": "rgb(var(--ui-border-strong) / <alpha-value>)",
+          text: "rgb(var(--ui-text) / <alpha-value>)",
+          "text-soft": "rgb(var(--ui-text-soft) / <alpha-value>)",
+          "text-mute": "rgb(var(--ui-text-mute) / <alpha-value>)",
+        },
+        /**
+         * State colours. Reserved for the status glyph that reports what a
+         * thing is doing, and for the badge that repeats it. Never a surface,
+         * never body text, never an action.
+         */
+        state: {
+          idle: "rgb(var(--state-idle) / <alpha-value>)",
+          running: "rgb(var(--state-running) / <alpha-value>)",
+          pending: "rgb(var(--state-pending) / <alpha-value>)",
+          done: "rgb(var(--state-done) / <alpha-value>)",
+          failed: "rgb(var(--state-failed) / <alpha-value>)",
         },
         /**
          * Difficulty scale. An ordinal domain scale for song difficulty, kept

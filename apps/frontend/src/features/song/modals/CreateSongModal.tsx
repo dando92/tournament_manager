@@ -63,7 +63,7 @@ export default function CreateSongModal({
       maxWidth="max-w-sm"
       footer={
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={handleClose} className="px-3 py-1.5 text-sm text-gray-500 hover:underline">
+          <button type="button" onClick={handleClose} className="px-3 py-1.5 text-sm text-ui-text-mute hover:underline">
             Cancel
           </button>
           <button type="submit" form="create-song-form" className={`text-sm ${btnPrimary}`}>
@@ -74,7 +74,7 @@ export default function CreateSongModal({
     >
       <form id="create-song-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <label className="block text-sm font-medium text-ui-text-soft mb-1">Title</label>
           <input
             type="text"
             value={title}
@@ -86,7 +86,7 @@ export default function CreateSongModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Artist <span className="text-gray-500 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-ui-text-soft mb-1">Artist <span className="text-ui-text-mute font-normal">(optional)</span></label>
           <input
             type="text"
             value={artist}
@@ -96,7 +96,7 @@ export default function CreateSongModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+          <label className="block text-sm font-medium text-ui-text-soft mb-1">Difficulty</label>
           <input
             type="number"
             min={1}
@@ -108,20 +108,20 @@ export default function CreateSongModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Pack</label>
+          <label className="block text-sm font-medium text-ui-text-soft mb-1">Pack</label>
           <input
             type="text"
             value={group}
             onChange={(e) => { setGroup(e.target.value); setGroupError(null); }}
-            className="w-full border rounded px-3 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full border rounded px-3 py-1.5 text-sm disabled:bg-ui-raised disabled:text-ui-text-mute"
             placeholder="e.g. Pack A"
             required
             disabled={!isNewGroup}
           />
           {!isNewGroup && (
-            <p className="text-xs text-gray-500 mt-1">Pack is preselected for this action.</p>
+            <p className="text-xs text-ui-text-mute mt-1">Pack is preselected for this action.</p>
           )}
-          {groupError && <p className="text-red-600 text-xs mt-1">{groupError}</p>}
+          {groupError && <p className="text-state-failed text-xs mt-1">{groupError}</p>}
         </div>
       </form>
     </BaseModal>

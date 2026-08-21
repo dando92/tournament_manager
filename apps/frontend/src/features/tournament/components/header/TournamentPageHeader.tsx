@@ -47,8 +47,8 @@ export default function TournamentPageHeader({
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
       <div className="min-w-0">
-        <h1 className="text-2xl font-black text-gray-900">{tournamentName}</h1>
-        <p className="text-sm text-gray-500">{headerSubtitle}</p>
+        <h1 className="text-2xl font-black text-ui-text">{tournamentName}</h1>
+        <p className="text-sm text-ui-text-mute">{headerSubtitle}</p>
       </div>
 
       {controls && (

@@ -44,7 +44,7 @@ export default function CreatePhaseModal({ open, onClose, onCreate, divisions, d
           <div>
             <h3 className="mb-1">Division</h3>
             <select
-              className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+              className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
               value={selectedDivisionId}
               onChange={(e) => setSelectedDivisionId(Number(e.target.value))}
             >
@@ -59,7 +59,7 @@ export default function CreatePhaseModal({ open, onClose, onCreate, divisions, d
         <div>
           <h3 className="mb-1">Name</h3>
           <input
-            className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+            className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}

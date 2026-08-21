@@ -190,10 +190,10 @@ export default function MatchCard({
   return (
     <div
       ref={cardRef}
-      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-white shadow-sm transition-shadow ${
+      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-ui-surface shadow-sm transition-shadow ${
         isHighlighted
-          ? "border-brand-400 ring-2 ring-brand-300 shadow-brand-100 shadow-lg"
-          : "border-gray-100"
+          ? "border-ui-border-strong ring-2 ring-ui-border-strong shadow-ui-border shadow-lg"
+          : "border-ui-border"
       }`}
     >
       <AddEditSongToMatchModal

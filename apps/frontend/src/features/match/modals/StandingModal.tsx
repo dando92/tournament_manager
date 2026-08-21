@@ -136,7 +136,7 @@ export default function StandingModal({
           <div className="flex flex-row gap-2">
             <button
               type="button"
-              className="text-gray-600 px-3 py-1.5 rounded hover:underline"
+              className="text-ui-text-soft px-3 py-1.5 rounded hover:underline"
               onClick={onClose}
             >
               Cancel
@@ -148,17 +148,17 @@ export default function StandingModal({
         </div>
       }
     >
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-ui-text-mute mb-4">
         {playerName} for {songTitle}
       </p>
       <div className="flex flex-col gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Registered score</label>
+          <label className="block text-sm font-medium text-ui-text-soft">Registered score</label>
           <select
             value={selectedScoreId}
             onChange={(event) => setSelectedScoreId(event.target.value)}
             disabled={loadingScores}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-600 focus:border-brand-700 sm:text-sm"
+            className="mt-1 block w-full px-3 py-2 border border-ui-border-strong rounded-md shadow-sm focus:outline-none focus:ring-state-running focus:border-ui-border-strong sm:text-sm"
           >
             <option value="">Manual score</option>
             {scoreOptions.map((score) => (
@@ -169,21 +169,21 @@ export default function StandingModal({
           </select>
         </div>
         {isRegisteredScoreMode && selectedScore ? (
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          <div className="rounded-md border border-ui-border bg-ui-raised px-3 py-2 text-sm text-ui-text-soft">
             Using score #{selectedScore.id}: {selectedScore.percentage.toFixed(2)}%
             {selectedScore.isFailed ? " failed" : ""}. Manual fields are hidden while a registered score is selected.
           </div>
         ) : (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Percentage</label>
+              <label className="block text-sm font-medium text-ui-text-soft">Percentage</label>
               <input
                 type="text"
                 inputMode="decimal"
                 value={percentage}
                 onChange={(e) => setPercentage(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-brand-600 focus:border-brand-700 sm:text-sm ${
-                  percentageIsValid ? "border-gray-300" : "border-red-300"
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-state-running focus:border-ui-border-strong sm:text-sm ${
+                  percentageIsValid ? "border-ui-border-strong" : "border-state-failed/30"
                 }`}
               />
             </div>
@@ -195,7 +195,7 @@ export default function StandingModal({
                 onChange={(e) => setIsFailed(e.target.checked)}
                 className="rounded"
               />
-              <label htmlFor="isFailed" className="text-sm font-medium text-gray-700">
+              <label htmlFor="isFailed" className="text-sm font-medium text-ui-text-soft">
                 Failed
               </label>
             </div>

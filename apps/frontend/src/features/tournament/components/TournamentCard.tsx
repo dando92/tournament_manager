@@ -13,7 +13,7 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
   return (
     <div
       onClick={onClick}
-      className="flex flex-col rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md cursor-pointer transition-shadow bg-white"
+      className="flex flex-col rounded-lg overflow-hidden border border-ui-border shadow-sm hover:shadow-md cursor-pointer transition-shadow bg-ui-surface"
     >
       {/* Banner */}
       <div className={`bg-gradient-to-br ${gradient} h-32 flex items-center justify-center`}>
@@ -22,7 +22,7 @@ export default function TournamentCard({ tournament, onClick }: TournamentCardPr
 
       {/* Info */}
       <div className="p-3 flex flex-col gap-1">
-        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">
+        <h3 className="font-bold text-ui-text text-sm leading-tight line-clamp-2">
           {tournament.name}
         </h3>
       </div>

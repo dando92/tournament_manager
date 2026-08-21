@@ -20,7 +20,7 @@ export default function PlayersByNameList({
 }: PlayersByNameListProps) {
   if (players.length === 0) {
     return (
-      <p className="text-sm text-gray-500 italic">
+      <p className="text-sm text-ui-text-mute italic">
         {totalParticipants === 0 ? "No participants available." : "No participants match your search."}
       </p>
     );

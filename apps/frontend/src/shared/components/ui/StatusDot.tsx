@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import StatusIcon from "@/shared/components/ui/StatusIcon";
 
 const TAP_TOOLTIP_MS = 2000;
 
@@ -36,14 +37,11 @@ export default function StatusDot({ on, label }: StatusDotProps) {
         onBlur={() => setTapped(false)}
         className="-m-1.5 flex cursor-default items-center p-1.5"
       >
-        <span
-          aria-hidden
-          className={`h-2.5 w-2.5 rounded-full ring-2 ${on ? "bg-emerald-500 ring-emerald-100" : "bg-gray-300 ring-gray-100"}`}
-        />
+        <StatusIcon status={on ? "running" : "idle"} label={label} />
       </button>
       <span
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-[11px] font-medium text-white transition-opacity ${
+        className={`pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-ui-text px-2 py-1 text-[11px] font-medium text-ui-surface transition-opacity ${
           tapped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}
       >

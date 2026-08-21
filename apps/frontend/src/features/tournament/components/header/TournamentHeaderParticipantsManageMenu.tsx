@@ -25,29 +25,29 @@ export default function TournamentHeaderParticipantsManageMenu({ onOpen }: Props
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white shadow-lg">
+          <div className="absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded border border-ui-border bg-ui-surface shadow-lg">
             <button
               type="button"
               onClick={() => openModal("register")}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised"
             >
-              <FontAwesomeIcon icon={faPlus} className="text-brand-700" />
+              <FontAwesomeIcon icon={faPlus} className="text-ui-text-mute" />
               Register participant
             </button>
             <button
               type="button"
               onClick={() => openModal("database")}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised"
             >
-              <FontAwesomeIcon icon={faDatabase} className="text-brand-700" />
+              <FontAwesomeIcon icon={faDatabase} className="text-ui-text-mute" />
               Add from player database
             </button>
             <button
               type="button"
               onClick={() => openModal("import")}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised"
             >
-              <FontAwesomeIcon icon={faFileImport} className="text-brand-700" />
+              <FontAwesomeIcon icon={faFileImport} className="text-ui-text-mute" />
               Import names
             </button>
           </div>

@@ -52,7 +52,7 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
         <div className="w-full">
           <h3>Name</h3>
           <input
-            className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+            className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
             type="text"
             value={state.name}
             onChange={(event) => state.setName(event.target.value)}
@@ -62,7 +62,7 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
         <div className="w-full">
           <h3>Subtitle</h3>
           <input
-            className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+            className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
             type="text"
             value={state.subtitle}
             onChange={(event) => state.setSubtitle(event.target.value)}

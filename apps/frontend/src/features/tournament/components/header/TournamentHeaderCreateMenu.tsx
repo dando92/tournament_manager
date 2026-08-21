@@ -38,7 +38,7 @@ export default function TournamentHeaderCreateMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded shadow-lg border border-gray-200 min-w-[240px]">
+          <div className="absolute right-0 top-full mt-1 z-20 bg-ui-surface rounded shadow-lg border border-ui-border min-w-[240px]">
             <button
               type="button"
               disabled={!hasStartggApiKey}
@@ -48,9 +48,9 @@ export default function TournamentHeaderCreateMenu({
                 setOpen(false);
                 onOpenParticipantsManageModal("startgg");
               }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={faLink} className="text-brand-700" />
+              <FontAwesomeIcon icon={faLink} className="text-ui-text-mute" />
               Import from start.gg
             </button>
             <button
@@ -60,9 +60,9 @@ export default function TournamentHeaderCreateMenu({
                 setOpen(false);
                 onGenerateBracket();
               }}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={faDiagramProject} className="text-brand-700" />
+              <FontAwesomeIcon icon={faDiagramProject} className="text-ui-text-mute" />
               Generate bracket
             </button>
           </div>

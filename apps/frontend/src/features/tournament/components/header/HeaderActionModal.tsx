@@ -36,7 +36,7 @@ export default function HeaderActionModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-ui-border-strong px-4 py-2 text-sm font-medium text-ui-text-soft hover:bg-ui-raised"
           >
             Cancel
           </button>
@@ -51,7 +51,7 @@ export default function HeaderActionModal({
         </div>
       }
     >
-      <p className="mb-4 text-sm text-gray-500">{description}</p>
+      <p className="mb-4 text-sm text-ui-text-mute">{description}</p>
       <div className="flex flex-col gap-3">{children}</div>
     </BaseModal>
   );

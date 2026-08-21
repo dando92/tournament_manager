@@ -37,12 +37,12 @@ function formatAction(action: string) {
 function ActionBadge({ action }: { action: string }) {
   const palette =
     action === "mapped" || action.startsWith("match-")
-      ? "bg-emerald-100 text-emerald-800"
+      ? "bg-state-done/10 text-ui-text-soft"
       : action.startsWith("create")
-        ? "bg-brand-100 text-brand-800"
+        ? "bg-ui-raised text-ui-text"
         : action.includes("blocked")
-          ? "bg-red-100 text-red-800"
-          : "bg-gray-100 text-gray-700";
+          ? "bg-state-failed/10 text-state-failed"
+          : "bg-ui-selected text-ui-text-soft";
 
   return (
     <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-semibold ${palette}`}>
@@ -131,19 +131,19 @@ export default function StartggImportModal({
       <div className="flex flex-col gap-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-800">Event slug</label>
+            <label className="text-sm font-semibold text-ui-text">Event slug</label>
             <input
               value={eventSlug}
               onChange={(event) => setEventSlug(event.target.value)}
               placeholder="tournament/example/event/singles"
               autoFocus
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
+              className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-800">Target tournament</label>
-            <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            <label className="text-sm font-semibold text-ui-text">Target tournament</label>
+            <div className="rounded border border-ui-border bg-ui-raised px-3 py-2 text-sm text-ui-text-soft">
               {fixedTournamentName ?? `Tournament #${fixedTournamentId}`}
             </div>
           </div>
@@ -151,14 +151,14 @@ export default function StartggImportModal({
 
         {preview && (
           <div className="flex flex-col gap-4">
-            <div className="rounded border border-gray-200 bg-gray-50 p-4">
+            <div className="rounded border border-ui-border bg-ui-raised p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Event</p>
-                  <h3 className="text-lg font-semibold text-gray-900">{preview.event.name}</h3>
-                  <p className="text-sm text-gray-500">{preview.event.slug}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ui-text-mute">Event</p>
+                  <h3 className="text-lg font-semibold text-ui-text">{preview.event.name}</h3>
+                  <p className="text-sm text-ui-text-mute">{preview.event.slug}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+                <div className="grid grid-cols-2 gap-2 text-sm text-ui-text-soft">
                   <span>Participants: {preview.counts.participants}</span>
                   <span>Entrants: {preview.counts.entrants}</span>
                   <span>Phases: {preview.counts.phases}</span>
@@ -167,28 +167,28 @@ export default function StartggImportModal({
               </div>
             </div>
 
-            <section className="rounded border border-gray-200 p-4">
+            <section className="rounded border border-ui-border p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="font-semibold text-gray-900">Division</h4>
-                  <p className="text-sm text-gray-500">Local division target for this event import.</p>
+                  <h4 className="font-semibold text-ui-text">Division</h4>
+                  <p className="text-sm text-ui-text-mute">Local division target for this event import.</p>
                 </div>
                 <ActionBadge action={preview.division.action} />
               </div>
-              <p className="text-sm text-gray-800">{preview.division.name}</p>
+              <p className="text-sm text-ui-text">{preview.division.name}</p>
             </section>
 
-            <section className="rounded border border-gray-200 p-4">
+            <section className="rounded border border-ui-border p-4">
               <div className="mb-3">
-                <h4 className="font-semibold text-gray-900">Participants</h4>
-                <p className="text-sm text-gray-500">How each imported player identity will resolve locally.</p>
+                <h4 className="font-semibold text-ui-text">Participants</h4>
+                <p className="text-sm text-ui-text-mute">How each imported player identity will resolve locally.</p>
               </div>
               <div className="grid gap-2">
                 {preview.participants.map((participant) => (
-                  <div key={participant.externalId} className="flex items-center justify-between gap-3 rounded bg-gray-50 px-3 py-2 text-sm">
+                  <div key={participant.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                     <div>
-                      <p className="font-medium text-gray-900">{participant.gamerTag}</p>
-                      <p className="text-xs text-gray-500">start.gg participant {participant.externalId}</p>
+                      <p className="font-medium text-ui-text">{participant.gamerTag}</p>
+                      <p className="text-xs text-ui-text-mute">start.gg participant {participant.externalId}</p>
                     </div>
                     <ActionBadge action={participant.action} />
                   </div>
@@ -196,17 +196,17 @@ export default function StartggImportModal({
               </div>
             </section>
 
-            <section className="rounded border border-gray-200 p-4">
+            <section className="rounded border border-ui-border p-4">
               <div className="mb-3">
-                <h4 className="font-semibold text-gray-900">Entrants and seeding</h4>
-                <p className="text-sm text-gray-500">Event entrants, including singles and team cases.</p>
+                <h4 className="font-semibold text-ui-text">Entrants and seeding</h4>
+                <p className="text-sm text-ui-text-mute">Event entrants, including singles and team cases.</p>
               </div>
               <div className="grid gap-2">
                 {preview.entrants.map((entrant) => (
-                  <div key={entrant.externalId} className="flex items-center justify-between gap-3 rounded bg-gray-50 px-3 py-2 text-sm">
+                  <div key={entrant.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                     <div>
-                      <p className="font-medium text-gray-900">{entrant.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-ui-text">{entrant.name}</p>
+                      <p className="text-xs text-ui-text-mute">
                         {entrant.type} entrant
                         {entrant.seedNum !== null ? ` • seed ${entrant.seedNum}` : ""}
                       </p>
@@ -218,35 +218,35 @@ export default function StartggImportModal({
             </section>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <section className="rounded border border-gray-200 p-4">
+              <section className="rounded border border-ui-border p-4">
                 <div className="mb-3">
-                  <h4 className="font-semibold text-gray-900">Phases</h4>
-                  <p className="text-sm text-gray-500">Phase structure to create or reuse.</p>
+                  <h4 className="font-semibold text-ui-text">Phases</h4>
+                  <p className="text-sm text-ui-text-mute">Phase structure to create or reuse.</p>
                 </div>
                 <div className="grid gap-2">
                   {preview.phases.map((phase) => (
-                    <div key={phase.externalId} className="flex items-center justify-between gap-3 rounded bg-gray-50 px-3 py-2 text-sm">
-                      <span className="font-medium text-gray-900">{phase.name}</span>
+                    <div key={phase.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                      <span className="font-medium text-ui-text">{phase.name}</span>
                       <ActionBadge action={phase.action} />
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section className="rounded border border-gray-200 p-4">
+              <section className="rounded border border-ui-border p-4">
                 <div className="mb-3">
-                  <h4 className="font-semibold text-gray-900">Matches</h4>
-                  <p className="text-sm text-gray-500">Imported sets that will become local matches.</p>
+                  <h4 className="font-semibold text-ui-text">Matches</h4>
+                  <p className="text-sm text-ui-text-mute">Imported sets that will become local matches.</p>
                 </div>
                 <div className="grid gap-2">
                   {preview.matches.slice(0, 12).map((match) => (
-                    <div key={match.externalId} className="flex items-center justify-between gap-3 rounded bg-gray-50 px-3 py-2 text-sm">
-                      <span className="font-medium text-gray-900">{match.name}</span>
+                    <div key={match.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                      <span className="font-medium text-ui-text">{match.name}</span>
                       <ActionBadge action={match.action} />
                     </div>
                   ))}
                   {preview.matches.length > 12 && (
-                    <p className="text-xs text-gray-500">Showing 12 of {preview.matches.length} matches in preview.</p>
+                    <p className="text-xs text-ui-text-mute">Showing 12 of {preview.matches.length} matches in preview.</p>
                   )}
                 </div>
               </section>

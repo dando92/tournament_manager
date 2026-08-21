@@ -10,7 +10,7 @@ export default function TournamentLiveLobbies({ tournamentId, controls }: Props)
   const { tournamentLiveStates } = useLivePhase(tournamentId);
 
   if (tournamentLiveStates.length === 0) {
-    return <p className="text-gray-500">No live lobbies.</p>;
+    return <p className="text-ui-text-mute">No live lobbies.</p>;
   }
 
   return (

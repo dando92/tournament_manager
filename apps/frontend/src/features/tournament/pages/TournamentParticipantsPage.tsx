@@ -170,20 +170,20 @@ export default function TournamentParticipantsPage() {
       <div className="relative">
         <FontAwesomeIcon
           icon={faMagnifyingGlass}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-mute text-sm"
         />
         <input
           type="search"
           value={participantSearch}
           onChange={(event) => setParticipantSearch(event.target.value)}
           placeholder="Search participants by name..."
-          className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
+          className="w-full rounded-lg border border-ui-border-strong py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
         />
       </div>
 
       <div className="grid gap-2">
         {filteredParticipants.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">
+          <p className="text-sm text-ui-text-mute italic">
             {participants.length === 0 ? "No participants registered." : "No participants match your search."}
           </p>
         ) : (
@@ -196,12 +196,12 @@ export default function TournamentParticipantsPage() {
               <div
                 key={participant.id}
                 className={`flex items-center justify-between rounded border px-4 py-3 text-sm ${
-                  roleLabel ? "border-amber-200 bg-amber-50" : "border-gray-200 bg-white"
+                  roleLabel ? "border-state-pending/30 bg-state-pending/10" : "border-ui-border bg-ui-surface"
                 }`}
               >
                 <div>
-                  <p className="font-medium text-gray-900">{participant.player.playerName}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-ui-text">{participant.player.playerName}</p>
+                  <p className="text-xs text-ui-text-mute">
                     {participant.status}
                     {roleLabel ? ` | ${roleLabel}` : ""}
                   </p>
@@ -265,14 +265,14 @@ export default function TournamentParticipantsPage() {
           onChange={(event) => setName(event.target.value)}
           placeholder="Enter gamer tag"
           autoFocus
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
+          className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
         />
       </BaseModal>
 
       <BaseModal open={participantsManageModal === "database"} onClose={() => setParticipantsManageModal("none")} title="Add from player database" maxWidth="max-w-md">
         <div className="flex flex-col gap-3">
           {availablePlayers.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No available players.</p>
+            <p className="text-sm text-ui-text-mute italic">No available players.</p>
           ) : (
             <MultiSelect
               options={availablePlayerOptions}
@@ -328,16 +328,16 @@ export default function TournamentParticipantsPage() {
             onChange={(event) => setBulkText(event.target.value)}
             placeholder={"Alice\nBob\nCharlie"}
             rows={8}
-            className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="w-full resize-none rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
           />
 
           {preview.length > 0 && (
             <div className="grid gap-2">
               {preview.map((entry) => (
-                <div key={entry.name} className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+                <div key={entry.name} className="rounded border border-ui-border bg-ui-raised px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium text-gray-900">{entry.name}</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-medium text-ui-text">{entry.name}</span>
+                    <span className="text-xs text-ui-text-mute">
                       {entry.alreadyParticipant
                         ? "Already participant"
                         : entry.matchedPlayer

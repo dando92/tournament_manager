@@ -31,7 +31,7 @@ export default function OkModal({
         </div>
       }
     >
-      <div className="text-sm text-gray-500">{children}</div>
+      <div className="text-sm text-ui-text-mute">{children}</div>
     </BaseModal>
   );
 }

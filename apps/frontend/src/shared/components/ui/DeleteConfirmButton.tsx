@@ -61,7 +61,7 @@ export default function DeleteConfirmButton({
 
       <BaseModal open={open} onClose={() => setOpen(false)} title={confirmTitle} maxWidth="max-w-md">
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-gray-600">{confirmMessage}</p>
+          <p className="text-sm text-ui-text-soft">{confirmMessage}</p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"

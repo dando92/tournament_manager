@@ -32,11 +32,11 @@ export function MobileBottomNav() {
   return (
     <>
     <SearchTournamentModal open={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
-    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 h-14">
+    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-ui-surface border-t border-ui-border z-40 h-14">
       {/* Left: menu button */}
       <button
         onClick={toggle}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs text-gray-500 hover:text-brand-700 transition-colors"
+        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs text-ui-text-mute hover:text-ui-text transition-colors"
       >
         <FontAwesomeIcon icon={faBars} className="text-xl" />
         <span>Menu</span>
@@ -45,7 +45,7 @@ export function MobileBottomNav() {
       {/* Center: search */}
       <button
         onClick={() => setSearchModalOpen(true)}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors text-gray-500 hover:text-brand-700"
+        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors text-ui-text-mute hover:text-ui-text"
       >
         <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl" />
         <span>Search</span>
@@ -56,7 +56,7 @@ export function MobileBottomNav() {
         <button
           onClick={handleLogout}
           className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-brand-700 font-semibold" : "text-gray-500"
+            isOnAccount ? "text-ui-text font-semibold" : "text-ui-text-mute"
           }`}
         >
           <FontAwesomeIcon icon={faRightFromBracket} className="text-xl" />
@@ -66,7 +66,7 @@ export function MobileBottomNav() {
         <button
           onClick={() => navigate("/login", { state: { from: location.pathname } })}
           className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-brand-700 font-semibold" : "text-gray-500"
+            isOnAccount ? "text-ui-text font-semibold" : "text-ui-text-mute"
           }`}
         >
           <FontAwesomeIcon icon={faRightToBracket} className="text-xl" />

@@ -40,7 +40,7 @@ export default function TournamentHeaderLobbyManageMenu({
   });
 
   const menuItemClass =
-    "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:bg-white";
+    "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:cursor-not-allowed disabled:text-ui-text-mute disabled:hover:bg-ui-surface";
 
   return (
     <>
@@ -57,13 +57,13 @@ export default function TournamentHeaderLobbyManageMenu({
         }}
       >
         <input
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
           placeholder="Lobby name"
           value={createLobbyName}
           onChange={(event) => setCreateLobbyName(event.target.value)}
         />
         <input
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
           placeholder="Password (optional)"
           type="password"
           value={createLobbyPassword}
@@ -88,7 +88,7 @@ export default function TournamentHeaderLobbyManageMenu({
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={closeMenu} />
-            <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded shadow-lg border border-gray-200 min-w-[190px]">
+            <div className="absolute right-0 top-full mt-1 z-20 bg-ui-surface rounded shadow-lg border border-ui-border min-w-[190px]">
               {connectionStatus.isConnected ? (
                 <button
                   type="button"
@@ -99,7 +99,7 @@ export default function TournamentHeaderLobbyManageMenu({
                   disabled={disconnectingServer}
                   className={menuItemClass}
                 >
-                  <FontAwesomeIcon icon={faPowerOff} className="text-red-600" />
+                  <FontAwesomeIcon icon={faPowerOff} className="text-state-failed" />
                   {disconnectingServer ? "Disconnecting..." : "Disconnect"}
                 </button>
               ) : (
@@ -112,7 +112,7 @@ export default function TournamentHeaderLobbyManageMenu({
                   disabled={connectingServer || connectionStatus.isActive}
                   className={menuItemClass}
                 >
-                  <FontAwesomeIcon icon={faPlug} className="text-brand-700" />
+                  <FontAwesomeIcon icon={faPlug} className="text-ui-text-mute" />
                   {connectingServer || connectionStatus.isActive ? "Connecting..." : "Connect"}
                 </button>
               )}
@@ -125,10 +125,10 @@ export default function TournamentHeaderLobbyManageMenu({
                 disabled={refreshing || !connectionStatus.isConnected}
                 className={menuItemClass}
               >
-                <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin text-brand-700" : "text-brand-700"} />
+                <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin text-ui-text-mute" : "text-ui-text-mute"} />
                 {refreshing ? "Refreshing..." : "Refresh all"}
               </button>
-              <div className="my-1 border-t border-gray-100" />
+              <div className="my-1 border-t border-ui-border" />
               <button
                 type="button"
                 onClick={openCreateLobbyModal}
@@ -137,7 +137,7 @@ export default function TournamentHeaderLobbyManageMenu({
               >
                 <FontAwesomeIcon
                   icon={faSatelliteDish}
-                  className={connectionStatus.isConnected ? "text-brand-700" : "text-gray-500"}
+                  className={connectionStatus.isConnected ? "text-ui-text-mute" : "text-ui-text-mute"}
                 />
                 Create lobby
               </button>

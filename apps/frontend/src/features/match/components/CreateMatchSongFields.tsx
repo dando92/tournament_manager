@@ -88,7 +88,7 @@ export default function CreateMatchSongFields({
               {selectedSongDifficulties.map((difficulty, index) => (
                 <div key={`${difficulty}-${index}`} className="flex flex-row items-center gap-2">
                   <span className="w-6 font-bold">{difficulty}</span>
-                  <button onClick={() => onRemoveDifficulty(index)} className="text-red-700 text-sm">
+                  <button onClick={() => onRemoveDifficulty(index)} className="text-state-failed text-sm">
                     <FontAwesomeIcon icon={faMinusCircle} />
                   </button>
                 </div>
@@ -99,7 +99,7 @@ export default function CreateMatchSongFields({
             <input
               value={difficultyInput}
               onChange={(event) => onDifficultyInputChange(event.target.value)}
-              className="border border-gray-300 px-2 py-2 mr-2 rounded-lg"
+              className="border border-ui-border-strong px-2 py-2 mr-2 rounded-lg"
               type="number"
               placeholder="Type difficulty"
             />

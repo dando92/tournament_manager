@@ -30,7 +30,7 @@ export default function RenamePhaseModal({ open, currentName, onClose, onRename 
       <div className="w-full">
         <h3 className="mb-1">Name</h3>
         <input
-          className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+          className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
           type="text"
           value={name}
           onChange={(event) => setName(event.target.value)}

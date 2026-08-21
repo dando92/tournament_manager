@@ -50,7 +50,7 @@ export default function TournamentLobbiesPage() {
       >
         <div className="flex flex-col gap-3">
           <input
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
             placeholder="Lobby name"
             value={spectateModal.lobbyName}
             onChange={(event) =>
@@ -61,7 +61,7 @@ export default function TournamentLobbiesPage() {
             }
           />
           <input
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
             placeholder="Password (optional)"
             type="password"
             value={spectateModal.password}

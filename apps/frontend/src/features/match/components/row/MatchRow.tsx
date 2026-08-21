@@ -78,9 +78,9 @@ export default function MatchRow({
     <tr
       className={`border-t transition-colors ${
         isRouteSelected
-          ? "border-emerald-200 bg-emerald-100"
-          : "border-gray-100 odd:bg-white even:bg-gray-50"
-      } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-emerald-50" : ""}`}
+          ? "border-state-done/30 bg-state-done/10"
+          : "border-ui-border odd:bg-ui-surface even:bg-ui-raised"
+      } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-state-done/10" : ""}`}
       onClick={() => {
         if (canToggleRoute && routeTargetMatchId) {
           onToggleRouteHighlight?.();
@@ -104,7 +104,7 @@ export default function MatchRow({
         <div className="flex items-center gap-2 relative">
           <div className="flex items-center gap-2 min-w-0">
             <span
-              className={`font-medium truncate ${hasRoute ? "text-emerald-700" : "text-gray-800"}`}
+              className={`font-medium truncate ${hasRoute ? "text-ui-text-soft" : "text-ui-text"}`}
               title={routeTargetLabel}
             >
               {player.playerName}
@@ -120,13 +120,13 @@ export default function MatchRow({
 
         if (playerDisabled) {
           return (
-            <td key={round.song.id} className="px-1 sm:px-3 py-2 bg-gray-100 text-center">
+            <td key={round.song.id} className="px-1 sm:px-3 py-2 bg-ui-selected text-center">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-xs text-gray-500 italic">disabled</span>
+                <span className="text-xs text-ui-text-mute italic">disabled</span>
                 {controls && (
                   <button
                     onClick={() => onDeleteStanding(player.id, round.song.id)}
-                    className="text-xs text-brand-700 hover:underline"
+                    className="text-xs text-ui-text-soft hover:underline"
                   >
                     reactivate
                   </button>
@@ -148,7 +148,7 @@ export default function MatchRow({
                   <FontAwesomeIcon icon={faPlus} />
                 </button>
               ) : (
-                <span className="text-gray-300">—</span>
+                <span className="text-ui-border-strong">—</span>
               )}
             </td>
           );
@@ -157,7 +157,7 @@ export default function MatchRow({
         return (
           <td
             key={round.song.id}
-            className={`px-1 sm:px-3 py-2 text-center ${scoreData.isFailed ? "bg-red-50" : ""}`}
+            className={`px-1 sm:px-3 py-2 text-center ${scoreData.isFailed ? "bg-state-failed/10" : ""}`}
           >
             <div
               className={`relative inline-flex flex-col items-center gap-0.5 ${
@@ -182,14 +182,14 @@ export default function MatchRow({
               }}
             >
               <div className="flex min-h-7 items-center justify-center gap-1.5">
-                <span className={`font-bold text-base ${scoreData.isFailed ? "text-red-600" : "text-gray-800"}`}>
+                <span className={`font-bold text-base ${scoreData.isFailed ? "text-state-failed" : "text-ui-text"}`}>
                   {scoreData.percentage.toFixed(2)}%
                 </span>
                 {scoreData.isFailed && (
-                  <span className="text-xs bg-red-100 text-red-600 px-1 rounded font-semibold">F</span>
+                  <span className="text-xs bg-state-failed/10 text-state-failed px-1 rounded font-semibold">F</span>
                 )}
                 {controls && (
-                  <FontAwesomeIcon icon={faChevronDown} className="sm:hidden text-xs text-gray-500" />
+                  <FontAwesomeIcon icon={faChevronDown} className="sm:hidden text-xs text-ui-text-mute" />
                 )}
                 {controls && (
                   <button
@@ -208,14 +208,14 @@ export default function MatchRow({
                       );
                     }}
                     title="Edit score"
-                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center text-brand-600 hover:text-brand-800"
+                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center text-ui-text-mute hover:text-ui-text"
                   >
                     <FontAwesomeIcon icon={faPencil} className="text-sm" />
                   </button>
                 )}
               </div>
               <div className="flex min-h-6 items-center justify-center gap-1.5">
-                <span className="text-xs text-gray-500">{scoreData.score} pts</span>
+                <span className="text-xs text-ui-text-mute">{scoreData.score} pts</span>
                 {controls && (
                   <DeleteConfirmButton
                     onConfirm={() => onDeleteStanding(player.id, round.song.id)}
@@ -232,8 +232,8 @@ export default function MatchRow({
         );
       })}
 
-      <td className="px-1 sm:px-3 py-2 text-center border-l border-gray-100">
-        <span className="font-bold text-gray-700">{totalPoints}</span>
+      <td className="px-1 sm:px-3 py-2 text-center border-l border-ui-border">
+        <span className="font-bold text-ui-text-soft">{totalPoints}</span>
       </td>
       {mobileScoreMenu && (
         <MobileScoreActionsMenu

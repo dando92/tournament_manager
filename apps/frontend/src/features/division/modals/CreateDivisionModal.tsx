@@ -37,7 +37,7 @@ export default function CreateDivisionModal({
         <div>
           <h3 className="mb-1">Name</h3>
           <input
-            className="w-full border border-gray-300 px-2 py-2 rounded-lg"
+            className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}

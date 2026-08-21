@@ -195,23 +195,23 @@ export default function TournamentConfigurationPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading configuration...</p>;
+    return <p className="text-sm text-ui-text-mute">Loading configuration...</p>;
   }
 
   const isClosed = configuration?.status === "closed";
 
   return (
     <div className="max-w-3xl">
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-ui-border bg-ui-surface p-5 shadow-sm">
         <div className="mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Configuration</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-bold text-ui-text">Configuration</h2>
+          <p className="text-sm text-ui-text-mute">
             Tournament-wide integration and match defaults.
           </p>
         </div>
 
         {isClosed && (
-          <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mb-5 rounded-lg border border-state-pending/30 bg-state-pending/10 px-4 py-3 text-sm text-ui-text-soft">
             This tournament is closed and read-only. Reopen it before making
             changes.
           </div>
@@ -219,7 +219,7 @@ export default function TournamentConfigurationPage() {
 
         <div className="grid gap-4">
           <label className="grid gap-1">
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-ui-text">
               Tournament name
             </span>
             <input
@@ -228,14 +228,14 @@ export default function TournamentConfigurationPage() {
               onChange={(event) =>
                 setForm((current) => ({ ...current, name: event.target.value }))
               }
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               placeholder="Tournament name"
               disabled={isClosed}
             />
           </label>
 
           <label className="grid gap-1">
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-ui-text">
               SyncStart URL
             </span>
             <input
@@ -247,14 +247,14 @@ export default function TournamentConfigurationPage() {
                   syncstartUrl: event.target.value,
                 }))
               }
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               placeholder="ws://syncservice.groovestats.com:1337"
               disabled={isClosed}
             />
           </label>
 
           <label className="grid gap-1">
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-ui-text">
               start.gg API key
             </span>
             <input
@@ -266,7 +266,7 @@ export default function TournamentConfigurationPage() {
                   startggApiKey: event.target.value,
                 }))
               }
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               placeholder="Paste tournament start.gg API key"
               autoComplete="off"
               disabled={isClosed}
@@ -274,7 +274,7 @@ export default function TournamentConfigurationPage() {
           </label>
 
           <label className="grid gap-1">
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-ui-text">
               Available setups count
             </span>
             <input
@@ -288,13 +288,13 @@ export default function TournamentConfigurationPage() {
                   availableSetupsCount: event.target.value,
                 }))
               }
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               disabled={isClosed}
             />
           </label>
 
           <label className="grid gap-1">
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-ui-text">
               Default match scoring system
             </span>
             <select
@@ -305,7 +305,7 @@ export default function TournamentConfigurationPage() {
                   defaultScoringSystem: event.target.value,
                 }))
               }
-              className="rounded border border-gray-300 px-3 py-2 text-sm"
+              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               disabled={isClosed}
             >
               {scoringSystems.map((system) => (

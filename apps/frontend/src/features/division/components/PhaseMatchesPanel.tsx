@@ -81,7 +81,7 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
             onCreate={onCreate}
             phaseName={phaseName}
           />
-          <p className="py-8 text-center text-sm text-gray-500">
+          <p className="py-8 text-center text-sm text-ui-text-mute">
             {props.controls ? "No pool yet. Create one to add matches." : "No pool yet."}
           </p>
         </>
@@ -131,7 +131,7 @@ function SelectedPhaseGroupPanel({
         rightSlot={
           <>
             {bracketTypeLabel && (
-              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">{bracketTypeLabel}</span>
+              <span className="rounded-full bg-ui-selected px-2 py-0.5 text-xs text-ui-text-mute">{bracketTypeLabel}</span>
             )}
             <PhaseGroupViewSelect
               mode={viewMode}

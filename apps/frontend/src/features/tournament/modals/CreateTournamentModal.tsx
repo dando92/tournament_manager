@@ -77,11 +77,11 @@ export default function CreateTournamentModal({ open, onClose, onCreated }: Prop
             required
           />
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ui-text-mute">
           Syncstart, start.gg and scoring settings are configured after creation in the
           tournament configuration page.
         </p>
-        {apiError && <p className="text-red-600 text-sm">{apiError}</p>}
+        {apiError && <p className="text-state-failed text-sm">{apiError}</p>}
       </form>
     </BaseModal>
   );

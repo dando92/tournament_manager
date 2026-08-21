@@ -8,7 +8,7 @@ export default function PlayersWarning({ warnings }: PlayersWarningProps) {
   }
 
   return (
-    <div className="bg-amber-50 border border-amber-300 rounded px-3 py-2 text-sm text-amber-800">
+    <div className="bg-state-pending/10 border border-state-pending/30 rounded px-3 py-2 text-sm text-ui-text-soft">
       The following players already existed and were linked:{" "}
       <span className="font-semibold">{warnings.join(", ")}</span>
     </div>

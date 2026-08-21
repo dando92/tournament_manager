@@ -79,9 +79,9 @@ export default function AdvancementRulesEditor({
   };
 
   return (
-    <div className="mt-4 rounded border border-gray-200 bg-gray-50 p-3">
+    <div className="mt-4 rounded border border-ui-border bg-ui-raised p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h5 className="text-sm font-semibold text-gray-700">Advancement rules</h5>
+        <h5 className="text-sm font-semibold text-ui-text-soft">Advancement rules</h5>
         <div className="flex items-center gap-2">
           <button type="button" className={`${btnSecondary} text-xs`} onClick={addRule} disabled={saving}>
             Add rule
@@ -96,7 +96,7 @@ export default function AdvancementRulesEditor({
       </div>
 
       {draftRules.length === 0 ? (
-        <p className="text-sm text-gray-500">No advancement rules configured.</p>
+        <p className="text-sm text-ui-text-mute">No advancement rules configured.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {draftRules.map((rule, index) => {
@@ -110,7 +110,7 @@ export default function AdvancementRulesEditor({
                   onChange={(event) =>
                     updateRule(index, { ...rule, sourcePlacement: Number(event.target.value) })
                   }
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="rounded border border-ui-border-strong px-2 py-1 text-sm"
                   aria-label="Source placement"
                 />
                 <select
@@ -123,7 +123,7 @@ export default function AdvancementRulesEditor({
                       targetId: getOptions(targetKind, matchOptions, phaseGroupOptions)[0]?.id ?? 0,
                     });
                   }}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="rounded border border-ui-border-strong px-2 py-1 text-sm"
                   aria-label="Target type"
                 >
                   <option value="match">{targetKindLabels.match}</option>
@@ -132,7 +132,7 @@ export default function AdvancementRulesEditor({
                 <select
                   value={rule.targetId}
                   onChange={(event) => updateRule(index, { ...rule, targetId: Number(event.target.value) })}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="rounded border border-ui-border-strong px-2 py-1 text-sm"
                   aria-label="Target"
                 >
                   <option value={0}>Select target</option>
@@ -147,12 +147,12 @@ export default function AdvancementRulesEditor({
                   min={1}
                   value={rule.targetSlot}
                   onChange={(event) => updateRule(index, { ...rule, targetSlot: Number(event.target.value) })}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="rounded border border-ui-border-strong px-2 py-1 text-sm"
                   aria-label="Target slot"
                 />
                 <button
                   type="button"
-                  className="text-sm text-red-600"
+                  className="text-sm text-state-failed"
                   onClick={() => onChange(draftRules.filter((_, currentIndex) => currentIndex !== index))}
                   aria-label="Delete advancement rule"
                 >
@@ -165,7 +165,7 @@ export default function AdvancementRulesEditor({
       )}
 
       {errors.length > 0 && (
-        <div className="mt-3 flex flex-col gap-1 text-xs text-red-600">
+        <div className="mt-3 flex flex-col gap-1 text-xs text-state-failed">
           {errors.map((error) => (
             <p key={error}>{error}</p>
           ))}

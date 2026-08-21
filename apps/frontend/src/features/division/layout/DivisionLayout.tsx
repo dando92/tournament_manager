@@ -23,16 +23,16 @@ export default function DivisionLayout({ context }: DivisionLayoutProps) {
         <button
           type="button"
           onClick={() => navigate(`/tournament/${tournamentId}/overview`)}
-          className="text-gray-500 hover:text-gray-600 flex items-center gap-1.5 text-sm"
+          className="text-ui-text-mute hover:text-ui-text-soft flex items-center gap-1.5 text-sm"
         >
           <FontAwesomeIcon icon={faChevronLeft} className="text-xs" />
           Back to overview
         </button>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-semibold text-gray-700">{division.name}</span>
+        <span className="text-ui-border-strong">/</span>
+        <span className="text-sm font-semibold text-ui-text-soft">{division.name}</span>
       </div>
 
-      <div className="flex items-end border-b border-gray-200 overflow-x-auto">
+      <div className="flex items-end border-b border-ui-border overflow-x-auto">
         {DIVISION_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -40,8 +40,8 @@ export default function DivisionLayout({ context }: DivisionLayoutProps) {
             onClick={() => navigate(`/tournament/${tournamentId}/division/${divisionId}/${tab.key}`)}
             className={`px-4 py-2 text-sm border-b-2 shrink-0 transition-colors ${
               activeTab === tab.key
-                ? "border-brand-700 text-brand-700 font-semibold"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-ui-border-strong text-ui-text font-semibold"
+                : "border-transparent text-ui-text-mute hover:text-ui-text-soft hover:border-ui-border-strong"
             }`}
           >
             {tab.label}

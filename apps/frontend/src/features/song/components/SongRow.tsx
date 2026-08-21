@@ -19,15 +19,15 @@ export default function SongRow({ song, canEdit, onDelete }: Props) {
   const label = song.artist ? `${song.artist} - ${song.title}` : song.title;
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors">
+    <div className="border-b border-ui-border last:border-0">
+      <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-ui-raised transition-colors">
         <span
           className={`${difficultyColor(song.difficulty)} text-white text-xs font-bold w-7 h-7 flex items-center justify-center rounded shrink-0`}
         >
           {song.difficulty}
         </span>
 
-        <span className="flex-1 text-sm text-gray-800 truncate">{label}</span>
+        <span className="flex-1 text-sm text-ui-text truncate">{label}</span>
 
         {canEdit && (
           <DeleteConfirmButton

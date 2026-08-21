@@ -72,32 +72,32 @@ export default function TournamentHeaderSongsManageMenu({
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={closeMenu} />
-            <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded shadow-lg border border-gray-200 min-w-[180px]">
+            <div className="absolute right-0 top-full mt-1 z-20 bg-ui-surface rounded shadow-lg border border-ui-border min-w-[180px]">
               <button
                 type="button"
                 disabled={!selectedGroupName || loadingSongsMeta}
                 onClick={openAddInGroup}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faPlus} className="text-brand-700" />
+                <FontAwesomeIcon icon={faPlus} className="text-ui-text-mute" />
                 Add song
               </button>
               <button
                 type="button"
                 disabled={loadingSongsMeta}
                 onClick={openAddInNewGroup}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faLayerGroup} className="text-brand-700" />
+                <FontAwesomeIcon icon={faLayerGroup} className="text-ui-text-mute" />
                 New pack
               </button>
               <button
                 type="button"
                 disabled={loadingSongsMeta}
                 onClick={triggerImport}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faFileImport} className="text-brand-700" />
+                <FontAwesomeIcon icon={faFileImport} className="text-ui-text-mute" />
                 Import
               </button>
             </div>

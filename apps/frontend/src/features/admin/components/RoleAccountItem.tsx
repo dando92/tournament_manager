@@ -7,7 +7,7 @@ type Props = {
 
 export default function RoleAccountItem({ account, onFlagChange }: Props) {
   return (
-    <div className="flex flex-row items-center justify-between bg-gray-50 px-5 py-4 rounded-lg">
+    <div className="flex flex-row items-center justify-between bg-ui-raised px-5 py-4 rounded-lg">
       <div>
         <p className="font-semibold">{account.username}</p>
       </div>

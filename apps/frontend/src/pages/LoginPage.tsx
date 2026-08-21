@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto mt-16">
-      <h1 className="text-3xl font-bold text-brand-700 mb-6">Login</h1>
+      <h1 className="text-3xl font-bold text-ui-text mb-6">Login</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Username</label>
@@ -54,12 +54,12 @@ export default function LoginPage() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
             autoComplete="username"
             minLength={3}
             required
           />
-          {usernameError && <p className="text-red-600 text-sm mt-1">{usernameError}</p>}
+          {usernameError && <p className="text-state-failed text-sm mt-1">{usernameError}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
@@ -67,14 +67,14 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
             autoComplete="current-password"
             minLength={6}
             required
           />
-          {passwordError && <p className="text-red-600 text-sm mt-1">{passwordError}</p>}
+          {passwordError && <p className="text-state-failed text-sm mt-1">{passwordError}</p>}
         </div>
-        {apiError && <p className="text-red-600 text-sm">{apiError}</p>}
+        {apiError && <p className="text-state-failed text-sm">{apiError}</p>}
         <button
           type="submit"
           disabled={loading}
@@ -83,9 +83,9 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-gray-600">
+      <p className="mt-4 text-sm text-ui-text-soft">
         Don't have an account?{" "}
-        <Link to="/register" className="text-brand-700 hover:underline">
+        <Link to="/register" className="text-ui-text-soft hover:underline">
           Register
         </Link>
       </p>

@@ -35,16 +35,16 @@ export default function PhaseBreadcrumb({
           <button
             type="button"
             onClick={() => onSelect("all")}
-            className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-brand-700 transition-colors hover:bg-brand-50"
+            className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-ui-text-soft transition-colors hover:bg-ui-selected"
           >
             <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
             All phases
           </button>
-          <span className="text-xs text-gray-300">/</span>
+          <span className="text-xs text-ui-border-strong">/</span>
         </>
       )}
       <PhaseMenu phases={phases} selectedPhase={selectedPhase} onSelect={onSelect} onCreate={onCreate} />
-      <span className="text-xs text-gray-500">
+      <span className="text-xs text-ui-text-mute">
         {selectedPhase
           ? matchCountLabel(phaseMatchCount(selectedPhase))
           : phases.length > 0 &&
@@ -76,7 +76,7 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
         type="button"
         title="Switch phase"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-full border border-brand-700 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
+        className="flex items-center gap-1.5 rounded-full border border-ui-border-strong bg-ui-selected px-3 py-1 text-xs font-medium text-ui-text"
       >
         {selectedPhase?.name ?? "Summary"}
         <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
@@ -84,7 +84,7 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white py-1 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded border border-ui-border bg-ui-surface py-1 shadow-lg">
             <MenuItem label="Summary" hint="All phases" selected={!selectedPhase} onSelect={() => choose("all")} />
             {phases.map((phase) => (
               <MenuItem
@@ -102,7 +102,7 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
                   setOpen(false);
                   onCreate();
                 }}
-                className="mt-1 flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-left text-sm text-brand-700 hover:bg-brand-50"
+                className="mt-1 flex w-full items-center gap-2 border-t border-ui-border px-4 py-2.5 text-left text-sm text-ui-text-soft hover:bg-ui-selected"
               >
                 <FontAwesomeIcon icon={faPlus} />
                 New phase
@@ -128,11 +128,11 @@ function MenuItem({ label, hint, selected, onSelect }: MenuItemProps) {
       type="button"
       onClick={onSelect}
       className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm ${
-        selected ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-50"
+        selected ? "bg-ui-selected text-ui-text" : "text-ui-text-soft hover:bg-ui-raised"
       }`}
     >
       {label}
-      <span className="text-xs text-gray-500">{hint}</span>
+      <span className="text-xs text-ui-text-mute">{hint}</span>
     </button>
   );
 }

@@ -55,16 +55,16 @@ export default function HomePage() {
       <div className="flex flex-col gap-8">
         {/* Hero */}
         <div className="flex flex-col items-center gap-4 py-6">
-          <h1 className="text-3xl font-black text-gray-900">Tournament Manager</h1>
+          <h1 className="text-3xl font-black text-ui-text">Tournament Manager</h1>
         </div>
 
         {/* All tournaments */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-800">All events</h2>
+            <h2 className="text-lg font-bold text-ui-text">All events</h2>
             <button
               onClick={() => setSearchModalOpen(true)}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+              className="flex items-center gap-2 text-sm text-ui-text-mute hover:text-ui-text-soft"
             >
               <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xs" />
               Find tournaments
@@ -74,11 +74,11 @@ export default function HomePage() {
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="rounded-lg overflow-hidden border border-gray-200 animate-pulse">
-                  <div className="h-32 bg-gray-200" />
+                <div key={i} className="rounded-lg overflow-hidden border border-ui-border animate-pulse">
+                  <div className="h-32 bg-ui-selected" />
                   <div className="p-3 flex flex-col gap-2">
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                    <div className="h-3 bg-ui-selected rounded w-3/4" />
+                    <div className="h-3 bg-ui-selected rounded w-1/2" />
                   </div>
                 </div>
               ))}
@@ -86,7 +86,7 @@ export default function HomePage() {
           )}
 
           {!isLoading && tournaments.length === 0 && (
-            <p className="text-gray-500 text-sm italic">No tournaments yet.</p>
+            <p className="text-ui-text-mute text-sm italic">No tournaments yet.</p>
           )}
 
           {!isLoading && tournaments.length > 0 && (

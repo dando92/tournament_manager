@@ -19,10 +19,10 @@ export default function LiveScoreCard({
   // the judgment colouring with it.
   const cardClass = player.isCompleted
     ? player.isFailed === true
-      ? "bg-red-100 text-red-900"
-      : "bg-emerald-100 text-emerald-900"
+      ? "bg-state-failed/10 text-state-failed"
+      : "bg-state-done/10 text-ui-text"
     : player.isFailed === true
-      ? "bg-live-failed text-white ring-2 ring-red-600"
+      ? "bg-live-failed text-white ring-2 ring-state-failed"
       : "bg-live-screen text-white";
 
   return (
@@ -37,7 +37,7 @@ export default function LiveScoreCard({
         </span>
         <div className="flex items-baseline gap-2">
           {player.exScore != null && (
-            <span className={`font-bold text-xl ${player.isCompleted ? "text-inherit" : "text-brand-300"}`}>{player.exScore.toFixed(2)}%</span>
+            <span className={`font-bold text-xl ${player.isCompleted ? "text-inherit" : "text-ui-text-mute"}`}>{player.exScore.toFixed(2)}%</span>
           )}
           <span className={`font-bold ${player.exScore != null ? `text-sm ${player.isCompleted ? "opacity-80" : "text-white/70"}` : "text-xl"}`}>
             {player.score.toFixed(2)}%

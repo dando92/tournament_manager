@@ -3,7 +3,8 @@ import { PhaseGroup } from "@/features/division/types/Phase";
 import { Entrant, entrantPlayer } from "@/features/entrant/types/Entrant";
 import { AdvancementRule, Match } from "@/features/match/types/Match";
 import { toOrdinal } from "@/shared/utils";
-import { getActiveLabel, getCommitBadgeClass, getCommitBadgeLabel, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { commitBadgeClass, getActiveLabel, getCommitBadgeLabel, getCommitStatus, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import StatusIcon from "@/shared/components/ui/StatusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
 
 type MatchBracketTreeProps = {
@@ -215,31 +216,32 @@ function MatchBracketCard({
           onSelect();
         }
       }}
-      className={`relative block w-[220px] rounded-md border bg-white text-left shadow-sm transition-colors ${
+      className={`relative block w-[220px] rounded-md border bg-ui-surface text-left shadow-sm transition-colors ${
         selected
-          ? "border-brand-400 ring-2 ring-brand-300"
-          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50"
+          ? "border-ui-border-strong ring-2 ring-ui-border-strong"
+          : "border-ui-border hover:border-ui-border hover:bg-ui-raised"
       }`}
     >
-      <div className="border-b border-gray-100 px-2.5 py-1.5">
+      <div className="border-b border-ui-border px-2.5 py-1.5">
         <div className="flex items-center gap-2">
           <StatusDot on={match.active} label={getActiveLabel(match.active)} />
-          <span className="truncate text-xs font-semibold text-gray-800">{match.name}</span>
-          <span className={`ml-auto shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getCommitBadgeClass(commitState)}`}>
+          <span className="truncate text-xs font-semibold text-ui-text">{match.name}</span>
+          <span className={`ml-auto shrink-0 ${commitBadgeClass}`}>
+            <StatusIcon status={getCommitStatus(commitState)} className="h-3 w-3" />
             {getCommitBadgeLabel(commitState)}
           </span>
         </div>
       </div>
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-ui-border">
         {incomingSourceRules.map((rule) => (
           <div
             key={`${rule.sourceKind}-${rule.sourceId}-${rule.sourcePlacement}-${rule.targetSlot}`}
-            className="grid grid-cols-[1fr_34px] items-center bg-gray-50"
+            className="grid grid-cols-[1fr_34px] items-center bg-ui-raised"
           >
-            <span className="truncate px-2.5 py-1.5 text-xs font-medium text-gray-500">
+            <span className="truncate px-2.5 py-1.5 text-xs font-medium text-ui-text-mute">
               {getSourceRuleLabel(rule, allMatches, phaseGroups)}
             </span>
-            <span className="h-full px-2 py-1.5 text-center text-xs font-semibold text-gray-500">
+            <span className="h-full px-2 py-1.5 text-center text-xs font-semibold text-ui-text-mute">
               -
             </span>
           </div>
@@ -250,9 +252,9 @@ function MatchBracketCard({
           const didAdvance = player ? advancedPlayerIds.has(player.id) : false;
           return (
             <div key={entrant.id} className="grid grid-cols-[1fr_34px] items-center">
-              <span className="truncate px-2.5 py-1.5 text-xs font-medium text-gray-800">{entrant.name}</span>
-              <span className={`h-full px-2 py-1.5 text-center text-xs font-semibold text-white ${
-                didAdvance ? "bg-emerald-600" : "bg-gray-700"
+              <span className="truncate px-2.5 py-1.5 text-xs font-medium text-ui-text">{entrant.name}</span>
+              <span className={`h-full px-2 py-1.5 text-center text-xs font-semibold ${
+                didAdvance ? "bg-state-done text-ui-surface" : "bg-ui-selected text-ui-text-soft"
               }`}>
                 {points ?? "-"}
               </span>
@@ -260,7 +262,7 @@ function MatchBracketCard({
           );
         })}
         {!hasRows && (
-          <div className="px-2.5 py-1.5 text-xs text-gray-500">No data available</div>
+          <div className="px-2.5 py-1.5 text-xs text-ui-text-mute">No data available</div>
         )}
         {Array.from({ length: Math.max(0, rowCount - (hasRows ? incomingSourceRules.length + sortedEntrants.length : 1)) }).map((_, index) => (
           <div key={`blank-${index}`} className="px-2.5 py-1.5 text-xs text-transparent">-</div>
@@ -308,7 +310,7 @@ export default function MatchBracketTree({
   return (
     <div className="space-y-4" onClick={handleBackgroundClick}>
       {positionedMatches.length > 0 && (
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-gray-50 p-4">
+        <div className="overflow-x-auto rounded-md border border-ui-border bg-ui-raised p-4">
           <div className="relative" style={{ width, height }}>
             <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
               {edges.map((edge) => {
@@ -357,8 +359,8 @@ export default function MatchBracketTree({
       )}
 
       {unlinkedMatches.length > 0 && (
-        <div className="rounded-md border border-gray-200 bg-white p-3">
-          <div className="mb-2 text-xs font-semibold text-gray-500">Unlinked matches</div>
+        <div className="rounded-md border border-ui-border bg-ui-surface p-3">
+          <div className="mb-2 text-xs font-semibold text-ui-text-mute">Unlinked matches</div>
           <div className="flex flex-wrap gap-3">
             {unlinkedMatches.map((match) => (
               <MatchBracketCard
