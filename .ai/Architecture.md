@@ -34,6 +34,7 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 - Creates one `TournamentSyncStartRuntime` per configured tournament. Each runtime binds `tournamentId`, its protocol client, and its replaceable lobby catalog; the replica-local registry only creates, locates, replaces, and shuts down these owners.
 - Within the protocol client, `SyncStartServerSession` owns server connection and search correlation, while each `LobbySession` owns its identity, handshake, pending connection, state interpretation, and lobby WebSocket lifecycle.
 - Exposes internal HTTP command and snapshot endpoints to the API and Realtime services.
+- Reconstructs its replica-local runtimes from the API when it starts, so a SyncStart-only restart no longer waits for an API restart or an operator action. Reconciliation retries in the background instead of blocking readiness, and never replaces a runtime that already exists.
 - Submits completed songs to the API over internal HTTP.
 - Publishes replaceable live telemetry through Redis Pub/Sub.
 - Runs as a single state-owning replica. A future multi-replica deployment must assign each `tournamentId` to exactly one logical owner and route all commands for that tournament to it; the assignment, lease, and failover mechanism remains deferred until explicitly required.

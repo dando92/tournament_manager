@@ -74,6 +74,20 @@ describe("TournamentSyncStartRegistry", () => {
       .toThrow("No SyncStart runtime for tournament=8");
   });
 
+  it("reconstructs only tournaments without a live runtime", () => {
+    const factory = jest.fn(() => client());
+    const registry = new TournamentSyncStartRegistry(
+      {} as any,
+      {} as any,
+      factory as any,
+    );
+
+    expect(registry.ensureConfigured(7, "ws://syncstart")).toBe(true);
+    expect(registry.ensureConfigured(7, "ws://replacement")).toBe(false);
+    expect(registry.ensureConfigured(8, "")).toBe(false);
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
   it("closes replaced runtimes and every runtime during shutdown", () => {
     const first = client();
     const second = client();

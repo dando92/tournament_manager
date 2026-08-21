@@ -2,13 +2,21 @@
 
 ## Current Position
 
-- Last updated: 2026-08-20.
+- Last updated: 2026-08-21.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
 - State: Migration complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: none; future work follows the normal product backlog and the deferred questions in [FunctionalQuestions.md](FunctionalQuestions.md).
 
 ## Completed Checkpoints
+
+### SyncStart startup reconciliation
+
+- Made SyncStart reconstruct its own tournament runtimes at startup through `TournamentBootstrapService`, which consumes the previously unused `GET /internal/syncstart/tournaments` endpoint on the API.
+- Closed the restart gap: `TournamentSyncStartBootstrap` only pushes configuration when the API starts, so a SyncStart-only restart left every configured tournament without a runtime until an operator saved or reopened the tournament.
+- Kept reconciliation off the readiness path. The API is still starting while SyncStart becomes healthy in the local topology, so a failed attempt retries in the background with an unreferenced timer that stops on shutdown.
+- Added `TournamentSyncStartRegistry.ensureConfigured`, which creates a runtime only for a tournament that has none, so reconciliation cannot tear down a live protocol connection.
+- Verification passed: `npm run lint --workspace=@tournament-manager/syncstart`, `npm run test --workspace=@tournament-manager/syncstart -- --runInBand` (7 suites, 25 tests), `npm run build --workspace=@tournament-manager/syncstart`, and `npm run check:architecture`.
 
 ### Authentication unification and administrator bootstrap
 

@@ -34,6 +34,13 @@ export class TournamentSyncStartRegistry implements OnApplicationShutdown {
     );
   }
 
+  /** Creates a runtime only when the tournament has none, keeping live connections. */
+  ensureConfigured(tournamentId: number, syncstartUrl: string): boolean {
+    if (this.runtimes.has(tournamentId)) return false;
+    this.configure(tournamentId, syncstartUrl);
+    return this.runtimes.has(tournamentId);
+  }
+
   close(tournamentId: number): void {
     this.runtimes.get(tournamentId)?.close();
     this.runtimes.delete(tournamentId);

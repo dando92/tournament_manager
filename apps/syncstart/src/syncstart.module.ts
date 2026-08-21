@@ -10,6 +10,7 @@ import { InternalController } from "./internal.controller";
 import { SyncStartEventsPublisher } from "./syncstart-events.publisher";
 import { CompletedSongSubmitter } from "./completed-song-submitter";
 import { TournamentSyncStartRegistry } from "./tournament-syncstart-registry";
+import { TournamentBootstrapService } from "./tournament-bootstrap.service";
 import { syncStartClientFactoryProvider } from "./syncstart-client.factory";
 import { RedisHealthService } from "./redis-health.service";
 
@@ -29,6 +30,7 @@ import { RedisHealthService } from "./redis-health.service";
     SyncStartEventsPublisher,
     syncStartClientFactoryProvider,
     TournamentSyncStartRegistry,
+    TournamentBootstrapService,
     RedisHealthService,
   ],
 })
