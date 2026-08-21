@@ -140,35 +140,6 @@ export class PhaseGroupService {
         await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
     }
 
-    async updateSeeding(phaseGroupId: number, entrantIds: number[]): Promise<void> {
-        const phaseGroup = await this.phaseGroupRepository.findOne({
-            where: { id: phaseGroupId },
-            relations: {
-                entrants: {
-                    entrant: true,
-                },
-            },
-        });
-        if (!phaseGroup) throw new NotFoundException(`PhaseGroup with ID ${phaseGroupId} not found`);
-
-        const existingByEntrantId = new Map((phaseGroup.entrants ?? []).map((entry) => [entry.entrant.id, entry]));
-        for (const [index, entrantId] of entrantIds.entries()) {
-            let phaseGroupEntrant = existingByEntrantId.get(entrantId);
-            if (!phaseGroupEntrant) {
-                const entrant = await this.entrantRepository.findOneBy({ id: entrantId });
-                if (!entrant) throw new NotFoundException(`Entrant with ID ${entrantId} not found`);
-                phaseGroupEntrant = new PhaseGroupEntrant();
-                phaseGroupEntrant.phaseGroup = phaseGroup;
-                phaseGroupEntrant.entrant = entrant;
-                phaseGroupEntrant.status = 'active';
-            }
-            phaseGroupEntrant.seedNum = index + 1;
-            phaseGroupEntrant.slot = index + 1;
-            await this.phaseGroupEntrantRepository.save(phaseGroupEntrant);
-        }
-        await this.uiUpdateGateway.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
-    }
-
     async addEntrant(phaseGroupId: number, entrantId: number, slot?: number | null, sourceAdvancementRuleId?: number | null): Promise<void> {
         const phaseGroup = await this.phaseGroupRepository.findOneBy({ id: phaseGroupId });
         if (!phaseGroup) throw new NotFoundException(`PhaseGroup with ID ${phaseGroupId} not found`);
@@ -269,13 +240,23 @@ export class PhaseGroupService {
             changed = true;
         }
 
+        const addedEntrants = (
+            await Promise.all(
+                [...entrantIdsInMatches]
+                    .filter((entrantId) => !existingEntrantIds.has(entrantId))
+                    .map((entrantId) => this.entrantRepository.findOneBy({ id: entrantId })),
+            )
+        )
+            .filter((entrant): entrant is Entrant => Boolean(entrant))
+            // The division seeding decides the order entrants take their slots in the pool.
+            .sort(
+                (left, right) =>
+                    (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER)
+                    || left.name.localeCompare(right.name),
+            );
+
         let nextSlot = await this.getNextSlot(phaseGroupId);
-        for (const entrantId of entrantIdsInMatches) {
-            if (existingEntrantIds.has(entrantId)) continue;
-
-            const entrant = await this.entrantRepository.findOneBy({ id: entrantId });
-            if (!entrant) continue;
-
+        for (const entrant of addedEntrants) {
             const phaseGroupEntrant = new PhaseGroupEntrant();
             phaseGroupEntrant.phaseGroup = phaseGroup;
             phaseGroupEntrant.entrant = entrant;

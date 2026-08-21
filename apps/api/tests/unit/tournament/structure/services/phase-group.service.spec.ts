@@ -98,7 +98,7 @@ describe('PhaseGroupService.syncDerivedEntrants', () => {
       where: jest.fn().mockReturnThis(),
       getRawOne: jest.fn().mockResolvedValue({ max: 0 }),
     });
-    entrantRepository.findOneBy.mockImplementation(async ({ id }: { id: number }) => ({ id }));
+    entrantRepository.findOneBy.mockImplementation(async ({ id }: { id: number }) => ({ id, name: `Entrant ${id}`, seedNum: id }));
     phaseGroupEntrantRepository.save.mockImplementation(async (entry: unknown) => entry);
   });
 
@@ -110,6 +110,21 @@ describe('PhaseGroupService.syncDerivedEntrants', () => {
 
     expect(phaseGroupEntrantRepository.save).toHaveBeenCalledTimes(2);
     expect(phaseGroupEntrantRepository.remove).not.toHaveBeenCalled();
+  });
+
+  it('gives the slots in division seeding order', async () => {
+    phaseGroupRepository.findOne.mockResolvedValue(phaseGroupWithMatchEntrants([[21, 20]]));
+    phaseGroupEntrantRepository.find.mockResolvedValue([]);
+    entrantRepository.findOneBy.mockImplementation(async ({ id }: { id: number }) => ({
+      id,
+      name: `Entrant ${id}`,
+      seedNum: id === 21 ? 1 : 2,
+    }));
+
+    await service.syncDerivedEntrants(5);
+
+    const savedOrder = phaseGroupEntrantRepository.save.mock.calls.map(([entry]) => entry.entrant.id);
+    expect(savedOrder).toEqual([21, 20]);
   });
 
   it('removes an entrant that no match mentions any more', async () => {

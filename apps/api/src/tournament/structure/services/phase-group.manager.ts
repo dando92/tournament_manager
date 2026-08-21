@@ -1,10 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
-import {
-    CreatePhaseGroupDto,
-    UpdatePhaseGroupDto,
-    UpdatePhaseGroupSeedingDto,
-} from '@tournament/dtos';
+import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
 import { DivisionSummaryPhaseGroupDto } from '@tournament/structure/dtos/division-summary.dto';
 import { PhaseGroupService } from './phase-group.service';
 
@@ -43,18 +39,6 @@ export class PhaseGroupManager {
 
     async delete(id: number): Promise<void> {
         await this.phaseGroupService.delete(id);
-    }
-
-    async addEntrant(phaseGroupId: number, entrantId: number): Promise<void> {
-        await this.phaseGroupService.addEntrant(phaseGroupId, entrantId);
-    }
-
-    async removeEntrant(phaseGroupId: number, entrantId: number): Promise<void> {
-        await this.phaseGroupService.removeEntrant(phaseGroupId, entrantId);
-    }
-
-    async updateSeeding(phaseGroupId: number, dto: UpdatePhaseGroupSeedingDto): Promise<void> {
-        await this.phaseGroupService.updateSeeding(phaseGroupId, dto.entrantIds);
     }
 
     private toDto(phaseGroup: PhaseGroup): DivisionSummaryPhaseGroupDto {

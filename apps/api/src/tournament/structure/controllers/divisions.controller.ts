@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
 import { Division, Entrant } from '@tournament-manager/persistence';
-import { CreateDivisionDto, DivisionStandingRowDto, DivisionSummaryDto, GenerateDivisionBracketDto, UpdateDivisionDto } from '@tournament/dtos';
+import { CreateDivisionDto, DivisionStandingRowDto, DivisionSummaryDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
 import { DivisionManager } from '../services/division.manager';
 import { DivisionService } from '../services/division.service';
 import { EntrantService } from '@tournament/services/entrant.service';
@@ -67,6 +67,15 @@ export class DivisionsController {
     @Get(':id/entrants')
     async getEntrants(@Param('id') id: number): Promise<Entrant[]> {
         return this.divisionService.getEntrants(id);
+    }
+
+    @Patch(':id/entrants/seeding')
+    @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
+    async updateSeeding(
+        @Param('id') id: number,
+        @Body(new ValidationPipe()) dto: UpdateDivisionSeedingDto,
+    ): Promise<void> {
+        return this.divisionService.updateSeeding(Number(id), dto.entrantIds);
     }
 
     @Get(':id/available-participants')

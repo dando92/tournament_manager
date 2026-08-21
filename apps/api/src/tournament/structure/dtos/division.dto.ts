@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Tournament } from '@tournament-manager/persistence';
@@ -54,3 +54,9 @@ export class GenerateDivisionBracketDto {
   playerPerMatch?: number;
 }
 
+
+export class UpdateDivisionSeedingDto {
+  @IsArray()
+  @IsNumber({}, { each: true })
+  entrantIds: number[];
+}

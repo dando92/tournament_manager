@@ -1,4 +1,4 @@
-import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class CreatePhaseGroupDto {
   @IsOptional()
@@ -30,11 +30,5 @@ export class UpdatePhaseGroupDto {
   @IsOptional()
   @IsString()
   state?: string;
-}
-
-export class UpdatePhaseGroupSeedingDto {
-  @IsArray()
-  @IsNumber({}, { each: true })
-  entrantIds: number[];
 }
 

@@ -12,6 +12,8 @@ export class DivisionService {
         private readonly divisionRepository: Repository<Division>,
         @InjectRepository(Tournament)
         private readonly tournamentRepository: Repository<Tournament>,
+        @InjectRepository(Entrant)
+        private readonly entrantRepository: Repository<Entrant>,
         private readonly uiUpdateGateway: UiUpdatePublisher,
     ) {}
 
@@ -254,7 +256,30 @@ export class DivisionService {
     async getEntrants(id: number): Promise<Entrant[]> {
         const division = await this.findEntrantsOnly(id);
         if (!division) throw new NotFoundException(`Division ${id} not found`);
-        return division.entrants ?? [];
+        return this.sortBySeed(division.entrants ?? []);
+    }
+
+    async updateSeeding(id: number, entrantIds: number[]): Promise<void> {
+        const division = await this.findEntrantsOnly(id);
+        if (!division) throw new NotFoundException(`Division ${id} not found`);
+
+        const entrantsById = new Map((division.entrants ?? []).map((entrant) => [entrant.id, entrant]));
+        for (const [index, entrantId] of entrantIds.entries()) {
+            const entrant = entrantsById.get(entrantId);
+            if (!entrant) throw new NotFoundException(`Entrant ${entrantId} does not belong to division ${id}`);
+            entrant.seedNum = index + 1;
+            await this.entrantRepository.save(entrant);
+        }
+
+        await this.uiUpdateGateway.emitDivisionUpdateByDivisionId(id);
+    }
+
+    private sortBySeed(entrants: Entrant[]): Entrant[] {
+        return [...entrants].sort(
+            (left, right) =>
+                (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER)
+                || left.name.localeCompare(right.name),
+        );
     }
 
     async getAvailableParticipants(id: number): Promise<Participant[]> {

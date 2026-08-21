@@ -11,6 +11,7 @@ const TournamentPage = lazy(() => import("@/pages/TournamentPage"));
 const DivisionPage = lazy(() => import("@/pages/DivisionPage"));
 const DivisionPhasesPage = lazy(() => import("@/features/division/pages/DivisionPhasesPage"));
 const DivisionPlayersPage = lazy(() => import("@/features/division/pages/DivisionPlayersPage"));
+const DivisionSeedingPage = lazy(() => import("@/features/division/pages/DivisionSeedingPage"));
 const DivisionStandingsPage = lazy(() => import("@/features/division/pages/DivisionStandingsPage"));
 const TournamentOverviewPage = lazy(() => import("@/features/tournament/pages/TournamentOverviewPage"));
 const TournamentParticipantsPage = lazy(() => import("@/features/tournament/pages/TournamentParticipantsPage"));
@@ -56,6 +57,7 @@ export default function AppRouter() {
                   <Route path="phases" element={<DivisionPhasesPage />} />
                   <Route path="phases/:phaseId" element={<DivisionPhasesPage />} />
                   <Route path="entrants" element={<DivisionPlayersPage />} />
+                  <Route path="seeding" element={<DivisionSeedingPage />} />
                   <Route path="standings" element={<DivisionStandingsPage />} />
                 </Route>
               </Route>

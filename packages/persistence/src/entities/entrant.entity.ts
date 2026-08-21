@@ -33,6 +33,9 @@ export class Entrant {
   @Column({ default: 'active' })
   status: EntrantStatus;
 
+  @Column({ nullable: true })
+  seedNum?: number | null;
+
   @ManyToMany(() => Participant, (participant) => participant.entrants)
   @JoinTable()
   participants: Participant[];
