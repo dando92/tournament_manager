@@ -4,7 +4,6 @@ import { Division } from "@/features/division/types/Division";
 import { MatchHighlight } from "@/features/match/types/Match";
 import { useBracketsTab } from "@/features/division/hooks/useBracketsTab";
 import { useState } from "react";
-import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 type BracketsTabProps = {
   division: Division;
@@ -33,20 +32,6 @@ export default function BracketsTab({
         onCreate={controls ? onCreatePhase : undefined}
       />
 
-      {controls && state.selectedPhase && (
-        <div className="flex justify-end">
-          <DeleteConfirmButton
-            title="Delete phase"
-            onConfirm={() => state.handleDeletePhase(state.selectedPhase!.id)}
-            className="flex items-center gap-2 rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-            iconClassName="w-3"
-            confirmMessage={`Delete phase "${state.selectedPhase.name}"?`}
-          >
-            Delete phase
-          </DeleteConfirmButton>
-        </div>
-      )}
-
       {state.selectedPhaseId === "all" ? (
         state.phases.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-8">No bracket yet.</p>
@@ -61,6 +46,7 @@ export default function BracketsTab({
                 tournamentId={tournamentId}
                 highlight={highlight}
                 onHighlight={setHighlight}
+                onDeletePhase={() => state.handleDeletePhase(phase.id)}
                 onChanged={onDivisionChanged}
               />
             ))}
@@ -74,6 +60,7 @@ export default function BracketsTab({
           tournamentId={tournamentId}
           highlight={highlight}
           onHighlight={setHighlight}
+          onDeletePhase={() => state.handleDeletePhase(state.selectedPhase!.id)}
           onChanged={onDivisionChanged}
         />
       ) : (

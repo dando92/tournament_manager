@@ -62,15 +62,19 @@ export default function DeleteConfirmButton({
       <BaseModal open={open} onClose={() => setOpen(false)} title={confirmTitle} maxWidth="max-w-md">
         <div className="flex flex-col gap-4">
           <p className="text-sm text-gray-600">{confirmMessage}</p>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className={`${btnSecondary} text-sm`}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className={`${btnSecondary} w-full text-sm sm:w-auto`}
+            >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleConfirm}
               disabled={submitting}
-              className={`${btnDanger} text-sm`}
+              className={`${btnDanger} w-full text-sm sm:w-auto`}
             >
               {submitting ? "Deleting..." : confirmText}
             </button>

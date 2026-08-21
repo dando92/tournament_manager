@@ -190,7 +190,7 @@ export default function MatchCard({
   return (
     <div
       ref={cardRef}
-      className={`flex flex-col w-full p-4 my-3 border rounded-xl bg-white shadow-sm transition-shadow ${
+      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-white shadow-sm transition-shadow ${
         isHighlighted
           ? "border-green-400 ring-2 ring-green-300 shadow-green-100 shadow-lg"
           : "border-gray-100"
@@ -289,6 +289,9 @@ export default function MatchCard({
           onManualPointsChange={(playerId, points) =>
             setManualPoints((current) => ({ ...current, [playerId]: points }))
           }
+          onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
+          onOpenAddSong={openAddSong}
+          canAddSong={(match.entrants?.length ?? 0) > 0}
         />
       )}
 

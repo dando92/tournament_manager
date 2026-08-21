@@ -15,4 +15,5 @@ export const btnGhost =
   "text-primary-dark px-3 py-2 rounded hover:bg-primary-dark/10 focus-visible:ring-2 focus-visible:ring-primary-dark focus-visible:ring-offset-2 disabled:opacity-50";
 
 /** Trash — icon-only delete */
-export const btnTrash = "text-red-600 hover:text-red-800 disabled:opacity-50";
+export const btnTrash =
+  "inline-flex items-center justify-center rounded p-2 -m-1 text-red-600 hover:bg-red-50 hover:text-red-800 disabled:opacity-50";

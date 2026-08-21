@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faStickyNote, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faStickyNote, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match } from "@/features/match/types/Match";
-import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
+import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
 
 type Props = {
@@ -30,7 +30,6 @@ export default function MatchHeader({
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
-  const [mobileAddMenuOpen, setMobileAddMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMatchEnded = Boolean(match.matchResult);
   const canAddSong = (match.entrants?.length ?? 0) > 0;
@@ -105,73 +104,38 @@ export default function MatchHeader({
       </div>
       {controls && (
         <div className="flex items-center justify-end gap-3 shrink-0">
-          {!isMatchEnded && (
-            <>
-              <button
-                onClick={onOpenAddPlayer}
-                title="Add player"
-                className="hidden sm:inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
-              >
-                <FontAwesomeIcon icon={faUserPlus} />
-                <span>Add player</span>
-              </button>
-              {canAddSong && (
-                <button
-                  onClick={onOpenAddSong}
-                  title="Add song/round"
-                  className="hidden sm:inline-flex items-center gap-1 text-green-700 hover:text-green-900 text-sm font-medium"
-                >
-                  <MusicPlusIcon />
-                  <span>Add song</span>
-                </button>
-              )}
-              <div className="relative sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setMobileAddMenuOpen((value) => !value)}
-                  title="Add"
-                  className="inline-flex items-center justify-center text-green-700 hover:text-green-900"
-                >
-                  <FontAwesomeIcon icon={faPlus} />
-                </button>
-                {mobileAddMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setMobileAddMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded border border-gray-200 bg-white shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMobileAddMenuOpen(false);
-                          onOpenAddPlayer();
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-green-700 hover:bg-gray-50 hover:text-green-900"
-                      >
-                        <FontAwesomeIcon icon={faUserPlus} />
-                        Add player
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!canAddSong}
-                        onClick={() => {
-                          setMobileAddMenuOpen(false);
-                          onOpenAddSong();
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-green-700 hover:bg-gray-50 hover:text-green-900 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <MusicPlusIcon />
-                        Add song
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-          <DeleteConfirmButton
-            onConfirm={() => onDeleteMatch(match.id)}
-            title="Delete match"
-            className="text-sm"
-            confirmMessage={`Delete match "${match.name}"?`}
+          <ActionsMenu
+            title="Match actions"
+            items={[
+              {
+                key: "add-player",
+                label: "Add player",
+                icon: faUserPlus,
+                hidden: isMatchEnded,
+                className: "sm:hidden",
+                onSelect: onOpenAddPlayer,
+              },
+              {
+                key: "add-song",
+                label: "Add song",
+                icon: <MusicPlusIcon />,
+                hidden: isMatchEnded,
+                disabled: !canAddSong,
+                className: "sm:hidden",
+                onSelect: onOpenAddSong,
+              },
+              {
+                key: "delete",
+                label: "Delete match",
+                icon: faTrash,
+                danger: true,
+                onSelect: () => onDeleteMatch(match.id),
+                confirm: {
+                  message: `Delete match "${match.name}"? This cannot be undone.`,
+                  confirmText: "Delete match",
+                },
+              },
+            ]}
           />
         </div>
       )}

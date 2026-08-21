@@ -1,7 +1,8 @@
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 import { entrantPlayer } from "@/features/entrant/types/Entrant";
 import { Player } from "@/features/player/types/Player";
-import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 
 type DivisionCardProps = {
   division: TournamentDivisionOption;
@@ -29,12 +30,22 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
       <div className="px-4 py-3 bg-primary border-b border-white/10 flex items-center justify-between gap-2">
         <h3 className="font-bold text-white text-base leading-tight">{division.name}</h3>
         {controls && onDelete && (
-          <DeleteConfirmButton
-            title="Delete division"
-            onConfirm={onDelete}
-            className="text-sm"
-            stopPropagation
-            confirmMessage={`Delete division "${division.name}"?`}
+          <ActionsMenu
+            title="Division actions"
+            triggerClassName="rounded border border-white/40 text-white hover:bg-white/10"
+            items={[
+              {
+                key: "delete",
+                label: "Delete division",
+                icon: faTrash,
+                danger: true,
+                onSelect: onDelete,
+                confirm: {
+                  message: `Delete division "${division.name}"? Its phases, pools and matches are deleted with it, and this cannot be undone.`,
+                  confirmText: "Delete division",
+                },
+              },
+            ]}
           />
         )}
       </div>

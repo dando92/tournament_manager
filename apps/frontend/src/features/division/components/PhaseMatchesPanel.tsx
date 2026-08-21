@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import PhaseGroupActionsMenu from "@/features/division/components/PhaseGroupActionsMenu";
+import { faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
+import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import PhaseGroupContent from "@/features/division/components/PhaseGroupContent";
 import PhaseGroupSelector from "@/features/division/components/PhaseGroupSelector";
 import PhaseGroupViewSelect from "@/features/division/components/PhaseGroupViewSelect";
@@ -18,6 +19,7 @@ type PhaseMatchesPanelProps = {
   tournamentId?: number;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
+  onDeletePhase?: () => void | Promise<void>;
   onChanged?: () => Promise<void>;
 };
 
@@ -58,6 +60,26 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
         <span className="text-xs text-gray-400">
           {matchCount} match{matchCount !== 1 ? "es" : ""}
         </span>
+        {props.controls && props.onDeletePhase && (
+          <div className="ml-auto">
+            <ActionsMenu
+              title="Phase actions"
+              items={[
+                {
+                  key: "delete",
+                  label: "Delete phase",
+                  icon: faTrash,
+                  danger: true,
+                  onSelect: props.onDeletePhase,
+                  confirm: {
+                    message: `Delete phase "${props.phase.name}"? Its pools and their matches are deleted with it, and this cannot be undone.`,
+                    confirmText: "Delete phase",
+                  },
+                },
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       {selectedPhaseGroup ? (
@@ -131,12 +153,29 @@ function SelectedPhaseGroupPanel({
               )
             )}
             {controls && (
-              <PhaseGroupActionsMenu
-                phaseGroupName={phaseGroup.name}
+              <ActionsMenu
+                title="Pool actions"
                 disabled={actions.saving || actions.deleting}
-                deleting={actions.deleting}
-                onEditAdvancementRules={actions.beginAdvancementEdit}
-                onDeletePhaseGroup={actions.removePhaseGroup}
+                busy={actions.deleting}
+                items={[
+                  {
+                    key: "advancement",
+                    label: "Edit advancement rules",
+                    icon: faPenToSquare,
+                    onSelect: actions.beginAdvancementEdit,
+                  },
+                  {
+                    key: "delete",
+                    label: "Delete pool",
+                    icon: faTrash,
+                    danger: true,
+                    onSelect: actions.removePhaseGroup,
+                    confirm: {
+                      message: `Delete pool "${phaseGroup.name}"? Its matches are deleted with it, and this cannot be undone.`,
+                      confirmText: "Delete pool",
+                    },
+                  },
+                ]}
               />
             )}
           </>
