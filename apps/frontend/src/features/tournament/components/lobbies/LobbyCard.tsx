@@ -1,4 +1,5 @@
 import { LobbyCardStateDto } from "@/features/live/services/syncstartGatewayDtos";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 
 type Props = {
   lobbyId: string;
@@ -90,15 +91,10 @@ export default function LobbyCard({
                     <div className="font-semibold text-ui-text">{player.playerName}</div>
                     <div className="text-xs text-ui-text-mute">{player.playerId}</div>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                      player.ready
-                        ? "bg-state-done/10 text-ui-text-soft"
-                        : "bg-state-failed/10 text-state-failed"
-                    }`}
-                  >
-                    {player.ready ? "Ready" : "Not ready"}
-                  </span>
+                  <StatusBadge
+                    status={player.ready ? "done" : "idle"}
+                    label={player.ready ? "Ready" : "Not ready"}
+                  />
                 </div>
             ))}
           </div>

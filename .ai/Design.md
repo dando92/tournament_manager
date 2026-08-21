@@ -122,17 +122,43 @@ cards by fading the surface toward white.
 
 ## Themes
 
-Every token is defined for both themes in `tokens.css`, so components never name
-a theme. The dark block is keyed on `:root[data-theme="dark"]` and is inert until
-something sets that attribute; there is no theme switch yet, so the app renders
-light.
+Every token is defined for both themes in `tokens.css`, so no component ever
+names a theme. The choice is a device preference — it depends on where you are,
+a laptop in the venue or a projector, not on who you are — and lives in
+`shared/services/themePreference.ts` alongside the pool view mode.
 
-## Still to do
+Three settings, offered in the account page:
 
-The lobby and Start.gg status badges (`LobbyCard`, `LobbyCardsSection`,
-`StartggImportModal`) still use a tinted fill with neutral text rather than the
-neutral badge plus coloured glyph. They are legible and on-token, but not yet in
-the final form.
+| Setting | What it does |
+| --- | --- |
+| Light | sets `data-theme="light"`, which beats a dark operating system |
+| Dark | sets `data-theme="dark"`, which beats a light operating system |
+| System | stores `"system"` and removes the attribute, so `prefers-color-scheme` decides and the page follows the OS live |
+
+Two CSS blocks carry the dark values and both are needed: a
+`@media (prefers-color-scheme: dark)` block guarded on
+`:root:not([data-theme="light"])` for the System setting, and a
+`:root[data-theme="dark"]` block for the explicit choice. They must stay
+identical. The attribute block is last in the file, so at equal specificity it
+wins.
+
+`index.html` applies the stored attribute in an inline script before the bundle
+loads. Without it a dark-theme device flashes the light theme on every load. The
+script duplicates the storage key rather than importing it, because it has to
+run before any module is fetched; keep the two in step.
+
+### What the theme touches beyond the neutral scale
+
+- **Score bands** invert. A dark band vanishes on a dark surface and a light one
+  vanishes on white, so `--score-*` is defined per theme.
+- **Elevation** is a token, not a hard-coded black: `--ui-shadow` and
+  `--ui-shadow-alpha`. On light it is a soft cool shadow; on dark a deep black
+  one, where the borders do most of the separating anyway.
+- **react-select** cannot take Tailwind classes but does take any CSS value, so
+  `selectStyles.ts` references the tokens as `rgb(var(--ui-surface))` rather than
+  copying them.
+- **The live view does not change.** Its surfaces and the judgment palette are
+  fixed in both themes, for the reason given above.
 
 ## Product decisions
 

@@ -1,37 +1,39 @@
 import type { StylesConfig } from "react-select";
 
 /**
- * react-select cannot take Tailwind classes, so the design tokens it needs are
- * repeated here as literals. Keep them in step with tailwind.config.js.
+ * react-select cannot take Tailwind classes, but it does take any CSS value, so
+ * the tokens are referenced rather than copied. That keeps the control on the
+ * design system and lets it follow the theme without any work here.
  */
-const GRAY_100 = "#F3F4F6";
-const GRAY_200 = "#E5E7EB";
-const GRAY_300 = "#D1D5DB";
-const GRAY_500 = "#6B7280";
-const GRAY_800 = "#1F2937";
-const BRAND_600 = "#1571B7";
+const SURFACE = "rgb(var(--ui-surface))";
+const RAISED = "rgb(var(--ui-raised))";
+const SELECTED = "rgb(var(--ui-selected))";
+const BORDER = "rgb(var(--ui-border-strong))";
+const TEXT = "rgb(var(--ui-text))";
+const TEXT_MUTE = "rgb(var(--ui-text-mute))";
+const FOCUS = "rgb(var(--state-running))";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const selectStyles: StylesConfig<any, any, any> = {
   control: (base, state) => ({
     ...base,
-    backgroundColor: "white",
-    color: GRAY_800,
-    borderColor: state.isFocused ? BRAND_600 : GRAY_300,
-    boxShadow: state.isFocused ? `0 0 0 1px ${BRAND_600}` : base.boxShadow,
-    "&:hover": { borderColor: state.isFocused ? BRAND_600 : GRAY_500 },
+    backgroundColor: SURFACE,
+    color: TEXT,
+    borderColor: state.isFocused ? FOCUS : BORDER,
+    boxShadow: state.isFocused ? `0 0 0 1px ${FOCUS}` : base.boxShadow,
+    "&:hover": { borderColor: state.isFocused ? FOCUS : TEXT_MUTE },
   }),
-  menu: (base) => ({ ...base, backgroundColor: "white" }),
+  menu: (base) => ({ ...base, backgroundColor: SURFACE, border: `1px solid ${BORDER}` }),
   option: (base, state) => ({
     ...base,
-    backgroundColor: state.isFocused ? GRAY_100 : "white",
-    color: GRAY_800,
+    backgroundColor: state.isFocused ? RAISED : SURFACE,
+    color: TEXT,
   }),
-  singleValue: (base) => ({ ...base, color: GRAY_800 }),
-  multiValue: (base) => ({ ...base, backgroundColor: GRAY_200 }),
-  multiValueLabel: (base) => ({ ...base, color: GRAY_800 }),
-  input: (base) => ({ ...base, color: GRAY_800 }),
-  placeholder: (base) => ({ ...base, color: GRAY_500 }),
+  singleValue: (base) => ({ ...base, color: TEXT }),
+  multiValue: (base) => ({ ...base, backgroundColor: SELECTED }),
+  multiValueLabel: (base) => ({ ...base, color: TEXT }),
+  input: (base) => ({ ...base, color: TEXT }),
+  placeholder: (base) => ({ ...base, color: TEXT_MUTE }),
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

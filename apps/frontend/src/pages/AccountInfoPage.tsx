@@ -4,7 +4,9 @@ import axios from "axios";
 import { btnPrimary } from "@/styles/buttonStyles";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faPen, faCamera } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faPen, faCamera, faSun, faMoon, faDesktop } from "@fortawesome/free-solid-svg-icons";
+import { useThemePreference } from "@/shared/hooks/useThemePreference";
+import { THEME_PREFERENCES, type ThemePreference } from "@/shared/services/themePreference";
 
 const NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "Andorran", "Angolan", "Antiguan", "Argentine", "Armenian",
@@ -57,8 +59,15 @@ function compressImage(file: File, maxSize: number): Promise<string> {
   });
 }
 
+const THEME_ICON: Record<ThemePreference, typeof faSun> = {
+  light: faSun,
+  dark: faMoon,
+  system: faDesktop,
+};
+
 export default function AccountInfoPage() {
   const { state, actions } = useAuthContext();
+  const [theme, chooseTheme] = useThemePreference();
   const { account } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -265,6 +274,37 @@ export default function AccountInfoPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Appearance */}
+      <div className="border border-ui-border rounded-lg bg-ui-surface overflow-hidden mb-4">
+        <div className="flex items-center gap-2 px-4 py-2 bg-ui-selected border-b border-ui-border text-ui-text font-semibold text-sm">
+          <FontAwesomeIcon icon={faMoon} />
+          <span>Appearance</span>
+        </div>
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <span className="text-xs text-ui-text-mute">
+            Applies to this device only. &ldquo;System&rdquo; follows the setting of your operating system.
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {THEME_PREFERENCES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={theme === option}
+                onClick={() => chooseTheme(option)}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm capitalize transition-colors ${
+                  theme === option
+                    ? "border-ui-border-strong bg-ui-selected font-semibold text-ui-text"
+                    : "border-ui-border text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
+                }`}
+              >
+                <FontAwesomeIcon icon={THEME_ICON[option]} className="text-xs" />
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

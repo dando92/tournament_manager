@@ -5,6 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tournament Manager</title>
+    <script>
+      /*
+       * Applies the stored theme before the first paint, so a dark-theme device
+       * never flashes the light theme while the bundle loads.
+       *
+       * The key and the values are duplicated from
+       * src/shared/services/themePreference.ts on purpose: this has to run
+       * before any module is fetched, so it cannot import them. Keep them in
+       * step. "system" stores nothing to apply here — the media query in
+       * tokens.css handles it.
+       */
+      try {
+        var storedTheme = localStorage.getItem("theme_preference");
+        if (storedTheme === "light" || storedTheme === "dark") {
+          document.documentElement.dataset.theme = storedTheme;
+        }
+      } catch (error) {
+        /* Storage can be unavailable; the operating system preference applies. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

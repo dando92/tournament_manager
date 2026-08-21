@@ -329,7 +329,7 @@ export default function MatchBracketTree({
                     key={`${edge.sourceId}-${edge.targetId}`}
                     d={`M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`}
                     fill="none"
-                    stroke="#cbd5e1"
+                    stroke="rgb(var(--ui-border-strong))"
                     strokeWidth="2"
                   />
                 );

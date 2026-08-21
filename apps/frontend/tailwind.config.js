@@ -54,19 +54,18 @@ export default {
           5: "#7E22CE",
         },
         /**
-         * Score bands. An ordinal domain scale for the score badge, kept out of
-         * the semantic palette for the same reason as the difficulty scale: it
-         * ranks a result, it does not report a state. Rendered as tinted badges
-         * (`bg-score-N/10 text-score-N border-score-N/25`), so every step is dark
-         * enough to stay legible as small text.
+         * Score bands. An ordinal domain scale over result quality, rendered as
+         * a tinted badge (`bg-score-N/10 text-score-N`). Values live in
+         * tokens.css because the band has to invert with the theme: a dark
+         * value vanishes on a dark surface and a light one vanishes on white.
          */
         score: {
-          base: "#374151",
-          1: "#92400E",
-          2: "#065F46",
-          3: "#134C77",
-          4: "#6B21A8",
-          failed: "#991B1B",
+          base: "rgb(var(--score-base) / <alpha-value>)",
+          1: "rgb(var(--score-1) / <alpha-value>)",
+          2: "rgb(var(--score-2) / <alpha-value>)",
+          3: "rgb(var(--score-3) / <alpha-value>)",
+          4: "rgb(var(--score-4) / <alpha-value>)",
+          failed: "rgb(var(--score-failed) / <alpha-value>)",
         },
         /**
          * Judgment colours, taken from the In The Groove palette. These are the
@@ -93,6 +92,18 @@ export default {
           screen: "#0F1E2A",
           failed: "#2E0F14",
         },
+      },
+      /**
+       * Elevation. The shadow colour is a token, so a dark theme gets a shadow
+       * that was chosen for it rather than a light-theme black that disappears.
+       */
+      boxShadow: {
+        sm: "0 1px 2px 0 rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        DEFAULT:
+          "0 1px 3px 0 rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 1px 2px -1px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        md: "0 4px 6px -1px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 2px 4px -2px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        lg: "0 10px 15px -3px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 4px 6px -4px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        xl: "0 20px 25px -5px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 8px 10px -6px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
       },
       zIndex: {
         dropdown: "20",

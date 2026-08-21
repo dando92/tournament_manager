@@ -32,13 +32,66 @@
   --state-pending: 194 118 26;
   --state-done: 14 138 95;
   --state-failed: 211 58 52;
+
+  /* Score bands. An ordinal domain scale over result quality, rendered as a
+     tinted badge (`bg-score-N/10 text-score-N`). Per-theme, because a dark
+     value on a dark surface disappears and a light one on white does too. */
+  --score-base: 55 65 81;
+  --score-1: 146 64 14;
+  --score-2: 6 95 70;
+  --score-3: 19 76 119;
+  --score-4: 107 33 168;
+  --score-failed: 153 27 27;
+
+  /* Shadow. Defined per theme rather than inherited, so elevation is a decision
+     in both: a soft cool shadow on light, a deep black one on dark where the
+     borders do most of the separating anyway. */
+  --ui-shadow: 15 23 42;
+  --ui-shadow-alpha: 0.07;
 }
 
 /*
- * Dark theme. The surfaces are Linear's published values; the neutral scale
- * keeps the same 4-9% saturation on the way down. Inert until something sets
- * the attribute, so the app stays light until a theme switch exists.
+ * Dark theme.
+ *
+ * The surfaces are Linear's published values; the neutral scale keeps the same
+ * 4-9% saturation on the way down.
+ *
+ * Two blocks apply it, and both are needed. The media query serves the "System"
+ * setting, which stores no attribute — it is guarded on `:not([data-theme="light"])`
+ * so an explicit light choice still beats a dark OS. The attribute block serves
+ * an explicit dark choice and wins over a light OS. Keep the two bodies
+ * identical.
  */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ui-canvas: 8 9 10;
+    --ui-surface: 15 16 17;
+    --ui-raised: 22 23 24;
+    --ui-selected: 35 37 42;
+    --ui-border: 28 30 33;
+    --ui-border-strong: 47 50 55;
+    --ui-text: 247 248 248;
+    --ui-text-soft: 167 172 180;
+    --ui-text-mute: 123 131 142;
+
+    --state-idle: 123 131 142;
+    --state-running: 61 165 232;
+    --state-pending: 224 163 60;
+    --state-done: 60 201 141;
+    --state-failed: 238 107 99;
+
+    --score-base: 154 163 175;
+    --score-1: 224 163 60;
+    --score-2: 60 201 141;
+    --score-3: 95 178 232;
+    --score-4: 185 140 236;
+    --score-failed: 238 107 99;
+
+    --ui-shadow: 0 0 0;
+    --ui-shadow-alpha: 0.5;
+  }
+}
+
 :root[data-theme="dark"] {
   --ui-canvas: 8 9 10;
   --ui-surface: 15 16 17;
@@ -55,4 +108,14 @@
   --state-pending: 224 163 60;
   --state-done: 60 201 141;
   --state-failed: 238 107 99;
+
+  --score-base: 154 163 175;
+  --score-1: 224 163 60;
+  --score-2: 60 201 141;
+  --score-3: 95 178 232;
+  --score-4: 185 140 236;
+  --score-failed: 238 107 99;
+
+  --ui-shadow: 0 0 0;
+  --ui-shadow-alpha: 0.5;
 }

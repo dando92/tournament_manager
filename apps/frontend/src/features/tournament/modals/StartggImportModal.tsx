@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
+import type { Status } from "@/shared/components/ui/status";
 import { toast } from "react-toastify";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
@@ -34,20 +36,17 @@ function formatAction(action: string) {
   return ACTION_LABELS[action] ?? action;
 }
 
-function ActionBadge({ action }: { action: string }) {
-  const palette =
-    action === "mapped" || action.startsWith("match-")
-      ? "bg-state-done/10 text-ui-text-soft"
-      : action.startsWith("create")
-        ? "bg-ui-raised text-ui-text"
-        : action.includes("blocked")
-          ? "bg-state-failed/10 text-state-failed"
-          : "bg-ui-selected text-ui-text-soft";
+/** What the import did to a row, told by the same glyph the rest of the app uses. */
+function actionStatus(action: string): Status {
+  if (action === "mapped" || action.startsWith("match-")) return "done";
+  if (action.startsWith("create")) return "running";
+  if (action.includes("blocked")) return "failed";
+  return "idle";
+}
 
+function ActionBadge({ action }: { action: string }) {
   return (
-    <span className={`inline-flex rounded px-2 py-0.5 text-[11px] font-semibold ${palette}`}>
-      {formatAction(action)}
-    </span>
+    <StatusBadge status={actionStatus(action)} label={formatAction(action)} />
   );
 }
 

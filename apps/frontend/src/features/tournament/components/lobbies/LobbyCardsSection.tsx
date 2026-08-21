@@ -1,4 +1,5 @@
 import { LobbyCardStateDto } from "@/features/live/services/syncstartGatewayDtos";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import LobbyCard from "./LobbyCard";
 
 type LobbyEntry = {
@@ -39,20 +40,14 @@ export default function LobbyCardsSection({
             Available lobbies are listed from SyncStart. Active lobbies are being spectated by Tournament Manager.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                connectionStatus.isActive ? "bg-ui-raised text-ui-text" : "bg-ui-selected text-ui-text-mute"
-              }`}
-            >
-              {connectionStatus.isActive ? "Active" : "Inactive"}
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                connectionStatus.isConnected ? "bg-state-done/10 text-ui-text-soft" : "bg-state-failed/10 text-state-failed"
-              }`}
-            >
-              {connectionStatus.isConnected ? "Connected" : "Disconnected"}
-            </span>
+            <StatusBadge
+              status={connectionStatus.isActive ? "running" : "idle"}
+              label={connectionStatus.isActive ? "Active" : "Inactive"}
+            />
+            <StatusBadge
+              status={connectionStatus.isConnected ? "done" : "failed"}
+              label={connectionStatus.isConnected ? "Connected" : "Disconnected"}
+            />
           </div>
         </div>
       </div>
