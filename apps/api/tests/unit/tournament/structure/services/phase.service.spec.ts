@@ -6,6 +6,7 @@ import { PhaseService } from '@tournament/structure/services/phase.service';
 describe('PhaseService', () => {
   const phaseRepository = {
     save: jest.fn(),
+    findOne: jest.fn(),
   };
   const divisionRepository = {
     findOneBy: jest.fn(),
@@ -42,5 +43,22 @@ describe('PhaseService', () => {
     await service.create({ divisionId: 7, name: 'Qualifiers' });
 
     expect(phaseGroupService.createForPhase).not.toHaveBeenCalled();
+  });
+
+  it('renames a phase and tells its division to refresh', async () => {
+    phaseRepository.findOne.mockResolvedValue({ id: 42, name: 'Qualifiers', division: { id: 7 } } as Phase);
+
+    const phase = await service.update(42, { name: '  Finals  ' });
+
+    expect(phase.name).toBe('Finals');
+    expect(uiUpdateGateway.emitDivisionUpdateByDivisionId).toHaveBeenCalledWith(7);
+  });
+
+  it('keeps the current name when the new one is blank', async () => {
+    phaseRepository.findOne.mockResolvedValue({ id: 42, name: 'Qualifiers', division: { id: 7 } } as Phase);
+
+    const phase = await service.update(42, { name: '   ' });
+
+    expect(phase.name).toBe('Qualifiers');
   });
 });

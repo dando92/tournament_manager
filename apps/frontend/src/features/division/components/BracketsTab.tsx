@@ -40,7 +40,11 @@ export default function BracketsTab({
         onCreate={createPhase}
         rightSlot={
           controls && selectedPhase ? (
-            <PhaseActionsMenu phase={selectedPhase} onDelete={() => state.handleDeletePhase(selectedPhase.id)} />
+            <PhaseActionsMenu
+              phase={selectedPhase}
+              onDelete={() => state.handleDeletePhase(selectedPhase.id)}
+              onChanged={onDivisionChanged}
+            />
           ) : undefined
         }
       />

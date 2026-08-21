@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Phase } from '@tournament-manager/persistence';
-import { CreatePhaseDto } from '@tournament/dtos';
+import { CreatePhaseDto, UpdatePhaseDto } from '@tournament/dtos';
 import { PhaseService } from '../services/phase.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
@@ -13,6 +13,12 @@ export class PhasesController {
     @RequireOpenTournament({ entity: 'division', location: 'body', field: 'divisionId' })
     async create(@Body(new ValidationPipe()) dto: CreatePhaseDto): Promise<Phase> {
         return this.phaseService.createWithDefaultPhaseGroup(dto);
+    }
+
+    @Patch(':id')
+    @RequireOpenTournament({ entity: 'phase', location: 'params', field: 'id' })
+    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdatePhaseDto): Promise<Phase> {
+        return this.phaseService.update(Number(id), dto);
     }
 
     @Delete(':id')
