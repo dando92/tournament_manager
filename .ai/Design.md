@@ -53,7 +53,7 @@ a user has to read.
 | --- | --- | --- | --- | --- |
 | `state-idle` | `#8A929E` | `#7B838E` | dashed ring | not started, not active |
 | `state-running` | `#1F8DDE` | `#3DA5E8` | ring half filled | in progress, active, connected |
-| `state-pending` | `#C2761A` | `#E0A33C` | ring three quarters filled | waiting on a person |
+| `state-pending` | `#C2761A` | `#E0A33C` | ring three quarters filled, breathing | waiting on a person |
 | `state-done` | `#0E8A5F` | `#3CC98D` | solid with a check | completed, advanced |
 | `state-failed` | `#D33A34` | `#EE6B63` | solid with a cross | failed, disconnected, destructive |
 
@@ -74,16 +74,20 @@ four do not, and must stay inside a glyph or behind a tint.
   but deleting is an action and not a state; colouring it costs `state-failed`
   its meaning. It turns red on hover, not at rest.
 
-## Motion reports one thing
+## Motion reports one thing: something is waiting for you
 
-The status glyph of an **active match** breathes — a slow opacity fade, nothing
-else. It is the one state in the application that changes without anybody
-touching the screen, and motion is the only channel that reaches an eye which is
-not already pointed at it.
+The **`pending`** glyph breathes — a slow opacity fade, nothing else. It is the
+one state that is stuck until a person acts, and motion is the only channel that
+reaches an eye which is not already pointed at it. A match being played asks
+nothing of anybody, so `running` does not move; the blue half-filled ring says
+active on its own.
 
 Nothing else animates state. The moment a second thing pulses, neither one means
-anything. It is always wrapped in `motion-safe:`, so a device asking for reduced
-movement gets the ring and the colour and no animation, which still says active.
+anything. The animation lives inside `StatusIcon`, on the state rather than on
+the caller, so every place that draws `pending` moves and no component can
+decide to be the exception. It is always wrapped in `motion-safe:`, so a device
+asking for reduced movement gets the ring and the colour and no animation, which
+still says waiting.
 
 ## The match row has two axes, not one
 
@@ -102,7 +106,29 @@ Progress fills the ring in four steps, which is what the ring was drawn for:
 | `Completed` | solid with a check | result committed |
 
 `getMatchProgress` is the single source: the commit button derives from it, so
-the badge a viewer reads and the button they press cannot disagree.
+the badge a viewer reads and the button they press cannot disagree. The API
+repeats the `Ready to commit` rule in one aggregate query
+(`MatchService.countPendingByPhaseGroup`) so the sidebar can count without
+loading matches; the two definitions have to be changed together.
+
+## The tree inherits the state of what it contains
+
+A branch of the sidebar shows the strongest state below it, pool to phase to
+division to tournament. The pool is the bottom rung and the only node that can
+see matches, so a match waiting on a person enters there and every node above
+inherits it unchanged.
+
+`pending` outranks `running` in that roll-up. During a tournament the sidebar's
+job is not to say what is busy but to say what is stuck: a live match will
+finish by itself, a match with every score in will not. Since `pending` is also
+the state that breathes, a collapsed tree points at the branch that needs
+somebody without being opened.
+
+A tournament that is not the open one has no structure loaded, so its row keeps
+its own pin or clock icon rather than claiming a state it cannot know. When the
+open tournament does report one, that icon moves next to the name and the row
+carries the glyph like every other branch — a row still never carries a neutral
+icon and a status glyph in the same slot.
 
 The row owns the **state** of a match and the card owns its **contents**, which
 is why commit lives on the row rather than in the card. The right-hand slot is

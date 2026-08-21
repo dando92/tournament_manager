@@ -20,6 +20,11 @@ export interface PhaseGroup {
   state: PhaseGroupState;
   entrants: PhaseGroupEntrant[];
   matchCount: number;
+  /**
+   * Matches waiting on a person: every score in, no result committed. Only the
+   * tournament overview carries it, because only the tree needs it.
+   */
+  pendingMatchCount?: number;
   advancementRules?: AdvancementRule[];
 }
 

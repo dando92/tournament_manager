@@ -15,11 +15,10 @@ type StatusDotProps = {
  * have no hover: tapping it reveals the same tooltip a pointer gets for free,
  * and the tooltip hides itself again shortly after.
  *
- * An active match breathes. It is the one thing in the interface that changes
- * without anybody touching it, and motion is the only channel that catches an
- * eye which is not already pointed at it. `motion-safe` keeps it out of the way
- * of anyone who has asked the system for less movement. Nothing else in the
- * application animates state, so this stays a signal rather than decoration.
+ * It does not move. Motion in this application belongs to the one state that
+ * is waiting for somebody, and an active match is not waiting for anybody — it
+ * is being played. Active is therefore reported by the blue half-filled ring
+ * and nothing else. See .ai/Design.md.
  */
 export default function StatusDot({ on, label }: StatusDotProps) {
   const [tapped, setTapped] = useState(false);
@@ -43,7 +42,7 @@ export default function StatusDot({ on, label }: StatusDotProps) {
         onBlur={() => setTapped(false)}
         className="-m-1.5 flex cursor-default items-center p-1.5"
       >
-        <StatusIcon status={on ? "running" : "idle"} label={label} className={on ? "motion-safe:animate-pulse" : ""} />
+        <StatusIcon status={on ? "running" : "idle"} label={label} />
       </button>
       <span
         role="tooltip"

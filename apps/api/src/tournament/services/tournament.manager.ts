@@ -10,6 +10,7 @@ import {
     UpdateTournamentDto,
 } from '@tournament/dtos';
 import { DivisionService } from '@tournament/structure/services/division.service';
+import { MatchService } from '@match/services/match.service';
 import { TournamentService } from './tournament.service';
 import { ParticipantService } from './participant.service';
 import { PlayerService } from '@player/player.service';
@@ -19,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 export class TournamentManager {
     constructor(
         private readonly divisionService: DivisionService,
+        private readonly matchService: MatchService,
         private readonly tournamentService: TournamentService,
         private readonly participantService: ParticipantService,
         private readonly playerService: PlayerService,
@@ -196,6 +198,10 @@ export class TournamentManager {
 
     async findOverview(tournamentId: number): Promise<TournamentOverviewDto> {
         const divisions = await this.divisionService.findOverviewData(tournamentId);
+        /* The tree marks a branch that is waiting on a person, so the overview
+           carries the count the sidebar rolls up. One aggregate for the whole
+           tournament rather than a load of its matches. */
+        const pendingMatchCounts = await this.matchService.countPendingByPhaseGroup(tournamentId);
         const divisionCount = divisions.length;
         const playerCount = divisions.reduce(
             (count, division) => count + (division.entrants?.filter((entrant) => entrant.status === 'active').length ?? 0),
@@ -245,6 +251,7 @@ export class TournamentManager {
                         state: phaseGroup.state,
                         entrants: [],
                         matchCount: this.getPhaseGroupMatchCount(phaseGroup),
+                        pendingMatchCount: pendingMatchCounts.get(phaseGroup.id) ?? 0,
                     })),
                 })),
             })),

@@ -9,6 +9,14 @@
  * This is the only place in the interface where colour reports state, which is
  * why the state scale is defined for a 3:1 graphical threshold rather than the
  * 4.5:1 that text needs. See .ai/Design.md.
+ *
+ * `pending` breathes, and it is the only state that does. It is the one state
+ * that is stuck until somebody acts, so motion belongs to it rather than to a
+ * match that is merely being played. Because the animation lives on the glyph,
+ * every place that draws the state gets it — the sidebar branch, the match row,
+ * the bracket card — and no caller can decide to be the exception.
+ * `motion-safe` keeps it away from anyone who asked the system for less
+ * movement; the amber ring says the same thing standing still.
  */
 
 import { STATUS_LABEL, type Status } from "@/shared/components/ui/status";
@@ -50,7 +58,9 @@ export default function StatusIcon({ status, label, className = "" }: StatusIcon
       viewBox="0 0 14 14"
       role="img"
       aria-label={label ?? STATUS_LABEL[status]}
-      className={`h-3.5 w-3.5 shrink-0 ${TONE[status]} ${className}`}
+      className={`h-3.5 w-3.5 shrink-0 ${TONE[status]} ${
+        status === "pending" ? "motion-safe:animate-pulse" : ""
+      } ${className}`}
     >
       {solid ? (
         <>

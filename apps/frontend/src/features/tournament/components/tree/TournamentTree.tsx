@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClockRotateLeft,
   faDownload,
@@ -21,7 +22,7 @@ import {
   unpinTournament,
   type RecentTournament,
 } from "@/features/tournament/services/recentTournaments";
-import { divisionStatus, phaseStatus, poolStatus } from "@/features/tournament/utils/treeStatus";
+import { divisionStatus, phaseStatus, poolStatus, tournamentStatus } from "@/features/tournament/utils/treeStatus";
 import {
   divisionPagePath,
   divisionPath,
@@ -258,6 +259,11 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
           const isCurrent = tree.tournamentId === tournament.id;
           const expanded = isCurrent && tree.isExpanded(key);
           const controls = canEditTournament(tournament.id);
+          /* Only the open tournament knows what is inside it. When it does, the
+             row reports it like every other branch and the pin or clock moves
+             next to the name, so a collapsed tree still shows what is waiting. */
+          const rolledUpStatus = isCurrent ? tournamentStatus(tree.divisions) : undefined;
+          const identityIcon = tournament.pinned ? faThumbtack : faClockRotateLeft;
 
           return (
             <div key={tournament.id} className="flex flex-col gap-0.5">
@@ -265,7 +271,13 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
                 label={tournament.name}
                 depth={0}
                 strong
-                icon={tournament.pinned ? faThumbtack : faClockRotateLeft}
+                icon={rolledUpStatus ? undefined : identityIcon}
+                status={rolledUpStatus}
+                leading={
+                  rolledUpStatus ? (
+                    <FontAwesomeIcon icon={identityIcon} className="w-3 shrink-0 text-[10px] text-ui-text-mute" />
+                  ) : undefined
+                }
                 expandable
                 expanded={expanded}
                 selected={Boolean(selection && selection.tournamentId === tournament.id && !selection.page && !selection.divisionId)}

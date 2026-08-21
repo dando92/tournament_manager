@@ -93,6 +93,70 @@ export class MatchService {
         });
     }
 
+    /**
+     * How many matches in each pool of a tournament are waiting on a person.
+     *
+     * A match is waiting when it has songs, has players, has a score for every
+     * player on every song, and still has no committed result. That is the same
+     * rule the match card draws as "Ready to commit" (`getMatchProgress` in the
+     * frontend); the two must be changed together.
+     *
+     * It is one aggregate rather than a load of the tournament's matches
+     * because the caller is the sidebar tree, which needs a count per pool and
+     * nothing else. Written as SQL because the row-count comparison it does is
+     * the whole query, and a TypeORM equivalent would only hide it.
+     */
+    async countPendingByPhaseGroup(tournamentId: number): Promise<Map<number, number>> {
+        const rows: Array<{ phaseGroupId: number; pendingMatchCount: number }> = await this.matchRepository.query(
+            `
+            WITH tournament_match AS (
+                SELECT m."id", m."phaseGroupId"
+                FROM "match" m
+                JOIN "phase_group" pg ON pg."id" = m."phaseGroupId"
+                JOIN "phase" p ON p."id" = pg."phaseId"
+                JOIN "division" d ON d."id" = p."divisionId"
+                WHERE d."tournamentId" = $1 AND m."matchResultId" IS NULL
+            ),
+            match_player AS (
+                SELECT DISTINCT tm."id" AS "matchId", pa."playerId"
+                FROM tournament_match tm
+                JOIN "match_entrants_entrant" me ON me."matchId" = tm."id"
+                JOIN "entrant" e ON e."id" = me."entrantId" AND e."type" = 'player'
+                JOIN "entrant_participants_participant" ep ON ep."entrantId" = e."id"
+                JOIN "participant" pa ON pa."id" = ep."participantId"
+            ),
+            match_round AS (
+                SELECT r."matchId", r."id" AS "roundId"
+                FROM "round" r
+                JOIN tournament_match tm ON tm."id" = r."matchId"
+            ),
+            expected_score AS (
+                SELECT mr."matchId", COUNT(*) AS "expected"
+                FROM match_round mr
+                JOIN match_player mp ON mp."matchId" = mr."matchId"
+                GROUP BY mr."matchId"
+            ),
+            entered_score AS (
+                SELECT mr."matchId", COUNT(DISTINCT (s."roundId", sc."playerId")) AS "entered"
+                FROM "standing" s
+                JOIN match_round mr ON mr."roundId" = s."roundId"
+                JOIN "score" sc ON sc."id" = s."scoreId"
+                JOIN match_player mp ON mp."matchId" = mr."matchId" AND mp."playerId" = sc."playerId"
+                GROUP BY mr."matchId"
+            )
+            SELECT tm."phaseGroupId" AS "phaseGroupId", COUNT(*)::int AS "pendingMatchCount"
+            FROM tournament_match tm
+            JOIN expected_score es ON es."matchId" = tm."id"
+            LEFT JOIN entered_score en ON en."matchId" = tm."id"
+            WHERE COALESCE(en."entered", 0) >= es."expected"
+            GROUP BY tm."phaseGroupId"
+            `,
+            [tournamentId],
+        );
+
+        return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.pendingMatchCount)]));
+    }
+
     async findByDivisionForView(divisionId: number): Promise<Match[]> {
         return this.matchRepository.find({
             where: {

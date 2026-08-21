@@ -30,6 +30,8 @@ export type TournamentOverviewDivisionPhaseDto = {
         state: string;
         entrants: unknown[];
         matchCount: number;
+        /** Matches in this pool whose scores are all in and whose result is not committed yet. */
+        pendingMatchCount: number;
     }>;
 };
 

@@ -239,10 +239,7 @@ export default function RoundRobinMatchesView({
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
                             <span className={commitBadgeClass}>
-                              <StatusIcon
-                                status={cell.match.active ? "running" : "idle"}
-                                className={`h-3 w-3 ${cell.match.active ? "motion-safe:animate-pulse" : ""}`}
-                              />
+                              <StatusIcon status={cell.match.active ? "running" : "idle"} className="h-3 w-3" />
                               {cell.match.active ? "Active" : "Not active"}
                             </span>
                             <span className={commitBadgeClass}>
