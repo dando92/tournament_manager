@@ -21,7 +21,7 @@ type TargetOption = {
 
 const targetKindLabels: Record<AdvancementCompetitionKind, string> = {
   match: "Match",
-  phase_group: "Phase group",
+  phase_group: "Pool",
 };
 
 export default function AdvancementRulesEditor({
@@ -47,7 +47,7 @@ export default function AdvancementRulesEditor({
     .sort((left, right) => left.id - right.id)
     .map((match) => ({
       id: match.id,
-      label: `${phaseGroupLabelById.get(match.phaseGroupId) ?? "Unknown phase group"} / ${match.name}`,
+      label: `${phaseGroupLabelById.get(match.phaseGroupId) ?? "Unknown pool"} / ${match.name}`,
     }));
   const phaseGroupOptions = phaseGroups.filter((phaseGroup) => !(sourceKind === "phase_group" && phaseGroup.id === sourceId));
 

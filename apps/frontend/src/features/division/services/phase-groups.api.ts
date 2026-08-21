@@ -3,7 +3,7 @@ import { Entrant } from "@/features/entrant/types/Entrant";
 import { PhaseGroup, PhaseGroupEntrant } from "@/features/division/types/Phase";
 
 type CreatePhaseGroupRequest = {
-  name: string;
+  name?: string;
   displayIdentifier?: string;
   bracketType?: string;
 };

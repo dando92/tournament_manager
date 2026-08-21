@@ -1,8 +1,9 @@
 import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreatePhaseGroupDto {
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
   @IsOptional()
   @IsString()

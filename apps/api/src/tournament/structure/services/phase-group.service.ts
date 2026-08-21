@@ -5,6 +5,8 @@ import { Entrant, Phase, PhaseGroup, PhaseGroupEntrant } from '@tournament-manag
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 @Injectable()
 export class PhaseGroupService {
     constructor(
@@ -23,9 +25,11 @@ export class PhaseGroupService {
         const phase = await this.phaseRepository.findOneBy({ id: phaseId });
         if (!phase) throw new NotFoundException(`Phase with ID ${phaseId} not found`);
 
+        const displayIdentifier = dto.displayIdentifier?.trim() || (await this.getNextDisplayIdentifier(phaseId));
+
         const phaseGroup = new PhaseGroup();
-        phaseGroup.name = dto.name;
-        phaseGroup.displayIdentifier = dto.displayIdentifier ?? null;
+        phaseGroup.name = dto.name?.trim() || displayIdentifier;
+        phaseGroup.displayIdentifier = displayIdentifier;
         phaseGroup.bracketType = dto.bracketType ?? null;
         phaseGroup.state = 'pending';
         phaseGroup.phase = phase;
@@ -238,6 +242,20 @@ export class PhaseGroupService {
         });
         if (!phaseGroup) throw new NotFoundException(`PhaseGroup with ID ${phaseGroupId} not found`);
         return phaseGroup.entrants ?? [];
+    }
+
+    private async getNextDisplayIdentifier(phaseId: number): Promise<string> {
+        const taken = new Set(
+            (await this.phaseGroupRepository.find({ where: { phase: { id: phaseId } } }))
+                .map((phaseGroup) => phaseGroup.displayIdentifier?.trim())
+                .filter((identifier): identifier is string => Boolean(identifier)),
+        );
+
+        for (let index = 0; index < ALPHABET.length; index++) {
+            const candidate = ALPHABET[index];
+            if (!taken.has(candidate)) return candidate;
+        }
+        return String(taken.size + 1);
     }
 
     private async getNextSlot(phaseGroupId: number): Promise<number> {

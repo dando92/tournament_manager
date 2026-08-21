@@ -48,9 +48,9 @@ export function usePhaseGroupActions({ division, phaseGroup, onChanged }: UsePha
       await updateAdvancementRulesForSource("phase_group", phaseGroup.id, draftRules);
       setEditingAdvancement(false);
       await onChanged?.();
-      toast.success("Phase group advancement rules updated.");
+      toast.success("Pool advancement rules updated.");
     } catch {
-      toast.error("Error updating phase group advancement rules.");
+      toast.error("Error updating pool advancement rules.");
     } finally {
       setSaving(false);
     }

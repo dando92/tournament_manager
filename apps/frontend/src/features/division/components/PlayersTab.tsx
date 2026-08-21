@@ -288,9 +288,9 @@ function PhaseGroupEntrantsPanel({
       setEditingSeeding(false);
       await refreshEntrants();
       await onChanged();
-      toast.success("Phase group seeding updated.");
+      toast.success("Pool seeding updated.");
     } catch {
-      toast.error("Error updating phase group seeding.");
+      toast.error("Error updating pool seeding.");
     } finally {
       setSaving(false);
     }
@@ -314,9 +314,9 @@ function PhaseGroupEntrantsPanel({
       await addEntrantToPhaseGroup(phaseGroup.id, entrantId);
       await refreshEntrants();
       await onChanged();
-      toast.success("Entrant added to phase group.");
+      toast.success("Entrant added to pool.");
     } catch {
-      toast.error("Error adding entrant to phase group.");
+      toast.error("Error adding entrant to pool.");
     } finally {
       setSaving(false);
     }
@@ -328,9 +328,9 @@ function PhaseGroupEntrantsPanel({
       await removeEntrantFromPhaseGroup(phaseGroup.id, entrantId);
       await refreshEntrants();
       await onChanged();
-      toast.success("Entrant removed from phase group.");
+      toast.success("Entrant removed from pool.");
     } catch {
-      toast.error("Error removing entrant from phase group.");
+      toast.error("Error removing entrant from pool.");
     } finally {
       setSaving(false);
     }

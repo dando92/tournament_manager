@@ -55,8 +55,6 @@ export class BracketManager {
             name: dto.phaseName?.trim() || `Bracket ${nextPhaseNumber}`,
         });
         const phaseGroup = await this.phaseGroupService.createForPhase(phase.id, {
-            name: phase.name,
-            displayIdentifier: '1',
             bracketType: dto.bracketType,
         });
         await this.phaseGroupService.replaceEntrants(phaseGroup.id, entrants);

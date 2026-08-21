@@ -19,10 +19,7 @@ export class PhaseService {
 
     async createWithDefaultPhaseGroup(dto: CreatePhaseDto): Promise<Phase> {
         const phase = await this.create(dto);
-        await this.phaseGroupService.createForPhase(phase.id, {
-            name: phase.name,
-            displayIdentifier: '1',
-        });
+        await this.phaseGroupService.createForPhase(phase.id, {});
         return phase;
     }
 

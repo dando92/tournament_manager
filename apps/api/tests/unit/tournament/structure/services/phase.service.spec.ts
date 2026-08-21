@@ -35,10 +35,7 @@ describe('PhaseService', () => {
 
     expect(phase.id).toBe(42);
     expect(phaseGroupService.createForPhase).toHaveBeenCalledTimes(1);
-    expect(phaseGroupService.createForPhase).toHaveBeenCalledWith(42, {
-      name: 'Qualifiers',
-      displayIdentifier: '1',
-    });
+    expect(phaseGroupService.createForPhase).toHaveBeenCalledWith(42, {});
   });
 
   it('leaves the plain create without a phase group so importers own their own structure', async () => {

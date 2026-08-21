@@ -4,7 +4,6 @@ import PhaseGroupActionsMenu from "@/features/division/components/PhaseGroupActi
 import PhaseGroupContent from "@/features/division/components/PhaseGroupContent";
 import PhaseGroupSelector from "@/features/division/components/PhaseGroupSelector";
 import { usePhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
-import CreatePhaseGroupModal from "@/features/division/modals/CreatePhaseGroupModal";
 import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupState } from "@/features/division/types/Phase";
@@ -50,7 +49,7 @@ type PhaseGroupsPanelProps = PhaseMatchesPanelProps & {
 
 function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
   const [selectedPhaseGroupId, setSelectedPhaseGroupId] = useState(phaseGroups[0].id);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const highlightedPhaseGroupId = props.highlight.phaseGroupId;
 
   useEffect(() => {
@@ -62,13 +61,16 @@ function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
     phaseGroups.find((phaseGroup) => phaseGroup.id === selectedPhaseGroupId) ?? phaseGroups[0];
   const showSelector = phaseGroups.length > 1;
 
-  const handleCreatePhaseGroup = async (name: string, phaseId: number) => {
+  const handleCreatePhaseGroup = async () => {
+    setCreating(true);
     try {
-      await createPhaseGroup(phaseId, { name });
+      await createPhaseGroup(props.phase.id, {});
       await props.onChanged?.();
-      toast.success("Phase group created.");
+      toast.success("Pool created.");
     } catch {
-      toast.error("Error creating phase group.");
+      toast.error("Error creating pool.");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -85,15 +87,8 @@ function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
         phaseGroup={selectedPhaseGroup}
         showSelector={showSelector}
         onSelect={setSelectedPhaseGroupId}
-        onCreate={props.controls ? () => setCreateOpen(true) : undefined}
+        onCreate={props.controls && !creating ? handleCreatePhaseGroup : undefined}
         highlightedPhaseGroupId={highlightedPhaseGroupId}
-      />
-      <CreatePhaseGroupModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreate={handleCreatePhaseGroup}
-        phases={[props.phase]}
-        phaseId={props.phase.id}
       />
     </div>
   );

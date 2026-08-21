@@ -33,15 +33,15 @@ export default function CreatePhaseGroupModal({
   }, [open, phaseId, phases]);
 
   const onSubmit = () => {
-    if (!name.trim() || !selectedPhaseId) return;
+    if (!selectedPhaseId) return;
     onCreate(name.trim(), selectedPhaseId);
     onClose();
   };
 
   return (
     <OkModal
-      title="Create Phase Group"
-      okText="Create phase group"
+      title="Create pool"
+      okText="Create pool"
       open={open}
       onClose={onClose}
       onOk={onSubmit}
@@ -65,13 +65,13 @@ export default function CreatePhaseGroupModal({
           />
         </div>
         <div>
-          <h3 className="mb-1">Name</h3>
+          <h3 className="mb-1">Name (optional)</h3>
           <input
             className="w-full border border-gray-300 px-2 py-2 rounded-lg"
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Phase group name"
+            placeholder="Leave empty to name it after its letter"
             autoFocus
             onKeyDown={(event) => {
               if (event.key === "Enter") onSubmit();

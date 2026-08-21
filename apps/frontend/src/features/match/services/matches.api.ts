@@ -23,8 +23,8 @@ export async function listByPhaseGroup(phaseGroupId: number): Promise<Match[]> {
     const response = await axios.get<Match[]>(`matches/phase-group/${phaseGroupId}`);
     return response.data;
   } catch (error) {
-    console.error("Error listing matches by phase group:", error);
-    throw new Error("Unable to list matches by phase group.");
+    console.error("Error listing matches by pool:", error);
+    throw new Error("Unable to list matches by pool.");
   }
 }
 

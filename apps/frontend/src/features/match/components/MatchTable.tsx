@@ -122,7 +122,7 @@ export default function MatchTable({
 
   const totalCols = Math.max(3, match.rounds.length + 3);
   const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
-  const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Phase group ${phaseGroupId}`;
+  const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Pool ${phaseGroupId}`;
   const getHighlightForTarget = (targetKind: AdvancementCompetitionKind, targetId: number): MatchHighlight => {
     if (targetKind === "match") {
       const targetMatch = allMatches.find((candidate) => candidate.id === targetId);
@@ -256,7 +256,7 @@ export default function MatchTable({
                 ? phaseGroups.find((phaseGroup) => phaseGroup.id === sourceId) ?? null
                 : null;
               const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? (
-                typedSourceKind === "match" ? `Match ${sourceId}` : `Phase group ${sourceId}`
+                typedSourceKind === "match" ? `Match ${sourceId}` : `Pool ${sourceId}`
               );
               const positions = incomingRules
                 .filter((rule) => rule.sourceKind === typedSourceKind && rule.sourceId === sourceId)

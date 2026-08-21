@@ -28,7 +28,7 @@ export default function PhaseGroupActionsMenu({
     <div className="relative shrink-0">
       <button
         type="button"
-        title="Phase group actions"
+        title="Pool actions"
         onClick={() => setMenuOpen((current) => !current)}
         disabled={disabled}
         className={`${btnSecondary} flex h-8 w-8 items-center justify-center p-0 text-sm disabled:cursor-not-allowed`}
@@ -70,7 +70,7 @@ export default function PhaseGroupActionsMenu({
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
             >
               <FontAwesomeIcon icon={faTrash} />
-              Delete phase group
+              Delete pool
             </button>
           </div>
         </>
@@ -78,7 +78,7 @@ export default function PhaseGroupActionsMenu({
 
       <BaseModal open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} title="Confirm deletion" maxWidth="max-w-md">
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-gray-600">Delete phase group "{phaseGroupName}"?</p>
+          <p className="text-sm text-gray-600">Delete pool "{phaseGroupName}"?</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setDeleteConfirmOpen(false)} className={`${btnSecondary} text-sm`}>
               Cancel

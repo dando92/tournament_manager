@@ -23,7 +23,7 @@ export default function PhaseGroupSelector({
 }: PhaseGroupSelectorProps) {
   return (
     <div className="flex items-center gap-2 mb-3 flex-wrap">
-      <span className="text-xs text-gray-400">Phase group</span>
+      <span className="text-xs text-gray-400">Pool</span>
       {phaseGroups.map((phaseGroup) => (
         <button
           key={phaseGroup.id}
@@ -43,7 +43,7 @@ export default function PhaseGroupSelector({
       {onCreate && (
         <button
           type="button"
-          title="Create phase group"
+          title="Create pool"
           onClick={onCreate}
           className="rounded-full border border-dashed border-gray-300 px-3 py-1 text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600"
         >

@@ -115,7 +115,7 @@ export default function TournamentHeaderCreateMenu({
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
-                Phase group
+                Pool
               </button>
             )}
           </div>
