@@ -6,6 +6,8 @@ The current deployment is pre-production and contains no production data. GitHub
 
 The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.yml). It runs pinned PostgreSQL and Redis containers with named volumes and consumes migrations, API, SyncStart, realtime, and frontend images tagged only with the Git commit SHA. A reverse proxy or tunnel may expose the loopback-bound API, realtime, and frontend ports; that edge component is outside the application contract.
 
+Alternative hosted targets, and the changes they would require, are recorded in [Hosting Options](HostingOptions.md); none is selected.
+
 Production is not declared. Before production use, replace the pre-production reset/restore policy with approved forward-migration, compatibility, backup-retention, rollback, and disaster-recovery requirements.
 
 ## Maintenance Window

@@ -44,6 +44,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - [Migration execution status and next action](.ai/MigrationStatus.md)
 - [Local platform operations](.ai/LocalOperations.md)
 - [Continuous delivery and testing deployment](.ai/Deployment.md)
+- [Hosting options and deferred hosted target](.ai/HostingOptions.md)
 - [Current behavior and migration safety-net inventory](.ai/BaselineInventory.md)
 - [Deferred functional questions](.ai/FunctionalQuestions.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
