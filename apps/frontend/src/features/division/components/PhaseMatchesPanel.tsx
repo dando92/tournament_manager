@@ -61,24 +61,23 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
           {matchCount} match{matchCount !== 1 ? "es" : ""}
         </span>
         {props.controls && props.onDeletePhase && (
-          <div className="ml-auto">
-            <ActionsMenu
-              title="Phase actions"
-              items={[
-                {
-                  key: "delete",
-                  label: "Delete phase",
-                  icon: faTrash,
-                  danger: true,
-                  onSelect: props.onDeletePhase,
-                  confirm: {
-                    message: `Delete phase "${props.phase.name}"? Its pools and their matches are deleted with it, and this cannot be undone.`,
-                    confirmText: "Delete phase",
-                  },
+          <ActionsMenu
+            title="Phase actions"
+            align="left"
+            items={[
+              {
+                key: "delete",
+                label: "Delete phase",
+                icon: faTrash,
+                danger: true,
+                onSelect: props.onDeletePhase,
+                confirm: {
+                  message: `Delete phase "${props.phase.name}"? Its pools and their matches are deleted with it, and this cannot be undone.`,
+                  confirmText: "Delete phase",
                 },
-              ]}
-            />
-          </div>
+              },
+            ]}
+          />
         )}
       </div>
 

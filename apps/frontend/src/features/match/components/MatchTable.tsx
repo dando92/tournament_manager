@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import MatchRow from "@/features/match/components/row/MatchRow";
 import PathRow from "@/features/match/components/row/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
-import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
 import { toOrdinal } from "@/shared/utils";
 
 type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed: boolean };
@@ -37,9 +36,6 @@ type MatchTableProps = {
   onDeleteStanding: (playerId: number, songId: number) => void;
   manualPoints: Record<number, number>;
   onManualPointsChange: (playerId: number, points: number) => void;
-  onOpenAddPlayer?: () => void;
-  onOpenAddSong?: () => void;
-  canAddSong?: boolean;
 };
 
 export default function MatchTable({
@@ -57,9 +53,6 @@ export default function MatchTable({
   onDeleteStanding,
   manualPoints,
   onManualPointsChange,
-  onOpenAddPlayer,
-  onOpenAddSong,
-  canAddSong = false,
 }: MatchTableProps) {
   const [tooltip, setTooltip] = useState<{ roundId: number; title: string; x: number; y: number } | null>(null);
 
@@ -326,35 +319,9 @@ export default function MatchTable({
               })()
             ))}
 
-            {canEditMatchContent && onOpenAddPlayer && (
-              <tr className="hidden sm:table-row border-t border-dashed border-green-300">
-                <td colSpan={totalCols} className="p-0">
-                  <button
-                    type="button"
-                    onClick={onOpenAddPlayer}
-                    className="invisible flex w-full items-center justify-center gap-2 px-3 py-2 text-sm text-green-700 transition-colors hover:bg-green-50 group-hover/match:visible"
-                  >
-                    <FontAwesomeIcon icon={faUserPlus} />
-                    Add player
-                  </button>
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
-
-      {canEditMatchContent && onOpenAddSong && (
-        <button
-          type="button"
-          disabled={!canAddSong}
-          onClick={onOpenAddSong}
-          className="invisible mt-2 hidden w-full items-center justify-center gap-2 rounded border border-dashed border-green-300 px-3 py-2 text-sm text-green-700 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex group-hover/match:visible"
-        >
-          <MusicPlusIcon />
-          Add song
-        </button>
-      )}
 
       {tooltip && createPortal(
         <div

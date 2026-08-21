@@ -30,9 +30,18 @@ type ActionsMenuProps = {
   busy?: boolean;
   /** Replaces the trigger styling, for a menu that sits on a coloured surface. */
   triggerClassName?: string;
+  /** Which edge the panel is anchored to. Use "left" for a trigger near the left of the page. */
+  align?: "left" | "right";
 };
 
-export default function ActionsMenu({ title, items, disabled = false, busy = false, triggerClassName }: ActionsMenuProps) {
+export default function ActionsMenu({
+  title,
+  items,
+  disabled = false,
+  busy = false,
+  triggerClassName,
+  align = "right",
+}: ActionsMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState<ActionsMenuItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +74,11 @@ export default function ActionsMenu({ title, items, disabled = false, busy = fal
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white py-1 shadow-lg">
+          <div
+            className={`absolute top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white py-1 shadow-lg ${
+              align === "left" ? "left-0" : "right-0"
+            }`}
+          >
             {visibleItems.map((item) => (
               <button
                 key={item.key}

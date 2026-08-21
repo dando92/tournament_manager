@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import StandingModal from "@/features/match/modals/StandingModal";
 import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
+import MatchAddActions from "@/features/match/components/MatchAddActions";
 import MatchTable from "@/features/match/components/MatchTable";
 import MatchFooter from "@/features/match/components/MatchFooter";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
@@ -289,9 +290,14 @@ export default function MatchCard({
           onManualPointsChange={(playerId, points) =>
             setManualPoints((current) => ({ ...current, [playerId]: points }))
           }
-          onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
-          onOpenAddSong={openAddSong}
+        />
+      )}
+
+      {controls && !editMode && !match.matchResult && (
+        <MatchAddActions
           canAddSong={(match.entrants?.length ?? 0) > 0}
+          onAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
+          onAddSong={openAddSong}
         />
       )}
 

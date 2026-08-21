@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faStickyNote, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faStickyNote, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match } from "@/features/match/types/Match";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
@@ -89,14 +89,6 @@ export default function MatchHeader({
               <FontAwesomeIcon icon={faStickyNote} />
             </span>
           ) : null}
-          {controls && !isMatchEnded && canEditAdvancementRules ? (
-              <button
-                onClick={onEditAdvancementRules}
-                className="text-xs text-primary-dark font-medium border border-primary-dark/30 rounded px-2 py-0.5 hover:bg-primary-dark/10 transition-colors"
-              >
-                Edit advancement rules
-              </button>
-          ) : null}
         </div>
         {match.subtitle && (
           <p className="text-xs text-gray-400 mt-0.5">{match.subtitle}</p>
@@ -123,6 +115,13 @@ export default function MatchHeader({
                 disabled: !canAddSong,
                 className: "sm:hidden",
                 onSelect: onOpenAddSong,
+              },
+              {
+                key: "advancement",
+                label: "Edit advancement rules",
+                icon: faPenToSquare,
+                hidden: isMatchEnded || !canEditAdvancementRules,
+                onSelect: () => onEditAdvancementRules?.(),
               },
               {
                 key: "delete",
