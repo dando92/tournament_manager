@@ -135,7 +135,6 @@ function SelectedPhaseGroupPanel({
                 phaseGroupName={phaseGroup.name}
                 disabled={actions.saving || actions.deleting}
                 deleting={actions.deleting}
-                onCreateMatch={actions.openCreateMatch}
                 onEditAdvancementRules={actions.beginAdvancementEdit}
                 onDeletePhaseGroup={actions.removePhaseGroup}
               />

@@ -126,17 +126,23 @@ export default function MatchList({
           <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
         )
       ) : usesRoundRobinTable ? (
-        <RoundRobinMatchesView
-          matches={state.matches}
-          phaseGroup={phaseGroup}
-          renderMatchCard={(match) => renderMatchCard(match, true)}
-        />
+        <>
+          <RoundRobinMatchesView
+            matches={state.matches}
+            phaseGroup={phaseGroup}
+            renderMatchCard={(match) => renderMatchCard(match, true)}
+          />
+          {onCreateMatch && <CreateCard label="Create match" onClick={onCreateMatch} className="mt-4" />}
+        </>
       ) : usesBracketTree ? (
-        <EliminationMatchesView
-          matches={state.matches}
-          phaseGroups={phaseGroups}
-          renderMatchCard={renderMatchCard}
-        />
+        <>
+          <EliminationMatchesView
+            matches={state.matches}
+            phaseGroups={phaseGroups}
+            renderMatchCard={renderMatchCard}
+          />
+          {onCreateMatch && <CreateCard label="Create match" onClick={onCreateMatch} className="mt-4" />}
+        </>
       ) : (
         <>
           {bracketTreeUnavailable && (

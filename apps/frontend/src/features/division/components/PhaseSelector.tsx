@@ -37,7 +37,7 @@ export default function PhaseSelector({
             );
           })()
         ))}
-        {onCreate && <CreateChip title="Create phase" onClick={onCreate} />}
+        {onCreate && <CreateChip title="Create phase" onClick={onCreate} shape="tile" />}
       </div>
     </div>
   );

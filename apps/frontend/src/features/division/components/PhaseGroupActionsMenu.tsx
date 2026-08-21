@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDice, faEllipsisVertical, faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsisVertical, faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnDanger, btnSecondary } from "@/styles/buttonStyles";
 
@@ -8,7 +8,6 @@ type PhaseGroupActionsMenuProps = {
   phaseGroupName: string;
   disabled?: boolean;
   deleting?: boolean;
-  onCreateMatch: () => void;
   onEditAdvancementRules: () => void | Promise<void>;
   onDeletePhaseGroup: () => void | Promise<void>;
 };
@@ -17,7 +16,6 @@ export default function PhaseGroupActionsMenu({
   phaseGroupName,
   disabled = false,
   deleting = false,
-  onCreateMatch,
   onEditAdvancementRules,
   onDeletePhaseGroup,
 }: PhaseGroupActionsMenuProps) {
@@ -39,17 +37,6 @@ export default function PhaseGroupActionsMenu({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
           <div className="absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white shadow-lg">
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                onCreateMatch();
-              }}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <FontAwesomeIcon icon={faDice} className="text-primary-dark" />
-              Create match
-            </button>
             <button
               type="button"
               onClick={() => {
