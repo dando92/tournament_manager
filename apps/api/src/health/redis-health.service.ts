@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'node:net';
+import { resolveRedisEndpoint } from '@tournament-manager/live-messaging';
 
 @Injectable()
 export class RedisHealthService {
   constructor(private readonly config: ConfigService) {}
 
   async ping(): Promise<void> {
-    const host = this.config.get('REDIS_HOST') ?? '127.0.0.1';
-    const port = Number(this.config.get('REDIS_PORT') ?? 6379);
+    const { host, port } = resolveRedisEndpoint(this.config);
     const timeoutMs = Number(this.config.get('HEALTH_CHECK_TIMEOUT_MS') ?? 1000);
 
     await new Promise<void>((resolve, reject) => {

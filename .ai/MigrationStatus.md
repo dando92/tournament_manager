@@ -10,6 +10,13 @@
 
 ## Completed Checkpoints
 
+### Hosted-target preparation and local replica contract
+
+- Added `REDIS_URL` support to the Redis transport through `resolveRedisEndpoint` and `createRedisClient`. A hosted instance can now supply credentials and TLS in one connection string, while the local stack keeps `REDIS_HOST` and `REDIS_PORT` unchanged.
+- Routed the API, SyncStart, and Realtime Redis readiness probes through the same resolver so they follow the configured endpoint instead of the discrete host and port only. The probe still speaks plaintext `PING` over a raw socket; moving it to an authenticated client call remains open in [Hosting Options](HostingOptions.md).
+- Made the two local realtime replicas an enforced contract: `check-architecture` now fails when the root Compose configuration defines fewer than two, and [Local Operations](LocalOperations.md) records that they verify replica convergence rather than provide capacity.
+- Verification passed: `npm run check:architecture`, `npm run build`, `npm run lint` (pre-existing warnings only), and `npm run test:unit` across every workspace.
+
 ### SyncStart startup reconciliation
 
 - Made SyncStart reconstruct its own tournament runtimes at startup through `TournamentBootstrapService`, which consumes the previously unused `GET /internal/syncstart/tournaments` endpoint on the API.

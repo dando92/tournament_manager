@@ -23,7 +23,7 @@ Two consequences of spin-down belong to the operating procedure, not to the appl
 
 ## Service Mapping
 
-- API, SyncStart, and Realtime become web services built from their existing Dockerfiles. One Realtime instance replaces the two local replicas.
+- API, SyncStart, and Realtime become web services built from their existing Dockerfiles. One Realtime instance replaces the two local replicas. This does not relax the local contract: the local stack keeps two replicas because they verify replica convergence, and `check-architecture` enforces that.
 - The frontend stays on its current static host and keeps pointing at the hosted API and Realtime URLs.
 - PostgreSQL is external. Render's free PostgreSQL instance expires and is not used.
 - Redis uses a hosted key-value instance. A free tier that keeps data in memory only and empties it on restart is acceptable: Redis carries replaceable live messages only.
@@ -31,7 +31,7 @@ Two consequences of spin-down belong to the operating procedure, not to the appl
 
 ## Required Changes
 
-1. **Redis credentials.** `createRedisClient` in `packages/live-messaging/src/transports/redis/redis-live-event.config.ts` builds a client from `REDIS_HOST` and `REDIS_PORT` only. A hosted Redis requires authentication and TLS, so the transport must accept a full connection URL while keeping the host and port form for the local stack.
+1. **Redis credentials.** Done for the transport: `createRedisClient` accepts `REDIS_URL` and falls back to `REDIS_HOST` and `REDIS_PORT`, which the local stack keeps using. Still open for readiness: each service probes Redis with a plaintext `PING` over a raw TCP socket, so a TLS endpoint or one that requires authentication will report the service as not ready even when the transport connects. The probe must move to an authenticated client call before a hosted Redis is used.
 2. **Internal HTTP timeout.** `INTERNAL_HTTP_TIMEOUT_MS` defaults to five seconds in `HttpSyncStartClient`. A suspended free instance takes thirty to sixty seconds to spin up, so the first API call to a suspended SyncStart fails. Raise the timeout for the hosted target, or keep SyncStart on a paid instance whenever a tournament is configured.
 3. **Internal service addressing.** `API_INTERNAL_URL` and `SYNCSTART_INTERNAL_URL` must carry the services' public HTTPS URLs. Confirm whether the selected plan provides private networking before relying on it; without it, internal calls traverse the public internet protected only by `INTERNAL_SERVICE_TOKEN`.
 4. **Database configuration.** Set `DATABASE_SSL` to `true` and use the provider's pooled endpoint. The application already supports both; only configuration changes.

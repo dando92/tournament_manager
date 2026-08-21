@@ -51,6 +51,8 @@ Replaceable live events use the `tournament-manager.live` Redis Pub/Sub channel.
 
 The bundled SyncStart simulator is optional and starts through the `simulator` Compose profile; a host or remote WebSocket URL may be supplied through `LOCAL_FIXTURE_SYNCSTART_URL`.
 
+The local stack runs two realtime replicas deliberately. They are not local capacity: they verify that Pub/Sub fan-out converges across replicas without client affinity, which is the property `npm run verify:local` checks and `npm run check:architecture` enforces. A hosted deployment may run a single instance without changing this local contract.
+
 The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
 The frontend container reads `PUBLIC_API_URL` and `PUBLIC_REALTIME_URL` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
 

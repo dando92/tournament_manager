@@ -88,6 +88,16 @@ if (/^\s+build:/m.test(deploymentCompose)) {
   );
 }
 
+const localCompose = readFileSync(join(root, "docker-compose.yml"), "utf8");
+const localRealtimeReplicas = (
+  localCompose.match(/^ {2}realtime[a-z0-9-]*:$/gm) ?? []
+).length;
+if (localRealtimeReplicas < 2) {
+  errors.push(
+    "local Compose must run at least two realtime replicas; they verify that Pub/Sub fan-out converges without client affinity",
+  );
+}
+
 const deliveryWorkflow = readFileSync(
   join(root, ".github", "workflows", "delivery.yml"),
   "utf8",

@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'node:net';
+import { resolveRedisEndpoint } from '@tournament-manager/live-messaging';
 
 @Injectable()
 export class RedisHealthService {
   constructor(private readonly config: ConfigService) {}
 
   ping(): Promise<void> {
-    const host = this.config.get('REDIS_HOST') ?? '127.0.0.1';
-    const port = Number(this.config.get('REDIS_PORT') ?? 6379);
+    const { host, port } = resolveRedisEndpoint(this.config);
     return new Promise((resolve, reject) => {
       const socket = new Socket();
       const finish = (error?: Error) => {
