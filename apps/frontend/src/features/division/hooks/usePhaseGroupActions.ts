@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
-import { deletePhaseGroup } from "@/features/division/services/phase-groups.api";
+import { deletePhaseGroup, updatePhaseGroup } from "@/features/division/services/phase-groups.api";
 import { Division } from "@/features/division/types/Division";
 import { PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
 import * as MatchesApi from "@/features/match/services/matches.api";
@@ -68,6 +68,18 @@ export function usePhaseGroupActions({ division, phaseGroup, onChanged }: UsePha
     }
   };
 
+  const changeView = async (bracketType: string | null) => {
+    setSaving(true);
+    try {
+      await updatePhaseGroup(phaseGroup.id, { bracketType });
+      await onChanged?.();
+    } catch {
+      toast.error("Error updating how the pool is displayed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const createMatch = async (request: CreateMatchRequest) => {
     await MatchesApi.create(request);
     await onChanged?.();
@@ -86,6 +98,7 @@ export function usePhaseGroupActions({ division, phaseGroup, onChanged }: UsePha
     saveAdvancementRules,
     cancelAdvancementEdit,
     removePhaseGroup,
+    changeView,
     openCreateMatch: () => setCreateMatchOpen(true),
     closeCreateMatch: () => setCreateMatchOpen(false),
     createMatch,

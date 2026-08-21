@@ -13,6 +13,14 @@ export async function createPhaseGroup(phaseId: number, request: CreatePhaseGrou
   return response.data;
 }
 
+export async function updatePhaseGroup(
+  phaseGroupId: number,
+  request: { bracketType?: string | null },
+): Promise<PhaseGroup> {
+  const response = await axios.patch<PhaseGroup>(`phase-groups/${phaseGroupId}`, request);
+  return response.data;
+}
+
 export async function getPhaseGroup(phaseGroupId: number): Promise<PhaseGroup> {
   const response = await axios.get<PhaseGroup>(`phase-groups/${phaseGroupId}`);
   return response.data;

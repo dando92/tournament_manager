@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import PhaseGroupActionsMenu from "@/features/division/components/PhaseGroupActionsMenu";
 import PhaseGroupContent from "@/features/division/components/PhaseGroupContent";
 import PhaseGroupSelector from "@/features/division/components/PhaseGroupSelector";
+import PhaseGroupViewSelect from "@/features/division/components/PhaseGroupViewSelect";
 import { usePhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
 import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 import { Division } from "@/features/division/types/Division";
@@ -76,10 +77,7 @@ function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
 
   return (
     <div>
-      <PhaseHeader
-        phase={props.phase}
-        bracketTypeLabel={showSelector ? null : formatBracketType(selectedPhaseGroup.bracketType)}
-      />
+      <PhaseHeader phase={props.phase} />
       <SelectedPhaseGroupPanel
         key={selectedPhaseGroup.id}
         {...props}
@@ -121,6 +119,14 @@ function SelectedPhaseGroupPanel({
   const actions = usePhaseGroupActions({ division, phaseGroup, onChanged });
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
 
+  const viewControl = controls ? (
+    <PhaseGroupViewSelect phaseGroup={phaseGroup} disabled={actions.saving} onChange={actions.changeView} />
+  ) : (
+    bracketTypeLabel && (
+      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
+    )
+  );
+
   const actionsMenu = controls && (
     <PhaseGroupActionsMenu
       phaseGroupName={phaseGroup.name}
@@ -144,15 +150,16 @@ function SelectedPhaseGroupPanel({
           rightSlot={
             <>
               <PhaseGroupStateBadge state={phaseGroup.state} />
-              {bracketTypeLabel && (
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
-              )}
+              {viewControl}
               {actionsMenu}
             </>
           }
         />
       ) : (
-        actionsMenu && <div className="mb-3 flex justify-end">{actionsMenu}</div>
+        <div className="mb-3 flex items-center justify-end gap-2">
+          {viewControl}
+          {actionsMenu}
+        </div>
       )}
       <PhaseGroupContent
         phase={phase}
@@ -182,10 +189,9 @@ function PhaseGroupStateBadge({ state }: { state: PhaseGroupState }) {
 
 type PhaseHeaderProps = {
   phase: Phase;
-  bracketTypeLabel?: string | null;
 };
 
-function PhaseHeader({ phase, bracketTypeLabel }: PhaseHeaderProps) {
+function PhaseHeader({ phase }: PhaseHeaderProps) {
   const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
 
   return (
@@ -194,9 +200,6 @@ function PhaseHeader({ phase, bracketTypeLabel }: PhaseHeaderProps) {
       <span className="text-xs text-gray-400">
         {matchCount} match{matchCount !== 1 ? "es" : ""}
       </span>
-      {bracketTypeLabel && (
-        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
-      )}
     </div>
   );
 }

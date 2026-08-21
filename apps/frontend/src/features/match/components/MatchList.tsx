@@ -38,7 +38,19 @@ export default function MatchList({
     [division.phases],
   );
   const bracketType = phaseGroup?.bracketType ?? phaseGroups.find((candidate) => candidate.id === phaseGroupId)?.bracketType ?? null;
-  const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType);
+  const hasBracketEdges = useMemo(
+    () => {
+      const matchIds = new Set(state.matches.map((match) => match.id));
+      return state.matches.some((match) =>
+        (match.advancementRules ?? []).some(
+          (rule) => rule.sourceKind === "match" && rule.targetKind === "match" && matchIds.has(rule.targetId),
+        ),
+      );
+    },
+    [state.matches],
+  );
+  const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType) && hasBracketEdges;
+  const bracketTreeUnavailable = phaseGroupId !== undefined && isEliminationBracket(bracketType) && !hasBracketEdges;
   const usesRoundRobinTable = phaseGroupId !== undefined && isRoundRobinBracket(bracketType);
 
   const refreshMatches = () => {
@@ -119,10 +131,18 @@ export default function MatchList({
           renderMatchCard={renderMatchCard}
         />
       ) : (
-        <RawMatchCardsView
-          matches={state.matches}
-          renderMatchCard={(match) => renderMatchCard(match, true)}
-        />
+        <>
+          {bracketTreeUnavailable && (
+            <p className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              These matches carry no advancement rule between them, so there is no bracket to draw yet. They are listed
+              as cards until one match feeds another.
+            </p>
+          )}
+          <RawMatchCardsView
+            matches={state.matches}
+            renderMatchCard={(match) => renderMatchCard(match, true)}
+          />
+        </>
       )}
     </div>
   );
