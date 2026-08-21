@@ -1,49 +1,41 @@
-import TournamentManagementModals from "@/features/tournament/components/TournamentManagementModals";
+import { Suspense, useMemo } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import TournamentPageHeader from "@/features/tournament/components/header/TournamentPageHeader";
 import { TournamentLobbiesProvider } from "@/features/tournament/context/TournamentLobbiesContext";
 import { TournamentPageContextValue } from "@/features/tournament/context/TournamentPageContext";
-import { TournamentPageState } from "@/features/tournament/hooks/useTournamentPage";
-import { useTournamentLayout } from "@/features/tournament/hooks/useTournamentLayout";
-import { Suspense } from "react";
-import { Outlet } from "react-router-dom";
 
-type TournamentLayoutProps = {
-  context: TournamentPageContextValue;
-  state: TournamentPageState;
-};
+/**
+ * What wraps every tournament destination: the header, and the lobby context
+ * for the one page that needs it.
+ *
+ * The structural dialogs used to be mounted here. They now live beside the
+ * tree provider, because the tree's context menu is what opens them and the
+ * tree outlives any page.
+ */
+export default function TournamentLayout({ context }: { context: TournamentPageContextValue }) {
+  const location = useLocation();
+  const { tournamentId } = context;
 
-export default function TournamentLayout({ context, state }: TournamentLayoutProps) {
-  const {
-    isOverviewPage,
-    isLobbiesPage,
-    isParticipantsPage,
-    isSongsPage,
-    isDivisionPhasesPage,
-    currentDivisionId,
-    headerSubtitle,
-    handleCreatePhase,
-    handleGenerateBracket,
-  } = useTournamentLayout({ context, state });
+  const page = useMemo(() => {
+    const at = (key: string) => location.pathname === `/tournament/${tournamentId}/${key}`;
+    return {
+      isSongsPage: at("songs"),
+      isParticipantsPage: at("participants"),
+      isLobbiesPage: at("lobbies"),
+    };
+  }, [location.pathname, tournamentId]);
 
-  const pageContent = (
+  const content = (
     <>
       <TournamentPageHeader
-        tournamentId={context.tournamentId}
+        tournamentId={tournamentId}
         tournamentName={context.tournamentName}
-        headerSubtitle={headerSubtitle}
         controls={context.controls}
-        isOverviewPage={isOverviewPage}
-        isSongsPage={isSongsPage}
-        isParticipantsPage={isParticipantsPage}
-        isLobbiesPage={isLobbiesPage}
-        isDivisionPhasesPage={isDivisionPhasesPage}
+        isSongsPage={page.isSongsPage}
+        isParticipantsPage={page.isParticipantsPage}
+        isLobbiesPage={page.isLobbiesPage}
         songsVersion={context.songsVersion}
         refreshSongs={context.refreshSongs}
-        createMenuOpen={state.createMenuOpen}
-        setCreateMenuOpen={state.setCreateMenuOpen}
-        hasDivisions={state.divisions.length > 0}
-        hasStartggApiKey={context.hasStartggApiKey}
-        onGenerateBracket={() => state.setGenerateBracketOpen(true)}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 
@@ -55,20 +47,10 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
 
   return (
     <div className="flex flex-col gap-4">
-      <TournamentManagementModals
-        context={context}
-        state={state}
-        currentDivisionId={currentDivisionId}
-        onCreatePhase={handleCreatePhase}
-        onGenerateBracket={handleGenerateBracket}
-      />
-
-      {isLobbiesPage ? (
-        <TournamentLobbiesProvider tournamentId={context.tournamentId}>
-          {pageContent}
-        </TournamentLobbiesProvider>
+      {page.isLobbiesPage ? (
+        <TournamentLobbiesProvider tournamentId={tournamentId}>{content}</TournamentLobbiesProvider>
       ) : (
-        pageContent
+        content
       )}
     </div>
   );

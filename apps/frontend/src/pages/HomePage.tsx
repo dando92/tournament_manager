@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { Tournament } from "@/features/tournament/types/Tournament";
-import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
+import { rememberTournament } from "@/features/tournament/services/recentTournaments";
 import TournamentCard from "@/features/tournament/components/TournamentCard";
 import CreateTournamentModal from "@/features/tournament/modals/CreateTournamentModal";
 import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
@@ -36,7 +36,7 @@ export default function HomePage() {
   }, []);
 
   function handleSelect(t: Tournament) {
-    addRecentTournament({ id: t.id, name: t.name });
+    rememberTournament({ id: t.id, name: t.name });
     navigate(`/tournament/${t.id}`);
   }
 
@@ -47,7 +47,7 @@ export default function HomePage() {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onCreated={(t) => {
-          addRecentTournament({ id: t.id, name: t.name });
+          rememberTournament({ id: t.id, name: t.name });
           navigate(`/tournament/${t.id}`);
         }}
       />

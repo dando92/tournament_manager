@@ -22,7 +22,6 @@ export type TournamentPageContextValue = {
   refreshDivisions: () => Promise<void>;
   refreshSongs: () => void;
   openCreateDivision: () => void;
-  openCreatePhase: () => void;
   participantsManageModal: ParticipantsManageModal;
   setParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };

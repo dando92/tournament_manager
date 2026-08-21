@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
-import { GenerateBracketRequest } from "@/features/tournament/hooks/useTournamentPage";
+import { GenerateBracketRequest } from "@/features/division/types/GenerateBracket";
 
 type Props = {
   open: boolean;

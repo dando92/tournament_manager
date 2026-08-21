@@ -1,79 +1,74 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faListUl, faMagnifyingGlass, faRightToBracket, faUser } from "@fortawesome/free-solid-svg-icons";
 import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBars,
-  faMagnifyingGlass,
-  faRightToBracket,
-  faRightFromBracket,
-} from "@fortawesome/free-solid-svg-icons";
-import { useSidebar } from "@/shared/context/SidebarContext";
-import { useState } from "react";
 
-// Bottom navigation bar — visible only on mobile
+/**
+ * The bottom bar on phones.
+ *
+ * Browse opens the tree as a page of its own rather than as a drawer over the
+ * content. A drawer is for choosing one thing and dismissing; a tree is a
+ * surface you move around in, and it earns the whole screen.
+ */
 export function MobileBottomNav() {
-  const { state, actions } = useAuthContext();
-  const { toggle } = useSidebar();
+  const { state } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  const isOnAccount =
-    location.pathname === "/account" ||
-    location.pathname === "/login" ||
-    location.pathname === "/register";
-
-  function handleLogout() {
-    actions.logout();
-    navigate("/");
-  }
+  const onAccount =
+    location.pathname === "/account" || location.pathname === "/login" || location.pathname === "/register";
 
   return (
     <>
-    <SearchTournamentModal open={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
-    <nav className="flex md:hidden fixed bottom-0 left-0 right-0 bg-ui-surface border-t border-ui-border z-40 h-14">
-      {/* Left: menu button */}
-      <button
-        onClick={toggle}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs text-ui-text-mute hover:text-ui-text transition-colors"
-      >
-        <FontAwesomeIcon icon={faBars} className="text-xl" />
-        <span>Menu</span>
-      </button>
-
-      {/* Center: search */}
-      <button
-        onClick={() => setSearchModalOpen(true)}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors text-ui-text-mute hover:text-ui-text"
-      >
-        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl" />
-        <span>Search</span>
-      </button>
-
-      {/* Right: login/logout */}
-      {state.account ? (
-        <button
-          onClick={handleLogout}
-          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-ui-text font-semibold" : "text-ui-text-mute"
-          }`}
-        >
-          <FontAwesomeIcon icon={faRightFromBracket} className="text-xl" />
-          <span>Logout</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => navigate("/login", { state: { from: location.pathname } })}
-          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-ui-text font-semibold" : "text-ui-text-mute"
-          }`}
-        >
-          <FontAwesomeIcon icon={faRightToBracket} className="text-xl" />
-          <span>Login</span>
-        </button>
-      )}
-    </nav>
+      <SearchTournamentModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-14 border-t border-ui-border bg-ui-surface md:hidden">
+        <NavButton
+          icon={faListUl}
+          label="Browse"
+          active={location.pathname === "/browse"}
+          onClick={() => navigate("/browse")}
+        />
+        <NavButton icon={faMagnifyingGlass} label="Search" active={false} onClick={() => setSearchOpen(true)} />
+        {state.account ? (
+          <NavButton icon={faUser} label="Account" active={onAccount} onClick={() => navigate("/account")} />
+        ) : (
+          <NavButton
+            icon={faRightToBracket}
+            label="Login"
+            active={onAccount}
+            onClick={() => navigate("/login", { state: { from: location.pathname } })}
+          />
+        )}
+      </nav>
     </>
+  );
+}
+
+function NavButton({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: IconDefinition;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs transition-colors ${
+        active ? "font-semibold text-ui-text" : "text-ui-text-mute hover:text-ui-text"
+      }`}
+    >
+      <FontAwesomeIcon icon={icon} className="text-xl" />
+      <span>{label}</span>
+    </button>
   );
 }

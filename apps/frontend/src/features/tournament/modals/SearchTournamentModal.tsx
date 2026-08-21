@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { Tournament } from "@/features/tournament/types/Tournament";
-import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
+import { rememberTournament } from "@/features/tournament/services/recentTournaments";
 import { getBannerGradient } from "@/features/tournament/utils/tournamentBanner";
 
 type Props = {
@@ -38,7 +38,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
     : tournaments;
 
   function handleSelect(t: Tournament) {
-    addRecentTournament({ id: t.id, name: t.name });
+    rememberTournament({ id: t.id, name: t.name });
     navigate(`/tournament/${t.id}`);
     onClose();
   }

@@ -155,6 +155,22 @@
 - Updated application imports, package dependencies, architecture documentation, and envelope/in-memory transport tests.
 - Verification passed: builds and type lint for contracts, live-messaging, API, SyncStart, and Realtime; `npm run test:contract`; and `npm run test:unit` (all workspace unit suites passed). API lint completed with its nine pre-existing warnings and no errors.
 
+### Frontend navigation rebuilt around the tournament tree
+
+- Replaced four overlapping navigation systems — the sidebar tab list, the tournament header create menus, the division tab bar, and the phase breadcrumb with its pool chips — with one tournament tree in the sidebar.
+- Mounted `TournamentUpdatesProvider` and the new `TournamentTreeProvider` in `MainLayout`, above both the sidebar and the page outlet, so the tree's status glyphs follow the same realtime events the pages do. Tournament structure and every operation that changes it now belong to that provider alone; `useTournamentPage` keeps only the tournament's own properties.
+- Made every node an address: `division/:divisionId`, `.../phase/:phaseId`, and `.../phase/:phaseId/pool/:poolId` open one flat match list at different depths, with the open match carried as `?match=` and a pool's advancement rules as `?edit=advancement`.
+- Added the flat match list: pools grouped under sticky headers, its own scroll with the card anchored below, and search over match, player, song, pool and phase names across the whole division.
+- Gave each match row two independent axes in fixed positions — the active dot on the left, the commit state on the right — instead of one combined status.
+- Added a shared `ContextMenu` with right click on desktop, a visible overflow button, and a long press on touch; structural creation, renaming and deletion moved there from the page header.
+- Tree icons stay neutral; colour on a node reports only rolled-up state (`running` outranks `pending`, and a branch is `done` only when every child is). Selection stays greyscale, per `.ai/Design.md`.
+- Made the sidebar resizable, replaced the mobile drawer with a `/browse` page, and persisted tree expansion, recents and pinned tournaments in localStorage.
+- Moved the workspace totals from Overview into Stats and left Overview as a deliberate placeholder. Division entrants, seeding and standings stay tree leaves for now; merging them into a tournament-level Roster page is the next step and was staged last on purpose so nothing breaks in between.
+- Retired `DivisionPhasesPage`, `BracketsTab`, `PhaseBreadcrumb`, `PhaseGroupSelector`, `PhaseMatchesPanel`, `PhaseGroupContent`, `PhaseActionsMenu`, `RenamePhaseModal`, `useBracketsTab`, `usePhaseGroupActions`, `TournamentManagementModals`, `TournamentHeaderCreateMenu`, `tournamentHeaderSubtitle`, both tab configs, `useTournamentLayout`, `SidebarContext`, `TournamentOverviewDivisions`, `DivisionCard`, `useTournamentOverviewPage`, `CreateChip`, and `phaseMatchCount`.
+- Left `MatchList` and the bracket and round-robin views in place but unwired: the bracket visualisation is parked, not dropped, and needs a decision about where it is reached from.
+- Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors (six pre-existing fast-refresh warnings), `npx vite build` succeeds, and `npm test` passes with the header-subtitle suite replaced by a `parseTreeSelection` suite covering every tree depth.
+- Not done, and needing approval before it is: the pool status glyph cannot report "awaiting confirmation" because the overview payload carries no per-pool count of matches pending a commit. It currently maps `pending | active | completed` straight through.
+
 ## Verification
 
 ```text

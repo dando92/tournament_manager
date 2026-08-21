@@ -32,4 +32,29 @@ Vite loads build-time development defaults from the repository root. Container d
 - Closing requires an explicit confirmation that states the configured retention period, read-only behavior, lobby disconnection, and permanent transport-data deletion.
 - Reopening restores mutation controls but does not imply that previously purged transport history can be reconstructed.
 
+## Navigation
+
+The tournament tree in the sidebar is the application's only navigation. Keep it
+that way: a second control that reaches the same destination is what made the
+previous layout hard to follow.
+
+- Every node the tree can select is an address. A branch (division, phase, pool)
+  opens the same flat match list at a different depth; the open match is a
+  `?match=` search parameter, because it is a sub-state of the list rather than
+  another destination.
+- `TournamentUpdatesProvider` and `TournamentTreeProvider` are mounted in
+  `MainLayout`, above both the sidebar and the page outlet. The tree draws state
+  derived from the same data the pages show, so it has to sit beside them, not
+  inside them.
+- Tournament structure — divisions, phases, pools — belongs to
+  `TournamentTreeProvider` alone, together with every operation that changes it.
+  Pages read it from there rather than fetching it again.
+- Creation, renaming and deletion of structure act on a node, so they live in
+  that node's context menu. A page header carries only what applies to the page
+  it heads.
+- Destinations a viewer cannot reach are omitted from the tree, not disabled.
+- Tree expansion, recent tournaments and pinned tournaments persist in
+  localStorage. Sidebar width does not: it is a momentary adjustment, not a
+  setting.
+
 Additional frontend architectural and coding rules remain intentionally minimal.

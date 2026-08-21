@@ -6,24 +6,19 @@ import {
   TournamentPageContextValue,
 } from "@/features/tournament/context/TournamentPageContext";
 import { useTournamentPage } from "@/features/tournament/hooks/useTournamentPage";
+import { useTournamentTree } from "@/features/tournament/context/TournamentTreeContext";
 
 export function useTournamentPageContainer(tournamentId: number) {
-  const divisionMatch = useMatch(
-    "/tournament/:tournamentId/division/:divisionId/*",
-  );
+  const divisionMatch = useMatch("/tournament/:tournamentId/division/:divisionId/*");
   const { canEditTournament } = usePermissions();
   const canControl = canEditTournament(tournamentId);
   const state = useTournamentPage({ tournamentId, canControl });
+  const tree = useTournamentTree();
   const [songsVersion, setSongsVersion] = useState(0);
-  const [participantsManageModal, setParticipantsManageModal] =
-    useState<ParticipantsManageModal>("none");
-  const parsedDivisionId = divisionMatch?.params.divisionId
-    ? Number(divisionMatch.params.divisionId)
-    : undefined;
-  const currentDivisionId =
-    parsedDivisionId && Number.isFinite(parsedDivisionId)
-      ? parsedDivisionId
-      : undefined;
+  const [participantsManageModal, setParticipantsManageModal] = useState<ParticipantsManageModal>("none");
+
+  const parsedDivisionId = divisionMatch?.params.divisionId ? Number(divisionMatch.params.divisionId) : undefined;
+  const currentDivisionId = parsedDivisionId && Number.isFinite(parsedDivisionId) ? parsedDivisionId : undefined;
 
   const context: TournamentPageContextValue = {
     tournamentId,
@@ -33,22 +28,19 @@ export function useTournamentPageContainer(tournamentId: number) {
     hasStartggApiKey: state.hasStartggApiKey,
     tournamentStatus: state.tournamentStatus,
     songsVersion,
-    divisions: state.divisions,
+    /* Structure comes from the tree, which owns it for the whole shell. */
+    divisions: tree.divisions,
     controls: canControl && state.tournamentStatus === "open",
     setTournamentName: state.setTournamentName,
     setSyncstartUrl: state.setSyncstartUrl,
     setHasStartggApiKey: state.setHasStartggApiKey,
     setTournamentStatus: state.setTournamentStatus,
-    refreshDivisions: state.refreshDivisions,
+    refreshDivisions: tree.refreshTree,
     refreshSongs: () => setSongsVersion((value) => value + 1),
-    openCreateDivision: () => state.setCreateDivisionOpen(true),
-    openCreatePhase: () => state.setCreatePhaseOpen(true),
+    openCreateDivision: () => tree.openDialog({ kind: "createDivision" }),
     participantsManageModal,
     setParticipantsManageModal,
   };
 
-  return {
-    context,
-    state,
-  };
+  return { context, state };
 }

@@ -1,68 +1,48 @@
 import type { Dispatch, SetStateAction } from "react";
 import { ParticipantsManageModal } from "@/features/tournament/context/TournamentPageContext";
-import TournamentHeaderCreateMenu from "@/features/tournament/components/header/TournamentHeaderCreateMenu";
+import TournamentBreadcrumb from "@/features/tournament/components/header/TournamentBreadcrumb";
 import TournamentHeaderLobbyManageMenu from "@/features/tournament/components/header/TournamentHeaderLobbyManageMenu";
 import TournamentHeaderParticipantsManageMenu from "@/features/tournament/components/header/TournamentHeaderParticipantsManageMenu";
 import TournamentHeaderSongsManageMenu from "@/features/tournament/components/header/TournamentHeaderSongsManageMenu";
 
+/**
+ * The header of whatever the tree has open.
+ *
+ * One rule governs it: the left says *where you are*, the right says *what you
+ * can do here*. Creating divisions, phases, pools and brackets is no longer on
+ * the right — those act on a node, so they live in that node's context menu in
+ * the tree, where the target is unambiguous.
+ */
+
 type TournamentPageHeaderProps = {
   tournamentId: number;
   tournamentName: string;
-  headerSubtitle: string;
   controls: boolean;
-  isOverviewPage: boolean;
   isSongsPage: boolean;
   isParticipantsPage: boolean;
   isLobbiesPage: boolean;
-  isDivisionPhasesPage: boolean;
   songsVersion: number;
   refreshSongs: () => void;
-  createMenuOpen: boolean;
-  setCreateMenuOpen: Dispatch<SetStateAction<boolean>>;
-  hasDivisions: boolean;
-  hasStartggApiKey: boolean;
-  onGenerateBracket: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
 export default function TournamentPageHeader({
   tournamentId,
   tournamentName,
-  headerSubtitle,
   controls,
-  isOverviewPage,
   isSongsPage,
   isParticipantsPage,
   isLobbiesPage,
-  isDivisionPhasesPage,
   songsVersion,
   refreshSongs,
-  createMenuOpen,
-  setCreateMenuOpen,
-  hasDivisions,
-  hasStartggApiKey,
-  onGenerateBracket,
   onOpenParticipantsManageModal,
 }: TournamentPageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4 flex-wrap">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-black text-ui-text">{tournamentName}</h1>
-        <p className="text-sm text-ui-text-mute">{headerSubtitle}</p>
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <TournamentBreadcrumb tournamentName={tournamentName} />
 
       {controls && (
-        <div className="flex items-center gap-2 ml-auto">
-          {(isOverviewPage || isDivisionPhasesPage) && (
-            <TournamentHeaderCreateMenu
-              open={createMenuOpen}
-              setOpen={setCreateMenuOpen}
-              hasDivisions={hasDivisions}
-              hasStartggApiKey={hasStartggApiKey}
-              onGenerateBracket={onGenerateBracket}
-              onOpenParticipantsManageModal={onOpenParticipantsManageModal}
-            />
-          )}
+        <div className="ml-auto flex items-center gap-2">
           {isSongsPage && (
             <TournamentHeaderSongsManageMenu
               tournamentId={tournamentId}
@@ -70,14 +50,8 @@ export default function TournamentPageHeader({
               refreshSongs={refreshSongs}
             />
           )}
-          {isParticipantsPage && (
-            <TournamentHeaderParticipantsManageMenu onOpen={onOpenParticipantsManageModal} />
-          )}
-          {isLobbiesPage && (
-            <TournamentHeaderLobbyManageMenu
-              tournamentId={tournamentId}
-            />
-          )}
+          {isParticipantsPage && <TournamentHeaderParticipantsManageMenu onOpen={onOpenParticipantsManageModal} />}
+          {isLobbiesPage && <TournamentHeaderLobbyManageMenu tournamentId={tournamentId} />}
         </div>
       )}
     </div>

@@ -1,79 +1,131 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import Logo from "@/assets/icon.png";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
-import { useLayoutEffect, useRef, useState } from "react";
-import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
+  faLayerGroup,
   faMagnifyingGlass,
   faPlus,
-  faShield,
-  faUser,
   faRightFromBracket,
   faRightToBracket,
-  faTrophy,
+  faShield,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import {
-  getRecentTournaments,
-  selectRecentTournament,
-  type RecentTournament,
-} from "@/features/tournament/services/recentTournaments";
-import { useSidebar } from "@/shared/context/SidebarContext";
+import Logo from "@/assets/icon.png";
+import { useAuthContext } from "@/features/auth/context/AuthContext";
+import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
+import TournamentTree from "@/features/tournament/components/tree/TournamentTree";
+import { useTournamentTree } from "@/features/tournament/context/TournamentTreeContext";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
-import { TOURNAMENT_TABS } from "@/features/tournament/config/tournamentTabs";
 
-function ScrollingText({ text }: { text: string }) {
-  const containerRef = useRef<HTMLSpanElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
-  const [shouldScroll, setShouldScroll] = useState(false);
+/**
+ * The sidebar: a header that acts on the whole list, the tree, and the account.
+ *
+ * The two searches it sits between do different jobs and stay apart on
+ * purpose. The magnifier here finds a *tournament*; the one in the page header
+ * searches *inside* the destination that is open.
+ */
+export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { state, actions } = useAuthContext();
+  const { isAdmin, canCreateTournament } = usePermissions();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const tree = useTournamentTree();
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  useLayoutEffect(() => {
-    if (containerRef.current && textRef.current) {
-      setShouldScroll(textRef.current.scrollWidth > containerRef.current.offsetWidth);
-    }
-  }, [text]);
+  const go = (path: string) => {
+    navigate(path);
+    onNavigate?.();
+  };
 
   return (
-    <span ref={containerRef} className="overflow-hidden block min-w-0 flex-1" title={text}>
-      <span
-        ref={textRef}
-        className={`block whitespace-nowrap ${shouldScroll ? "animate-marquee" : ""}`}
+    <aside className="flex h-full min-w-0 flex-col bg-ui-canvas">
+      <SearchTournamentModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      <button
+        type="button"
+        onClick={() => go("/")}
+        className="flex shrink-0 items-center gap-3 border-b border-ui-border p-4 text-left transition-colors hover:bg-ui-raised"
       >
-        {text}
-      </span>
-    </span>
+        <img src={Logo} alt="" className="h-9 w-9 shrink-0 rounded-lg" />
+        <h2 className="text-sm font-bold leading-tight text-ui-text">
+          Tournament
+          <br />
+          Manager
+        </h2>
+      </button>
+
+      <div className="flex shrink-0 items-center gap-1 border-b border-ui-border px-3 py-2">
+        <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">Tournaments</span>
+        <HeaderButton icon={faLayerGroup} title="Collapse all" onClick={tree.collapseAll} />
+        {canCreateTournament && (
+          <HeaderButton
+            icon={faPlus}
+            title="New tournament"
+            onClick={() => go(state.account ? "/?create=1" : "/login")}
+          />
+        )}
+        <HeaderButton icon={faMagnifyingGlass} title="Find a tournament" onClick={() => setSearchOpen(true)} />
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <TournamentTree onNavigate={onNavigate} />
+      </div>
+
+      <div className="flex shrink-0 flex-col gap-0.5 border-t border-ui-border p-2">
+        {isAdmin && (
+          <SidebarLink
+            to="/admin/roles"
+            icon={faShield}
+            active={location.pathname === "/admin/roles"}
+            onClick={onNavigate}
+          >
+            Manage roles
+          </SidebarLink>
+        )}
+        {state.account ? (
+          <>
+            <SidebarLink to="/account" icon={faUser} active={location.pathname === "/account"} onClick={onNavigate}>
+              Account
+            </SidebarLink>
+            <button
+              type="button"
+              onClick={() => {
+                actions.logout();
+                go("/");
+              }}
+              className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text"
+            >
+              <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
+              <span>Logout</span>
+            </button>
+          </>
+        ) : (
+          <SidebarLink
+            to="/login"
+            state={{ from: location.pathname }}
+            icon={faRightToBracket}
+            active={location.pathname === "/login" || location.pathname === "/register"}
+            onClick={onNavigate}
+          >
+            Login / Register
+          </SidebarLink>
+        )}
+      </div>
+    </aside>
   );
 }
 
-function TournamentButton({
-  tournament,
-  selected,
-  onClick,
-}: {
-  tournament: RecentTournament;
-  selected: boolean;
-  onClick: () => void;
-}) {
+function HeaderButton({ icon, title, onClick }: { icon: IconDefinition; title: string; onClick: () => void }) {
   return (
     <button
+      type="button"
+      title={title}
+      aria-label={title}
       onClick={onClick}
-      title={tournament.name}
-      className={`flex items-center gap-2 px-2 py-2 rounded text-sm transition-colors w-full text-left ${
-        selected
-          ? "bg-ui-selected text-ui-text font-semibold"
-          : "text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
-      }`}
+      className="flex h-7 w-7 items-center justify-center rounded text-xs text-ui-text-mute transition-colors hover:bg-ui-raised hover:text-ui-text"
     >
-      {tournament.logo ? (
-        <img
-          src={tournament.logo}
-          alt=""
-          className="h-6 w-6 rounded shrink-0 object-cover"
-        />
-      ) : (
-        <FontAwesomeIcon icon={faTrophy} className="w-4 shrink-0" />
-      )}
-      <ScrollingText text={tournament.name} />
+      <FontAwesomeIcon icon={icon} />
     </button>
   );
 }
@@ -88,7 +140,7 @@ function SidebarLink({
 }: {
   to: string;
   state?: unknown;
-  icon?: React.ComponentProps<typeof FontAwesomeIcon>["icon"];
+  icon: IconDefinition;
   children: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
@@ -98,197 +150,14 @@ function SidebarLink({
       to={to}
       state={state}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
+      className={`flex items-center gap-3 rounded px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-ui-selected text-ui-text font-semibold"
+          ? "bg-ui-selected font-semibold text-ui-text"
           : "text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
       }`}
     >
-      {icon && <FontAwesomeIcon icon={icon} className="w-4 shrink-0" />}
+      <FontAwesomeIcon icon={icon} className="w-4 shrink-0" />
       <span>{children}</span>
     </Link>
-  );
-}
-
-export default function Sidebar() {
-  const { state, actions } = useAuthContext();
-  const { isAdmin, canCreateTournament, canEditTournament } = usePermissions();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { isOpen, close } = useSidebar();
-
-  const [recentTournaments, setRecentTournaments] = useState<RecentTournament[]>(
-    getRecentTournaments,
-  );
-
-  const prevPathname = useRef(location.pathname);
-  useLayoutEffect(() => {
-    if (prevPathname.current !== location.pathname) {
-      prevPathname.current = location.pathname;
-      setRecentTournaments(getRecentTournaments());
-    }
-  }, [location.pathname]);
-
-  function handleLogout() {
-    actions.logout();
-    navigate("/");
-    close();
-  }
-
-  const selectedTournament = recentTournaments[0] ?? null;
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-
-  function handleTournamentClick(t: RecentTournament) {
-    selectRecentTournament(t.id);
-    setRecentTournaments(getRecentTournaments());
-    close();
-
-    navigate(`/tournament/${t.id}`);
-  }
-
-  const tournamentMatch = location.pathname.match(/^\/tournament\/(\d+)(?:\/([^/]+))?/);
-  const currentTournamentId = tournamentMatch ? Number(tournamentMatch[1]) : null;
-  const visibleTournamentTabs = TOURNAMENT_TABS.filter((tab) => {
-    if (tab.key === "participants" || tab.key === "configuration") {
-      return currentTournamentId !== null && canEditTournament(currentTournamentId);
-    }
-    if (tab.key !== "lobbies") return true;
-    return currentTournamentId !== null && canEditTournament(currentTournamentId);
-  });
-  const currentTournamentTab = visibleTournamentTabs.find((tab) =>
-    location.pathname.endsWith(`/${tab.key}`),
-  )?.key;
-
-  const content = (
-    <aside className="flex flex-col w-56 h-full bg-ui-canvas border-r border-ui-border">
-      <button
-        type="button"
-        onClick={() => {
-          navigate("/");
-          close();
-        }}
-        className="flex items-center gap-3 p-4 border-b border-ui-border shrink-0 text-left hover:bg-ui-raised transition-colors"
-      >
-        <img src={Logo} alt="logo" className="h-10 w-10 rounded-lg shrink-0" />
-        <h2 className="text-ui-text font-bold text-base leading-tight">
-          Tournament<br />Manager
-        </h2>
-      </button>
-
-      <div className="p-3 border-b border-ui-border shrink-0 flex flex-col gap-2">
-        {canCreateTournament && (
-          <button
-            onClick={() => { navigate(state.account ? "/?create=1" : "/login"); close(); }}
-            className="flex items-center justify-center gap-2 w-full border border-ui-border bg-ui-surface hover:bg-ui-raised text-ui-text text-sm font-semibold px-3 py-2 rounded transition-colors"
-          >
-            <FontAwesomeIcon icon={faPlus} className="text-xs" />
-            Create tournament
-          </button>
-        )}
-        <button
-          onClick={() => setSearchModalOpen(true)}
-          className="flex items-center justify-center gap-2 w-full border border-ui-border bg-ui-surface hover:bg-ui-raised text-ui-text text-sm font-semibold px-3 py-2 rounded transition-colors"
-        >
-          <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xs" />
-          Search tournament
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-0.5 p-3 border-b border-ui-border shrink-0">
-        <p className="text-ui-text-soft text-xs uppercase tracking-wide mb-1 px-1">Recent tournaments</p>
-        {recentTournaments.length > 0 ? (
-          recentTournaments.map((t) => (
-            <TournamentButton
-              key={t.id}
-              tournament={t}
-              selected={t.id === selectedTournament?.id}
-              onClick={() => handleTournamentClick(t)}
-            />
-          ))
-        ) : (
-          <p className="text-ui-text-mute text-xs px-1 italic">No recent tournaments</p>
-        )}
-      </div>
-
-      {currentTournamentId !== null && (
-        <div className="flex flex-col gap-0.5 p-3 border-b border-ui-border shrink-0">
-          <p className="text-ui-text-soft text-xs uppercase tracking-wide mb-1 px-1">Tournament</p>
-          {visibleTournamentTabs.map((tab) => (
-            <SidebarLink
-              key={tab.key}
-              to={`/tournament/${currentTournamentId}/${tab.key}`}
-              active={currentTournamentTab === tab.key}
-              onClick={close}
-            >
-              {tab.label}
-            </SidebarLink>
-          ))}
-        </div>
-      )}
-
-      <div className="flex-1" />
-
-      <div className="flex flex-col gap-0.5 p-3 border-t border-ui-border shrink-0">
-        {isAdmin && (
-          <SidebarLink
-            to="/admin/roles"
-            icon={faShield}
-            active={location.pathname === "/admin/roles"}
-            onClick={close}
-          >
-            Manage Roles
-          </SidebarLink>
-        )}
-        {state.account && (
-          <SidebarLink
-            to="/account"
-            icon={faUser}
-            active={location.pathname === "/account"}
-            onClick={close}
-          >
-            Account
-          </SidebarLink>
-        )}
-        {state.account ? (
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 rounded text-sm text-ui-text-soft hover:bg-ui-raised hover:text-ui-text transition-colors text-left w-full"
-          >
-            <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
-            <span>Logout</span>
-          </button>
-        ) : (
-          <SidebarLink
-            to="/login"
-            state={{ from: location.pathname }}
-            icon={faRightToBracket}
-            active={
-              location.pathname === "/login" || location.pathname === "/register"
-            }
-            onClick={close}
-          >
-            Login / Register
-          </SidebarLink>
-        )}
-      </div>
-    </aside>
-  );
-
-  return (
-    <>
-      <SearchTournamentModal open={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
-
-      <div className="hidden md:flex min-h-screen shrink-0">{content}</div>
-
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={close}
-          />
-          <div className="relative z-10 flex h-full">{content}</div>
-        </div>
-      )}
-    </>
   );
 }

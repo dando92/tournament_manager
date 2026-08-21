@@ -7,7 +7,7 @@ import {
   Tournament,
   TournamentConfiguration,
 } from "@/features/tournament/types/Tournament";
-import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
+import { rememberTournament } from "@/features/tournament/services/recentTournaments";
 
 type FormState = {
   name: string;
@@ -129,7 +129,7 @@ export default function TournamentConfigurationPage() {
       setInitial(saved);
       setForm(saved);
       setTournamentName(saved.name);
-      addRecentTournament({ id: tournamentId, name: saved.name });
+      rememberTournament({ id: tournamentId, name: saved.name });
       setSyncstartUrl(saved.syncstartUrl);
       setHasStartggApiKey(Boolean(saved.startggApiKey));
       toast.success("Configuration saved.");

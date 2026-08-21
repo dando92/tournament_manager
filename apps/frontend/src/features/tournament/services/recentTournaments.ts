@@ -1,41 +1,105 @@
+/**
+ * The tournaments the sidebar offers: the ones you pinned, then the ones you
+ * visited recently.
+ *
+ * Both lists store a snapshot of the name and logo so the sidebar can draw
+ * itself before any request completes. A snapshot goes stale when a tournament
+ * is renamed, so `rememberTournament` refreshes every list it appears in, and
+ * `forgetTournament` drops one that no longer exists.
+ */
+
 export interface RecentTournament {
   id: number;
   name: string;
   logo?: string;
 }
 
-const STORAGE_KEY = "recent_tournaments";
-const MAX_RECENT = 5;
+const RECENT_KEY = "recent_tournaments";
+const PINNED_KEY = "pinned_tournaments";
+const MAX_RECENT = 8;
 
-export function getRecentTournaments(): RecentTournament[] {
+function read(key: string): RecentTournament[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
-    return JSON.parse(raw) as RecentTournament[];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as RecentTournament[]).filter((entry) => typeof entry?.id === "number") : [];
   } catch {
     return [];
   }
 }
 
-/** Add or move tournament to front of the list. Trims to MAX_RECENT. */
-export function addRecentTournament(tournament: RecentTournament): void {
-  const recent = getRecentTournaments().filter((t) => t.id !== tournament.id);
+function write(key: string, entries: RecentTournament[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(entries));
+  } catch {
+    /* Storage can be unavailable; the lists simply do not persist. */
+  }
+}
+
+export function getRecentTournaments(): RecentTournament[] {
+  return read(RECENT_KEY);
+}
+
+export function getPinnedTournaments(): RecentTournament[] {
+  return read(PINNED_KEY);
+}
+
+export function isPinned(id: number): boolean {
+  return getPinnedTournaments().some((entry) => entry.id === id);
+}
+
+/**
+ * Records a visit: moves the tournament to the front of the recents and
+ * refreshes the name held by every list, so a rename shows up everywhere the
+ * next time the tournament is opened.
+ */
+export function rememberTournament(tournament: RecentTournament): void {
+  const recent = getRecentTournaments().filter((entry) => entry.id !== tournament.id);
   recent.unshift(tournament);
-  if (recent.length > MAX_RECENT) recent.pop();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(recent));
+  write(RECENT_KEY, recent.slice(0, MAX_RECENT));
+
+  const pinned = getPinnedTournaments();
+  if (pinned.some((entry) => entry.id === tournament.id)) {
+    write(PINNED_KEY, pinned.map((entry) => (entry.id === tournament.id ? { ...entry, ...tournament } : entry)));
+  }
 }
 
-/** Returns the most recently selected tournament (first in list). */
+/** Drops a tournament from both lists — used when it is deleted or gone. */
+export function forgetTournament(id: number): void {
+  write(RECENT_KEY, getRecentTournaments().filter((entry) => entry.id !== id));
+  write(PINNED_KEY, getPinnedTournaments().filter((entry) => entry.id !== id));
+}
+
+export function removeRecentTournament(id: number): void {
+  write(RECENT_KEY, getRecentTournaments().filter((entry) => entry.id !== id));
+}
+
+export function pinTournament(tournament: RecentTournament): void {
+  if (isPinned(tournament.id)) return;
+  write(PINNED_KEY, [...getPinnedTournaments(), tournament]);
+}
+
+export function unpinTournament(id: number): void {
+  write(PINNED_KEY, getPinnedTournaments().filter((entry) => entry.id !== id));
+}
+
+/** Returns the most recently visited tournament, for the bare `/tournament` route. */
 export function getSelectedTournament(): RecentTournament | null {
-  const recent = getRecentTournaments();
-  return recent.length > 0 ? recent[0] : null;
+  return getRecentTournaments()[0] ?? null;
 }
 
-/** Move an existing recent tournament to the front (make it selected). */
-export function selectRecentTournament(id: number): void {
-  const recent = getRecentTournaments();
-  const found = recent.find((t) => t.id === id);
-  if (!found) return;
-  const reordered = [found, ...recent.filter((t) => t.id !== id)];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reordered));
+/**
+ * What the sidebar lists: pinned first, then recents that are not already
+ * pinned, so a tournament never appears twice.
+ */
+export function getSidebarTournaments(): Array<RecentTournament & { pinned: boolean }> {
+  const pinned = getPinnedTournaments();
+  const pinnedIds = new Set(pinned.map((entry) => entry.id));
+  return [
+    ...pinned.map((entry) => ({ ...entry, pinned: true })),
+    ...getRecentTournaments()
+      .filter((entry) => !pinnedIds.has(entry.id))
+      .map((entry) => ({ ...entry, pinned: false })),
+  ];
 }
