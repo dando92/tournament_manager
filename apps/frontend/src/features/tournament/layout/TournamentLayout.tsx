@@ -20,13 +20,10 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
     isSongsPage,
     isDivisionPhasesPage,
     currentDivisionId,
-    currentPhaseId,
     headerSubtitle,
     handleCreatePhase,
-    handleCreatePhaseGroup,
     handleGenerateBracket,
   } = useTournamentLayout({ context, state });
-  const currentDivision = state.divisions.find((division) => division.id === currentDivisionId);
 
   const pageContent = (
     <>
@@ -45,12 +42,10 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         createMenuOpen={state.createMenuOpen}
         setCreateMenuOpen={state.setCreateMenuOpen}
         hasDivisions={state.divisions.length > 0}
-        hasCurrentDivisionPhases={(currentDivision?.phases.length ?? 0) > 0}
         hasStartggApiKey={context.hasStartggApiKey}
         onCreateDivision={() => state.setCreateDivisionOpen(true)}
         onGenerateBracket={() => state.setGenerateBracketOpen(true)}
         onCreatePhase={() => state.setCreatePhaseOpen(true)}
-        onCreatePhaseGroup={() => state.setCreatePhaseGroupOpen(true)}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 
@@ -66,9 +61,7 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         context={context}
         state={state}
         currentDivisionId={currentDivisionId}
-        currentPhaseId={currentPhaseId}
         onCreatePhase={handleCreatePhase}
-        onCreatePhaseGroup={handleCreatePhaseGroup}
         onGenerateBracket={handleGenerateBracket}
       />
 

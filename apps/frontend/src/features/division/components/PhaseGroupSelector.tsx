@@ -6,7 +6,7 @@ import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
 
 type PhaseGroupSelectorProps = {
   phaseGroups: PhaseGroup[];
-  selectedPhaseGroupId: number;
+  selectedPhaseGroupId: number | null;
   onSelect: (phaseGroupId: number) => void;
   onCreate?: () => void;
   highlightedPhaseGroupId?: number | null;

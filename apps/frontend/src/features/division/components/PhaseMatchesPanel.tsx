@@ -9,7 +9,6 @@ import { createPhaseGroup } from "@/features/division/services/phase-groups.api"
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup, PhaseGroupState } from "@/features/division/types/Phase";
 import { formatBracketType } from "@/features/division/utils/bracketType";
-import MatchList from "@/features/match/components/MatchList";
 import { MatchHighlight } from "@/features/match/types/Match";
 
 type PhaseMatchesPanelProps = {
@@ -24,43 +23,17 @@ type PhaseMatchesPanelProps = {
 
 export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
   const phaseGroups = props.phase.phaseGroups ?? [];
-
-  if (phaseGroups.length === 0) {
-    return (
-      <div>
-        <PhaseHeader phase={props.phase} />
-        <MatchList
-          key={`phase-${props.phase.id}`}
-          division={props.division}
-          controls={props.controls}
-          tournamentId={props.tournamentId}
-          highlight={props.highlight}
-          onHighlight={props.onHighlight}
-        />
-      </div>
-    );
-  }
-
-  return <PhaseGroupsPanel {...props} phaseGroups={phaseGroups} />;
-}
-
-type PhaseGroupsPanelProps = PhaseMatchesPanelProps & {
-  phaseGroups: PhaseGroup[];
-};
-
-function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
-  const [selectedPhaseGroupId, setSelectedPhaseGroupId] = useState(phaseGroups[0].id);
+  const [selectedPhaseGroupId, setSelectedPhaseGroupId] = useState<number | null>(phaseGroups[0]?.id ?? null);
   const [creating, setCreating] = useState(false);
   const highlightedPhaseGroupId = props.highlight.phaseGroupId;
+  const selectedPhaseGroup =
+    phaseGroups.find((phaseGroup) => phaseGroup.id === selectedPhaseGroupId) ?? phaseGroups[0] ?? null;
 
   useEffect(() => {
     if (highlightedPhaseGroupId && phaseGroups.some((phaseGroup) => phaseGroup.id === highlightedPhaseGroupId)) {
       setSelectedPhaseGroupId(highlightedPhaseGroupId);
     }
   }, [highlightedPhaseGroupId, phaseGroups]);
-  const selectedPhaseGroup =
-    phaseGroups.find((phaseGroup) => phaseGroup.id === selectedPhaseGroupId) ?? phaseGroups[0];
-  const showSelector = phaseGroups.length > 1;
 
   const handleCreatePhaseGroup = async () => {
     setCreating(true);
@@ -75,19 +48,41 @@ function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
     }
   };
 
+  const matchCount = props.phase.matchCount ?? props.phase.matches?.length ?? 0;
+  const onCreate = props.controls && !creating ? handleCreatePhaseGroup : undefined;
+
   return (
     <div>
-      <PhaseHeader phase={props.phase} />
-      <SelectedPhaseGroupPanel
-        key={selectedPhaseGroup.id}
-        {...props}
-        phaseGroups={phaseGroups}
-        phaseGroup={selectedPhaseGroup}
-        showSelector={showSelector}
-        onSelect={setSelectedPhaseGroupId}
-        onCreate={props.controls && !creating ? handleCreatePhaseGroup : undefined}
-        highlightedPhaseGroupId={highlightedPhaseGroupId}
-      />
+      <div className="flex items-center gap-2 mb-2">
+        <h4 className="text-sm font-semibold text-gray-700">{props.phase.name}</h4>
+        <span className="text-xs text-gray-400">
+          {matchCount} match{matchCount !== 1 ? "es" : ""}
+        </span>
+      </div>
+
+      {selectedPhaseGroup ? (
+        <SelectedPhaseGroupPanel
+          key={selectedPhaseGroup.id}
+          {...props}
+          phaseGroups={phaseGroups}
+          phaseGroup={selectedPhaseGroup}
+          onSelect={setSelectedPhaseGroupId}
+          onCreate={onCreate}
+          highlightedPhaseGroupId={highlightedPhaseGroupId}
+        />
+      ) : (
+        <>
+          <PhaseGroupSelector
+            phaseGroups={phaseGroups}
+            selectedPhaseGroupId={null}
+            onSelect={setSelectedPhaseGroupId}
+            onCreate={onCreate}
+          />
+          <p className="py-8 text-center text-sm text-gray-400">
+            {props.controls ? "No pool yet. Create one to add matches." : "No pool yet."}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -95,7 +90,6 @@ function PhaseGroupsPanel({ phaseGroups, ...props }: PhaseGroupsPanelProps) {
 type SelectedPhaseGroupPanelProps = PhaseMatchesPanelProps & {
   phaseGroups: PhaseGroup[];
   phaseGroup: PhaseGroup;
-  showSelector: boolean;
   onSelect: (phaseGroupId: number) => void;
   onCreate?: () => void;
   highlightedPhaseGroupId: number | null;
@@ -111,7 +105,6 @@ function SelectedPhaseGroupPanel({
   highlight,
   onHighlight,
   onChanged,
-  showSelector,
   onSelect,
   onCreate,
   highlightedPhaseGroupId,
@@ -119,48 +112,37 @@ function SelectedPhaseGroupPanel({
   const actions = usePhaseGroupActions({ division, phaseGroup, onChanged });
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
 
-  const viewControl = controls ? (
-    <PhaseGroupViewSelect phaseGroup={phaseGroup} disabled={actions.saving} onChange={actions.changeView} />
-  ) : (
-    bracketTypeLabel && (
-      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
-    )
-  );
-
-  const actionsMenu = controls && (
-    <PhaseGroupActionsMenu
-      phaseGroupName={phaseGroup.name}
-      disabled={actions.saving || actions.deleting}
-      deleting={actions.deleting}
-      onCreateMatch={actions.openCreateMatch}
-      onEditAdvancementRules={actions.beginAdvancementEdit}
-      onDeletePhaseGroup={actions.removePhaseGroup}
-    />
-  );
-
   return (
     <>
-      {showSelector ? (
-        <PhaseGroupSelector
-          phaseGroups={phaseGroups}
-          selectedPhaseGroupId={phaseGroup.id}
-          onSelect={onSelect}
-          onCreate={onCreate}
-          highlightedPhaseGroupId={highlightedPhaseGroupId}
-          rightSlot={
-            <>
-              <PhaseGroupStateBadge state={phaseGroup.state} />
-              {viewControl}
-              {actionsMenu}
-            </>
-          }
-        />
-      ) : (
-        <div className="mb-3 flex items-center justify-end gap-2">
-          {viewControl}
-          {actionsMenu}
-        </div>
-      )}
+      <PhaseGroupSelector
+        phaseGroups={phaseGroups}
+        selectedPhaseGroupId={phaseGroup.id}
+        onSelect={onSelect}
+        onCreate={onCreate}
+        highlightedPhaseGroupId={highlightedPhaseGroupId}
+        rightSlot={
+          <>
+            <PhaseGroupStateBadge state={phaseGroup.state} />
+            {controls ? (
+              <PhaseGroupViewSelect phaseGroup={phaseGroup} disabled={actions.saving} onChange={actions.changeView} />
+            ) : (
+              bracketTypeLabel && (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
+              )
+            )}
+            {controls && (
+              <PhaseGroupActionsMenu
+                phaseGroupName={phaseGroup.name}
+                disabled={actions.saving || actions.deleting}
+                deleting={actions.deleting}
+                onCreateMatch={actions.openCreateMatch}
+                onEditAdvancementRules={actions.beginAdvancementEdit}
+                onDeletePhaseGroup={actions.removePhaseGroup}
+              />
+            )}
+          </>
+        }
+      />
       <PhaseGroupContent
         phase={phase}
         phaseGroup={phaseGroup}
@@ -185,21 +167,4 @@ function PhaseGroupStateBadge({ state }: { state: PhaseGroupState }) {
         : "bg-gray-100 text-gray-600";
 
   return <span className={`rounded-full px-2 py-0.5 text-xs ${stateClass}`}>{state}</span>;
-}
-
-type PhaseHeaderProps = {
-  phase: Phase;
-};
-
-function PhaseHeader({ phase }: PhaseHeaderProps) {
-  const matchCount = phase.matchCount ?? phase.matches?.length ?? 0;
-
-  return (
-    <div className="flex items-center gap-2 mb-2">
-      <h4 className="text-sm font-semibold text-gray-700">{phase.name}</h4>
-      <span className="text-xs text-gray-400">
-        {matchCount} match{matchCount !== 1 ? "es" : ""}
-      </span>
-    </div>
-  );
 }
