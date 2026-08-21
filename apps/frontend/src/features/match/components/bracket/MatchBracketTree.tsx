@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import { Entrant, entrantPlayer } from "@/features/entrant/types/Entrant";
-import { AdvancementRule, Match, MatchCommitState } from "@/features/match/types/Match";
+import { AdvancementRule, Match } from "@/features/match/types/Match";
 import { toOrdinal } from "@/shared/utils";
-import { getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { getActiveLabel, getCommitBadgeClass, getCommitBadgeLabel, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import StatusDot from "@/shared/components/ui/StatusDot";
 
 type MatchBracketTreeProps = {
   matches: Match[];
@@ -177,18 +178,6 @@ function getSourceRuleLabel(rule: AdvancementRule, matches: Match[], phaseGroups
   return `${toOrdinal(rule.sourcePlacement)} from ${sourceName}`;
 }
 
-function getCommitBadgeClass(state: MatchCommitState): string {
-  return {
-    Disabled: "border-gray-200 bg-gray-50 text-gray-700",
-    Completed: "border-blue-200 bg-blue-50 text-blue-800",
-    Pending: "border-amber-200 bg-amber-50 text-amber-800",
-  }[state];
-}
-
-function getCommitBadgeLabel(state: MatchCommitState): string {
-  return state === "Disabled" ? "Not ready" : state;
-}
-
 function MatchBracketCard({
   match,
   phaseGroups,
@@ -233,18 +222,12 @@ function MatchBracketCard({
       }`}
     >
       <div className="border-b border-gray-100 px-2.5 py-1.5">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <StatusDot on={match.active} label={getActiveLabel(match.active)} />
           <span className="truncate text-xs font-semibold text-gray-800">{match.name}</span>
-          <div className="flex shrink-0 items-center gap-1">
-            <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
-              match.active ? "border-green-200 bg-green-50 text-green-800" : "border-gray-200 bg-gray-50 text-gray-700"
-            }`}>
-              {match.active ? "Active" : "Not active"}
-            </span>
-            <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getCommitBadgeClass(commitState)}`}>
-              {getCommitBadgeLabel(commitState)}
-            </span>
-          </div>
+          <span className={`ml-auto shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getCommitBadgeClass(commitState)}`}>
+            {getCommitBadgeLabel(commitState)}
+          </span>
         </div>
       </div>
       <div className="divide-y divide-gray-100">

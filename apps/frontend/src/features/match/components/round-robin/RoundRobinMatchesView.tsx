@@ -1,9 +1,9 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import { entrantPlayer } from "@/features/entrant/types/Entrant";
-import { Match, MatchCommitState } from "@/features/match/types/Match";
+import { Match } from "@/features/match/types/Match";
 import { Player } from "@/features/player/types/Player";
-import { getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { getCommitBadgeClass, getCommitBadgeLabel, getMatchCommitState } from "@/features/match/utils/matchStatus";
 
 type RoundRobinMatchesViewProps = {
   matches: Match[];
@@ -39,18 +39,6 @@ function getMatchPlayers(match: Match): Player[] {
 
 function getPlayerPoints(match: Match, playerId: number): number {
   return match.matchResult?.playerPoints?.find((entry) => entry.playerId === playerId)?.points ?? 0;
-}
-
-function getCommitBadgeLabel(state: MatchCommitState): string {
-  return state === "Disabled" ? "Not ready" : state;
-}
-
-function getCommitBadgeClass(state: MatchCommitState): string {
-  return {
-    Disabled: "border-gray-200 bg-gray-50 text-gray-700",
-    Pending: "border-amber-200 bg-amber-50 text-amber-800",
-    Completed: "border-blue-200 bg-blue-50 text-blue-800",
-  }[state];
 }
 
 function getCellResultClass(cell: PairCell): string {

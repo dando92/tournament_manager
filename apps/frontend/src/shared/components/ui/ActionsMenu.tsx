@@ -67,7 +67,7 @@ export default function ActionsMenu({
         title={title}
         onClick={() => setMenuOpen((current) => !current)}
         disabled={disabled}
-        className={`flex h-8 w-8 items-center justify-center p-0 text-sm disabled:cursor-not-allowed ${triggerClassName ?? btnSecondary}`}
+        className={`relative flex h-8 w-8 items-center justify-center p-0 text-sm before:absolute before:left-1/2 before:top-1/2 before:h-11 before:w-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] disabled:cursor-not-allowed sm:before:hidden ${triggerClassName ?? btnSecondary}`}
       >
         <FontAwesomeIcon icon={faEllipsisVertical} />
       </button>

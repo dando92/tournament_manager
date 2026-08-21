@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faStickyNote, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
-import { Match } from "@/features/match/types/Match";
+import { faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { Match, MatchCommitState } from "@/features/match/types/Match";
+import { getActiveLabel, getCommitBadgeClass } from "@/features/match/utils/matchStatus";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
+import StatusDot from "@/shared/components/ui/StatusDot";
 
 type Props = {
   match: Match;
   controls: boolean;
+  commitState: MatchCommitState;
   onOpenEditNotes: () => void;
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
@@ -15,11 +18,18 @@ type Props = {
   onRenameMatch?: (matchId: number, name: string) => void;
   canEditAdvancementRules?: boolean;
   onEditAdvancementRules?: () => void;
+  onToggleActive: () => void;
+  onCommitMatch: () => void;
+  onReopenMatch: () => void;
 };
+
+/** Vertical touch area on phones, where the compact button is under the touch-target size. */
+const touchAreaClass = "relative before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] sm:before:hidden";
 
 export default function MatchHeader({
   match,
   controls,
+  commitState,
   onOpenEditNotes,
   onDeleteMatch,
   onOpenAddSong,
@@ -27,12 +37,16 @@ export default function MatchHeader({
   onRenameMatch,
   canEditAdvancementRules = false,
   onEditAdvancementRules,
+  onToggleActive,
+  onCommitMatch,
+  onReopenMatch,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isMatchEnded = Boolean(match.matchResult);
   const canAddSong = (match.entrants?.length ?? 0) > 0;
+  const canToggleActive = !isMatchEnded || match.active;
 
   useEffect(() => {
     if (isRenaming) inputRef.current?.focus();
@@ -55,6 +69,7 @@ export default function MatchHeader({
     <div className="flex items-start justify-between gap-3 mb-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
+          <StatusDot on={match.active} label={getActiveLabel(match.active)} />
           {controls && isRenaming ? (
             <input
               ref={inputRef}
@@ -96,9 +111,35 @@ export default function MatchHeader({
       </div>
       {controls && (
         <div className="flex items-center justify-end gap-3 shrink-0">
+          {commitState === "Completed" ? (
+            <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${getCommitBadgeClass("Completed")}`}>
+              Completed
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onCommitMatch}
+              disabled={commitState === "Disabled"}
+              title={commitState === "Disabled" ? "Every score must be filled in before the match can be committed" : undefined}
+              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${touchAreaClass} ${
+                commitState === "Disabled"
+                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                  : "cursor-pointer border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+              }`}
+            >
+              Commit
+            </button>
+          )}
           <ActionsMenu
             title="Match actions"
             items={[
+              {
+                key: "active",
+                label: match.active ? "Set not active" : "Set active",
+                icon: faTowerBroadcast,
+                disabled: !canToggleActive,
+                onSelect: onToggleActive,
+              },
               {
                 key: "add-player",
                 label: "Add player",
@@ -122,6 +163,13 @@ export default function MatchHeader({
                 icon: faPenToSquare,
                 hidden: isMatchEnded || !canEditAdvancementRules,
                 onSelect: () => onEditAdvancementRules?.(),
+              },
+              {
+                key: "reopen",
+                label: "Re-open match",
+                icon: faRotateLeft,
+                hidden: commitState !== "Completed",
+                onSelect: onReopenMatch,
               },
               {
                 key: "delete",

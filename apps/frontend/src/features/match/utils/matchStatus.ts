@@ -24,3 +24,19 @@ export function getMatchCommitState(match: Match, manualPoints: ManualPointsByPl
   const players = entrantPlayers(match.entrants);
   return players.some((player) => (manualPoints[player.id] ?? 0) > 0) ? "Pending" : "Disabled";
 }
+
+export function getCommitBadgeLabel(state: MatchCommitState): string {
+  return state === "Disabled" ? "Not ready" : state;
+}
+
+export function getCommitBadgeClass(state: MatchCommitState): string {
+  return {
+    Disabled: "border-gray-200 bg-gray-50 text-gray-700",
+    Pending: "border-amber-200 bg-amber-50 text-amber-800",
+    Completed: "border-blue-200 bg-blue-50 text-blue-800",
+  }[state];
+}
+
+export function getActiveLabel(active: boolean): string {
+  return active ? "Match active" : "Match not active";
+}

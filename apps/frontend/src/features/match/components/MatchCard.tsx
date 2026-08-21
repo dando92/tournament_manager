@@ -8,7 +8,6 @@ import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchAddActions from "@/features/match/components/MatchAddActions";
 import MatchTable from "@/features/match/components/MatchTable";
-import MatchFooter from "@/features/match/components/MatchFooter";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { getMatchCommitState } from "@/features/match/utils/matchStatus";
 import { CommitMatchResultRequest } from "@/features/match/types/match-requests";
@@ -172,19 +171,19 @@ export default function MatchCard({
     await onUpdateMatchActive?.(match.id, !match.active);
   }
 
-  async function commitOrReopenMatch() {
-    if (!controls || commitState === "Disabled") return;
-
-    if (commitState === "Completed") {
-      await onReopenMatchResult?.(match.id);
-      setManualPoints({});
-      return;
-    }
+  async function commitMatch() {
+    if (!controls || commitState !== "Pending") return;
 
     const playerPoints = match.rounds.length === 0
       ? entrantPlayers(match.entrants).map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
       : undefined;
     await onCommitMatchResult?.(match.id, { playerPoints });
+    setManualPoints({});
+  }
+
+  async function reopenMatch() {
+    if (!controls || commitState !== "Completed") return;
+    await onReopenMatchResult?.(match.id);
     setManualPoints({});
   }
 
@@ -240,6 +239,7 @@ export default function MatchCard({
       <MatchHeader
         match={match}
         controls={controls}
+        commitState={commitState}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}
@@ -247,6 +247,9 @@ export default function MatchCard({
         onRenameMatch={onRenameMatch}
         canEditAdvancementRules={controls && !editMode}
         onEditAdvancementRules={enterEditMode}
+        onToggleActive={toggleActive}
+        onCommitMatch={commitMatch}
+        onReopenMatch={reopenMatch}
       />
 
       {editMode && (
@@ -298,16 +301,6 @@ export default function MatchCard({
           canAddSong={(match.entrants?.length ?? 0) > 0}
           onAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
           onAddSong={openAddSong}
-        />
-      )}
-
-      {controls && !editMode && (
-        <MatchFooter
-          active={match.active}
-          activeDisabled={Boolean(match.matchResult && !match.active)}
-          commitState={commitState}
-          onToggleActive={toggleActive}
-          onCommitOrReopen={commitOrReopenMatch}
         />
       )}
     </div>
