@@ -58,7 +58,6 @@ export default function BracketsTab({
                 tournamentId={tournamentId}
                 highlight={highlight}
                 onHighlight={setHighlight}
-                autoExpandSinglePhaseGroup={false}
                 onChanged={onDivisionChanged}
               />
             ))}

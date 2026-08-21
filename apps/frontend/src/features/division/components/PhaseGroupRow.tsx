@@ -1,21 +1,13 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import MatchList from "@/features/match/components/MatchList";
-import { Division } from "@/features/division/types/Division";
-import { Phase, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
-import { MatchHighlight } from "@/features/match/types/Match";
-import { Match } from "@/features/match/types/Match";
-import {
-  deletePhaseGroup,
-} from "@/features/division/services/phase-groups.api";
-import { toast } from "react-toastify";
-import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
-import * as MatchesApi from "@/features/match/services/matches.api";
-import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
-import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import PhaseGroupActionsMenu from "@/features/division/components/PhaseGroupActionsMenu";
+import PhaseGroupContent from "@/features/division/components/PhaseGroupContent";
+import { usePhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
+import { Division } from "@/features/division/types/Division";
+import { Phase, PhaseGroup } from "@/features/division/types/Phase";
+import { MatchHighlight } from "@/features/match/types/Match";
+import { formatBracketType } from "@/features/division/utils/bracketType";
 
 type PhaseGroupRowProps = {
   phase: Phase;
@@ -25,31 +17,8 @@ type PhaseGroupRowProps = {
   tournamentId?: number;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
-  defaultExpanded?: boolean;
   onChanged?: () => Promise<void>;
 };
-
-function formatBracketType(bracketType: string | null | undefined): string | null {
-  switch (bracketType) {
-    case "SingleElimination":
-    case "SINGLE_ELIMINATION":
-      return "Single elimination";
-    case "DoubleElimination":
-    case "DOUBLE_ELIMINATION":
-      return "Double elimination";
-    case "RoundRobin":
-    case "ROUND_ROBIN":
-      return "Round robin";
-    case "Swiss":
-    case "SWISS":
-      return "Swiss";
-    case "CustomSchedule":
-    case "CUSTOM_SCHEDULE":
-      return "Custom schedule";
-    default:
-      return bracketType ?? null;
-  }
-}
 
 function phaseGroupStateClass(state: PhaseGroup["state"]): string {
   switch (state) {
@@ -71,79 +40,12 @@ export default function PhaseGroupRow({
   tournamentId,
   highlight,
   onHighlight,
-  defaultExpanded = false,
   onChanged,
 }: PhaseGroupRowProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const [editingAdvancement, setEditingAdvancement] = useState(false);
-  const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
-  const [createMatchOpen, setCreateMatchOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const actions = usePhaseGroupActions({ division, phaseGroup, onChanged });
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
   const isHighlighted = highlight.phaseGroupId === phaseGroup.id;
-
-  const beginAdvancementEdit = async () => {
-    const existing = (phaseGroup.advancementRules ?? [])
-      .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === phaseGroup.id)
-      .map((rule) => ({
-        sourcePlacement: rule.sourcePlacement,
-        targetKind: rule.targetKind,
-        targetId: rule.targetId,
-        targetSlot: rule.targetSlot,
-      }));
-    setDraftRules(existing);
-    setEditingAdvancement(true);
-    try {
-      setAllMatches(await MatchesApi.listByDivision(division.id));
-    } catch {
-      setAllMatches([]);
-    }
-  };
-
-  const saveAdvancementRules = async () => {
-    setSaving(true);
-    try {
-      await updateAdvancementRulesForSource("phase_group", phaseGroup.id, draftRules);
-      setEditingAdvancement(false);
-      await onChanged?.();
-      toast.success("Phase group advancement rules updated.");
-    } catch {
-      toast.error("Error updating phase group advancement rules.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeletePhaseGroup = async () => {
-    setDeleting(true);
-    try {
-      await deletePhaseGroup(phaseGroup.id);
-      await onChanged?.();
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleCreateMatch = async (request: CreateMatchRequest) => {
-    await MatchesApi.create(request);
-    await onChanged?.();
-    toast.success("Match created.");
-  };
-
-  const content = (
-    <MatchList
-      key={`phase-group-${phaseGroup.id}`}
-      division={division}
-      phaseGroupId={phaseGroup.id}
-      phaseGroup={phaseGroup}
-      controls={controls}
-      tournamentId={tournamentId}
-      highlight={highlight}
-      onHighlight={onHighlight}
-    />
-  );
 
   return (
     <div className={`border rounded-md bg-white overflow-visible transition-shadow ${
@@ -176,39 +78,25 @@ export default function PhaseGroupRow({
         {controls && (
           <PhaseGroupActionsMenu
             phaseGroupName={phaseGroup.name}
-            disabled={saving || deleting}
-            deleting={deleting}
-            onCreateMatch={() => setCreateMatchOpen(true)}
-            onEditAdvancementRules={() => beginAdvancementEdit()}
-            onDeletePhaseGroup={handleDeletePhaseGroup}
+            disabled={actions.saving || actions.deleting}
+            deleting={actions.deleting}
+            onCreateMatch={actions.openCreateMatch}
+            onEditAdvancementRules={actions.beginAdvancementEdit}
+            onDeletePhaseGroup={actions.removePhaseGroup}
           />
         )}
       </div>
-      {editingAdvancement && (
-        <div className="px-4 pb-4 border-t border-gray-100">
-          <AdvancementRulesEditor
-            sourceKind="phase_group"
-            sourceId={phaseGroup.id}
-            rules={draftRules}
-            division={division}
-            allMatches={allMatches}
-            saving={saving}
-            onChange={setDraftRules}
-            onSave={saveAdvancementRules}
-            onCancel={() => setEditingAdvancement(false)}
-          />
-        </div>
-      )}
-      {expanded && !editingAdvancement && <div className="px-4 pb-4 border-t border-gray-100">{content}</div>}
-      <CreateMatchModal
-        open={createMatchOpen}
-        onClose={() => setCreateMatchOpen(false)}
-        onCreate={handleCreateMatch}
-        divisionId={division.id}
-        phaseId={phase.id}
-        phaseGroupId={phaseGroup.id}
-        phases={[{ ...phase, phaseGroups: [phaseGroup] }]}
+      <PhaseGroupContent
+        phase={phase}
+        phaseGroup={phaseGroup}
+        division={division}
+        controls={controls}
         tournamentId={tournamentId}
+        highlight={highlight}
+        onHighlight={onHighlight}
+        actions={actions}
+        showMatches={expanded}
+        bodyClassName="px-4 pb-4 border-t border-gray-100"
       />
     </div>
   );
