@@ -9,6 +9,7 @@ import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
 import { useQueryClient } from "@tanstack/react-query";
+import CreateCard from "@/shared/components/ui/CreateCard";
 
 type MatchListProps = {
   division: Division;
@@ -18,6 +19,7 @@ type MatchListProps = {
   phaseGroup?: PhaseGroup;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
+  onCreateMatch?: () => void;
 };
 
 export default function MatchList({
@@ -28,6 +30,7 @@ export default function MatchList({
   phaseGroup,
   highlight,
   onHighlight,
+  onCreateMatch,
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id, phaseGroupId);
   const queryClient = useQueryClient();
@@ -117,7 +120,11 @@ export default function MatchList({
   return (
     <div className="mt-4">
       {state.matches.length === 0 ? (
-        <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
+        onCreateMatch ? (
+          <CreateCard label="Create match" onClick={onCreateMatch} />
+        ) : (
+          <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
+        )
       ) : usesRoundRobinTable ? (
         <RoundRobinMatchesView
           matches={state.matches}
@@ -141,6 +148,7 @@ export default function MatchList({
           <RawMatchCardsView
             matches={state.matches}
             renderMatchCard={(match) => renderMatchCard(match, true)}
+            onCreateMatch={onCreateMatch}
           />
         </>
       )}

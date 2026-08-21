@@ -6,6 +6,7 @@ export type DivisionPageContextValue = {
   tournamentId: number;
   divisionId: number;
   controls: boolean;
+  openCreatePhase: () => void;
   refreshDivision: () => Promise<void>;
 };
 

@@ -10,6 +10,7 @@ type BracketsTabProps = {
   division: Division;
   controls: boolean;
   tournamentId?: number;
+  onCreatePhase?: () => void;
   onDivisionChanged?: () => Promise<void>;
 };
 
@@ -17,6 +18,7 @@ export default function BracketsTab({
   division,
   controls,
   tournamentId,
+  onCreatePhase,
   onDivisionChanged,
 }: BracketsTabProps) {
   const state = useBracketsTab({ division, onDivisionChanged });
@@ -28,6 +30,7 @@ export default function BracketsTab({
         phases={state.phases}
         selectedPhaseId={state.selectedPhaseId}
         onSelect={state.setSelectedPhaseId}
+        onCreate={controls ? onCreatePhase : undefined}
       />
 
       {controls && state.selectedPhase && (

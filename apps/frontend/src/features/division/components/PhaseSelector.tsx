@@ -1,15 +1,18 @@
 import { Phase } from "@/features/division/types/Phase";
+import CreateChip from "@/shared/components/ui/CreateChip";
 
 type PhaseSelectorProps = {
   phases: Phase[];
   selectedPhaseId: number | "all";
   onSelect: (phaseId: number | "all") => void;
+  onCreate?: () => void;
 };
 
 export default function PhaseSelector({
   phases,
   selectedPhaseId,
   onSelect,
+  onCreate,
 }: PhaseSelectorProps) {
   return (
     <div className="overflow-x-auto">
@@ -34,6 +37,7 @@ export default function PhaseSelector({
             );
           })()
         ))}
+        {onCreate && <CreateChip title="Create phase" onClick={onCreate} />}
       </div>
     </div>
   );

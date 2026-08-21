@@ -43,9 +43,7 @@ export default function TournamentLayout({ context, state }: TournamentLayoutPro
         setCreateMenuOpen={state.setCreateMenuOpen}
         hasDivisions={state.divisions.length > 0}
         hasStartggApiKey={context.hasStartggApiKey}
-        onCreateDivision={() => state.setCreateDivisionOpen(true)}
         onGenerateBracket={() => state.setGenerateBracketOpen(true)}
-        onCreatePhase={() => state.setCreatePhaseOpen(true)}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 

@@ -1,11 +1,13 @@
 import DivisionCard from "@/features/division/components/DivisionCard";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import CreateCard from "@/shared/components/ui/CreateCard";
 
 type Props = {
   divisions: TournamentDivisionOption[];
   controls: boolean;
   onSelectDivision: (divisionId: number) => void;
   onDeleteDivision: (divisionId: number, divisionName: string) => Promise<void>;
+  onCreateDivision: () => void;
 };
 
 export default function TournamentOverviewDivisions({
@@ -13,6 +15,7 @@ export default function TournamentOverviewDivisions({
   controls,
   onSelectDivision,
   onDeleteDivision,
+  onCreateDivision,
 }: Props) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -32,8 +35,10 @@ export default function TournamentOverviewDivisions({
             }}
           />
         ))}
-        {divisions.length === 0 && (
-          <p className="text-sm text-gray-400">No divisions yet.</p>
+        {controls ? (
+          <CreateCard label="Create division" onClick={onCreateDivision} className="min-h-[160px]" />
+        ) : (
+          divisions.length === 0 && <p className="text-sm text-gray-400">No divisions yet.</p>
         )}
       </div>
     </div>

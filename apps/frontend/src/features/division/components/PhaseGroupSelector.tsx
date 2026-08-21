@@ -1,8 +1,7 @@
 import { ReactNode } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
+import CreateChip from "@/shared/components/ui/CreateChip";
 
 type PhaseGroupSelectorProps = {
   phaseGroups: PhaseGroup[];
@@ -40,16 +39,7 @@ export default function PhaseGroupSelector({
           {phaseGroupLabel(phaseGroup)}
         </button>
       ))}
-      {onCreate && (
-        <button
-          type="button"
-          title="Create pool"
-          onClick={onCreate}
-          className="rounded-full border border-dashed border-gray-300 px-3 py-1 text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600"
-        >
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
-      )}
+      {onCreate && <CreateChip title="Create pool" onClick={onCreate} />}
       {rightSlot && <div className="ml-auto flex items-center gap-2">{rightSlot}</div>}
     </div>
   );

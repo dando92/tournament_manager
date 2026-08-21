@@ -53,6 +53,7 @@ export default function PhaseGroupContent({
       tournamentId={tournamentId}
       highlight={highlight}
       onHighlight={onHighlight}
+      onCreateMatch={controls ? actions.openCreateMatch : undefined}
     />
   ) : null;
 
