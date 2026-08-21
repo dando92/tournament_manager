@@ -8,7 +8,7 @@ import PhaseGroupViewSelect from "@/features/division/components/PhaseGroupViewS
 import { usePhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
 import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
 import { Division } from "@/features/division/types/Division";
-import { Phase, PhaseGroup, PhaseGroupState } from "@/features/division/types/Phase";
+import { Phase, PhaseGroup } from "@/features/division/types/Phase";
 import { formatBracketType } from "@/features/division/utils/bracketType";
 import { MatchHighlight } from "@/features/match/types/Match";
 
@@ -143,7 +143,6 @@ function SelectedPhaseGroupPanel({
         highlightedPhaseGroupId={highlightedPhaseGroupId}
         rightSlot={
           <>
-            <PhaseGroupStateBadge state={phaseGroup.state} />
             {controls ? (
               <PhaseGroupViewSelect phaseGroup={phaseGroup} disabled={actions.saving} onChange={actions.changeView} />
             ) : (
@@ -193,15 +192,4 @@ function SelectedPhaseGroupPanel({
       />
     </>
   );
-}
-
-function PhaseGroupStateBadge({ state }: { state: PhaseGroupState }) {
-  const stateClass =
-    state === "active"
-      ? "bg-green-50 text-green-800"
-      : state === "completed"
-        ? "bg-blue-50 text-blue-800"
-        : "bg-gray-100 text-gray-600";
-
-  return <span className={`rounded-full px-2 py-0.5 text-xs ${stateClass}`}>{state}</span>;
 }
