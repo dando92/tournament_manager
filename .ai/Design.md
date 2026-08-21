@@ -74,6 +74,36 @@ four do not, and must stay inside a glyph or behind a tint.
   but deleting is an action and not a state; colouring it costs `state-failed`
   its meaning. It turns red on hover, not at rest.
 
+## Motion reports one thing
+
+The status glyph of an **active match** breathes — a slow opacity fade, nothing
+else. It is the one state in the application that changes without anybody
+touching the screen, and motion is the only channel that reaches an eye which is
+not already pointed at it.
+
+Nothing else animates state. The moment a second thing pulses, neither one means
+anything. It is always wrapped in `motion-safe:`, so a device asking for reduced
+movement gets the ring and the colour and no animation, which still says active.
+
+## The match row has two axes, not one
+
+`active` and the progress of the result are independent facts, and a match can
+be running while its result is nowhere near final. They therefore keep fixed
+positions rather than sharing a mark: **active on the left, progress on the
+right**. Reading is then positional, and no row has to be decoded.
+
+Progress fills the ring in four steps, which is what the ring was drawn for:
+
+| Progress | Glyph | Means |
+| --- | --- | --- |
+| `Empty` | dashed ring | no songs, no scores, no points |
+| `In progress` | ring half filled | songs added, or some scores in |
+| `Ready to commit` | ring three quarters filled | everything filled, waiting on a person |
+| `Completed` | solid with a check | result committed |
+
+`getMatchProgress` is the single source: the commit button derives from it, so
+the badge a viewer reads and the button they press cannot disagree.
+
 ## Selection is greyscale
 
 Selected rows and the active navigation item are `ui-selected` with a

@@ -48,6 +48,10 @@
      borders do most of the separating anyway. */
   --ui-shadow: 15 23 42;
   --ui-shadow-alpha: 0.07;
+
+  /* Tells the browser which way its own widgets go: radios, checkboxes,
+     scrollbars and date pickers are drawn by the user agent, not by us. */
+  color-scheme: light;
 }
 
 /*
@@ -89,6 +93,8 @@
 
     --ui-shadow: 0 0 0;
     --ui-shadow-alpha: 0.5;
+
+    color-scheme: dark;
   }
 }
 
@@ -118,4 +124,6 @@
 
   --ui-shadow: 0 0 0;
   --ui-shadow-alpha: 0.5;
+
+  color-scheme: dark;
 }

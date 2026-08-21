@@ -3,7 +3,7 @@ import { PhaseGroup } from "@/features/division/types/Phase";
 import { entrantPlayer } from "@/features/entrant/types/Entrant";
 import { Match } from "@/features/match/types/Match";
 import { Player } from "@/features/player/types/Player";
-import { commitBadgeClass, getCommitBadgeLabel, getCommitStatus, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { commitBadgeClass, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/utils/matchStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 
 type RoundRobinMatchesViewProps = {
@@ -224,7 +224,7 @@ export default function RoundRobinMatchesView({
                       );
                     }
 
-                    const commitState = getMatchCommitState(cell.match);
+                    const progress = getMatchProgress(cell.match);
 
                     return (
                       <td key={columnPlayer.id} className="h-16 min-w-[92px] p-1 sm:h-24 sm:min-w-[160px] sm:p-1.5">
@@ -239,12 +239,15 @@ export default function RoundRobinMatchesView({
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
                             <span className={commitBadgeClass}>
-                              <StatusIcon status={cell.match.active ? "running" : "idle"} className="h-3 w-3" />
+                              <StatusIcon
+                                status={cell.match.active ? "running" : "idle"}
+                                className={`h-3 w-3 ${cell.match.active ? "motion-safe:animate-pulse" : ""}`}
+                              />
                               {cell.match.active ? "Active" : "Not active"}
                             </span>
                             <span className={commitBadgeClass}>
-                              <StatusIcon status={getCommitStatus(commitState)} className="h-3 w-3" />
-                              {getCommitBadgeLabel(commitState)}
+                              <StatusIcon status={getMatchProgressStatus(progress)} className="h-3 w-3" />
+                              {getMatchProgressLabel(progress)}
                             </span>
                           </div>
                           <span className="text-sm font-bold sm:text-base">

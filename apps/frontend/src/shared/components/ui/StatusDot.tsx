@@ -14,6 +14,12 @@ type StatusDotProps = {
  * The dot never performs an action. It is a button only because touch devices
  * have no hover: tapping it reveals the same tooltip a pointer gets for free,
  * and the tooltip hides itself again shortly after.
+ *
+ * An active match breathes. It is the one thing in the interface that changes
+ * without anybody touching it, and motion is the only channel that catches an
+ * eye which is not already pointed at it. `motion-safe` keeps it out of the way
+ * of anyone who has asked the system for less movement. Nothing else in the
+ * application animates state, so this stays a signal rather than decoration.
  */
 export default function StatusDot({ on, label }: StatusDotProps) {
   const [tapped, setTapped] = useState(false);
@@ -37,7 +43,7 @@ export default function StatusDot({ on, label }: StatusDotProps) {
         onBlur={() => setTapped(false)}
         className="-m-1.5 flex cursor-default items-center p-1.5"
       >
-        <StatusIcon status={on ? "running" : "idle"} label={label} />
+        <StatusIcon status={on ? "running" : "idle"} label={label} className={on ? "motion-safe:animate-pulse" : ""} />
       </button>
       <span
         role="tooltip"

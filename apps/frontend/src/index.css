@@ -5,6 +5,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Form controls follow the theme.
+ *
+ * A bare input keeps the user agent's own white background, which is invisible
+ * in the light theme and glaring in the dark one. Setting it once in the base
+ * layer fixes every field at the source; a component that wants something else
+ * still wins, because utilities beat base.
+ *
+ * Radios and checkboxes are excluded: painting their background defeats the
+ * native control rather than theming it. `color-scheme` handles those, along
+ * with scrollbars and date pickers, from the root.
+ */
+@layer base {
+  input:not([type="radio"]):not([type="checkbox"]),
+  textarea,
+  select {
+    background-color: rgb(var(--ui-surface));
+    color: rgb(var(--ui-text));
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--ui-text-mute));
+  }
+}
+
 body {
   font-family: "dinpro", sans-serif;
   background-color: rgb(var(--ui-canvas));

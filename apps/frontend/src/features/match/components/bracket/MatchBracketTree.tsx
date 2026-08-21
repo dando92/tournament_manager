@@ -3,7 +3,7 @@ import { PhaseGroup } from "@/features/division/types/Phase";
 import { Entrant, entrantPlayer } from "@/features/entrant/types/Entrant";
 import { AdvancementRule, Match } from "@/features/match/types/Match";
 import { toOrdinal } from "@/shared/utils";
-import { commitBadgeClass, getActiveLabel, getCommitBadgeLabel, getCommitStatus, getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { commitBadgeClass, getActiveLabel, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/utils/matchStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
 
@@ -195,7 +195,7 @@ function MatchBracketCard({
   onSelect: () => void;
 }) {
   const incomingSourceRules = getIncomingAdvancementSourceRules(match, allMatches, phaseGroups);
-  const commitState = getMatchCommitState(match);
+  const progress = getMatchProgress(match);
   const sortedEntrants = [...(match.entrants ?? [])].sort((a, b) => {
     const aPoints = getPlayerPoint(match, a);
     const bPoints = getPlayerPoint(match, b);
@@ -227,8 +227,8 @@ function MatchBracketCard({
           <StatusDot on={match.active} label={getActiveLabel(match.active)} />
           <span className="truncate text-xs font-semibold text-ui-text">{match.name}</span>
           <span className={`ml-auto shrink-0 ${commitBadgeClass}`}>
-            <StatusIcon status={getCommitStatus(commitState)} className="h-3 w-3" />
-            {getCommitBadgeLabel(commitState)}
+            <StatusIcon status={getMatchProgressStatus(progress)} className="h-3 w-3" />
+            {getMatchProgressLabel(progress)}
           </span>
         </div>
       </div>

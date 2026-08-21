@@ -1,9 +1,9 @@
 import StatusIcon, { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import {
   getActiveLabel,
-  getCommitBadgeLabel,
-  getCommitStatus,
-  getMatchCommitState,
+  getMatchProgress,
+  getMatchProgressLabel,
+  getMatchProgressStatus,
 } from "@/features/match/utils/matchStatus";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import { Match } from "@/features/match/types/Match";
@@ -27,7 +27,9 @@ type MatchListRowProps = {
 };
 
 export default function MatchListRow({ match, selected, routed, onSelect }: MatchListRowProps) {
-  const commitState = getMatchCommitState(match);
+  const progress = getMatchProgress(match);
+  const progressStatus = getMatchProgressStatus(progress);
+  const progressLabel = getMatchProgressLabel(progress);
   const playerCount = entrantPlayers(match.entrants).length;
   const players = `${playerCount} player${playerCount !== 1 ? "s" : ""}`;
   const meta =
@@ -50,7 +52,11 @@ export default function MatchListRow({ match, selected, routed, onSelect }: Matc
             : "bg-ui-surface hover:bg-ui-raised"
       }`}
     >
-      <StatusIcon status={match.active ? "running" : "idle"} label={getActiveLabel(match.active)} />
+      <StatusIcon
+        status={match.active ? "running" : "idle"}
+        label={getActiveLabel(match.active)}
+        className={match.active ? "motion-safe:animate-pulse" : ""}
+      />
 
       <span className={`shrink-0 text-sm text-ui-text ${selected ? "font-bold" : "font-semibold"}`}>{match.name}</span>
 
@@ -59,10 +65,10 @@ export default function MatchListRow({ match, selected, routed, onSelect }: Matc
       </span>
 
       <span className="hidden shrink-0 sm:block">
-        <StatusBadge status={getCommitStatus(commitState)} label={getCommitBadgeLabel(commitState)} />
+        <StatusBadge status={progressStatus} label={progressLabel} />
       </span>
       <span className="shrink-0 sm:hidden">
-        <StatusIcon status={getCommitStatus(commitState)} label={getCommitBadgeLabel(commitState)} />
+        <StatusIcon status={progressStatus} label={progressLabel} />
       </span>
     </button>
   );

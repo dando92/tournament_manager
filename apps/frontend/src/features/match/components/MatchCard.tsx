@@ -9,7 +9,7 @@ import MatchHeader from "@/features/match/components/MatchHeader";
 import MatchAddActions from "@/features/match/components/MatchAddActions";
 import MatchTable from "@/features/match/components/MatchTable";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
-import { getMatchCommitState } from "@/features/match/utils/matchStatus";
+import { getMatchCommitState, getMatchProgress } from "@/features/match/utils/matchStatus";
 import { CommitMatchResultRequest } from "@/features/match/types/match-requests";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
@@ -120,6 +120,7 @@ export default function MatchCard({
 
   const isHighlighted = match.id === highlight.matchId;
   const commitState = getMatchCommitState(match, manualPoints);
+  const progress = getMatchProgress(match, manualPoints);
   const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
 
   function enterEditMode() {
@@ -240,6 +241,7 @@ export default function MatchCard({
         match={match}
         controls={controls}
         commitState={commitState}
+        progress={progress}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}

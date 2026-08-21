@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/types/Match";
-import { commitBadgeClass, getActiveLabel } from "@/features/match/utils/matchStatus";
-import StatusIcon from "@/shared/components/ui/StatusIcon";
+import { getActiveLabel, getMatchProgressLabel, getMatchProgressStatus, type MatchProgress } from "@/features/match/utils/matchStatus";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
@@ -12,6 +12,7 @@ type Props = {
   match: Match;
   controls: boolean;
   commitState: MatchCommitState;
+  progress: MatchProgress;
   onOpenEditNotes: () => void;
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
@@ -31,6 +32,7 @@ export default function MatchHeader({
   match,
   controls,
   commitState,
+  progress,
   onOpenEditNotes,
   onDeleteMatch,
   onOpenAddSong,
@@ -110,14 +112,14 @@ export default function MatchHeader({
           <p className="text-xs text-ui-text-mute mt-0.5">{match.subtitle}</p>
         )}
       </div>
-      {controls && (
-        <div className="flex items-center justify-end gap-3 shrink-0">
-          {commitState === "Completed" ? (
-            <span className={commitBadgeClass}>
-              <StatusIcon status="done" className="h-3 w-3" />
-              Completed
-            </span>
-          ) : (
+      <div className="flex shrink-0 items-center justify-end gap-3">
+        {/* Visible to everyone: how far the result is from final is not a
+            staff-only fact. Only the button that changes it is. */}
+        <StatusBadge status={getMatchProgressStatus(progress)} label={getMatchProgressLabel(progress)} />
+
+        {controls && (
+          <>
+            {commitState !== "Completed" && (
             <button
               type="button"
               onClick={onCommitMatch}
@@ -131,7 +133,7 @@ export default function MatchHeader({
             >
               Commit
             </button>
-          )}
+            )}
           <ActionsMenu
             title="Match actions"
             items={[
@@ -186,8 +188,9 @@ export default function MatchHeader({
               },
             ]}
           />
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
