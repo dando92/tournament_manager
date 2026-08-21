@@ -61,7 +61,7 @@ export default function AddPlayersToMatchModal({
     <BaseModal open={open} onClose={onClose} title="Add players to match" maxWidth="max-w-md">
       <div className="flex flex-col gap-3">
         {availableEntrants.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No available players.</p>
+          <p className="text-sm text-gray-500 italic">No available players.</p>
         ) : (
           <MultiSelect
             options={entrantOptions}

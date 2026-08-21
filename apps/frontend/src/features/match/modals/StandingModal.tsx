@@ -158,7 +158,7 @@ export default function StandingModal({
             value={selectedScoreId}
             onChange={(event) => setSelectedScoreId(event.target.value)}
             disabled={loadingScores}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-600 focus:border-brand-700 sm:text-sm"
           >
             <option value="">Manual score</option>
             {scoreOptions.map((score) => (
@@ -182,7 +182,7 @@ export default function StandingModal({
                 inputMode="decimal"
                 value={percentage}
                 onChange={(e) => setPercentage(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-dark focus:border-primary-dark sm:text-sm ${
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-brand-600 focus:border-brand-700 sm:text-sm ${
                   percentageIsValid ? "border-gray-300" : "border-red-300"
                 }`}
               />

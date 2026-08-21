@@ -38,7 +38,7 @@ export default function TournamentOverviewDivisions({
         {controls ? (
           <CreateCard label="Create division" onClick={onCreateDivision} className="min-h-[160px]" />
         ) : (
-          divisions.length === 0 && <p className="text-sm text-gray-400">No divisions yet.</p>
+          divisions.length === 0 && <p className="text-sm text-gray-500">No divisions yet.</p>
         )}
       </div>
     </div>

@@ -125,7 +125,7 @@ export default function MatchList({
         onCreateMatch ? (
           <CreateCard label="Create match" onClick={onCreateMatch} />
         ) : (
-          <p className="text-center text-gray-400 text-sm py-8">No matches yet.</p>
+          <p className="text-center text-gray-500 text-sm py-8">No matches yet.</p>
         )
       ) : usesRoundRobinTable ? (
         <>

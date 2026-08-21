@@ -13,7 +13,7 @@ export default function PathRow({ ordinalLabel, sourceMatchName, colSpan, isSele
     <tr
       className={`border-t border-gray-100 transition-colors ${
         isSelected
-          ? "bg-green-50"
+          ? "bg-emerald-50"
           : canToggle
             ? "cursor-pointer hover:bg-gray-50"
             : ""
@@ -23,7 +23,7 @@ export default function PathRow({ ordinalLabel, sourceMatchName, colSpan, isSele
       <td
         colSpan={colSpan}
         className={`px-3 py-2 text-center text-sm italic ${
-          isSelected ? "text-green-700 font-medium" : "text-gray-400"
+          isSelected ? "text-emerald-700 font-medium" : "text-gray-500"
         }`}
       >
         {ordinalLabel} of {sourceMatchName}

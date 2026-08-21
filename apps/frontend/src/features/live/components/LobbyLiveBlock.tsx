@@ -17,9 +17,9 @@ export default function LobbyLiveBlock({ lobbyState, showObsSource }: Props) {
     <div className="mb-6">
       <div className="flex items-stretch justify-between mb-2">
         <div className="flex flex-col justify-center">
-          <span className="text-lg font-bold text-primary-dark">{lobbyState.lobbyName}</span>
+          <span className="text-lg font-bold text-brand-700">{lobbyState.lobbyName}</span>
           {lobbyState.lobbyCode && (
-            <span className="text-xs text-gray-400">{lobbyState.lobbyCode}</span>
+            <span className="text-xs text-gray-500">{lobbyState.lobbyCode}</span>
           )}
           {songName && (
             <span className="text-sm text-gray-500">{songName}</span>

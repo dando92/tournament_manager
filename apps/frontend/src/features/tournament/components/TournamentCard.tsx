@@ -1,26 +1,14 @@
 import { Tournament } from "@/features/tournament/types/Tournament";
+import { getBannerGradient } from "@/features/tournament/utils/tournamentBanner";
 
 type TournamentCardProps = {
   tournament: Tournament;
   onClick: () => void;
 };
 
-const BANNER_COLORS = [
-  "from-red-700 to-red-900",
-  "from-blue-700 to-blue-900",
-  "from-purple-700 to-purple-900",
-  "from-emerald-700 to-emerald-900",
-  "from-orange-600 to-red-800",
-  "from-cyan-700 to-blue-900",
-];
-
-function getBannerColor(id: number) {
-  return BANNER_COLORS[id % BANNER_COLORS.length];
-}
-
 export default function TournamentCard({ tournament, onClick }: TournamentCardProps) {
   const initial = tournament.name.charAt(0).toUpperCase();
-  const gradient = getBannerColor(tournament.id);
+  const gradient = getBannerGradient(tournament.id);
 
   return (
     <div

@@ -60,8 +60,8 @@ function TournamentButton({
       title={tournament.name}
       className={`flex items-center gap-2 px-2 py-2 rounded text-sm transition-colors w-full text-left ${
         selected
-          ? "bg-white/20 text-white font-semibold"
-          : "text-red-100 hover:bg-white/10 hover:text-white"
+          ? "bg-brand-500/25 text-white font-semibold"
+          : "text-brand-100 hover:bg-white/10 hover:text-white"
       }`}
     >
       {tournament.logo ? (
@@ -100,8 +100,8 @@ function SidebarLink({
       onClick={onClick}
       className={`flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
         active
-          ? "bg-white/20 text-white font-semibold"
-          : "text-red-100 hover:bg-white/10 hover:text-white"
+          ? "bg-brand-500/25 text-white font-semibold"
+          : "text-brand-100 hover:bg-white/10 hover:text-white"
       }`}
     >
       {icon && <FontAwesomeIcon icon={icon} className="w-4 shrink-0" />}
@@ -160,7 +160,7 @@ export default function Sidebar() {
   )?.key;
 
   const content = (
-    <aside className="flex flex-col w-56 h-full bg-primary border-r border-white/10">
+    <aside className="flex flex-col w-56 h-full bg-brand-900 border-r border-white/10">
       <button
         type="button"
         onClick={() => {
@@ -195,7 +195,7 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-0.5 p-3 border-b border-white/10 shrink-0">
-        <p className="text-red-200 text-xs uppercase tracking-wide mb-1 px-1">Recent tournaments</p>
+        <p className="text-brand-200 text-xs uppercase tracking-wide mb-1 px-1">Recent tournaments</p>
         {recentTournaments.length > 0 ? (
           recentTournaments.map((t) => (
             <TournamentButton
@@ -206,13 +206,13 @@ export default function Sidebar() {
             />
           ))
         ) : (
-          <p className="text-red-300 text-xs px-1 italic">No recent tournaments</p>
+          <p className="text-brand-300 text-xs px-1 italic">No recent tournaments</p>
         )}
       </div>
 
       {currentTournamentId !== null && (
         <div className="flex flex-col gap-0.5 p-3 border-b border-white/10 shrink-0">
-          <p className="text-red-200 text-xs uppercase tracking-wide mb-1 px-1">Tournament</p>
+          <p className="text-brand-200 text-xs uppercase tracking-wide mb-1 px-1">Tournament</p>
           {visibleTournamentTabs.map((tab) => (
             <SidebarLink
               key={tab.key}
@@ -252,7 +252,7 @@ export default function Sidebar() {
         {state.account ? (
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 rounded text-sm text-red-100 hover:bg-white/10 hover:text-white transition-colors text-left w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded text-sm text-brand-100 hover:bg-white/10 hover:text-white transition-colors text-left w-full"
           >
             <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
             <span>Logout</span>

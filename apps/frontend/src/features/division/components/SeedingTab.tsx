@@ -75,7 +75,7 @@ export default function SeedingTab({ division, canEdit, onSeedingChanged }: Seed
   };
 
   if (entrants.length === 0) {
-    return <p className="text-sm text-gray-400 italic">No entrants in this division yet.</p>;
+    return <p className="text-sm text-gray-500 italic">No entrants in this division yet.</p>;
   }
 
   return (

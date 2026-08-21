@@ -39,12 +39,12 @@ export default function BaseModal({
             >
               {title && (
                 <div className="flex items-center justify-between mb-4">
-                  <Dialog.Title as="h3" className="text-lg font-semibold text-primary-dark">
+                  <Dialog.Title as="h3" className="text-lg font-semibold text-brand-700">
                     {title}
                   </Dialog.Title>
                   <button
                     onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                    className="text-gray-500 hover:text-gray-600 text-xl font-bold"
                   >
                     ✕
                   </button>

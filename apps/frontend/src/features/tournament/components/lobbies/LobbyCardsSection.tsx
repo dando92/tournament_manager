@@ -41,7 +41,7 @@ export default function LobbyCardsSection({
           <div className="mt-2 flex flex-wrap gap-2">
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                connectionStatus.isActive ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                connectionStatus.isActive ? "bg-brand-100 text-brand-700" : "bg-gray-100 text-gray-500"
               }`}
             >
               {connectionStatus.isActive ? "Active" : "Inactive"}
@@ -58,7 +58,7 @@ export default function LobbyCardsSection({
       </div>
 
       {lobbies.length === 0 ? (
-        <p className="mt-4 text-sm text-gray-400">No lobbies found.</p>
+        <p className="mt-4 text-sm text-gray-500">No lobbies found.</p>
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {lobbies.map(({ lobby, lobbyState }) => (

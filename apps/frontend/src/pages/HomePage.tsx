@@ -86,7 +86,7 @@ export default function HomePage() {
           )}
 
           {!isLoading && tournaments.length === 0 && (
-            <p className="text-gray-400 text-sm italic">No tournaments yet.</p>
+            <p className="text-gray-500 text-sm italic">No tournaments yet.</p>
           )}
 
           {!isLoading && tournaments.length > 0 && (

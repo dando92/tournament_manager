@@ -79,7 +79,7 @@ export default function TournamentHeaderSongsManageMenu({
                 onClick={openAddInGroup}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faPlus} className="text-primary-dark" />
+                <FontAwesomeIcon icon={faPlus} className="text-brand-700" />
                 Add song
               </button>
               <button
@@ -88,7 +88,7 @@ export default function TournamentHeaderSongsManageMenu({
                 onClick={openAddInNewGroup}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faLayerGroup} className="text-primary-dark" />
+                <FontAwesomeIcon icon={faLayerGroup} className="text-brand-700" />
                 New pack
               </button>
               <button
@@ -97,7 +97,7 @@ export default function TournamentHeaderSongsManageMenu({
                 onClick={triggerImport}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faFileImport} className="text-primary-dark" />
+                <FontAwesomeIcon icon={faFileImport} className="text-brand-700" />
                 Import
               </button>
             </div>

@@ -6,24 +6,12 @@ import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { addRecentTournament } from "@/features/tournament/services/recentTournaments";
+import { getBannerGradient } from "@/features/tournament/utils/tournamentBanner";
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
-
-const BANNER_COLORS = [
-  "from-red-700 to-red-900",
-  "from-blue-700 to-blue-900",
-  "from-purple-700 to-purple-900",
-  "from-emerald-700 to-emerald-900",
-  "from-orange-600 to-red-800",
-  "from-cyan-700 to-blue-900",
-];
-
-function getBannerColor(id: number) {
-  return BANNER_COLORS[id % BANNER_COLORS.length];
-}
 
 export default function SearchTournamentModal({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
@@ -59,13 +47,13 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
     <BaseModal open={open} onClose={onClose} maxWidth="max-w-lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-primary-dark">Search tournaments</h3>
+          <h3 className="text-lg font-semibold text-brand-700">Search tournaments</h3>
           <p className="text-sm text-gray-500">Open an event.</p>
         </div>
       </div>
 
       <div className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2 mb-5 focus-within:border-gray-400 transition-colors">
-        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-gray-400 shrink-0" />
+        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-gray-500 shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -78,7 +66,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
 
       <div className="flex flex-col">
         {filtered.length === 0 && (
-          <p className="text-sm text-gray-400 italic px-1">No tournaments found.</p>
+          <p className="text-sm text-gray-500 italic px-1">No tournaments found.</p>
         )}
         {filtered.map((t) => (
           <button
@@ -88,7 +76,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
           >
             {/* Thumbnail */}
             <div
-              className={`h-12 w-12 rounded shrink-0 bg-gradient-to-br ${getBannerColor(t.id)} flex items-center justify-center`}
+              className={`h-12 w-12 rounded shrink-0 bg-gradient-to-br ${getBannerGradient(t.id)} flex items-center justify-center`}
             >
               <span className="text-white font-black text-lg opacity-40 select-none">
                 {t.name.charAt(0).toUpperCase()}
@@ -97,7 +85,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
 
             {/* Info */}
             <div className="flex flex-col min-w-0">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">
+              <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
                 Tournament
               </span>
               <span className="text-sm font-semibold text-gray-800 truncate">{t.name}</span>

@@ -36,7 +36,7 @@ export function MobileBottomNav() {
       {/* Left: menu button */}
       <button
         onClick={toggle}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs text-gray-500 hover:text-primary-dark transition-colors"
+        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs text-gray-500 hover:text-brand-700 transition-colors"
       >
         <FontAwesomeIcon icon={faBars} className="text-xl" />
         <span>Menu</span>
@@ -45,7 +45,7 @@ export function MobileBottomNav() {
       {/* Center: search */}
       <button
         onClick={() => setSearchModalOpen(true)}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors text-gray-500 hover:text-primary-dark"
+        className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors text-gray-500 hover:text-brand-700"
       >
         <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl" />
         <span>Search</span>
@@ -56,7 +56,7 @@ export function MobileBottomNav() {
         <button
           onClick={handleLogout}
           className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-primary-dark font-semibold" : "text-gray-500"
+            isOnAccount ? "text-brand-700 font-semibold" : "text-gray-500"
           }`}
         >
           <FontAwesomeIcon icon={faRightFromBracket} className="text-xl" />
@@ -66,7 +66,7 @@ export function MobileBottomNav() {
         <button
           onClick={() => navigate("/login", { state: { from: location.pathname } })}
           className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-xs transition-colors ${
-            isOnAccount ? "text-primary-dark font-semibold" : "text-gray-500"
+            isOnAccount ? "text-brand-700 font-semibold" : "text-gray-500"
           }`}
         >
           <FontAwesomeIcon icon={faRightToBracket} className="text-xl" />

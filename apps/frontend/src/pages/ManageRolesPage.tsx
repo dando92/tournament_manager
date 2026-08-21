@@ -32,7 +32,7 @@ export default function ManageRolesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-primary-dark mb-6">Manage Roles</h1>
+      <h1 className="text-3xl font-bold text-brand-700 mb-6">Manage Roles</h1>
       <div className="flex flex-col gap-3">
         {accounts.map((account) => (
           <RoleAccountItem

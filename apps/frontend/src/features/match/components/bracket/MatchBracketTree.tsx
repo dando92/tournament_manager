@@ -217,8 +217,8 @@ function MatchBracketCard({
       }}
       className={`relative block w-[220px] rounded-md border bg-white text-left shadow-sm transition-colors ${
         selected
-          ? "border-amber-400 ring-2 ring-amber-300"
-          : "border-gray-200 hover:border-primary-dark/40 hover:bg-gray-50"
+          ? "border-brand-400 ring-2 ring-brand-300"
+          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50"
       }`}
     >
       <div className="border-b border-gray-100 px-2.5 py-1.5">
@@ -239,7 +239,7 @@ function MatchBracketCard({
             <span className="truncate px-2.5 py-1.5 text-xs font-medium text-gray-500">
               {getSourceRuleLabel(rule, allMatches, phaseGroups)}
             </span>
-            <span className="h-full px-2 py-1.5 text-center text-xs font-semibold text-gray-400">
+            <span className="h-full px-2 py-1.5 text-center text-xs font-semibold text-gray-500">
               -
             </span>
           </div>
@@ -252,7 +252,7 @@ function MatchBracketCard({
             <div key={entrant.id} className="grid grid-cols-[1fr_34px] items-center">
               <span className="truncate px-2.5 py-1.5 text-xs font-medium text-gray-800">{entrant.name}</span>
               <span className={`h-full px-2 py-1.5 text-center text-xs font-semibold text-white ${
-                didAdvance ? "bg-green-600" : "bg-gray-700"
+                didAdvance ? "bg-emerald-600" : "bg-gray-700"
               }`}>
                 {points ?? "-"}
               </span>
@@ -260,7 +260,7 @@ function MatchBracketCard({
           );
         })}
         {!hasRows && (
-          <div className="px-2.5 py-1.5 text-xs text-gray-400">No data available</div>
+          <div className="px-2.5 py-1.5 text-xs text-gray-500">No data available</div>
         )}
         {Array.from({ length: Math.max(0, rowCount - (hasRows ? incomingSourceRules.length + sortedEntrants.length : 1)) }).map((_, index) => (
           <div key={`blank-${index}`} className="px-2.5 py-1.5 text-xs text-transparent">-</div>
@@ -358,7 +358,7 @@ export default function MatchBracketTree({
 
       {unlinkedMatches.length > 0 && (
         <div className="rounded-md border border-gray-200 bg-white p-3">
-          <div className="mb-2 text-xs font-semibold text-gray-400">Unlinked matches</div>
+          <div className="mb-2 text-xs font-semibold text-gray-500">Unlinked matches</div>
           <div className="flex flex-wrap gap-3">
             {unlinkedMatches.map((match) => (
               <MatchBracketCard

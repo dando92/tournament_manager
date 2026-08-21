@@ -50,7 +50,7 @@ export default function TournamentHeaderCreateMenu({
               }}
               className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={faLink} className="text-primary-dark" />
+              <FontAwesomeIcon icon={faLink} className="text-brand-700" />
               Import from start.gg
             </button>
             <button
@@ -62,7 +62,7 @@ export default function TournamentHeaderCreateMenu({
               }}
               className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <FontAwesomeIcon icon={faDiagramProject} className="text-primary-dark" />
+              <FontAwesomeIcon icon={faDiagramProject} className="text-brand-700" />
               Generate bracket
             </button>
           </div>

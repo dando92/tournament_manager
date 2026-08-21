@@ -2,11 +2,11 @@ import { Song } from "@/features/song/types/Song";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 function difficultyColor(difficulty: number): string {
-  if (difficulty <= 3) return "bg-green-500";
-  if (difficulty <= 6) return "bg-yellow-500";
-  if (difficulty <= 9) return "bg-orange-500";
-  if (difficulty <= 12) return "bg-red-600";
-  return "bg-purple-700";
+  if (difficulty <= 3) return "bg-difficulty-1";
+  if (difficulty <= 6) return "bg-difficulty-2";
+  if (difficulty <= 9) return "bg-difficulty-3";
+  if (difficulty <= 12) return "bg-difficulty-4";
+  return "bg-difficulty-5";
 }
 
 type Props = {

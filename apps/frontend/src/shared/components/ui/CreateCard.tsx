@@ -1,4 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { btnCreate } from "@/styles/buttonStyles";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type CreateCardProps = {
@@ -14,7 +15,7 @@ export default function CreateCard({ label, onClick, disabled = false, className
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-green-300 py-6 text-green-700 transition-colors hover:border-green-400 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 py-6 ${btnCreate} ${className}`}
     >
       <FontAwesomeIcon icon={faPlus} className="text-lg" />
       <span className="text-sm font-medium">{label}</span>

@@ -96,7 +96,7 @@ export default function AdvancementRulesEditor({
       </div>
 
       {draftRules.length === 0 ? (
-        <p className="text-sm text-gray-400">No advancement rules configured.</p>
+        <p className="text-sm text-gray-500">No advancement rules configured.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {draftRules.map((rule, index) => {
@@ -152,7 +152,7 @@ export default function AdvancementRulesEditor({
                 />
                 <button
                   type="button"
-                  className="text-sm text-red-500"
+                  className="text-sm text-red-600"
                   onClick={() => onChange(draftRules.filter((_, currentIndex) => currentIndex !== index))}
                   aria-label="Delete advancement rule"
                 >

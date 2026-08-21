@@ -4,6 +4,7 @@ import { faChevronDown, faPlus, faPencil } from "@fortawesome/free-solid-svg-ico
 import { Match } from "@/features/match/types/Match";
 import { Player } from "@/features/player/types/Player";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
+import { btnCreateIcon } from "@/styles/buttonStyles";
 import MobileScoreActionsMenu, {
   type MobileScoreMenuState,
   type ScoreEntry,
@@ -121,11 +122,11 @@ export default function MatchRow({
           return (
             <td key={round.song.id} className="px-1 sm:px-3 py-2 bg-gray-100 text-center">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-xs text-gray-400 italic">disabled</span>
+                <span className="text-xs text-gray-500 italic">disabled</span>
                 {controls && (
                   <button
                     onClick={() => onDeleteStanding(player.id, round.song.id)}
-                    className="text-xs text-blue-500 hover:underline"
+                    className="text-xs text-brand-700 hover:underline"
                   >
                     reactivate
                   </button>
@@ -142,7 +143,7 @@ export default function MatchRow({
                 <button
                   onClick={() => onOpenAddStanding(player.id, round.song.id, player.playerName, round.song.title)}
                   title="Add score"
-                  className="text-green-700 hover:text-green-900"
+                  className={btnCreateIcon}
                 >
                   <FontAwesomeIcon icon={faPlus} />
                 </button>
@@ -188,7 +189,7 @@ export default function MatchRow({
                   <span className="text-xs bg-red-100 text-red-600 px-1 rounded font-semibold">F</span>
                 )}
                 {controls && (
-                  <FontAwesomeIcon icon={faChevronDown} className="sm:hidden text-xs text-gray-400" />
+                  <FontAwesomeIcon icon={faChevronDown} className="sm:hidden text-xs text-gray-500" />
                 )}
                 {controls && (
                   <button
@@ -207,14 +208,14 @@ export default function MatchRow({
                       );
                     }}
                     title="Edit score"
-                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center text-blue-400 hover:text-blue-600"
+                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center text-brand-600 hover:text-brand-800"
                   >
                     <FontAwesomeIcon icon={faPencil} className="text-sm" />
                   </button>
                 )}
               </div>
               <div className="flex min-h-6 items-center justify-center gap-1.5">
-                <span className="text-xs text-gray-400">{scoreData.score} pts</span>
+                <span className="text-xs text-gray-500">{scoreData.score} pts</span>
                 {controls && (
                   <DeleteConfirmButton
                     onConfirm={() => onDeleteStanding(player.id, round.song.id)}

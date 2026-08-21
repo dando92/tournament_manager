@@ -170,20 +170,20 @@ export default function TournamentParticipantsPage() {
       <div className="relative">
         <FontAwesomeIcon
           icon={faMagnifyingGlass}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
         />
         <input
           type="search"
           value={participantSearch}
           onChange={(event) => setParticipantSearch(event.target.value)}
           placeholder="Search participants by name..."
-          className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-dark/30"
+          className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
         />
       </div>
 
       <div className="grid gap-2">
         {filteredParticipants.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">
+          <p className="text-sm text-gray-500 italic">
             {participants.length === 0 ? "No participants registered." : "No participants match your search."}
           </p>
         ) : (
@@ -265,14 +265,14 @@ export default function TournamentParticipantsPage() {
           onChange={(event) => setName(event.target.value)}
           placeholder="Enter gamer tag"
           autoFocus
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-dark/30"
+          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
         />
       </BaseModal>
 
       <BaseModal open={participantsManageModal === "database"} onClose={() => setParticipantsManageModal("none")} title="Add from player database" maxWidth="max-w-md">
         <div className="flex flex-col gap-3">
           {availablePlayers.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No available players.</p>
+            <p className="text-sm text-gray-500 italic">No available players.</p>
           ) : (
             <MultiSelect
               options={availablePlayerOptions}
@@ -328,7 +328,7 @@ export default function TournamentParticipantsPage() {
             onChange={(event) => setBulkText(event.target.value)}
             placeholder={"Alice\nBob\nCharlie"}
             rows={8}
-            className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-dark/30"
+            className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
           />
 
           {preview.length > 0 && (

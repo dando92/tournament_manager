@@ -20,13 +20,18 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * Ranks a score into one of the ordinal score bands. The `score` scale is a
+ * domain scale, not a semantic one: a band says how good a result is, it never
+ * reports the state of the application.
+ */
 export function scoreBadgeClass(percentage: number, isFailed: boolean): string {
-  if (isFailed) return "bg-red-100 text-red-700 border-red-200";
-  if (percentage >= 99) return "bg-purple-100 text-purple-800 border-purple-200";
-  if (percentage >= 95) return "bg-blue-100 text-blue-800 border-blue-200";
-  if (percentage >= 90) return "bg-green-100 text-green-800 border-green-200";
-  if (percentage >= 80) return "bg-yellow-100 text-yellow-800 border-yellow-200";
-  return "bg-gray-100 text-gray-600 border-gray-200";
+  if (isFailed) return "bg-score-failed/10 text-score-failed border-score-failed/25";
+  if (percentage >= 99) return "bg-score-4/10 text-score-4 border-score-4/25";
+  if (percentage >= 95) return "bg-score-3/10 text-score-3 border-score-3/25";
+  if (percentage >= 90) return "bg-score-2/10 text-score-2 border-score-2/25";
+  if (percentage >= 80) return "bg-score-1/10 text-score-1 border-score-1/25";
+  return "bg-score-base/10 text-score-base border-score-base/25";
 }
 
 export function useTournamentStatsPage(divisions: Division[]) {

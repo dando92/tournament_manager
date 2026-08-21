@@ -73,7 +73,7 @@ export default function MatchHeader({
           {controls && isRenaming ? (
             <input
               ref={inputRef}
-              className="text-base font-semibold text-gray-800 border-b border-primary-dark outline-none bg-transparent w-40"
+              className="text-base font-semibold text-gray-800 border-b border-brand-700 outline-none bg-transparent w-40"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={commitRename}
@@ -84,7 +84,7 @@ export default function MatchHeader({
             />
           ) : (
             <h3
-              className={`text-base font-semibold text-gray-800 ${controls ? "cursor-pointer hover:text-primary-dark transition-colors" : ""}`}
+              className={`text-base font-semibold text-gray-800 ${controls ? "cursor-pointer hover:text-brand-700 transition-colors" : ""}`}
               onClick={controls ? startRename : undefined}
               title={controls ? "Click to rename" : undefined}
             >
@@ -95,7 +95,7 @@ export default function MatchHeader({
             <button
               onClick={onOpenEditNotes}
               title={match.notes || "Add notes"}
-              className={`text-sm ${match.notes ? "text-amber-500 hover:text-amber-700" : "text-gray-300 hover:text-gray-500"}`}
+              className={`text-sm ${match.notes ? "text-amber-500 hover:text-amber-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               <FontAwesomeIcon icon={faStickyNote} />
             </button>
@@ -106,7 +106,7 @@ export default function MatchHeader({
           ) : null}
         </div>
         {match.subtitle && (
-          <p className="text-xs text-gray-400 mt-0.5">{match.subtitle}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{match.subtitle}</p>
         )}
       </div>
       {controls && (
@@ -123,7 +123,7 @@ export default function MatchHeader({
               title={commitState === "Disabled" ? "Every score must be filled in before the match can be committed" : undefined}
               className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${touchAreaClass} ${
                 commitState === "Disabled"
-                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-500"
                   : "cursor-pointer border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
               }`}
             >

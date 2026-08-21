@@ -3,6 +3,7 @@ import { faMinusCircle, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import Select from "react-select";
 import { Song } from "@/features/song/types/Song";
 import { selectPortalStyles } from "@/styles/selectStyles";
+import { btnCreateIcon } from "@/styles/buttonStyles";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";
 
 type CreateMatchSongFieldsProps = {
@@ -102,7 +103,7 @@ export default function CreateMatchSongFields({
               type="number"
               placeholder="Type difficulty"
             />
-            <button onClick={onAddDifficulty} className="text-green-700 text-lg">
+            <button onClick={onAddDifficulty} className={`text-lg ${btnCreateIcon}`}>
               <FontAwesomeIcon icon={faPlusCircle} />
             </button>
           </div>

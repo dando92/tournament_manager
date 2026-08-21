@@ -38,7 +38,7 @@ export default function StatusDot({ on, label }: StatusDotProps) {
       >
         <span
           aria-hidden
-          className={`h-2.5 w-2.5 rounded-full ring-2 ${on ? "bg-green-500 ring-green-100" : "bg-gray-300 ring-gray-100"}`}
+          className={`h-2.5 w-2.5 rounded-full ring-2 ${on ? "bg-emerald-500 ring-emerald-100" : "bg-gray-300 ring-gray-100"}`}
         />
       </button>
       <span

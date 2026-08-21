@@ -6,11 +6,11 @@ export default function DivisionStandingsPage() {
   const { rows, loaded } = useDivisionStandings(divisionId);
 
   if (!loaded) {
-    return <p className="text-sm text-gray-400 italic">Loading standings...</p>;
+    return <p className="text-sm text-gray-500 italic">Loading standings...</p>;
   }
 
   if (rows.length === 0) {
-    return <p className="text-sm text-gray-400 italic">No standings recorded yet.</p>;
+    return <p className="text-sm text-gray-500 italic">No standings recorded yet.</p>;
   }
 
   return (

@@ -12,7 +12,7 @@ export default function LobbyLiveScores({ lobbyState, singleColumn }: Props) {
 
   return (
     <div className="w-auto">
-      <h2 className="text-primary-dark">Now playing: {songTitle}</h2>
+      <h2 className="text-brand-700">Now playing: {songTitle}</h2>
       <div className={`grid my-2 border-b pb-2 gap-1 ${singleColumn ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3 lg:grid-cols-4"}`}>
         {sortedPlayers.map((player, idx) => (
           <LiveScoreCard

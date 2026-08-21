@@ -18,16 +18,16 @@ export default function TournamentOverviewSummary({
         </div>
         <div className="grid grid-cols-3 gap-4 sm:gap-6">
           <div>
-            <div className="text-xs uppercase tracking-wide text-gray-400">Divisions</div>
-            <div className="mt-1 text-2xl font-black text-primary-dark">{divisionCount}</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Divisions</div>
+            <div className="mt-1 text-2xl font-black text-brand-700">{divisionCount}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-gray-400">Players</div>
-            <div className="mt-1 text-2xl font-black text-primary-dark">{playerCount}</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Players</div>
+            <div className="mt-1 text-2xl font-black text-brand-700">{playerCount}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-gray-400">Matches</div>
-            <div className="mt-1 text-2xl font-black text-primary-dark">{matchCount}</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Matches</div>
+            <div className="mt-1 text-2xl font-black text-brand-700">{matchCount}</div>
           </div>
         </div>
       </div>

@@ -136,7 +136,7 @@ export default function ActionsMenu({
 }
 
 function ItemIcon({ icon, danger }: { icon: ActionsMenuItem["icon"]; danger?: boolean }) {
-  const className = danger ? undefined : "text-primary-dark";
+  const className = danger ? undefined : "text-brand-700";
   if (icon && typeof icon === "object" && "iconName" in icon) {
     return <FontAwesomeIcon icon={icon as IconDefinition} className={className} />;
   }

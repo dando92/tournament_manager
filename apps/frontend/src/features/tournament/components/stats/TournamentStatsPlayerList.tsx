@@ -36,7 +36,7 @@ export default function TournamentStatsPlayerList({
             >
               <FontAwesomeIcon
                 icon={isOpen ? faChevronUp : faChevronDown}
-                className="text-gray-400 text-xs w-3 shrink-0"
+                className="text-gray-500 text-xs w-3 shrink-0"
               />
               <span className="flex-1 font-semibold text-gray-900 truncate">
                 {player.playerName}

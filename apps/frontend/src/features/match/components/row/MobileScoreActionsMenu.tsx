@@ -66,7 +66,7 @@ export default function MobileScoreActionsMenu({
             menu.scoreData.isFailed,
           );
         }}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-gray-50"
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-gray-50"
       >
         <FontAwesomeIcon icon={faPencil} />
         Edit score

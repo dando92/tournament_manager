@@ -47,7 +47,7 @@ function getCellResultClass(cell: PairCell): string {
   }
 
   return cell.rowPoints > cell.columnPoints
-    ? "border-green-200 bg-green-50 text-green-800"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
     : "border-red-200 bg-red-50 text-red-700";
 }
 
@@ -174,7 +174,7 @@ export default function RoundRobinMatchesView({
   }
 
   if (orderedPlayers.length === 0) {
-    return <p className="text-center text-gray-400 text-sm py-8">No round robin players yet.</p>;
+    return <p className="text-center text-gray-500 text-sm py-8">No round robin players yet.</p>;
   }
 
   return (
@@ -217,7 +217,7 @@ export default function RoundRobinMatchesView({
 
                     if (!cell.match) {
                       return (
-                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-gray-100 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-gray-400 sm:h-24 sm:min-w-[160px] sm:px-3 sm:py-2 sm:text-xs">
+                        <td key={columnPlayer.id} className="h-16 min-w-[92px] bg-gray-100 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-gray-500 sm:h-24 sm:min-w-[160px] sm:px-3 sm:py-2 sm:text-xs">
                           No match available
                         </td>
                       );
@@ -233,12 +233,12 @@ export default function RoundRobinMatchesView({
                             setSelectedMatchId((current) => current === cell.match?.id ? null : cell.match?.id ?? null)
                           }
                           className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded border px-1 py-1 text-center transition-colors sm:gap-2 sm:px-2 sm:py-2 ${getCellResultClass(cell)} ${
-                            isSelected ? "border-amber-400 ring-2 ring-amber-300" : "hover:border-primary-dark/40"
+                            isSelected ? "border-brand-400 ring-2 ring-brand-300" : "hover:border-brand-300"
                           }`}
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
                             <span className={`rounded border px-1 py-0 text-[8px] font-semibold leading-4 sm:px-1.5 sm:py-0.5 sm:text-[10px] ${
-                              cell.match.active ? "border-green-200 bg-green-50 text-green-800" : "border-gray-200 bg-gray-50 text-gray-700"
+                              cell.match.active ? "border-brand-200 bg-brand-50 text-brand-700" : "border-gray-200 bg-gray-50 text-gray-700"
                             }`}>
                               {cell.match.active ? "Active" : "Not active"}
                             </span>

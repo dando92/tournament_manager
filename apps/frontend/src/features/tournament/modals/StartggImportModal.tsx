@@ -39,7 +39,7 @@ function ActionBadge({ action }: { action: string }) {
     action === "mapped" || action.startsWith("match-")
       ? "bg-emerald-100 text-emerald-800"
       : action.startsWith("create")
-        ? "bg-blue-100 text-blue-800"
+        ? "bg-brand-100 text-brand-800"
         : action.includes("blocked")
           ? "bg-red-100 text-red-800"
           : "bg-gray-100 text-gray-700";
@@ -137,7 +137,7 @@ export default function StartggImportModal({
               onChange={(event) => setEventSlug(event.target.value)}
               placeholder="tournament/example/event/singles"
               autoFocus
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-dark/30"
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
           </div>
 

@@ -42,7 +42,7 @@ export default function AddEditSongTitleFields({
       <div>
         <h3 className="mb-2">Select songs</h3>
         {filteredSongs.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-400 italic">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-500 italic">
             No songs match the current filters.
           </div>
         ) : (

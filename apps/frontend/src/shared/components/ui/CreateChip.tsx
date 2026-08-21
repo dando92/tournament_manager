@@ -1,4 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { btnCreate } from "@/styles/buttonStyles";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type CreateChipProps = {
@@ -14,7 +15,7 @@ export default function CreateChip({ title, onClick, disabled = false }: CreateC
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-full border border-dashed border-green-300 px-3 py-1 text-xs text-green-700 transition-colors hover:border-green-400 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className={`rounded-full border px-3 py-1 text-xs ${btnCreate}`}
     >
       <FontAwesomeIcon icon={faPlus} />
     </button>

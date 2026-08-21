@@ -53,7 +53,7 @@ export default function LobbyCard({
           <button
             type="button"
             onClick={() => onSpectate(lobbyCode)}
-            className="rounded-lg border border-primary-dark px-3 py-1.5 text-xs font-semibold text-primary-dark hover:bg-primary-dark/10"
+            className="rounded-lg border border-brand-700 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"
           >
             Spectate
           </button>
@@ -62,13 +62,13 @@ export default function LobbyCard({
 
       <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <div className="rounded-lg bg-white p-3">
-          <div className="text-xs uppercase tracking-wide text-gray-400">Song</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Song</div>
           <div className="mt-1 font-semibold text-gray-800">
             {songName}
           </div>
         </div>
         <div className="rounded-lg bg-white p-3">
-          <div className="text-xs uppercase tracking-wide text-gray-400">Lobby</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Lobby</div>
           <div className="mt-1 flex flex-wrap gap-2">
             <span className="font-semibold text-gray-800">{playerCount} players</span>
             <span className="font-semibold text-gray-800">{spectatorCount} spectators</span>
@@ -78,7 +78,7 @@ export default function LobbyCard({
       </div>
 
       <div className="mt-4">
-        <div className="text-xs uppercase tracking-wide text-gray-400">Players</div>
+        <div className="text-xs uppercase tracking-wide text-gray-500">Players</div>
         {sortedPlayers.length ? (
           <div className="mt-2 flex flex-col gap-2">
             {sortedPlayers.map((player) => (
@@ -103,7 +103,7 @@ export default function LobbyCard({
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-gray-400">Waiting for lobby state...</p>
+          <p className="mt-2 text-sm text-gray-500">Waiting for lobby state...</p>
         )}
       </div>
     </article>

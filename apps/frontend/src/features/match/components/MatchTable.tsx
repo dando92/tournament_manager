@@ -142,7 +142,7 @@ export default function MatchTable({
         <table className="w-full text-sm border-collapse">
           {match.rounds.length === 0 && (
             <thead>
-              <tr className="bg-primary-dark text-white">
+              <tr className="bg-brand-700 text-white">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold">Player</th>
                 <th className="px-3 py-2.5 text-center font-semibold w-[160px]">Pts</th>
@@ -151,7 +151,7 @@ export default function MatchTable({
           )}
           {match.rounds.length > 0 && (
             <thead>
-              <tr className="bg-primary-dark text-white">
+              <tr className="bg-brand-700 text-white">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold w-[120px] sm:w-[160px]">Player</th>
                 {match.rounds.map((round, idx) => {
@@ -202,7 +202,7 @@ export default function MatchTable({
           <tbody>
             {!hasContent && (
               <tr>
-                <td colSpan={totalCols} className="px-3 py-6 text-center text-gray-400 text-sm">
+                <td colSpan={totalCols} className="px-3 py-6 text-center text-gray-500 text-sm">
                   No match data available
                 </td>
               </tr>

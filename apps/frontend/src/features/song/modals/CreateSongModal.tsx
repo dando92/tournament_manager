@@ -86,7 +86,7 @@ export default function CreateSongModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Artist <span className="text-gray-400 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Artist <span className="text-gray-500 font-normal">(optional)</span></label>
           <input
             type="text"
             value={artist}
@@ -119,9 +119,9 @@ export default function CreateSongModal({
             disabled={!isNewGroup}
           />
           {!isNewGroup && (
-            <p className="text-xs text-gray-400 mt-1">Pack is preselected for this action.</p>
+            <p className="text-xs text-gray-500 mt-1">Pack is preselected for this action.</p>
           )}
-          {groupError && <p className="text-red-500 text-xs mt-1">{groupError}</p>}
+          {groupError && <p className="text-red-600 text-xs mt-1">{groupError}</p>}
         </div>
       </form>
     </BaseModal>

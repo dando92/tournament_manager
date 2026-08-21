@@ -35,7 +35,7 @@ export default function PhaseBreadcrumb({
           <button
             type="button"
             onClick={() => onSelect("all")}
-            className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-primary-dark transition-colors hover:bg-primary-dark/10"
+            className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-brand-700 transition-colors hover:bg-brand-50"
           >
             <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
             All phases
@@ -44,7 +44,7 @@ export default function PhaseBreadcrumb({
         </>
       )}
       <PhaseMenu phases={phases} selectedPhase={selectedPhase} onSelect={onSelect} onCreate={onCreate} />
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {selectedPhase
           ? matchCountLabel(phaseMatchCount(selectedPhase))
           : phases.length > 0 &&
@@ -76,7 +76,7 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
         type="button"
         title="Switch phase"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-full border border-primary-dark bg-primary-dark/10 px-3 py-1 text-xs font-medium text-primary-dark"
+        className="flex items-center gap-1.5 rounded-full border border-brand-700 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
       >
         {selectedPhase?.name ?? "Summary"}
         <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
@@ -102,7 +102,7 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
                   setOpen(false);
                   onCreate();
                 }}
-                className="mt-1 flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-left text-sm text-green-700 hover:bg-green-50"
+                className="mt-1 flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-left text-sm text-brand-700 hover:bg-brand-50"
               >
                 <FontAwesomeIcon icon={faPlus} />
                 New phase
@@ -128,11 +128,11 @@ function MenuItem({ label, hint, selected, onSelect }: MenuItemProps) {
       type="button"
       onClick={onSelect}
       className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm ${
-        selected ? "bg-primary-dark/10 text-primary-dark" : "text-gray-700 hover:bg-gray-50"
+        selected ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-50"
       }`}
     >
       {label}
-      <span className="text-xs text-gray-400">{hint}</span>
+      <span className="text-xs text-gray-500">{hint}</span>
     </button>
   );
 }

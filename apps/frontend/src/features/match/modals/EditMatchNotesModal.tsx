@@ -30,7 +30,7 @@ export default function EditMatchNotesModal({
       open={open}
     >
       <textarea
-        className="border border-primary p-3 outline-none rounded-lg"
+        className="rounded-lg border border-gray-300 p-3 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         style={{ width: "100%", height: "200px" }}

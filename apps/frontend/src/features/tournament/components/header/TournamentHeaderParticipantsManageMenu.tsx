@@ -31,7 +31,7 @@ export default function TournamentHeaderParticipantsManageMenu({ onOpen }: Props
               onClick={() => openModal("register")}
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
             >
-              <FontAwesomeIcon icon={faPlus} className="text-primary-dark" />
+              <FontAwesomeIcon icon={faPlus} className="text-brand-700" />
               Register participant
             </button>
             <button
@@ -39,7 +39,7 @@ export default function TournamentHeaderParticipantsManageMenu({ onOpen }: Props
               onClick={() => openModal("database")}
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
             >
-              <FontAwesomeIcon icon={faDatabase} className="text-primary-dark" />
+              <FontAwesomeIcon icon={faDatabase} className="text-brand-700" />
               Add from player database
             </button>
             <button
@@ -47,7 +47,7 @@ export default function TournamentHeaderParticipantsManageMenu({ onOpen }: Props
               onClick={() => openModal("import")}
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
             >
-              <FontAwesomeIcon icon={faFileImport} className="text-primary-dark" />
+              <FontAwesomeIcon icon={faFileImport} className="text-brand-700" />
               Import names
             </button>
           </div>

@@ -40,7 +40,7 @@ export default function TournamentHeaderLobbyManageMenu({
   });
 
   const menuItemClass =
-    "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white";
+    "flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:bg-white";
 
   return (
     <>
@@ -99,7 +99,7 @@ export default function TournamentHeaderLobbyManageMenu({
                   disabled={disconnectingServer}
                   className={menuItemClass}
                 >
-                  <FontAwesomeIcon icon={faPowerOff} className="text-red-500" />
+                  <FontAwesomeIcon icon={faPowerOff} className="text-red-600" />
                   {disconnectingServer ? "Disconnecting..." : "Disconnect"}
                 </button>
               ) : (
@@ -112,7 +112,7 @@ export default function TournamentHeaderLobbyManageMenu({
                   disabled={connectingServer || connectionStatus.isActive}
                   className={menuItemClass}
                 >
-                  <FontAwesomeIcon icon={faPlug} className="text-primary-dark" />
+                  <FontAwesomeIcon icon={faPlug} className="text-brand-700" />
                   {connectingServer || connectionStatus.isActive ? "Connecting..." : "Connect"}
                 </button>
               )}
@@ -125,7 +125,7 @@ export default function TournamentHeaderLobbyManageMenu({
                 disabled={refreshing || !connectionStatus.isConnected}
                 className={menuItemClass}
               >
-                <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin text-primary-dark" : "text-primary-dark"} />
+                <FontAwesomeIcon icon={faRotate} className={refreshing ? "animate-spin text-brand-700" : "text-brand-700"} />
                 {refreshing ? "Refreshing..." : "Refresh all"}
               </button>
               <div className="my-1 border-t border-gray-100" />
@@ -137,7 +137,7 @@ export default function TournamentHeaderLobbyManageMenu({
               >
                 <FontAwesomeIcon
                   icon={faSatelliteDish}
-                  className={connectionStatus.isConnected ? "text-primary-dark" : "text-gray-400"}
+                  className={connectionStatus.isConnected ? "text-brand-700" : "text-gray-500"}
                 />
                 Create lobby
               </button>

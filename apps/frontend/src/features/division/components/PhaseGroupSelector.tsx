@@ -25,7 +25,7 @@ export default function PhaseGroupSelector({
 }: PhaseGroupSelectorProps) {
   return (
     <div className="flex items-center gap-2 mb-3 flex-wrap">
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {phaseName && <span className="font-medium text-gray-600">{phaseName} / </span>}
         Pool
       </span>
@@ -36,9 +36,9 @@ export default function PhaseGroupSelector({
           onClick={() => onSelect(phaseGroup.id)}
           className={`rounded-full border px-3 py-1 text-xs transition-colors ${
             phaseGroup.id === highlightedPhaseGroupId
-              ? "border-green-400 bg-green-50 text-green-800 ring-2 ring-green-300"
+              ? "border-brand-700 bg-brand-50 text-brand-700 ring-2 ring-brand-300"
               : phaseGroup.id === selectedPhaseGroupId
-                ? "border-primary-dark bg-primary-dark/10 text-primary-dark"
+                ? "border-brand-700 bg-brand-50 text-brand-700"
                 : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
           }`}
         >

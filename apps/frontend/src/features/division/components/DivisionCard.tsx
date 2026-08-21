@@ -27,7 +27,7 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col text-left overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 bg-primary border-b border-white/10 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 bg-brand-700 border-b border-white/10 flex items-center justify-between gap-2">
         <h3 className="font-bold text-white text-base leading-tight">{division.name}</h3>
         {controls && onDelete && (
           <ActionsMenu
@@ -53,9 +53,9 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
       {/* Entrants */}
       <button type="button" onClick={onSelect} className="px-4 py-3 border-b border-gray-100 text-left">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-primary-dark shrink-0">Entrants</span>
+          <span className="text-xs font-semibold text-brand-700 shrink-0">Entrants</span>
           {visiblePlayers.length === 0 ? (
-            <span className="text-xs text-gray-400 italic">No entrants</span>
+            <span className="text-xs text-gray-500 italic">No entrants</span>
           ) : (
             <>
               {visiblePlayers.map((p, i) => (
@@ -65,7 +65,7 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
                 </span>
               ))}
               {extraPlayers > 0 && (
-                <span className="text-xs text-primary-dark/70">+{extraPlayers} more</span>
+                <span className="text-xs text-brand-600">+{extraPlayers} more</span>
               )}
             </>
           )}
@@ -75,7 +75,7 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
       {/* Brackets / Phases */}
       <button type="button" onClick={onSelect} className="px-4 py-3 flex-1 text-left">
         <div className="flex items-start gap-2">
-          <span className="text-xs font-semibold text-primary-dark shrink-0 mt-0.5">Brackets</span>
+          <span className="text-xs font-semibold text-brand-700 shrink-0 mt-0.5">Brackets</span>
           <div className="flex flex-col gap-1 min-w-0">
             {visiblePhases.length === 0 ? (
               <div className="flex items-center gap-1.5">
@@ -88,17 +88,17 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
               <>
                 {visiblePhases.map((phase) => (
                   <div key={phase.id} className="flex items-center gap-1.5">
-                    <span className="text-gray-400 text-xs">◆</span>
+                    <span className="text-gray-500 text-xs">◆</span>
                     <div className="min-w-0">
                       <span className="text-xs font-medium text-gray-800">{phase.name}</span>
-                      <span className="text-xs text-gray-400 ml-1">
+                      <span className="text-xs text-gray-500 ml-1">
                         {phase.matchCount} match{phase.matchCount !== 1 ? "es" : ""}
                       </span>
                     </div>
                   </div>
                 ))}
                 {extraPhases > 0 && (
-                  <span className="text-xs text-gray-400 pl-4">+{extraPhases} more</span>
+                  <span className="text-xs text-gray-500 pl-4">+{extraPhases} more</span>
                 )}
               </>
             )}
@@ -112,7 +112,7 @@ export default function DivisionCard({ division, onSelect, controls = false, onD
         onClick={onSelect}
         className="px-4 py-3 border-t border-gray-100 flex items-center justify-center"
       >
-        <span className="inline-flex items-center justify-center text-sm font-medium text-primary-dark">
+        <span className="inline-flex items-center justify-center text-sm font-medium text-brand-700">
           Open division
         </span>
       </button>

@@ -4,13 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-}
-
 body {
   font-family: "dinpro", sans-serif;
+  /* gray-50 / gray-800: the neutral ramp the components use. */
   background-color: #ffffff;
-  color: #1e293b;
+  color: #1f2937;
 }
 
 h1,

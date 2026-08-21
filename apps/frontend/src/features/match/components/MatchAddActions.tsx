@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
+import { btnCreate } from "@/styles/buttonStyles";
 
 type MatchAddActionsProps = {
   canAddSong: boolean;
@@ -42,7 +43,7 @@ function AddStrip({ icon, label, onClick, disabled = false }: AddStripProps) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-green-300 px-3 py-2 text-sm text-green-700 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className={`flex w-full items-center justify-center gap-2 rounded border px-3 py-2 text-sm ${btnCreate}`}
     >
       {icon}
       {label}
