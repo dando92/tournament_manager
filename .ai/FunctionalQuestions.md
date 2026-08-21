@@ -67,3 +67,20 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Expected behavior: an isolated SyncStart restart should recover configured open-tournament runtimes from the authoritative API bootstrap query.
 - Evidence: compare `apps/api/src/tournament/syncstart/tournament-syncstart.bootstrap.ts` with `GET /internal/syncstart/tournaments` in `apps/api/src/internal.controller.ts`; SyncStart currently has no startup consumer for that endpoint.
 - Remediation rule: move startup reconciliation ownership to SyncStart and adjust Compose startup ordering in a separate operational change; do not introduce polling, durable messaging, or distributed coordination.
+
+### FQ-008 — Automatic bracket generation quality
+
+- Status: Deferred.
+- Observed behavior: `BracketManager.generateForDivision` creates a phase, a pool, and a bracket in one call, reading the seeded entrants of the pool through `PhaseGroupService.getEntrantsForBracket`. `SingleElimination` builds every round from a player count and then fills the first wave. The user reports the produced brackets are not what they expect, without a single reproducible defect yet.
+- Question: What should generation produce for a given entrant count, seeding, players per match, and bye distribution, and should the structure be generated before the entrants are known so that advancement rules fill its slots?
+- Related consequence: the division now owns the seeding order (`Entrant.seedNum`), while generation still reads the per-pool `PhaseGroupEntrant.seedNum`. The pool seeding is derived from the division order when a match introduces an entrant, so the two agree for pools built by hand, but a regenerated bracket does not re-read the division order.
+- Evidence: `apps/api/src/tournament/competition/bracket/bracket.manager.ts`, `apps/api/src/tournament/competition/bracket/SingleElimination.ts`, and `apps/api/src/tournament/structure/services/phase-group.service.ts`.
+- Rule: collect concrete failing cases with the user before changing the generators.
+
+### FQ-009 — Pool bracket type as a display choice
+
+- Status: Deferred.
+- Observed behavior: `PhaseGroup.bracketType` carries two meanings. Locally it decides how the frontend draws the matches of a pool: raw cards, a round robin table, or a bracket tree. For an imported pool it also mirrors the provider value, which `StartggService.mapStartggBracketType` translates in both directions.
+- Decision taken: the user may now change it freely from the pool view, so it is treated as a display choice. Generation is unaffected because `BracketManager.generateForPhaseGroup` receives the bracket type as an explicit argument instead of reading the field.
+- Question: Should an imported pool keep a separate provider-owned field, so a local display choice never makes the stored value diverge from start.gg?
+- Evidence: `apps/api/src/integrations/startgg/startgg.service.ts`, `apps/frontend/src/features/division/components/PhaseGroupViewSelect.tsx`, and `apps/frontend/src/features/match/components/MatchList.tsx`.
