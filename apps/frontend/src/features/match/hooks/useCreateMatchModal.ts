@@ -6,7 +6,7 @@ import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 import { Tournament } from "@/features/tournament/types/Tournament";
-import { getPhaseGroup } from "@/features/division/services/phase-groups.api";
+import { listDivisionEntrants } from "@/features/division/services/divisions.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -103,25 +103,20 @@ export function useCreateMatchModal({
   }, [availablePhaseGroups, open, phaseGroupId, selectedPhaseGroupId]);
 
   useEffect(() => {
-    if (!open || !resolvedPhaseGroupId) {
+    if (!open || !resolvedDivisionId) {
       setEntrants([]);
       return;
     }
 
     let cancelled = false;
-    getPhaseGroup(resolvedPhaseGroupId)
-      .then((phaseGroup) => {
+    listDivisionEntrants(resolvedDivisionId)
+      .then((divisionEntrants) => {
         if (cancelled) return;
-        const phaseGroupEntrants = [...(phaseGroup.entrants ?? [])]
-          .filter((entry) => entry.status !== "withdrawn" && entry.status !== "dq")
-          .sort(
-            (left, right) =>
-              (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER) ||
-              left.entrant.name.localeCompare(right.entrant.name),
-          )
-          .map((entry) => entry.entrant)
-          .filter((entrant) => entrant.status === "active" && entrant.type === "player");
-        setEntrants(phaseGroupEntrants);
+        setEntrants(
+          divisionEntrants
+            .filter((entrant) => entrant.status === "active" && entrant.type === "player")
+            .sort((left, right) => left.name.localeCompare(right.name)),
+        );
       })
       .catch(() => {
         if (!cancelled) setEntrants([]);
@@ -130,7 +125,7 @@ export function useCreateMatchModal({
     return () => {
       cancelled = true;
     };
-  }, [open, resolvedPhaseGroupId]);
+  }, [open, resolvedDivisionId]);
 
   useEffect(() => {
     const entrantIds = new Set(entrants.map((entrant) => entrant.id));

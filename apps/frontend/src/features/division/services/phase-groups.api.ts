@@ -21,11 +21,6 @@ export async function updatePhaseGroup(
   return response.data;
 }
 
-export async function getPhaseGroup(phaseGroupId: number): Promise<PhaseGroup> {
-  const response = await axios.get<PhaseGroup>(`phase-groups/${phaseGroupId}`);
-  return response.data;
-}
-
 export async function listPhaseDivisionEntrants(phaseId: number): Promise<Entrant[]> {
   const response = await axios.get<Entrant[]>(`phases/${phaseId}/entrants`);
   return response.data;
