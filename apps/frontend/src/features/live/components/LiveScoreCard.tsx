@@ -11,13 +11,19 @@ export default function LiveScoreCard({
   rank,
   showJudgements,
 }: LiveScoreCardProps) {
+  // A running player keeps the near-black of the game screen, because that is
+  // the background the judgment palette is designed to be read against. Failing
+  // is marked by a red ring rather than by a pale surface: the ring sits behind
+  // no text, so the judgment counts stay legible while the player is still on
+  // the pad. Once the run is over the card turns into a light summary and drops
+  // the judgment colouring with it.
   const cardClass = player.isCompleted
     ? player.isFailed === true
       ? "bg-red-100 text-red-900"
       : "bg-emerald-100 text-emerald-900"
     : player.isFailed === true
-      ? "bg-red-300 opacity-50 text-white"
-      : "bg-brand-900 text-white";
+      ? "bg-live-failed text-white ring-2 ring-red-600"
+      : "bg-live-screen text-white";
 
   return (
     <div

@@ -59,16 +59,29 @@ export default {
           failed: "#991B1B",
         },
         /**
-         * Judgment colours. Fixed by the StepMania/ITG convention, so they are
-         * data rather than design. Never align these to the semantic palette.
+         * Judgment colours, taken from the In The Groove palette. These are the
+         * colours a player already reads off the cabinet, so they are data
+         * rather than design: never align them to the semantic palette, and
+         * never adjust one for contrast. Legibility is the background's job,
+         * which is why the live view is rendered on `live-screen`.
          */
         judgment: {
-          fantasticPlus: "#BFDBFE",
-          excellent: "#FDE047",
-          great: "#86EFAC",
-          decent: "#F9A8D4",
-          wayOff: "#FDBA74",
-          miss: "#FCA5A5",
+          fantasticPlus: "#21CCE8",
+          excellent: "#E29C18",
+          great: "#66C955",
+          decent: "#B45CFF",
+          wayOff: "#C9855E",
+          miss: "#FF3030",
+        },
+        /**
+         * Live view surfaces. The judgment palette is calibrated for the near
+         * black of the game screen and only holds up against a background of
+         * that weight, so the live cards mirror it. Both surfaces clear 4.5:1
+         * against every judgment colour; a lighter one does not.
+         */
+        live: {
+          screen: "#0F1E2A",
+          failed: "#2E0F14",
         },
       },
       zIndex: {

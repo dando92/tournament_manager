@@ -110,10 +110,28 @@ Keep them namespaced so nobody "harmonises" them away.
 
 | Scale | Where | Why it is separate |
 | --- | --- | --- |
-| `judgment-*` | live score cards | fixed by the StepMania/ITG convention — these are data |
+| `judgment-*` | live score cards | the In The Groove palette — the colours a player already reads off the cabinet |
 | `difficulty-*` | song rows | ordinal scale over song difficulty |
 | `score-*` | tournament stats badges | ordinal scale over result quality |
 | banner gradients | `features/tournament/utils/tournamentBanner.ts` | decorative identity for a tournament without a logo |
+
+### The live view is a dark surface
+
+Tournament Manager is a service for In The Groove, so the judgment colours on
+the live score cards are the game's own. They are never adjusted for contrast:
+changing one would mean showing a player a colour that does not match the
+cabinet.
+
+Legibility is therefore the background's job. The judgment palette is calibrated
+for the near black of the game screen, and only a background of that weight
+holds it: on `live-screen` (`#0F1E2A`) every judgment colour clears 4.5:1, with
+Miss the tightest at 4.61. On a mid-weight surface such as `brand-900`, Miss and
+Decent fall to about 3.1 and become unreadable.
+
+A failing run keeps a dark surface for the same reason. It is marked by
+`live-failed` (`#2E0F14`, still 4.79:1 at worst) plus a red ring: the ring sits
+behind no text, so the state is unmistakable without dimming the numbers. Never
+signal a state on the live cards by fading the surface toward white.
 
 ## Contrast
 

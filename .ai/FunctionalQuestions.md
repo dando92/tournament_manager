@@ -84,3 +84,17 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Decision taken: the user may now change it freely from the pool view, so it is treated as a display choice. Generation is unaffected because `BracketManager.generateForPhaseGroup` receives the bracket type as an explicit argument instead of reading the field.
 - Question: Should an imported pool keep a separate provider-owned field, so a local display choice never makes the stored value diverge from start.gg?
 - Evidence: `apps/api/src/integrations/startgg/startgg.service.ts`, `apps/frontend/src/features/division/components/PhaseGroupViewSelect.tsx`, and `apps/frontend/src/features/match/components/MatchList.tsx`.
+
+### FQ-010 — Judgment colour assignment on live score cards
+
+- Status: Open.
+- Observed behavior: `LiveScoreCard` paints `judgments.fantasticPlus` with the blue judgment colour, while `judgments.fantastics` carries no colour of its own and inherits the card text, which is white. In the In The Groove palette the white window is Fantastic+ and the blue one is Fantastic, so the two appear to be swapped. The colours were left exactly as the component assigned them; only their hex values were snapped to the game palette.
+- Question: Should Fantastic+ be white and Fantastic blue, matching the cabinet? If so, Fantastic needs the blue token and Fantastic+ needs an explicit white one, because it can no longer rely on inheriting the card text.
+- Evidence: `apps/frontend/src/features/live/components/LiveScoreCard.tsx` and the `judgment` scale in `apps/frontend/tailwind.config.js`.
+
+### FQ-011 — Judgment colours after a run is completed
+
+- Status: Open.
+- Observed behavior: a completed live score card switches to a light summary surface and renders every judgment count in one inherited colour, so the game colouring is only visible while a player is still running. A running card keeps the near-black `live-screen` surface, which the judgment palette needs to stay legible.
+- Question: Should a completed card keep the game colours, so results can still be scanned per judgment window after the run? Doing so means completed cards become dark surfaces too, and pass or fail moves to a border or a label rather than the card fill.
+- Evidence: `apps/frontend/src/features/live/components/LiveScoreCard.tsx`.
