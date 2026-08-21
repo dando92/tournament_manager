@@ -12,14 +12,6 @@ export async function createPhaseGroup(phaseId: number, request: CreatePhaseGrou
   return response.data;
 }
 
-export async function updatePhaseGroup(
-  phaseGroupId: number,
-  request: { bracketType?: string | null },
-): Promise<PhaseGroup> {
-  const response = await axios.patch<PhaseGroup>(`phase-groups/${phaseGroupId}`, request);
-  return response.data;
-}
-
 export async function deletePhaseGroup(phaseGroupId: number): Promise<void> {
   await axios.delete(`phase-groups/${phaseGroupId}`);
 }

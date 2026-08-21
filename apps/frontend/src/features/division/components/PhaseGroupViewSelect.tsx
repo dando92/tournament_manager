@@ -1,36 +1,30 @@
-import { PhaseGroup } from "@/features/division/types/Phase";
-import { formatBracketType } from "@/features/division/utils/bracketType";
+import { PoolViewMode } from "@/features/division/services/poolViewMode";
 
 type PhaseGroupViewSelectProps = {
-  phaseGroup: PhaseGroup;
-  disabled?: boolean;
-  onChange: (bracketType: string | null) => void | Promise<void>;
+  mode: PoolViewMode;
+  options: PoolViewMode[];
+  onChange: (mode: PoolViewMode) => void;
 };
 
-const VIEW_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Cards" },
-  { value: "RoundRobin", label: "Round robin" },
-  { value: "SingleElimination", label: "Single elimination" },
-  { value: "DoubleElimination", label: "Double elimination" },
-];
+const VIEW_LABELS: Record<PoolViewMode, string> = {
+  raw: "Cards",
+  roundRobin: "Round robin",
+  bracket: "Bracket",
+};
 
-export default function PhaseGroupViewSelect({ phaseGroup, disabled, onChange }: PhaseGroupViewSelectProps) {
-  const current = phaseGroup.bracketType ?? "";
-  const options = VIEW_OPTIONS.some((option) => option.value === current)
-    ? VIEW_OPTIONS
-    : [...VIEW_OPTIONS, { value: current, label: formatBracketType(current) ?? current }];
+export default function PhaseGroupViewSelect({ mode, options, onChange }: PhaseGroupViewSelectProps) {
+  if (options.length < 2) return null;
 
   return (
     <select
-      title="How to display the matches of this pool"
-      value={current}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.value || null)}
-      className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+      title="How to display the matches of this pool on this device"
+      value={mode}
+      onChange={(event) => onChange(event.target.value as PoolViewMode)}
+      className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600"
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
+        <option key={option} value={option}>
+          {VIEW_LABELS[option]}
         </option>
       ))}
     </select>

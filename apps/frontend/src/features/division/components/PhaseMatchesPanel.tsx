@@ -6,7 +6,9 @@ import PhaseGroupContent from "@/features/division/components/PhaseGroupContent"
 import PhaseGroupSelector from "@/features/division/components/PhaseGroupSelector";
 import PhaseGroupViewSelect from "@/features/division/components/PhaseGroupViewSelect";
 import { usePhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
+import { usePoolViewMode } from "@/features/division/hooks/usePoolViewMode";
 import { createPhaseGroup } from "@/features/division/services/phase-groups.api";
+import { availablePoolViewModes } from "@/features/division/services/poolViewMode";
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup } from "@/features/division/types/Phase";
 import { formatBracketType } from "@/features/division/utils/bracketType";
@@ -131,6 +133,7 @@ function SelectedPhaseGroupPanel({
   highlightedPhaseGroupId,
 }: SelectedPhaseGroupPanelProps) {
   const actions = usePhaseGroupActions({ division, phaseGroup, onChanged });
+  const [viewMode, setViewMode] = usePoolViewMode(phaseGroup);
   const bracketTypeLabel = formatBracketType(phaseGroup.bracketType);
 
   return (
@@ -143,13 +146,14 @@ function SelectedPhaseGroupPanel({
         highlightedPhaseGroupId={highlightedPhaseGroupId}
         rightSlot={
           <>
-            {controls ? (
-              <PhaseGroupViewSelect phaseGroup={phaseGroup} disabled={actions.saving} onChange={actions.changeView} />
-            ) : (
-              bracketTypeLabel && (
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
-              )
+            {bracketTypeLabel && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{bracketTypeLabel}</span>
             )}
+            <PhaseGroupViewSelect
+              mode={viewMode}
+              options={availablePoolViewModes(phaseGroup.bracketType)}
+              onChange={setViewMode}
+            />
             {controls && (
               <ActionsMenu
                 title="Pool actions"
@@ -188,6 +192,7 @@ function SelectedPhaseGroupPanel({
         highlight={highlight}
         onHighlight={onHighlight}
         actions={actions}
+        viewMode={viewMode}
         showMatches
       />
     </>

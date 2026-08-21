@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { Division } from "@/features/division/types/Division";
+import { PoolViewMode } from "@/features/division/services/poolViewMode";
 import { PhaseGroup } from "@/features/division/types/Phase";
 import EliminationMatchesView from "@/features/match/components/bracket/EliminationMatchesView";
 import MatchCard from "@/features/match/components/MatchCard";
@@ -17,6 +18,7 @@ type MatchListProps = {
   tournamentId?: number;
   phaseGroupId?: number;
   phaseGroup?: PhaseGroup;
+  viewMode: PoolViewMode;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   onCreateMatch?: () => void;
@@ -28,6 +30,7 @@ export default function MatchList({
   tournamentId,
   phaseGroupId,
   phaseGroup,
+  viewMode,
   highlight,
   onHighlight,
   onCreateMatch,
@@ -40,7 +43,6 @@ export default function MatchList({
     () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
     [division.phases],
   );
-  const bracketType = phaseGroup?.bracketType ?? phaseGroups.find((candidate) => candidate.id === phaseGroupId)?.bracketType ?? null;
   const hasBracketEdges = useMemo(
     () => {
       const matchIds = new Set(state.matches.map((match) => match.id));
@@ -52,9 +54,9 @@ export default function MatchList({
     },
     [state.matches],
   );
-  const usesBracketTree = phaseGroupId !== undefined && isEliminationBracket(bracketType) && hasBracketEdges;
-  const bracketTreeUnavailable = phaseGroupId !== undefined && isEliminationBracket(bracketType) && !hasBracketEdges;
-  const usesRoundRobinTable = phaseGroupId !== undefined && isRoundRobinBracket(bracketType);
+  const usesBracketTree = viewMode === "bracket" && hasBracketEdges;
+  const bracketTreeUnavailable = viewMode === "bracket" && !hasBracketEdges;
+  const usesRoundRobinTable = viewMode === "roundRobin";
 
   const refreshMatches = () => {
     actions.list();
@@ -160,15 +162,4 @@ export default function MatchList({
       )}
     </div>
   );
-}
-
-function isEliminationBracket(bracketType: string | null | undefined): boolean {
-  return bracketType === "SingleElimination"
-    || bracketType === "SINGLE_ELIMINATION"
-    || bracketType === "DoubleElimination"
-    || bracketType === "DOUBLE_ELIMINATION";
-}
-
-function isRoundRobinBracket(bracketType: string | null | undefined): boolean {
-  return bracketType === "RoundRobin" || bracketType === "ROUND_ROBIN";
 }

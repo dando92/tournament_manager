@@ -1,6 +1,7 @@
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { PhaseGroupActions } from "@/features/division/hooks/usePhaseGroupActions";
 import { Division } from "@/features/division/types/Division";
+import { PoolViewMode } from "@/features/division/services/poolViewMode";
 import { Phase, PhaseGroup } from "@/features/division/types/Phase";
 import MatchList from "@/features/match/components/MatchList";
 import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
@@ -15,6 +16,7 @@ type PhaseGroupContentProps = {
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   actions: PhaseGroupActions;
+  viewMode: PoolViewMode;
   showMatches: boolean;
   bodyClassName?: string;
 };
@@ -28,6 +30,7 @@ export default function PhaseGroupContent({
   highlight,
   onHighlight,
   actions,
+  viewMode,
   showMatches,
   bodyClassName,
 }: PhaseGroupContentProps) {
@@ -49,6 +52,7 @@ export default function PhaseGroupContent({
       division={division}
       phaseGroupId={phaseGroup.id}
       phaseGroup={phaseGroup}
+      viewMode={viewMode}
       controls={controls}
       tournamentId={tournamentId}
       highlight={highlight}

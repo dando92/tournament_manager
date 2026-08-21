@@ -19,3 +19,14 @@ export function formatBracketType(bracketType: string | null | undefined): strin
       return bracketType ?? null;
   }
 }
+
+export function isEliminationBracket(bracketType: string | null | undefined): boolean {
+  return bracketType === "SingleElimination"
+    || bracketType === "SINGLE_ELIMINATION"
+    || bracketType === "DoubleElimination"
+    || bracketType === "DOUBLE_ELIMINATION";
+}
+
+export function isRoundRobinBracket(bracketType: string | null | undefined): boolean {
+  return bracketType === "RoundRobin" || bracketType === "ROUND_ROBIN";
+}
