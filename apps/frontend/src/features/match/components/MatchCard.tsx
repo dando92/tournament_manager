@@ -6,10 +6,11 @@ import { useRef, useState } from "react";
 import StandingModal from "@/features/match/modals/StandingModal";
 import EditMatchNotesModal from "@/features/match/modals/EditMatchNotesModal";
 import MatchHeader from "@/features/match/components/MatchHeader";
-import MatchAddActions from "@/features/match/components/MatchAddActions";
+import MatchEmptySlots from "@/features/match/components/MatchEmptySlots";
 import MatchTable from "@/features/match/components/MatchTable";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
-import { getMatchCommitState, getMatchProgress } from "@/features/match/utils/matchStatus";
+import { getCommitBlocker, getMatchCommitState, getMatchProgress } from "@/features/match/utils/matchStatus";
+import { useManualScoring } from "@/features/match/hooks/useManualScoring";
 import { CommitMatchResultRequest } from "@/features/match/types/match-requests";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
@@ -114,7 +115,8 @@ export default function MatchCard({
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
-  const [manualPoints, setManualPoints] = useState<Record<number, number>>({});
+  const manualScoring = useManualScoring(match.id);
+  const manualPoints = manualScoring.enabled ? manualScoring.points : {};
 
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,24 @@ export default function MatchCard({
   const commitState = getMatchCommitState(match, manualPoints);
   const progress = getMatchProgress(match, manualPoints);
   const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
+  const commitBlocker = getCommitBlocker(match, {
+    manualScoringEnabled: manualScoring.enabled,
+    manualPoints,
+  });
+  const matchPlayers = entrantPlayers(match.entrants);
+  const hasIncomingRoutes = (match.advancementRules ?? []).some(
+    (rule) => rule.targetKind === "match" && rule.targetId === match.id,
+  );
+  /* Nothing in it at all — not even a route feeding it — so the card shows the
+     shape the match is about to take rather than an empty table. */
+  const showEmptySlots =
+    controls &&
+    !match.matchResult &&
+    !editMode &&
+    match.rounds.length === 0 &&
+    matchPlayers.length === 0 &&
+    !hasIncomingRoutes &&
+    !manualScoring.enabled;
 
   function enterEditMode() {
     setPendingAdvancementRules(
@@ -162,9 +182,18 @@ export default function MatchCard({
     if (match.rounds.length === 0 && hasManualDraftPoints) {
       const confirmed = window.confirm("Manual points will be reset before adding songs. Continue?");
       if (!confirmed) return;
-      setManualPoints({});
+      manualScoring.clear();
     }
     setAddSongToMatchModalOpen(true);
+  }
+
+  function toggleManualScoring() {
+    if (!controls) return;
+    if (manualScoring.enabled && hasManualDraftPoints) {
+      const confirmed = window.confirm("Points assigned by hand will be discarded. Continue?");
+      if (!confirmed) return;
+    }
+    manualScoring.setEnabled(!manualScoring.enabled);
   }
 
   async function toggleActive() {
@@ -176,16 +205,16 @@ export default function MatchCard({
     if (!controls || commitState !== "Pending") return;
 
     const playerPoints = match.rounds.length === 0
-      ? entrantPlayers(match.entrants).map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
+      ? matchPlayers.map((player) => ({ playerId: player.id, points: manualPoints[player.id] ?? 0 }))
       : undefined;
     await onCommitMatchResult?.(match.id, { playerPoints });
-    setManualPoints({});
+    manualScoring.clear();
   }
 
   async function reopenMatch() {
     if (!controls || commitState !== "Completed") return;
     await onReopenMatchResult?.(match.id);
-    setManualPoints({});
+    manualScoring.clear();
   }
 
   return (
@@ -242,6 +271,11 @@ export default function MatchCard({
         controls={controls}
         commitState={commitState}
         progress={progress}
+        commitBlocker={commitBlocker}
+        showAddActions={!showEmptySlots}
+        canAddSong={matchPlayers.length > 0}
+        manualScoringEnabled={manualScoring.enabled}
+        onToggleManualScoring={toggleManualScoring}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}
@@ -267,7 +301,15 @@ export default function MatchCard({
         />
       )}
 
-      {!editMode && (
+      {showEmptySlots && (
+        <MatchEmptySlots
+          canAddSong={matchPlayers.length > 0}
+          onAddSong={openAddSong}
+          onAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
+        />
+      )}
+
+      {!editMode && !showEmptySlots && (
         <MatchTable
           match={match}
           division={division}
@@ -291,19 +333,18 @@ export default function MatchCard({
             setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
           }
           onDeleteStanding={onDeleteStanding}
+          manualScoringEnabled={manualScoring.enabled}
           manualPoints={manualPoints}
-          onManualPointsChange={(playerId, points) =>
-            setManualPoints((current) => ({ ...current, [playerId]: points }))
-          }
+          onManualPointsChange={manualScoring.setPoints}
         />
       )}
 
-      {controls && !editMode && !match.matchResult && (
-        <MatchAddActions
-          canAddSong={(match.entrants?.length ?? 0) > 0}
-          onAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
-          onAddSong={openAddSong}
-        />
+      {manualScoring.enabled && !match.matchResult && !editMode && (
+        /* Said plainly, because the draft looks exactly like saved data and is
+           not: it lives on this device until a commit sends it. */
+        <p className="mt-2 text-xs text-ui-text-mute">
+          Scored by hand. These points stay on this device until you commit the match — nobody else sees them yet.
+        </p>
       )}
     </div>
   );

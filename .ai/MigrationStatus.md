@@ -171,6 +171,16 @@
 - Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors (six pre-existing fast-refresh warnings), `npx vite build` succeeds, and `npm test` passes with the header-subtitle suite replaced by a `parseTreeSelection` suite covering every tree depth.
 - Not done, and needing approval before it is: the pool status glyph cannot report "awaiting confirmation" because the overview payload carries no per-pool count of matches pending a commit. It currently maps `pending | active | completed` straight through.
 
+### Match card actions and hand scoring
+
+- Replaced the hover-revealed add strips with two affordances that never overlap: an empty match renders a skeleton table with a dashed song column and a dashed player row, and a match with content carries neutral `+ Player` and `+ Song` buttons in its header. The dash keeps its meaning of an empty slot to fill, so the header buttons are not dashed. The `sm:hidden` duplicates in the match actions menu are gone.
+- Made hand scoring an explicit per-match choice in the actions menu instead of a state a match fell into by having no songs, and persisted the choice and its points in `localStorage`, so closing a tab no longer discards a draft. The card says plainly that the points stay on the device until commit. Recorded as FQ-012 whether the draft should instead be shared.
+- Replaced the disabled commit button with the precondition it is waiting on — "3 scores missing", "No songs yet", "No points assigned" — computed by `getCommitBlocker` from the same progress function the badge uses.
+- Themed form controls in the base layer and declared `color-scheme` per theme; inputs across every modal were keeping the user agent's white background.
+- Gave a match row two independent axes: `active` on the left, four-step result progress on the right. `getMatchProgress` is the single source and `getMatchCommitState` derives from it.
+- An active match's status glyph breathes, wrapped in `motion-safe`. It is the only animated state in the application, and `.ai/Design.md` records that as a rule.
+- Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors, `npx vite build` succeeds, `npm test` 5/5.
+
 ## Verification
 
 ```text

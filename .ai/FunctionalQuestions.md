@@ -98,3 +98,10 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Observed behavior: a completed live score card switches to a light summary surface and renders every judgment count in one inherited colour, so the game colouring is only visible while a player is still running. A running card keeps the near-black `live-screen` surface, which the judgment palette needs to stay legible.
 - Question: Should a completed card keep the game colours, so results can still be scanned per judgment window after the run? Doing so means completed cards become dark surfaces too, and pass or fail moves to a border or a label rather than the card fill.
 - Evidence: `apps/frontend/src/features/live/components/LiveScoreCard.tsx`.
+
+### FQ-012 — Hand-scored points are a per-device draft
+
+- Status: Open.
+- Observed behavior: a match with no songs is scored by hand. That is now an explicit choice per match rather than a state a match falls into by being empty, and both the choice and the points are kept in `localStorage` so closing a tab no longer discards them. The points reach the server only on commit, which means two staff members scoring the same match each hold their own draft and neither can see the other's; whoever commits first decides the result.
+- Question: Should a hand-scored draft be shared — persisted server side and broadcast like any other match change — so two people at the same pool cannot diverge? The alternative is to keep it local and accept that hand scoring is a single-operator activity, in which case the interface should probably say so more strongly than the current note on the card.
+- Evidence: `apps/frontend/src/features/match/services/manualScoring.ts`, `apps/frontend/src/features/match/hooks/useManualScoring.ts`, and `commitMatch` in `apps/frontend/src/features/match/components/MatchCard.tsx`.

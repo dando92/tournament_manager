@@ -34,6 +34,7 @@ type MatchTableProps = {
     isFailed: boolean,
   ) => void;
   onDeleteStanding: (playerId: number, songId: number) => void;
+  manualScoringEnabled: boolean;
   manualPoints: Record<number, number>;
   onManualPointsChange: (playerId: number, points: number) => void;
 };
@@ -51,6 +52,7 @@ export default function MatchTable({
   onOpenAddStanding,
   onOpenEditStanding,
   onDeleteStanding,
+  manualScoringEnabled,
   manualPoints,
   onManualPointsChange,
 }: MatchTableProps) {
@@ -120,6 +122,9 @@ export default function MatchTable({
   const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
   const canEditMatchContent = controls && !match.matchResult;
 
+  /* With no songs there is nothing to total, so the points column belongs to
+     hand scoring and to a committed result — not to every empty match. */
+  const showManualPointsColumn = match.rounds.length === 0 && (manualScoringEnabled || Boolean(match.matchResult));
   const totalCols = Math.max(3, match.rounds.length + 3);
   const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
   const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Pool ${phaseGroupId}`;
@@ -145,7 +150,9 @@ export default function MatchTable({
               <tr className="bg-ui-raised text-[10px] uppercase tracking-wider text-ui-text-mute">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold">Player</th>
-                <th className="px-3 py-2.5 text-center font-semibold w-[160px]">Pts</th>
+                {showManualPointsColumn && (
+                  <th className="w-[160px] px-3 py-2.5 text-center font-semibold">Pts</th>
+                )}
               </tr>
             </thead>
           )}
@@ -208,7 +215,16 @@ export default function MatchTable({
               </tr>
             )}
 
-            {match.rounds.length === 0 && sortedPlayers.map((player) => {
+            {match.rounds.length === 0 && !showManualPointsColumn && sortedPlayers.map((player) => (
+              <tr key={player.id} className="border-t border-ui-border odd:bg-ui-surface even:bg-ui-raised">
+                <td className="w-8 px-2 py-2 text-center" />
+                <td className="px-3 py-2">
+                  <span className="font-medium text-ui-text">{player.playerName}</span>
+                </td>
+              </tr>
+            ))}
+
+            {match.rounds.length === 0 && showManualPointsColumn && sortedPlayers.map((player) => {
               const committedPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
               const points = committedPoints ?? manualPoints[player.id] ?? 0;
               return (

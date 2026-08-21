@@ -82,6 +82,37 @@ export function getMatchCommitState(match: Match, manualPoints: ManualPointsByPl
   return progress === "readyToCommit" ? "Pending" : "Disabled";
 }
 
+/**
+ * Why the commit button cannot fire yet, in the words of the thing that is
+ * missing.
+ *
+ * A greyed-out button with a tooltip makes someone hunt for the reason. The
+ * button's own place is the cheapest place to put it, so the control states its
+ * own precondition and nobody has to hover to find out.
+ */
+export function getCommitBlocker(
+  match: Match,
+  options: { manualScoringEnabled: boolean; manualPoints: ManualPointsByPlayerId },
+): string | null {
+  if (getMatchCommitState(match, options.manualPoints) !== "Disabled") return null;
+
+  const players = entrantPlayers(match.entrants);
+  if (players.length === 0) return "No players yet";
+
+  if (match.rounds.length === 0) {
+    return options.manualScoringEnabled ? "No points assigned" : "No songs yet";
+  }
+
+  const missing = match.rounds.reduce(
+    (count, round) =>
+      count +
+      players.filter((player) => !(round.standings ?? []).some((standing) => standing.score.player.id === player.id))
+        .length,
+    0,
+  );
+  return `${missing} score${missing !== 1 ? "s" : ""} missing`;
+}
+
 export function getActiveLabel(active: boolean): string {
   return active ? "Match active" : "Match not active";
 }

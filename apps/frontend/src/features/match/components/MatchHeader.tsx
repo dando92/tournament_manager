@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCalculator, faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/types/Match";
 import { getActiveLabel, getMatchProgressLabel, getMatchProgressStatus, type MatchProgress } from "@/features/match/utils/matchStatus";
+import { btnSecondary } from "@/styles/buttonStyles";
 import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
@@ -13,6 +14,13 @@ type Props = {
   controls: boolean;
   commitState: MatchCommitState;
   progress: MatchProgress;
+  /** Null once the match can be committed; otherwise what is still missing. */
+  commitBlocker: string | null;
+  /** Hidden while the match is still an empty skeleton, which offers its own slots. */
+  showAddActions: boolean;
+  canAddSong: boolean;
+  manualScoringEnabled: boolean;
+  onToggleManualScoring: () => void;
   onOpenEditNotes: () => void;
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
@@ -33,6 +41,11 @@ export default function MatchHeader({
   controls,
   commitState,
   progress,
+  commitBlocker,
+  showAddActions,
+  canAddSong,
+  manualScoringEnabled,
+  onToggleManualScoring,
   onOpenEditNotes,
   onDeleteMatch,
   onOpenAddSong,
@@ -48,7 +61,6 @@ export default function MatchHeader({
   const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isMatchEnded = Boolean(match.matchResult);
-  const canAddSong = (match.entrants?.length ?? 0) > 0;
   const canToggleActive = !isMatchEnded || match.active;
 
   useEffect(() => {
@@ -119,21 +131,35 @@ export default function MatchHeader({
 
         {controls && (
           <>
-            {commitState !== "Completed" && (
-            <button
-              type="button"
-              onClick={onCommitMatch}
-              disabled={commitState === "Disabled"}
-              title={commitState === "Disabled" ? "Every score must be filled in before the match can be committed" : undefined}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${touchAreaClass} ${
-                commitState === "Disabled"
-                  ? "cursor-not-allowed border-ui-border bg-ui-raised text-ui-text-mute"
-                  : "cursor-pointer border-state-pending/30 bg-state-pending/10 text-ui-text-soft hover:bg-state-pending/10"
-              }`}
-            >
-              Commit
-            </button>
+            {showAddActions && !isMatchEnded && (
+              <div className="flex items-center gap-1.5">
+                <AddButton icon={<FontAwesomeIcon icon={faUserPlus} />} label="Player" onClick={onOpenAddPlayer} />
+                <AddButton
+                  icon={<MusicPlusIcon />}
+                  label="Song"
+                  onClick={onOpenAddSong}
+                  disabled={!canAddSong}
+                  title={canAddSong ? undefined : "Add a player before adding a song"}
+                />
+              </div>
             )}
+
+            {commitState !== "Completed" &&
+              (commitBlocker ? (
+                /* The precondition where the button would be, instead of a grey
+                   button that makes someone hunt for the reason. */
+                <span className="rounded-md border border-dashed border-ui-border-strong px-3 py-1.5 text-xs font-medium text-ui-text-mute">
+                  {commitBlocker}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onCommitMatch}
+                  className={`cursor-pointer rounded-md border border-state-pending/30 bg-state-pending/10 px-3 py-1.5 text-xs font-semibold text-ui-text-soft transition-colors hover:bg-state-pending/20 ${touchAreaClass}`}
+                >
+                  Commit
+                </button>
+              ))}
           <ActionsMenu
             title="Match actions"
             items={[
@@ -145,21 +171,11 @@ export default function MatchHeader({
                 onSelect: onToggleActive,
               },
               {
-                key: "add-player",
-                label: "Add player",
-                icon: faUserPlus,
-                hidden: isMatchEnded,
-                className: "sm:hidden",
-                onSelect: onOpenAddPlayer,
-              },
-              {
-                key: "add-song",
-                label: "Add song",
-                icon: <MusicPlusIcon />,
-                hidden: isMatchEnded,
-                disabled: !canAddSong,
-                className: "sm:hidden",
-                onSelect: onOpenAddSong,
+                key: "manual-scoring",
+                label: manualScoringEnabled ? "Score by songs" : "Score by hand",
+                icon: faCalculator,
+                hidden: isMatchEnded || match.rounds.length > 0,
+                onSelect: onToggleManualScoring,
               },
               {
                 key: "advancement",
@@ -192,5 +208,40 @@ export default function MatchHeader({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * The two creation actions, once the match has content.
+ *
+ * Neutral rather than dashed: the dash means "an empty slot to fill", and at
+ * this size, next to a filled Commit, it would read as disabled instead. The
+ * dash belongs to the skeleton table an empty match shows.
+ */
+function AddButton({
+  icon,
+  label,
+  onClick,
+  disabled = false,
+  title,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title ?? `Add ${label.toLowerCase()}`}
+      aria-label={`Add ${label.toLowerCase()}`}
+      className={`${btnSecondary} flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold`}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
