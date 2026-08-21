@@ -4,9 +4,9 @@ import { updateAdvancementRulesForSource } from "@/features/advancement/services
 import { deletePhaseGroup } from "@/features/division/services/phase-groups.api";
 import { Division } from "@/features/division/types/Division";
 import { PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
+import { useCreateMatchAction } from "@/features/match/hooks/useCreateMatchAction";
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { Match } from "@/features/match/types/Match";
-import { CreateMatchRequest } from "@/features/match/types/match-requests";
 
 type UsePhaseGroupActionsOptions = {
   division: Division;
@@ -20,9 +20,9 @@ export function usePhaseGroupActions({ division, phaseGroup, onChanged }: UsePha
   const [editingAdvancement, setEditingAdvancement] = useState(false);
   const [draftRules, setDraftRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
-  const [createMatchOpen, setCreateMatchOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const matchCreation = useCreateMatchAction(onChanged);
 
   const beginAdvancementEdit = async () => {
     const existing = (phaseGroup.advancementRules ?? [])
@@ -68,26 +68,17 @@ export function usePhaseGroupActions({ division, phaseGroup, onChanged }: UsePha
     }
   };
 
-  const createMatch = async (request: CreateMatchRequest) => {
-    await MatchesApi.create(request);
-    await onChanged?.();
-    toast.success("Match created.");
-  };
-
   return {
     editingAdvancement,
     draftRules,
     setDraftRules,
     allMatches,
-    createMatchOpen,
     deleting,
     saving,
     beginAdvancementEdit,
     saveAdvancementRules,
     cancelAdvancementEdit,
     removePhaseGroup,
-    openCreateMatch: () => setCreateMatchOpen(true),
-    closeCreateMatch: () => setCreateMatchOpen(false),
-    createMatch,
+    ...matchCreation,
   };
 }

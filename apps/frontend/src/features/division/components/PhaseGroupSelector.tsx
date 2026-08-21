@@ -10,6 +10,8 @@ type PhaseGroupSelectorProps = {
   onCreate?: () => void;
   highlightedPhaseGroupId?: number | null;
   rightSlot?: ReactNode;
+  /** Names the owning phase, for the summary where the pools of several phases are listed. */
+  phaseName?: string;
 };
 
 export default function PhaseGroupSelector({
@@ -19,10 +21,14 @@ export default function PhaseGroupSelector({
   onCreate,
   highlightedPhaseGroupId,
   rightSlot,
+  phaseName,
 }: PhaseGroupSelectorProps) {
   return (
     <div className="flex items-center gap-2 mb-3 flex-wrap">
-      <span className="text-xs text-gray-400">Pool</span>
+      <span className="text-xs text-gray-400">
+        {phaseName && <span className="font-medium text-gray-600">{phaseName} / </span>}
+        Pool
+      </span>
       {phaseGroups.map((phaseGroup) => (
         <button
           key={phaseGroup.id}

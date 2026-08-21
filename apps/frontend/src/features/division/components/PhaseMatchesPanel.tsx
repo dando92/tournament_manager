@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
-import PhaseActionsMenu from "@/features/division/components/PhaseActionsMenu";
 import PhaseGroupContent from "@/features/division/components/PhaseGroupContent";
 import PhaseGroupSelector from "@/features/division/components/PhaseGroupSelector";
 import PhaseGroupViewSelect from "@/features/division/components/PhaseGroupViewSelect";
@@ -13,7 +12,6 @@ import { availablePoolViewModes } from "@/features/division/services/poolViewMod
 import { Division } from "@/features/division/types/Division";
 import { Phase, PhaseGroup } from "@/features/division/types/Phase";
 import { formatBracketType } from "@/features/division/utils/bracketType";
-import { matchCountLabel, phaseMatchCount } from "@/features/division/utils/phaseMatchCount";
 import { MatchHighlight } from "@/features/match/types/Match";
 
 type PhaseMatchesPanelProps = {
@@ -23,13 +21,12 @@ type PhaseMatchesPanelProps = {
   tournamentId?: number;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
-  onDeletePhase?: () => void | Promise<void>;
   onChanged?: () => Promise<void>;
   /**
-   * "stacked" is the summary, where the panel names itself because it is one of many.
-   * "focused" is a single open phase, whose name and actions live in the breadcrumb above.
+   * "stacked" is the summary, where the pool row names its phase because several are listed.
+   * "focused" is a single open phase, already named by the breadcrumb above.
    */
-  variant?: "stacked" | "focused";
+  variant: "stacked" | "focused";
 };
 
 export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
@@ -60,19 +57,10 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
   };
 
   const onCreate = props.controls && !creating ? handleCreatePhaseGroup : undefined;
+  const phaseName = props.variant === "stacked" ? props.phase.name : undefined;
 
   return (
     <div>
-      {props.variant !== "focused" && (
-        <div className="flex items-center gap-2 mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">{props.phase.name}</h4>
-          <span className="text-xs text-gray-400">{matchCountLabel(phaseMatchCount(props.phase))}</span>
-          {props.controls && props.onDeletePhase && (
-            <PhaseActionsMenu phase={props.phase} onDelete={props.onDeletePhase} align="left" />
-          )}
-        </div>
-      )}
-
       {selectedPhaseGroup ? (
         <SelectedPhaseGroupPanel
           key={selectedPhaseGroup.id}
@@ -82,6 +70,7 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
           onSelect={setSelectedPhaseGroupId}
           onCreate={onCreate}
           highlightedPhaseGroupId={highlightedPhaseGroupId}
+          phaseName={phaseName}
         />
       ) : (
         <>
@@ -90,6 +79,7 @@ export default function PhaseMatchesPanel(props: PhaseMatchesPanelProps) {
             selectedPhaseGroupId={null}
             onSelect={setSelectedPhaseGroupId}
             onCreate={onCreate}
+            phaseName={phaseName}
           />
           <p className="py-8 text-center text-sm text-gray-400">
             {props.controls ? "No pool yet. Create one to add matches." : "No pool yet."}
@@ -106,6 +96,7 @@ type SelectedPhaseGroupPanelProps = PhaseMatchesPanelProps & {
   onSelect: (phaseGroupId: number) => void;
   onCreate?: () => void;
   highlightedPhaseGroupId: number | null;
+  phaseName?: string;
 };
 
 function SelectedPhaseGroupPanel({
@@ -121,6 +112,8 @@ function SelectedPhaseGroupPanel({
   onSelect,
   onCreate,
   highlightedPhaseGroupId,
+  phaseName,
+  variant,
 }: SelectedPhaseGroupPanelProps) {
   const actions = usePhaseGroupActions({ division, phaseGroup, onChanged });
   const [viewMode, setViewMode] = usePoolViewMode(phaseGroup);
@@ -134,6 +127,7 @@ function SelectedPhaseGroupPanel({
         onSelect={onSelect}
         onCreate={onCreate}
         highlightedPhaseGroupId={highlightedPhaseGroupId}
+        phaseName={phaseName}
         rightSlot={
           <>
             {bracketTypeLabel && (
@@ -183,7 +177,7 @@ function SelectedPhaseGroupPanel({
         onHighlight={onHighlight}
         actions={actions}
         viewMode={viewMode}
-        showMatches
+        canCreateMatch={variant === "focused"}
       />
     </>
   );

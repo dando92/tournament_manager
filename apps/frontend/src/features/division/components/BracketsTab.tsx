@@ -2,8 +2,10 @@ import PhaseActionsMenu from "@/features/division/components/PhaseActionsMenu";
 import PhaseBreadcrumb from "@/features/division/components/PhaseBreadcrumb";
 import PhaseMatchesPanel from "@/features/division/components/PhaseMatchesPanel";
 import { Division } from "@/features/division/types/Division";
-import { MatchHighlight } from "@/features/match/types/Match";
 import { useBracketsTab } from "@/features/division/hooks/useBracketsTab";
+import { useCreateMatchAction } from "@/features/match/hooks/useCreateMatchAction";
+import CreateMatchModal from "@/features/match/modals/CreateMatchModal";
+import { MatchHighlight } from "@/features/match/types/Match";
 import CreateCard from "@/shared/components/ui/CreateCard";
 import { useState } from "react";
 
@@ -24,8 +26,10 @@ export default function BracketsTab({
 }: BracketsTabProps) {
   const state = useBracketsTab({ division, onDivisionChanged });
   const [highlight, setHighlight] = useState<MatchHighlight>({ matchId: null, phaseGroupId: null });
+  const matchCreation = useCreateMatchAction(onDivisionChanged);
   const selectedPhase = state.selectedPhase;
   const createPhase = controls ? onCreatePhase : undefined;
+  const hasPool = state.phases.some((phase) => (phase.phaseGroups ?? []).length > 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -52,6 +56,8 @@ export default function BracketsTab({
           onHighlight={setHighlight}
           onChanged={onDivisionChanged}
         />
+      ) : state.phases.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-400">No bracket yet.</p>
       ) : (
         <div className="flex flex-col gap-5">
           {state.phases.map((phase) => (
@@ -64,17 +70,21 @@ export default function BracketsTab({
               tournamentId={tournamentId}
               highlight={highlight}
               onHighlight={setHighlight}
-              onDeletePhase={() => state.handleDeletePhase(phase.id)}
               onChanged={onDivisionChanged}
             />
           ))}
-          {createPhase ? (
-            <CreateCard label="Create phase" onClick={createPhase} />
-          ) : (
-            state.phases.length === 0 && <p className="py-8 text-center text-sm text-gray-400">No bracket yet.</p>
-          )}
+          {controls && hasPool && <CreateCard label="Create match" onClick={matchCreation.openCreateMatch} />}
         </div>
       )}
+
+      <CreateMatchModal
+        open={matchCreation.createMatchOpen}
+        onClose={matchCreation.closeCreateMatch}
+        onCreate={matchCreation.createMatch}
+        divisionId={division.id}
+        phases={state.phases}
+        tournamentId={tournamentId}
+      />
     </div>
   );
 }

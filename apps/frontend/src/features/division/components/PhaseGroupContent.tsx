@@ -17,8 +17,8 @@ type PhaseGroupContentProps = {
   onHighlight: (highlight: MatchHighlight) => void;
   actions: PhaseGroupActions;
   viewMode: PoolViewMode;
-  showMatches: boolean;
-  bodyClassName?: string;
+  /** The summary creates matches once for the whole division, so only an open phase offers it here. */
+  canCreateMatch: boolean;
 };
 
 export default function PhaseGroupContent({
@@ -31,8 +31,7 @@ export default function PhaseGroupContent({
   onHighlight,
   actions,
   viewMode,
-  showMatches,
-  bodyClassName,
+  canCreateMatch,
 }: PhaseGroupContentProps) {
   const body = actions.editingAdvancement ? (
     <AdvancementRulesEditor
@@ -46,7 +45,7 @@ export default function PhaseGroupContent({
       onSave={actions.saveAdvancementRules}
       onCancel={actions.cancelAdvancementEdit}
     />
-  ) : showMatches ? (
+  ) : (
     <MatchList
       key={`phase-group-${phaseGroup.id}`}
       division={division}
@@ -57,13 +56,13 @@ export default function PhaseGroupContent({
       tournamentId={tournamentId}
       highlight={highlight}
       onHighlight={onHighlight}
-      onCreateMatch={controls ? actions.openCreateMatch : undefined}
+      onCreateMatch={controls && canCreateMatch ? actions.openCreateMatch : undefined}
     />
-  ) : null;
+  );
 
   return (
     <>
-      {body && <div className={bodyClassName}>{body}</div>}
+      {body}
       <CreateMatchModal
         open={actions.createMatchOpen}
         onClose={actions.closeCreateMatch}

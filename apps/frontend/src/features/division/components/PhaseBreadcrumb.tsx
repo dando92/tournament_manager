@@ -14,8 +14,8 @@ type PhaseBreadcrumbProps = {
 };
 
 /**
- * Where the phases view is: the summary of every phase, or one open phase with the
- * way back, the switcher, and its actions on a single line.
+ * Where the phases view is and how to move inside it: the way back to the summary,
+ * the switcher over every phase, what it holds, and its actions on a single line.
  */
 export default function PhaseBreadcrumb({
   phases,
@@ -26,34 +26,30 @@ export default function PhaseBreadcrumb({
 }: PhaseBreadcrumbProps) {
   const selectedPhase =
     typeof selectedPhaseId === "number" ? phases.find((phase) => phase.id === selectedPhaseId) ?? null : null;
-
-  if (!selectedPhase) {
-    const totalMatches = phases.reduce((total, phase) => total + phaseMatchCount(phase), 0);
-    return (
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-gray-700">Summary</h3>
-        {phases.length > 0 && (
-          <span className="text-xs text-gray-400">
-            {phases.length} phase{phases.length !== 1 ? "s" : ""} &middot; {matchCountLabel(totalMatches)}
-          </span>
-        )}
-      </div>
-    );
-  }
+  const totalMatches = phases.reduce((total, phase) => total + phaseMatchCount(phase), 0);
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => onSelect("all")}
-        className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-primary-dark transition-colors hover:bg-primary-dark/10"
-      >
-        <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
-        All phases
-      </button>
-      <span className="text-xs text-gray-300">/</span>
+      {selectedPhase && (
+        <>
+          <button
+            type="button"
+            onClick={() => onSelect("all")}
+            className="flex items-center gap-1.5 rounded px-1 py-1 text-xs text-primary-dark transition-colors hover:bg-primary-dark/10"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+            All phases
+          </button>
+          <span className="text-xs text-gray-300">/</span>
+        </>
+      )}
       <PhaseMenu phases={phases} selectedPhase={selectedPhase} onSelect={onSelect} onCreate={onCreate} />
-      <span className="text-xs text-gray-400">{matchCountLabel(phaseMatchCount(selectedPhase))}</span>
+      <span className="text-xs text-gray-400">
+        {selectedPhase
+          ? matchCountLabel(phaseMatchCount(selectedPhase))
+          : phases.length > 0 &&
+            `${phases.length} phase${phases.length !== 1 ? "s" : ""} · ${matchCountLabel(totalMatches)}`}
+      </span>
       {rightSlot && <div className="ml-auto flex items-center gap-2">{rightSlot}</div>}
     </div>
   );
@@ -61,13 +57,18 @@ export default function PhaseBreadcrumb({
 
 type PhaseMenuProps = {
   phases: Phase[];
-  selectedPhase: Phase;
-  onSelect: (phaseId: number) => void;
+  selectedPhase: Phase | null;
+  onSelect: (phaseId: number | "all") => void;
   onCreate?: () => void;
 };
 
 function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps) {
   const [open, setOpen] = useState(false);
+
+  const choose = (phaseId: number | "all") => {
+    setOpen(false);
+    onSelect(phaseId);
+  };
 
   return (
     <div className="relative">
@@ -75,32 +76,24 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
         type="button"
         title="Switch phase"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-full border border-primary-dark bg-primary-dark/10 px-3 py-1 text-xs text-primary-dark"
+        className="flex items-center gap-1.5 rounded-full border border-primary-dark bg-primary-dark/10 px-3 py-1 text-xs font-medium text-primary-dark"
       >
-        {selectedPhase.name}
+        {selectedPhase?.name ?? "Summary"}
         <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded border border-gray-200 bg-white py-1 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded border border-gray-200 bg-white py-1 shadow-lg">
+            <MenuItem label="Summary" hint="All phases" selected={!selectedPhase} onSelect={() => choose("all")} />
             {phases.map((phase) => (
-              <button
+              <MenuItem
                 key={phase.id}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onSelect(phase.id);
-                }}
-                className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm ${
-                  phase.id === selectedPhase.id
-                    ? "bg-primary-dark/10 text-primary-dark"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {phase.name}
-                <span className="text-xs text-gray-400">{matchCountLabel(phaseMatchCount(phase))}</span>
-              </button>
+                label={phase.name}
+                hint={matchCountLabel(phaseMatchCount(phase))}
+                selected={phase.id === selectedPhase?.id}
+                onSelect={() => choose(phase.id)}
+              />
             ))}
             {onCreate && (
               <button
@@ -119,5 +112,27 @@ function PhaseMenu({ phases, selectedPhase, onSelect, onCreate }: PhaseMenuProps
         </>
       )}
     </div>
+  );
+}
+
+type MenuItemProps = {
+  label: string;
+  hint: string;
+  selected: boolean;
+  onSelect: () => void;
+};
+
+function MenuItem({ label, hint, selected, onSelect }: MenuItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm ${
+        selected ? "bg-primary-dark/10 text-primary-dark" : "text-gray-700 hover:bg-gray-50"
+      }`}
+    >
+      {label}
+      <span className="text-xs text-gray-400">{hint}</span>
+    </button>
   );
 }
