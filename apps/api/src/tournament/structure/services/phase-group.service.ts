@@ -40,26 +40,6 @@ export class PhaseGroupService {
         return savedPhaseGroup;
     }
 
-    async findByPhase(phaseId: number): Promise<PhaseGroup[]> {
-        return this.phaseGroupRepository.find({
-            where: { phase: { id: phaseId } },
-            relations: {
-                phase: {
-                    division: true,
-                },
-                entrants: {
-                    entrant: {
-                        participants: {
-                            player: true,
-                        },
-                    },
-                },
-                matches: true,
-            },
-            order: { id: 'ASC' },
-        });
-    }
-
     async findDefaultForPhase(phaseId: number): Promise<PhaseGroup | null> {
         return this.phaseGroupRepository.findOne({
             where: { phase: { id: phaseId } },

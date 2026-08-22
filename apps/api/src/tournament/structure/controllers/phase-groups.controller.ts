@@ -9,11 +9,6 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 export class PhaseGroupsController {
     constructor(private readonly phaseGroupManager: PhaseGroupManager) {}
 
-    @Get('phases/:phaseId/phase-groups')
-    async findByPhase(@Param('phaseId') phaseId: number): Promise<DivisionSummaryPhaseGroupDto[]> {
-        return this.phaseGroupManager.findByPhase(Number(phaseId));
-    }
-
     @Post('phases/:phaseId/phase-groups')
     @RequireOpenTournament({ entity: 'phase', location: 'params', field: 'phaseId' })
     async createForPhase(
@@ -21,11 +16,6 @@ export class PhaseGroupsController {
         @Body(new ValidationPipe()) dto: CreatePhaseGroupDto,
     ): Promise<DivisionSummaryPhaseGroupDto> {
         return this.phaseGroupManager.createForPhase(Number(phaseId), dto);
-    }
-
-    @Get('phase-groups/:id')
-    async findOne(@Param('id') id: number): Promise<DivisionSummaryPhaseGroupDto> {
-        return this.phaseGroupManager.findOne(Number(id));
     }
 
     @Get('phase-groups/:id/entrants')

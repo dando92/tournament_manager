@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
 import { DivisionSummaryPhaseGroupDto } from '@tournament/structure/dtos/division-summary.dto';
@@ -13,17 +13,6 @@ export class PhaseGroupManager {
 
     async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<DivisionSummaryPhaseGroupDto> {
         return this.toDto(await this.phaseGroupService.createForPhase(phaseId, dto));
-    }
-
-    async findByPhase(phaseId: number): Promise<DivisionSummaryPhaseGroupDto[]> {
-        const phaseGroups = await this.phaseGroupService.findByPhase(phaseId);
-        return phaseGroups.map((phaseGroup) => this.toDto(phaseGroup));
-    }
-
-    async findOne(id: number): Promise<DivisionSummaryPhaseGroupDto> {
-        const phaseGroup = await this.phaseGroupService.findOne(id);
-        if (!phaseGroup) throw new NotFoundException(`PhaseGroup with ID ${id} not found`);
-        return this.toDto(phaseGroup);
     }
 
     async getEntrants(id: number): Promise<DivisionSummaryPhaseGroupDto['entrants']> {

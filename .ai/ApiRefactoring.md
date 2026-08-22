@@ -491,14 +491,29 @@ it leaves the application running, so `main` is never mid-refactoring.
 - Phases 4 and 7 are subdivided per feature and per aggregate, one branch each,
   rather than merged as a single large change.
 
-### Phase 0 — Removals
+### Phase 0 — Removals (done)
 
-- Delete `tournament/dtos/accountplayer.dto.ts`, `acount.dto.ts`,
-  `credentials.dto.ts` and the `tournament/dtos.ts` barrel entries that reach
-  them.
-- Confirm and then delete the endpoints with no client: `GET /divisions/:id`,
-  `GET /phase-groups/:id`, `GET /phase-groups/:id/entrants`.
-- Verification: build, lint, unit and end-to-end suites. No behaviour change.
+Six unreferenced files, 694 lines: `tournament/dtos/accountplayer.dto.ts`,
+`acount.dto.ts`, `credentials.dto.ts`, and — found while confirming the first
+three — `competition/dtos/setup.dto.ts`, `competition/services/pad.roller.ts`,
+which was never registered as a provider, and
+`competition/match/dtos/match_assignment.dto.ts`, whose only consumer was that
+roller. The `MatchAssignment` entity stays; the match graph still loads it.
+
+Three read endpoints no client calls, together with the chains that served them
+and nothing else: `GET /divisions/:id` with `DivisionService.findOne` and
+`findOneForView`; `GET /phase-groups/:id` with `PhaseGroupManager.findOne`; and
+`GET /phases/:phaseId/phase-groups` with `PhaseGroupManager.findByPhase` and
+`PhaseGroupService.findByPhase`.
+
+`GET /phase-groups/:id/entrants` was listed as a candidate and kept. No client
+calls it, but its end-to-end test is the only coverage of derived pool
+membership, which phases 2 and 7 refactor. It is removed in phase 7, once
+`PhaseGroupQueries` gives that test something else to assert through.
+
+Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
+pre-existing warnings, none in the changed files), 57 unit tests, 11
+end-to-end tests against PostgreSQL, and `npm run check:architecture`.
 
 ### Phase 1 — Match read side
 
