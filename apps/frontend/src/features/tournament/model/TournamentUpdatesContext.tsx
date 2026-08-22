@@ -2,6 +2,8 @@ import { ReactNode, createContext, useContext, useEffect, useRef, useState } fro
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
+import { matchKeys } from "@/features/match/services/matches.keys";
+import { divisionKeys } from "@/features/division/services/divisions.keys";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -113,7 +115,7 @@ export function TournamentUpdatesProvider({
           let next = new Map(prev);
           divisionDetailIds.forEach((divisionId) => {
             next = incrementVersion(next, divisionId);
-            queryClient.invalidateQueries({ queryKey: ["division-summary", divisionId] });
+            queryClient.invalidateQueries({ queryKey: divisionKeys.summary(divisionId) });
           });
           return next;
         });
@@ -131,14 +133,14 @@ export function TournamentUpdatesProvider({
 
       phaseGroupIds.forEach((phaseGroupId) => {
         queryClient.invalidateQueries({
-          queryKey: ["matches", "phase-group", phaseGroupId],
+          queryKey: matchKeys.byPhaseGroup(phaseGroupId),
           exact: true,
         });
       });
 
       divisionMatchIds.forEach((divisionId) => {
         queryClient.invalidateQueries({
-          queryKey: ["matches", "division", divisionId],
+          queryKey: matchKeys.byDivision(divisionId),
           exact: true,
         });
       });

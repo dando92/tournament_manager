@@ -8,6 +8,7 @@ import RawMatchCardsView from "@/features/match/components/RawMatchCardsView";
 import RoundRobinMatchesView from "@/features/match/components/round-robin/RoundRobinMatchesView";
 import { useMatches } from "@/features/match/services/useMatches";
 import * as MatchesApi from "@/features/match/services/matches.api";
+import { matchKeys } from "@/features/match/services/matches.keys";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
 import { useQueryClient } from "@tanstack/react-query";
 import CreateCard from "@/shared/components/ui/CreateCard";
@@ -71,7 +72,7 @@ export default function MatchList({
       loadAdvancementTargets={
         phaseGroupId !== undefined
           ? () => queryClient.fetchQuery({
-              queryKey: ["matches", "division", division.id],
+              queryKey: matchKeys.byDivision(division.id),
               queryFn: () => MatchesApi.listByDivision(division.id),
             })
           : undefined

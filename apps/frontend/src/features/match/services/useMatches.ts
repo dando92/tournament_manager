@@ -4,6 +4,7 @@ import { initialState, matchesReducer } from "@/features/match/services/matches.
 import * as MatchesApi from "@/features/match/services/matches.api";
 import { CreateMatchRequest, RoundSourceRequest } from "@/features/match/types/match-requests";
 import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
+import { matchKeys } from "@/features/match/services/matches.keys";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { toast } from "react-toastify";
 
@@ -11,9 +12,7 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
   const [state, dispatch] = useReducer(matchesReducer, initialState);
   const queryClient = useQueryClient();
   const queryKey = useMemo(
-    () => phaseGroupId !== undefined
-      ? ["matches", "phase-group", phaseGroupId] as const
-      : ["matches", "division", divisionId] as const,
+    () => (phaseGroupId !== undefined ? matchKeys.byPhaseGroup(phaseGroupId) : matchKeys.byDivision(divisionId)),
     [divisionId, phaseGroupId],
   );
   const query = useQuery({
