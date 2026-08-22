@@ -1,15 +1,10 @@
 import axios from "axios";
 import { Entrant } from "@/features/participant/model/types";
-import { Division, DivisionStandingRow, GenerateBracketRequest, GenerateBracketResultDto } from "@/features/division/model/types";
+import { Division, GenerateBracketRequest, GenerateBracketResultDto } from "@/features/division/model/types";
 
 /** The division as every page under it reads it: the roster and the structure. */
 export async function getDivisionSummary(divisionId: number): Promise<Division> {
   const response = await axios.get<Division>(`divisions/${divisionId}/summary`);
-  return response.data;
-}
-
-export async function listDivisionStandings(divisionId: number): Promise<DivisionStandingRow[]> {
-  const response = await axios.get<DivisionStandingRow[]>(`divisions/${divisionId}/standings`);
   return response.data;
 }
 

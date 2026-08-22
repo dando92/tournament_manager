@@ -9,7 +9,6 @@ import type { AdvancementRuleInput } from "@/features/match/model/types";
  */
 export type {
   DivisionSummaryDto as Division,
-  DivisionStandingRowDto as DivisionStandingRow,
   DivisionPhaseDto as Phase,
   PhaseGroupDto as PhaseGroup,
   PhaseGroupState,

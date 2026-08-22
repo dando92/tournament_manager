@@ -4,7 +4,6 @@ import {
   faDesktop,
   faListOl,
   faMusic,
-  faRankingStar,
   faTableColumns,
   faTowerBroadcast,
   faUsers,
@@ -41,13 +40,13 @@ export const TOURNAMENT_TREE_PAGES: readonly TreePage[] = [
 /**
  * The division-level destinations.
  *
- * These are staged: entrants, seeding and standings still live here so nothing
- * breaks while the tree lands. Entrants and seeding are due to merge into the
- * tournament-level Roster page and standings into Stats, at which point a
- * division becomes pure structure with no page children at all.
+ * These are staged: entrants and seeding still live here, and are due to merge
+ * into the tournament-level Roster page, at which point a division becomes pure
+ * structure with no page children at all. Standings has already gone: every
+ * number a tournament reports belongs on Stats, and FQ-016 holds the question of
+ * what those numbers are.
  */
 export const DIVISION_TREE_PAGES: readonly TreePage[] = [
   { key: "entrants", label: "Entrants", icon: faUsers },
   { key: "seeding", label: "Seeding", icon: faListOl },
-  { key: "standings", label: "Standings", icon: faRankingStar },
 ];

@@ -12,7 +12,7 @@ export type TreeSelection = {
   /** A tournament-level destination — "songs", "stats", "configuration". */
   page: string | null;
   divisionId: number | null;
-  /** A division-level destination — "entrants", "seeding", "standings". */
+  /** A division-level destination — "entrants" or "seeding". */
   divisionPage: string | null;
   phaseId: number | null;
   poolId: number | null;
