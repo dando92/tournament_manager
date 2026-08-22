@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { ParticipantDto, ParticipantImportPreviewRowDto } from '@tournament-manager/contracts';
 import { JwtAuthGuard, TournamentAccessGuard } from '@auth/guards';
 import {
     CreateParticipantDto,
@@ -6,17 +7,21 @@ import {
     ImportParticipantsPreviewDto,
 } from '@tournament/dtos';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { TournamentManager } from '@tournament/services/tournament.manager';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('tournaments')
 export class TournamentParticipantsController {
-    constructor(private readonly tournamentManager: TournamentManager) {}
+    constructor(
+        private readonly participantQueries: ParticipantQueries,
+        private readonly tournamentManager: TournamentManager,
+    ) {}
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Get(':id/participants')
-    listParticipants(@Param('id') id: number) {
-        return this.tournamentManager.listParticipants(Number(id));
+    listParticipants(@Param('id') id: number): Promise<ParticipantDto[]> {
+        return this.participantQueries.forTournament(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -44,8 +49,8 @@ export class TournamentParticipantsController {
     previewParticipantImport(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: ImportParticipantsPreviewDto,
-    ) {
-        return this.tournamentManager.previewParticipantImport(Number(id), dto.playerNames);
+    ): Promise<ParticipantImportPreviewRowDto[]> {
+        return this.participantQueries.importPreview(Number(id), dto.playerNames);
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)

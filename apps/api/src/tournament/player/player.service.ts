@@ -23,10 +23,24 @@ export class PlayerService {
         return this.playerRepo.findOneBy({ playerName });
     }
 
+    /**
+     * The player whose name matches once trimmed and lowercased on both sides.
+     *
+     * It used to load the whole catalogue and filter it in memory, which is what
+     * `TournamentManager.createParticipant` did inline as well. Two players
+     * normalizing to the same name would be a defect in the catalogue rather
+     * than a choice to make here, so the older of the two wins and the answer
+     * stays deterministic.
+     */
     async findByNameNormalized(playerName: string): Promise<Player | null> {
-        const normalized = playerName.trim().toLowerCase();
-        const players = await this.playerRepo.find();
-        return players.find((candidate) => candidate.playerName.trim().toLowerCase() === normalized) ?? null;
+        const [player] = await this.playerRepo
+            .createQueryBuilder('player')
+            .where('LOWER(TRIM(player.playerName)) = :normalized', { normalized: playerName.trim().toLowerCase() })
+            .orderBy('player.id', 'ASC')
+            .limit(1)
+            .getMany();
+
+        return player ?? null;
     }
 
     async create(playerName: string): Promise<Player> {

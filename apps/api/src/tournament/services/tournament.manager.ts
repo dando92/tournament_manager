@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Player } from '@tournament-manager/persistence';
 import {
     ParticipantDto,
-    ParticipantImportPreviewRowDto,
     TournamentDto,
     TournamentOverviewDto,
 } from '@tournament-manager/contracts';
@@ -12,7 +11,7 @@ import {
     ImportParticipantEntryDto,
     UpdateTournamentDto,
 } from '@tournament/dtos';
-import { toEntrantDto, toParticipantDto, toPlayerRefDto } from '@tournament/shared/projections';
+import { toEntrantDto, toParticipantDto } from '@tournament/shared/projections';
 import { DivisionService } from '@tournament/structure/services/division.service';
 import { MatchQueries } from '@match/match.queries';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
@@ -30,10 +29,6 @@ export class TournamentManager {
         private readonly participantService: ParticipantService,
         private readonly playerService: PlayerService,
     ) {}
-
-    private normalizeName(value: string): string {
-        return value.trim().toLowerCase();
-    }
 
     /**
      * A write answers with the projection its `GET` returns, so every one of
@@ -71,11 +66,6 @@ export class TournamentManager {
         return this.project(tournament.id);
     }
 
-    async listParticipants(tournamentId: number): Promise<ParticipantDto[]> {
-        const participants = await this.participantService.listForTournament(tournamentId);
-        return participants.map((participant) => toParticipantDto(participant));
-    }
-
     async createParticipant(tournamentId: number, dto: CreateParticipantDto): Promise<ParticipantDto> {
         const trimmedName = dto.playerName?.trim();
         if (!dto.playerId && !trimmedName) {
@@ -87,11 +77,8 @@ export class TournamentManager {
             player = await this.playerService.findById(dto.playerId);
             if (!player) throw new NotFoundException(`Player ${dto.playerId} not found`);
         } else if (trimmedName) {
-            const allPlayers = await this.playerService.findAll();
-            player = allPlayers.find((candidate) => this.normalizeName(candidate.playerName) === this.normalizeName(trimmedName)) ?? null;
-            if (!player) {
-                player = await this.playerService.create(trimmedName);
-            }
+            player = await this.playerService.findByNameNormalized(trimmedName)
+                ?? await this.playerService.create(trimmedName);
         }
 
         const participant = await this.participantService.ensureForPlayer(tournamentId, player!.id, ['competitor']);
@@ -110,22 +97,6 @@ export class TournamentManager {
     async removeParticipantStaffRole(tournamentId: number, participantId: number): Promise<ParticipantDto> {
         const participant = await this.participantService.removeStaffRole(tournamentId, participantId);
         return toParticipantDto(participant);
-    }
-
-    async previewParticipantImport(tournamentId: number, playerNames: string[]): Promise<ParticipantImportPreviewRowDto[]> {
-        const participants = await this.participantService.listForTournament(tournamentId);
-        const players = await this.playerService.findAll();
-        const playerByNormalizedName = new Map(players.map((player) => [this.normalizeName(player.playerName), player]));
-        const participantPlayerIds = new Set(participants.map((participant) => participant.player.id));
-
-        return [...new Set(playerNames.map((name) => name.trim()).filter(Boolean))].map((name) => {
-            const matchedPlayer = playerByNormalizedName.get(this.normalizeName(name)) ?? null;
-            return {
-                name,
-                matchedPlayer: matchedPlayer ? toPlayerRefDto(matchedPlayer) : null,
-                alreadyParticipant: matchedPlayer ? participantPlayerIds.has(matchedPlayer.id) : false,
-            };
-        });
     }
 
     async importParticipants(tournamentId: number, entries: ImportParticipantEntryDto[]): Promise<ParticipantDto[]> {
