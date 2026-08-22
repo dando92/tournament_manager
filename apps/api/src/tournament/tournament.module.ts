@@ -31,10 +31,11 @@ import { MatchQueries } from './competition/match/match.queries';
 import { MatchStore } from './competition/match/match.store';
 import { UiUpdateContextService } from './competition/match/services/ui-update-context.service';
 import { UiUpdatePublisher } from './competition/match/services/ui-update.publisher';
-import { ScoresController } from './competition/controllers/scores.controller';
-import { SongsController } from './competition/controllers/songs.controller';
+import { ScoresController } from './competition/score.controller';
+import { ScoreQueries } from './competition/score.queries';
+import { SongsController } from './catalog/song.controller';
+import { SongQueries } from './catalog/song.queries';
 import { CompletedSongService } from './competition/services/completed-song.service';
-import { ScoreService } from './competition/services/score.service';
 import { SongRoller } from './competition/services/song.roller';
 import { SongService } from './competition/services/song.service';
 import { RoundsController } from './competition/match/rounds.controller';
@@ -85,7 +86,6 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         PhaseGroupService,
         PhaseGroupManager,
         SongService,
-        ScoreService,
         UiUpdateContextService,
         StartggService,
         AdvancementRuleService,
@@ -93,6 +93,8 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         UiUpdatePublisher,
         CompletedSongService,
         DivisionQueries,
+        ScoreQueries,
+        SongQueries,
         ParticipantQueries,
         StandingsQueries,
         TournamentQueries,

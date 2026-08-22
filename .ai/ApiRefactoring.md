@@ -930,6 +930,28 @@ does not exist, which an empty collection cannot say. It is the third method on
 a class the inventory gave two, the same way `MatchQueries` took `exists` in
 phase 2.
 
+#### Catalogue and scores (done)
+
+`catalog/song.queries.ts` holds `forTournament` and
+`competition/score.queries.ts` holds `history`. `SongQueries.scoresForSong` is
+not written: `GET /songs/:id/scores` had no client, so it is removed rather than
+given a read model, and `ScoreService` went with it — its `create`, `update` and
+`findOne` had no caller either, because the match store owns score writes.
+
+`ScoreDto` is one shape. It was declared twice, once in `catalog.ts` carrying
+its player and its song and once in `match.ts` as `MatchScoreDto` carrying
+neither. Both readers know the song and the player already, so `projections.ts`
+declares the three fields once.
+
+`GET /scores` requires both of its parameters. It treated each as optional and
+answered with every score in the database when neither was given.
+
+`songs.controller.ts` is `catalog/song.controller.ts` and `scores.controller.ts`
+is `competition/score.controller.ts`, each beside the queries it reads. Phase 8
+had claimed both moves and named `catalog/` for the second; the tree above puts
+`score.queries.ts` under `competition/`, and a controller belongs beside its
+queries.
+
 ### Phase 6 — One update path
 
 - Mutations answer `204`.

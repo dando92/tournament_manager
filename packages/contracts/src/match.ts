@@ -1,6 +1,6 @@
 import type { ScoringSystemType } from '@tournament-manager/scoring';
 import type { AdvancementCompetitionKind } from './vocabulary';
-import type { EntrantDto, PlayerRefDto, SongRefDto } from './projections';
+import type { EntrantDto, PlayerRefDto, ScoreDto, SongRefDto } from './projections';
 
 /**
  * The one shape a match is read in.
@@ -8,12 +8,6 @@ import type { EntrantDto, PlayerRefDto, SongRefDto } from './projections';
  * `GET /matches/:id`, the two list routes and every mutation that answers with
  * a match return this, because they all go through the same projection.
  */
-
-export type MatchScoreDto = {
-    id: number;
-    percentage: number;
-    isFailed: boolean;
-};
 
 /**
  * The points of one player in one round. The score is the evidence behind them
@@ -24,7 +18,7 @@ export type MatchStandingDto = {
     id: number;
     points: number;
     player: PlayerRefDto;
-    score: MatchScoreDto | null;
+    score: ScoreDto | null;
 };
 
 /** A round with no song is the hand-scored one. A match holds at most one. */

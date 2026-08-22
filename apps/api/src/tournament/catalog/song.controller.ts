@@ -1,18 +1,17 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Song } from '@tournament-manager/persistence';
+import { SongDto } from '@tournament-manager/contracts';
 import { CreateSongDto } from '@tournament/dtos';
-import { ScoreService } from '../services/score.service';
-import { SongService } from '../services/song.service';
-import { TournamentService } from '@tournament/services/tournament.service';
+import { SongQueries } from '@tournament/catalog/song.queries';
+import { SongService } from '@tournament/competition/services/song.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('songs')
 export class SongsController {
     constructor(
+        private readonly songQueries: SongQueries,
         private readonly songService: SongService,
-        private readonly scoreService: ScoreService,
-        private readonly tournamentService: TournamentService,
     ) {}
 
     @Post()
@@ -22,13 +21,8 @@ export class SongsController {
     }
 
     @Get()
-    async findAll(@Query('tournamentId') tournamentId: number): Promise<Song[]> {
-        return this.tournamentService.findSongsByTournamentId(Number(tournamentId));
-    }
-
-    @Get(':id/scores')
-    findScores(@Param('id') id: number) {
-        return this.scoreService.findBySongId(id);
+    async findAll(@Query('tournamentId') tournamentId: number): Promise<SongDto[]> {
+        return this.songQueries.forTournament(Number(tournamentId));
     }
 
     @Delete(':id')
