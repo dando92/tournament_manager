@@ -7,10 +7,22 @@
 - Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 in progress. Phase 4 is complete and merged.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5 continues with `DivisionQueries` and `StandingsQueries`, then `SongQueries` and `ScoreQueries`, and last `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
-- Awaiting the user's manual UI check: the tournament read models (`refactor/5-tournament-reads`) and the registration read models (`refactor/5-participant-reads`). The home page and the search dialog read a two-field response; the participants page and the import preview read the same shapes as before.
+- Next action: phase 5 continues with `SongQueries` and `ScoreQueries`, then `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
+- Awaiting the user's manual UI check: `refactor/5-tournament-reads`, `refactor/5-participant-reads` and `refactor/5-division-reads`. The home page and the search dialog read a two-field response; the participants page, the import preview, the create-match modal, the players tab and the division standings read the shapes the frontend already declared, which the API now actually produces.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 5, division read models
+
+- Added `structure/division/division.queries.ts` with `entrants` and `availableParticipants`, and `competition/standings.queries.ts` with `forDivision`. All three are SQL, and all three replace a graph load.
+- `availableParticipants` was the most expensive read left in the structure routes. It loaded the division, its tournament, every participant of that tournament with its player and account, and every entrant of the division with its participants, then subtracted one set from the other in JavaScript. It is a `NOT EXISTS` against the join table.
+- `forDivision` replaces the second-largest `relations` block in the application — the division through its phases, pools, matches, results, rounds, songs, standings, scores and players — with one `GROUP BY`. It keeps the rule the roll-up applied: a hand-scored round awards points without a song having been played, so a standing counts towards the total either way and towards `songsPlayed` only when its round has a song.
+- `GET /divisions/:id/entrants` and `GET /divisions/:id/available-participants` answer with `EntrantDto[]` and `ParticipantDto[]`. Both used to answer with raw TypeORM entities while the frontend already declared the DTOs, so no frontend file changed; the API now produces what the interface reads. The entrant projection carries no `seedNum`, which is the shape it already declared and which FQ-015 still holds open.
+- Kept the `404` for a division that does not exist. An empty collection cannot say it, so the three read routes ask `DivisionQueries.exists` first — the same shape `MatchQueries.exists` already had.
+- Removed: `DivisionService.findOneForStandings`, `getEntrants`, `getAvailableParticipants` and `sortBySeed`, and `DivisionManager.findStandings`.
+- `divisions.controller.ts` is `structure/division/division.controller.ts`. `division.service.ts` and `division.manager.ts` stay under `services/` for the same reason the tournament pair did: phase 7 splits them into a store and commands.
+- The unit test of the seed order moved into the end-to-end suite together with the order itself, which the query now owns. 69 API unit tests, one fewer, and a new `tests/e2e/structure/division-reads.e2e-spec.ts` with four.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), 116 unit tests across the workspaces, and 32 end-to-end tests against PostgreSQL. The manual UI check is the user's.
 
 ### Structure refactoring phase 5, registration read models
 
