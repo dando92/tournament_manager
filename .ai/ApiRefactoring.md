@@ -894,6 +894,23 @@ the participant write paths that belong to `registration/`; moving the pair into
 `management/` now would move them again one phase later and split them wrongly
 in between.
 
+#### Registration (done)
+
+`registration/participants.queries.ts` holds `forTournament` and
+`importPreview`. Both are SQL, against the one `find({ select })` the inventory
+allowed here: each is a list of a projection joined across two tables, which is
+the case that table sends to SQL.
+
+`importPreview` is a join on the normalized name, where the previous form loaded
+every player in the system and filtered a map of them. The requested names
+arrive as one array parameter and keep their order through `WITH ORDINALITY`.
+`PlayerService.findByNameNormalized` lost the same scan, and
+`TournamentManager.createParticipant` calls it rather than repeating it inline.
+
+Neither route's contract changed; both already answered with the shapes the
+frontend declares. `tournament-participants.controller.ts` is
+`participants.controller.ts`.
+
 ### Phase 6 — One update path
 
 - Mutations answer `204`.

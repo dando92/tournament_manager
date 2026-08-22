@@ -7,10 +7,21 @@
 - Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 in progress. Phase 4 is complete and merged.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5 continues with `ParticipantQueries` (`forTournament`, `importPreview`), then `DivisionQueries` and `StandingsQueries`, then `SongQueries` and `ScoreQueries`, and last `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
-- Awaiting the user's manual UI check: the tournament read models on branch `refactor/5-tournament-reads`. The home page and the search dialog now read a two-field response.
+- Next action: phase 5 continues with `DivisionQueries` and `StandingsQueries`, then `SongQueries` and `ScoreQueries`, and last `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
+- Awaiting the user's manual UI check: the tournament read models (`refactor/5-tournament-reads`) and the registration read models (`refactor/5-participant-reads`). The home page and the search dialog read a two-field response; the participants page and the import preview read the same shapes as before.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 5, registration read models
+
+- Added `registration/participants.queries.ts` with `forTournament` and `importPreview`, both SQL. The inventory in [ApiRefactoring.md](ApiRefactoring.md) had allowed one `find({ select })` here; both are lists of a projection joined across two tables, which is the case that table sends to SQL.
+- `importPreview` is a join on the normalized name. It used to load every player in the system, build a map keyed by that name, and look each requested name up in it. The names arrive as one array parameter and keep the order the client sent through `WITH ORDINALITY`, so the response still lines up with the list on screen.
+- `PlayerService.findByNameNormalized` stopped scanning the catalogue for the same reason, and `TournamentManager.createParticipant` calls it rather than repeating that scan inline. Both now take the older of two players whose names normalize alike, so the answer is deterministic; duplicates of that kind are a defect in the catalogue rather than a choice for a read to make.
+- `forTournament` orders by the lowercased player name. `ParticipantService.listForTournament` sorted with `localeCompare` after loading the rows, and also loaded an `account` relation that the projection never read.
+- Removed: `TournamentManager.listParticipants` and `previewParticipantImport`, `ParticipantService.listForTournament`, and `findForTournamentByPlayerNameNormalized` and `listStaff`, neither of which had a caller.
+- `tournament-participants.controller.ts` is `participants.controller.ts`, the name the target layout gives it. The class keeps its name until phase 7 splits the manager behind it.
+- No contract changed: both routes already answered with the shapes the frontend declares.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), 117 unit tests across the workspaces, and 28 end-to-end tests against PostgreSQL — one of them new, covering the order of the list, its exact projection, the trimmed-form deduplication of requested names and the case-insensitive match behind the preview.
 
 ### Structure refactoring phase 5, tournament read models
 
