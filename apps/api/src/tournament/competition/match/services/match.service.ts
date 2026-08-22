@@ -63,37 +63,6 @@ export class MatchService {
         return await this.findOneForView(id);
     }
 
-    async findActiveByTournamentForLobbyLookup(tournamentId: number): Promise<Match[]> {
-        return await this.matchRepository.find({
-            where: {
-                active: true,
-                phaseGroup: {
-                    phase: {
-                    division: {
-                        tournament: {
-                            id: tournamentId,
-                        },
-                    },
-                    },
-                },
-            },
-            relations: {
-                entrants: { participants: { player: true } },
-                rounds: {
-                    song: true,
-                    standings: {
-                        player: true,
-                        score: {
-                            player: true,
-                            song: true,
-                        },
-                    },
-                },
-                matchResult: true,
-            },
-        });
-    }
-
     /**
      * How many matches in each pool of a tournament are waiting on a person.
      *

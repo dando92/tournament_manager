@@ -6,7 +6,6 @@ import { SongRoller } from '@tournament/competition/services/song.roller';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { RoundService } from '@tournament/competition/services/round.service';
-import { StandingService } from '@tournament/competition/standing/standing.service';
 import { MatchListDto } from '@match/dtos/match-list.dto';
 import { MatchQueries } from '@match/match.queries';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
@@ -18,8 +17,6 @@ export class MatchManager {
         private readonly matchService: MatchService,
         @Inject()
         private readonly songExtractor: SongRoller,
-        @Inject()
-        private readonly standingService: StandingService,
         @Inject()
         private readonly roundService: RoundService,
         @Inject()
@@ -53,27 +50,6 @@ export class MatchManager {
 
     async DeleteMatch(id: number): Promise<void> {
         return await this.matchService.delete(id);
-    }
-
-    async RemovePlayersFromMatch(matchId: number, playerIdsToRemove: number[]): Promise<void> {
-        const match = await this.matchService.getMatch(matchId);
-        if (!match) return;
-        this.matchWorkflowManager.assertEditable(match);
-
-        for (const round of match.rounds ?? []) {
-            for (const standing of round.standings ?? []) {
-                if (playerIdsToRemove.includes(standing.player.id)) {
-                    await this.standingService.delete(standing.id);
-                }
-            }
-        }
-
-        const remainingEntrantIds = (match.entrants ?? [])
-            .filter(entrant => !entrant.participants?.some(participant => playerIdsToRemove.includes(participant.player.id)))
-            .map(entrant => entrant.id);
-        const dto = new UpdateMatchDto();
-        dto.entrantIds = remainingEntrantIds;
-        await this.matchService.update(matchId, dto);
     }
 
     async AddEntrantInMatch(matchId: number, entrantId: number): Promise<void> {

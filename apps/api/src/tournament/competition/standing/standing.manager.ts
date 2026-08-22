@@ -114,23 +114,6 @@ export class StandingManager {
         return match;
     }
 
-    /**
-     * The SyncStart path. A completed song arrives naming its song, so the round
-     * is resolved from it and the write is the ordinary one.
-     */
-    async applyPlayedScore(match: Match, score: Score): Promise<Match> {
-        this.matchWorkflowManager.assertEditable(match);
-
-        const round = match.rounds.find((candidate) => candidate.song?.id === score.song.id);
-        if (!round) return match;
-
-        await this.writeStanding(round, score.player.id, { score, points: 0 });
-        await this.recalculateRoundIfComplete(match, round);
-        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
-
-        return match;
-    }
-
     private async loadRound(roundId: number): Promise<{ match: Match; round: Round }> {
         const stored = await this.roundService.findOneWithMatch(roundId);
         if (!stored) throw new NotFoundException(`Round with id ${roundId} not found`);
