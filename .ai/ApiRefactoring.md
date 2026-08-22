@@ -608,12 +608,61 @@ tests against PostgreSQL, nine of them new, and `npm run check:architecture`.
 The last of the new tests counts loads of the match graph: writing one score and
 committing a result each load it once, against five for the commit before.
 
-### Phase 3 — Shared contracts
+### Phase 3 — Shared contracts (done)
 
-- Move response DTOs into `@tournament-manager/contracts`.
-- Replace the frontend's redeclared types with imports.
-- Delete the duplicated projection code in favour of `shared/projections.ts`.
-- Verification: type-level only; both workspaces build.
+`@tournament-manager/contracts` holds every response type both workspaces
+speak, in nine files behind its entry point: the vocabulary the responses
+branch on, the three projections of a competitor, and one file per subject.
+The five DTO files that declared responses under `apps/api/src` are gone, and
+`tournament.dto.ts` and `match.requests.ts` keep only their requests.
+
+`tournament/shared/projections.ts` writes player, participant and entrant
+once. There were four copies — `DivisionManager.findSummary`,
+`TournamentManager.findOverview` and `toParticipantDto`, and
+`PhaseGroupManager.toEntrantDto` — and the three DTOs they mapped into were
+identical. `MatchQueries` does not call them: it builds the same JSON in the
+database, against the field names of the same types, which is what keeps a
+list of matches to one query.
+
+The frontend's seventeen redeclarations became imports. The shapes already
+agreed, so almost every consumer compiled unchanged; the three that did not
+were defects rather than naming differences.
+
+- `SeedingTab` sorted the division roster by a `seedNum` the summary
+  projection has never carried, so the tab has always opened alphabetically.
+  The dead key is gone and FQ-015 asks whether the seed belongs in that read.
+- `CommitMatchResultResponseDto.match` was optional because
+  `MatchQueries.byId` is. A commit answers with the match it committed.
+- The statistics page reads the raw entity dump of `GET /divisions`, four
+  levels deep, and was typed as a division summary. It has its own type,
+  stating the fields it reads, until phase 5 replaces that endpoint.
+
+Four departures from the plan as written:
+
+- Contracts gained one dependency, `@tournament-manager/scoring`, so that
+  `ScoringSystemType` stays declared once rather than being copied into the
+  package that every client reads. Scoring has no dependencies of its own and
+  now builds first. The unions the persistence entities own — statuses, kinds,
+  states — were not taken the same way: the browser must not depend on
+  TypeORM, so contracts declares them and the API's projections are checked
+  against them where they map a row.
+- `SongDto`, `ScoreDto` and `PlayerRefDto` describe routes that still answer
+  with entities, so nothing on the API asserts them yet. They state what the
+  interface reads; phase 5 makes the API produce them.
+- The frontend's `features/*/types/` modules re-export the contracts under the
+  names their consumers already use, rather than every consumer importing the
+  package. Phase 4 collapses those modules into `model/types.ts`, and
+  rewriting eighty-two import lines twice is the churn this plan avoids.
+- `tournament.dto.ts` was emptied but not moved. Phase 8 already claims the
+  move of what remains, which is a request DTO, together with the barrel that
+  re-exports it.
+
+Verification passed: `npx tsc --noEmit` in both workspaces, `npm run build`
+across every workspace, `npm run lint` (four pre-existing warnings in the API
+and six in the frontend, none in the changed files), `npm run test:contract`,
+126 unit tests, 27 end-to-end tests against PostgreSQL, and
+`npm run check:architecture`, which now records the two new edges: contracts
+on scoring, and the frontend on contracts.
 
 ### Phase 4 — Frontend api, model, ui
 
