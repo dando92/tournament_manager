@@ -4,12 +4,25 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 3 complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament` slice is complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 4 of [ApiRefactoring.md](ApiRefactoring.md) — the frontend's `api`, `model` and `ui` split, one feature at a time starting with `tournament`, on branch `refactor/4-tournament-feature`. The response types are now imported rather than declared, so `features/*/types/` collapses into `model/types.ts` in the same pass.
+- Next action: the `match` slice of phase 4, on branch `refactor/4-match-feature`. It is the largest remaining feature and already owns `matches.keys.ts`, which the tournament slice declared and left in `services/`; moving it into `api/` is part of that slice. `division`, `song`, `live`, `auth` and `participant` follow, one branch each.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 4, tournament slice: frontend api, model, ui
+
+- Split `features/tournament/` from seven directories into three. `api/` holds `tournament.api.ts`, `lobbies.api.ts`, `startgg.api.ts` and `tournament.keys.ts`; `model/` holds the hooks, the contexts, the view types and the pure functions; `ui/` holds everything that renders. `axios` now appears in the feature only inside `api/*.api.ts`.
+- Collapsed the five modules under `features/tournament/types/` into one `model/types.ts`, dropping twelve re-exports nothing imported: `TournamentOverviewPhase`, `TournamentOverviewDivision`, `TournamentOverviewPlayer` and the start.gg preview sub-shapes.
+- Extracted `useTournamentConfigurationPage` and `useTournamentParticipantsPage`, which took the two pages from 362 and 356 lines to 184 and 233 of JSX, and `useTournamentStructureDialogs` and `usePublicTournamentsQuery` for the remaining fetching components. No `.tsx` in the feature fetches.
+- Made the public tournament list one shared query. The home page and the search dialog each requested it, so opening the dialog from the home page asked the same question twice.
+- Moved the seven tournament pages to `src/pages/tournament/`, mirroring the router and dropping the prefix the directory now carries. `TournamentLayout` folded into `TournamentPage`, which is the layout route.
+- Moved `recentTournaments`, `treeState` and `themePreference` to `shared/lib/`, where the target layout puts persisted local state.
+- Declared `matches.keys.ts` and `divisions.keys.ts` in this slice rather than in the match and division slices. `["matches", "phase-group", id]` was written by hand in the reader and again in `TournamentUpdatesContext`, which this feature owns: if either had changed, invalidation would have stopped matching with no error and no failing test. Both files stay in `services/` until their own slice moves them into `api/`.
+- Put `bracket/bracket-types`, `divisions/:id/generate-bracket` and `matches/scoring-systems` in `divisions.api.ts` and `matches.api.ts` rather than a tournament module: they are called from tournament components but belong to other features. That also removed the second copy of the scoring-system request in the create-match modal.
+- The lobby list stopped redeclaring `SyncStartLobbiesDto` and reads the contract instead.
+- Verification passed: `npx tsc --noEmit` in the frontend, `npm run build` across every workspace, `npm run lint` (six pre-existing warnings, none in the changed files), `npm run test:contract`, the unit suites in both workspaces, and `npm run check:architecture`. No HTTP contract changed. The manual UI check is the user's.
 
 ### Structure refactoring phase 3: shared contracts
 

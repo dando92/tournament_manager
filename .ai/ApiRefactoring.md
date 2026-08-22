@@ -666,18 +666,59 @@ on scoring, and the frontend on contracts.
 
 ### Phase 4 — Frontend api, model, ui
 
-One feature at a time, starting with `tournament`, which has ten files calling
-the API and one `*.api.ts`.
+One feature at a time, one branch each. Every slice creates the API modules the
+feature is missing, empties the `.tsx` files that import `axios`, moves what it
+touched into `api/`, `model/` and `ui/`, and moves that feature's pages under
+`src/pages/` mirroring the router.
 
-- Create the missing API modules: `tournament.api.ts`, `song.api.ts`,
-  `account.api.ts`, `roles.api.ts`, `lobbies.api.ts`.
-- Empty the seven `.tsx` files that import `axios`.
-- Extract `useTournamentParticipantsPage` and `useTournamentConfigurationPage`;
-  the pages return to roughly 120 lines of JSX.
-- Add `<feature>.keys.ts` and replace the hand-written query keys.
-- Move files into `api/`, `model/`, `ui/`; move pages under `src/pages/`
-  mirroring the router.
-- Verification: the grep rules pass; the application builds; manual UI check.
+Verification per slice: the grep rules pass for the feature, `npx tsc
+--noEmit`, `npm run lint`, `npm run build` across every workspace, the unit
+suites, and a manual UI check.
+
+#### Tournament (done)
+
+`features/tournament/` had seven directories and now has three. `api/` holds
+`tournament.api.ts`, `lobbies.api.ts`, `startgg.api.ts` and
+`tournament.keys.ts`; `model/` holds the hooks, the contexts, the view types
+and the pure functions; `ui/` holds everything that renders. The seven pages
+moved to `src/pages/tournament/` and lost the prefix the directory now carries,
+and `TournamentLayout` folded into `TournamentPage`, which is the layout route.
+
+- The five modules under `features/tournament/types/` became one
+  `model/types.ts`. Twelve re-exports nothing imported went with them —
+  `TournamentOverviewPhase`, `TournamentOverviewDivision`,
+  `TournamentOverviewPlayer` and the start.gg preview sub-shapes.
+- `useTournamentConfigurationPage` and `useTournamentParticipantsPage` took
+  362 and 356 lines down to 184 and 233 of JSX. `useTournamentStructureDialogs`
+  and `usePublicTournamentsQuery` did the same for the structural dialogs and
+  the tournament list, so no `.tsx` in the feature fetches.
+- The public tournament list became one shared query. The home page and the
+  search dialog asked for it separately, twice per visit to the home page.
+- The lobby list stopped redeclaring `SyncStartLobbiesDto` and reads the
+  contract.
+- `recentTournaments`, `treeState` and `themePreference` moved to
+  `shared/lib/`, where the target layout puts persisted local state.
+
+Three departures from the plan as written:
+
+- `bracket/bracket-types`, `divisions/:id/generate-bracket` and
+  `matches/scoring-systems` are called from tournament components but belong to
+  other features, so they joined `divisions.api.ts` and `matches.api.ts` rather
+  than a tournament module. That also removed the second copy of the
+  scoring-system request in the create-match modal.
+- `matches.keys.ts` and `divisions.keys.ts` were declared in this slice rather
+  than in the match and division slices. `TournamentUpdatesContext` is the
+  writer of those keys and this feature owns it, so leaving them inline would
+  have left the defect rule 3 exists to close. Both files stay in `services/`
+  until their own slice moves them into `api/`.
+- `song.api.ts`, `account.api.ts` and `roles.api.ts`, listed here originally,
+  belong to the song, account and auth slices and are created there.
+
+#### Remaining slices
+
+`match`, `division`, `song`, `live`, `auth` (absorbing `admin` and
+`PermissionContext`) and `participant` (absorbing `player`). `advancement` and
+`entrant` are vestigial and are absorbed rather than given three directories.
 
 ### Phase 5 — Remaining read models
 
