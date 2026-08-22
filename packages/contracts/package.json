@@ -9,6 +9,9 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "test:contract": "npm run build"
   },
+  "dependencies": {
+    "@tournament-manager/scoring": "0.0.1"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@typescript-eslint/eslint-plugin": "^8.58.0",

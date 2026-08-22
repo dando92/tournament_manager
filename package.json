@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "packages/contracts",
     "packages/scoring",
+    "packages/contracts",
     "packages/persistence",
     "packages/live-messaging",
     "packages/syncstart-protocol",
