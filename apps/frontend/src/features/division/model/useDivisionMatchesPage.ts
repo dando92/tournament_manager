@@ -31,11 +31,8 @@ export function useDivisionMatchesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState<MatchHighlight>({ matchId: null, phaseGroupId: null });
-  const { state, actions } = useMatches(division.id);
-  const matchCreation = useCreateMatchAction(async () => {
-    await actions.list();
-    await refreshDivision();
-  });
+  const { matches, actions } = useMatches(division.id);
+  const matchCreation = useCreateMatchAction();
 
   const scopePhaseId = phaseIdParam ? Number(phaseIdParam) : null;
   const scopePoolId = poolIdParam ? Number(poolIdParam) : null;
@@ -47,7 +44,7 @@ export function useDivisionMatchesPage() {
      answer that stops at the open pool does not answer it. */
   const groups = useMemo<PoolGroup[]>(() => {
     const byPool = new Map<number, Match[]>();
-    state.matches.forEach((match) => {
+    matches.forEach((match) => {
       const bucket = byPool.get(match.phaseGroupId);
       if (bucket) bucket.push(match);
       else byPool.set(match.phaseGroupId, [match]);
@@ -67,7 +64,7 @@ export function useDivisionMatchesPage() {
             ),
           })),
       );
-  }, [division.phases, state.matches, scopePhaseId, scopePoolId, query, searching]);
+  }, [division.phases, matches, scopePhaseId, scopePoolId, query, searching]);
 
   const visibleMatches = useMemo(() => groups.flatMap((group) => group.matches), [groups]);
 
@@ -105,7 +102,7 @@ export function useDivisionMatchesPage() {
     entrants,
     tournamentId,
     controls,
-    matches: state.matches,
+    matches,
     actions,
     matchCreation,
     groups,

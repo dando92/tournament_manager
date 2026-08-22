@@ -28,9 +28,9 @@ export async function listSongs(tournamentId?: number): Promise<Song[]> {
  * so the loop is the caller's and each row succeeds or fails on its own, which
  * is what lets the import report how many of each.
  */
-export async function createSong(tournamentId: number, request: CreateSongRequest): Promise<Song> {
-  const response = await axios.post<Song>("songs", { ...request, tournamentId });
-  return response.data;
+export async function createSong(tournamentId: number, request: CreateSongRequest): Promise<number> {
+  const response = await axios.post<{ id: number }>("songs", { ...request, tournamentId });
+  return response.data.id;
 }
 
 export async function deleteSong(songId: number): Promise<void> {

@@ -1,9 +1,10 @@
-import { ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { ReactNode, useEffect, useRef } from "react";
+import { QueryKey, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { divisionKeys } from "@/features/division/api/division.keys";
+import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -48,30 +49,61 @@ type TournamentSocketMessage =
   | { event: "MatchUpdate"; data: MatchUpdateMessage }
   | { event: "UiWarning"; data: UiWarningMessage };
 
-type TournamentUpdatesContextValue = {
-  tournamentVersion: number;
-  divisionDetailVersions: ReadonlyMap<number, number>;
-  matchListVersions: ReadonlyMap<number, number>;
-  updatedMatchIds: ReadonlySet<number>;
-};
-
-const defaultValue: TournamentUpdatesContextValue = {
-  tournamentVersion: 0,
-  divisionDetailVersions: new Map(),
-  matchListVersions: new Map(),
-  updatedMatchIds: new Set(),
-};
-
-const TournamentUpdatesContext = createContext<TournamentUpdatesContextValue>(defaultValue);
-
-function incrementVersion(map: ReadonlyMap<number, number>, id: number): Map<number, number> {
-  const next = new Map(map);
-  next.set(id, (next.get(id) ?? 0) + 1);
-  return next;
-}
-
 const UI_UPDATE_INVALIDATION_DEBOUNCE_MS = 150;
 
+/**
+ * What an event makes stale.
+ *
+ * Every message carries the address of what changed, so the reads it invalidates
+ * are the ones scoped to that address and no others. A match event says that one
+ * pool's list of matches has moved, and nothing about the tree: the counts the
+ * tree draws change under their own event, published by the server only when
+ * they actually did. Scoring a round used to re-read the division, the pool and
+ * the whole tournament, which is why typing a percentage cost four requests.
+ */
+function staleAfter(message: TournamentSocketMessage): QueryKey[] {
+  switch (message.event) {
+    case "TournamentUpdate":
+      return [tournamentKeys.overview(message.data.tournamentId)];
+    case "DivisionUpdate":
+      return [
+        tournamentKeys.overview(message.data.tournamentId),
+        divisionKeys.summary(message.data.divisionId),
+        divisionKeys.entrants(message.data.divisionId),
+      ];
+    case "PhaseUpdate":
+      return [
+        tournamentKeys.overview(message.data.tournamentId),
+        divisionKeys.summary(message.data.divisionId),
+      ];
+    case "PhaseGroupUpdate":
+      return [
+        tournamentKeys.overview(message.data.tournamentId),
+        divisionKeys.summary(message.data.divisionId),
+        matchKeys.byPhaseGroup(message.data.phaseGroupId),
+        matchKeys.byDivision(message.data.divisionId),
+      ];
+    case "MatchUpdate":
+      return [
+        matchKeys.byPhaseGroup(message.data.phaseGroupId),
+        matchKeys.byDivision(message.data.divisionId),
+      ];
+    default:
+      return [];
+  }
+}
+
+/**
+ * The one path from a write to the interface.
+ *
+ * A mutation answers `204` and applies nothing locally. The server publishes
+ * what it changed, this listener marks those reads stale, and React Query
+ * refetches the ones on screen. Somebody else's change and your own therefore
+ * arrive the same way, which is what stops the two from disagreeing.
+ *
+ * It provides no context. What it produces is invalidation, and the query cache
+ * already carries that to every reader.
+ */
 export function TournamentUpdatesProvider({
   tournamentId,
   children,
@@ -80,129 +112,51 @@ export function TournamentUpdatesProvider({
   children: ReactNode;
 }) {
   const queryClient = useQueryClient();
-  const [tournamentVersion, setTournamentVersion] = useState(0);
-  const [divisionDetailVersions, setDivisionDetailVersions] = useState<ReadonlyMap<number, number>>(new Map());
-  const [matchListVersions, setMatchListVersions] = useState<ReadonlyMap<number, number>>(new Map());
-  const [updatedMatchIds, setUpdatedMatchIds] = useState<ReadonlySet<number>>(new Set());
-  const pendingMatchIds = useRef<Set<number>>(new Set());
-  const pendingPhaseGroupIds = useRef<Set<number>>(new Set());
-  const pendingDivisionDetailIds = useRef<Set<number>>(new Set());
-  const pendingMatchListDivisionIds = useRef<Set<number>>(new Set());
-  const pendingDivisionMatchIds = useRef<Set<number>>(new Set());
+  const pendingKeys = useRef<Map<string, QueryKey>>(new Map());
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    function scheduleInvalidationFlush() {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(flushInvalidations, UI_UPDATE_INVALIDATION_DEBOUNCE_MS);
-    }
+  /* A commit publishes several events at once, and a bracket generation
+     publishes one per pool it built. Collecting them for a moment turns a burst
+     into one refetch per read rather than one per message. */
+  function markStale(keys: QueryKey[]) {
+    keys.forEach((key) => pendingKeys.current.set(JSON.stringify(key), key));
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(flushInvalidations, UI_UPDATE_INVALIDATION_DEBOUNCE_MS);
+  }
 
-    function flushInvalidations() {
-      const matchIds = new Set(pendingMatchIds.current);
-      const phaseGroupIds = new Set(pendingPhaseGroupIds.current);
-      const divisionDetailIds = new Set(pendingDivisionDetailIds.current);
-      const matchListDivisionIds = new Set(pendingMatchListDivisionIds.current);
-      const divisionMatchIds = new Set(pendingDivisionMatchIds.current);
+  function flushInvalidations() {
+    const keys = [...pendingKeys.current.values()];
+    pendingKeys.current = new Map();
+    debounceTimer.current = null;
 
-      pendingMatchIds.current = new Set();
-      pendingPhaseGroupIds.current = new Set();
-      pendingDivisionDetailIds.current = new Set();
-      pendingMatchListDivisionIds.current = new Set();
-      pendingDivisionMatchIds.current = new Set();
-      debounceTimer.current = null;
-
-      if (divisionDetailIds.size > 0) {
-        setDivisionDetailVersions((prev) => {
-          let next = new Map(prev);
-          divisionDetailIds.forEach((divisionId) => {
-            next = incrementVersion(next, divisionId);
-            queryClient.invalidateQueries({ queryKey: divisionKeys.summary(divisionId) });
-          });
-          return next;
-        });
-      }
-
-      if (matchListDivisionIds.size > 0) {
-        setMatchListVersions((prev) => {
-          let next = new Map(prev);
-          matchListDivisionIds.forEach((divisionId) => {
-            next = incrementVersion(next, divisionId);
-          });
-          return next;
-        });
-      }
-
-      phaseGroupIds.forEach((phaseGroupId) => {
-        queryClient.invalidateQueries({
-          queryKey: matchKeys.byPhaseGroup(phaseGroupId),
-          exact: true,
-        });
-      });
-
-      divisionMatchIds.forEach((divisionId) => {
-        queryClient.invalidateQueries({
-          queryKey: matchKeys.byDivision(divisionId),
-          exact: true,
-        });
-      });
-
-      if (matchIds.size > 0) {
-        setUpdatedMatchIds(matchIds);
-      }
-    }
+    keys.forEach((queryKey) => queryClient.invalidateQueries({ queryKey, exact: true }));
+  }
 
   useRealtimeSocket("/uiupdatehub", tournamentId, (message: SequencedRealtimeMessage, replayed: boolean) => {
-        const msg = message as TournamentSocketMessage & SequencedRealtimeMessage;
+    const msg = message as TournamentSocketMessage & SequencedRealtimeMessage;
 
-        /* Replayed messages are history, and nothing here keeps state of its
-           own: every case below only says which query went stale, which the
-           pages have just fetched anyway. Acting on them would refetch the
-           whole tournament on load and toast warnings that are already old.
-           What a client that was away actually needs is the recovery below. */
-        if (replayed) return;
+    /* Replayed messages are history, and nothing here keeps state of its own:
+       every case below only says which query went stale, which the pages have
+       just fetched anyway. Acting on them would refetch the whole tournament on
+       load and toast warnings that are already old. What a client that was away
+       actually needs is the recovery below. */
+    if (replayed) return;
 
-        if (!msg?.data || msg.data.tournamentId !== tournamentId) {
-          return;
-        }
+    if (!msg?.data || msg.data.tournamentId !== tournamentId) return;
 
-        switch (msg.event) {
-          case "TournamentUpdate":
-            setTournamentVersion((value) => value + 1);
-            break;
-          case "DivisionUpdate":
-            pendingDivisionDetailIds.current.add(msg.data.divisionId);
-            scheduleInvalidationFlush();
-            break;
-          case "PhaseUpdate":
-            pendingDivisionDetailIds.current.add(msg.data.divisionId);
-            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
-            scheduleInvalidationFlush();
-            break;
-          case "PhaseGroupUpdate":
-            pendingPhaseGroupIds.current.add(msg.data.phaseGroupId);
-            pendingDivisionMatchIds.current.add(msg.data.divisionId);
-            pendingDivisionDetailIds.current.add(msg.data.divisionId);
-            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
-            scheduleInvalidationFlush();
-            break;
-          case "MatchUpdate":
-            pendingMatchIds.current.add(msg.data.matchId);
-            pendingPhaseGroupIds.current.add(msg.data.phaseGroupId);
-            pendingDivisionMatchIds.current.add(msg.data.divisionId);
-            pendingDivisionDetailIds.current.add(msg.data.divisionId);
-            pendingMatchListDivisionIds.current.add(msg.data.divisionId);
-            scheduleInvalidationFlush();
-            break;
-          case "UiWarning":
-            toast.warn(msg.data.message);
-            break;
-        }
+    if (msg.event === "UiWarning") {
+      toast.warn(msg.data.message);
+
+      return;
+    }
+
+    markStale(staleAfter(msg));
   }, async () => {
-    /* Reached only after events were missed. Which ones is unknowable by
-       then, and the query keys are scoped to divisions and pools rather than
-       to a tournament, so there is no narrower filter to pass: everything on
-       screen has to be re-read. */
+    /* Reached only after events were missed. Which ones is unknowable by then,
+       and the query keys are scoped to divisions and pools rather than to a
+       tournament, so there is no narrower filter to pass: everything on screen
+       has to be re-read. */
     await queryClient.invalidateQueries();
-    setTournamentVersion((value) => value + 1);
   });
 
   useEffect(() => {
@@ -211,20 +165,5 @@ export function TournamentUpdatesProvider({
     };
   }, []);
 
-  return (
-    <TournamentUpdatesContext.Provider
-      value={{
-        tournamentVersion,
-        divisionDetailVersions,
-        matchListVersions,
-        updatedMatchIds,
-      }}
-    >
-      {children}
-    </TournamentUpdatesContext.Provider>
-  );
-}
-
-export function useTournamentUpdates() {
-  return useContext(TournamentUpdatesContext);
+  return <>{children}</>;
 }

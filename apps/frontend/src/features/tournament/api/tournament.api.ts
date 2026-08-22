@@ -35,9 +35,10 @@ export async function getTournament(tournamentId: number): Promise<Tournament> {
   return response.data;
 }
 
-export async function createTournament(name: string): Promise<Tournament> {
-  const response = await axios.post<Tournament>("tournaments", { name });
-  return response.data;
+/** Answers with the id of the new tournament, which is the only part of it the caller does not already know. */
+export async function createTournament(name: string): Promise<number> {
+  const response = await axios.post<{ id: number }>("tournaments", { name });
+  return response.data.id;
 }
 
 export async function updateTournament(
@@ -47,14 +48,12 @@ export async function updateTournament(
   await axios.patch(`tournaments/${tournamentId}`, request);
 }
 
-export async function closeTournament(tournamentId: number): Promise<Tournament> {
-  const response = await axios.post<Tournament>(`tournaments/${tournamentId}/close`);
-  return response.data;
+export async function closeTournament(tournamentId: number): Promise<void> {
+  await axios.post(`tournaments/${tournamentId}/close`);
 }
 
-export async function reopenTournament(tournamentId: number): Promise<Tournament> {
-  const response = await axios.post<Tournament>(`tournaments/${tournamentId}/reopen`);
-  return response.data;
+export async function reopenTournament(tournamentId: number): Promise<void> {
+  await axios.post(`tournaments/${tournamentId}/reopen`);
 }
 
 export async function getTournamentConfiguration(tournamentId: number): Promise<TournamentConfiguration> {

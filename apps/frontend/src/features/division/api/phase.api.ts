@@ -1,18 +1,23 @@
 import axios from "axios";
-import { Phase } from "@/features/division/model/types";
 
 type UpdatePhaseRequest = {
   name?: string;
 };
 
-export async function createPhase(divisionId: number, name: string): Promise<Phase> {
-  const response = await axios.post<Phase>("phases", { name, divisionId });
-  return response.data;
+/**
+ * The phases of a division.
+ *
+ * A creation answers with the id of what it made; the other two answer nothing
+ * at all. What they changed reaches the tree through the event the server
+ * publishes, so no caller here applies a result of its own.
+ */
+export async function createPhase(divisionId: number, name: string): Promise<number> {
+  const response = await axios.post<{ id: number }>("phases", { name, divisionId });
+  return response.data.id;
 }
 
-export async function updatePhase(phaseId: number, request: UpdatePhaseRequest): Promise<Phase> {
-  const response = await axios.patch<Phase>(`phases/${phaseId}`, request);
-  return response.data;
+export async function updatePhase(phaseId: number, request: UpdatePhaseRequest): Promise<void> {
+  await axios.patch(`phases/${phaseId}`, request);
 }
 
 export async function deletePhase(phaseId: number): Promise<void> {

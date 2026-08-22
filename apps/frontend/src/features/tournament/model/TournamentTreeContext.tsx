@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
-import { useTournamentUpdates } from "@/features/tournament/model/TournamentUpdatesContext";
 import { useTournamentOverviewQuery } from "@/features/tournament/model/useTournamentOverviewQuery";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 import { createDivision, deleteDivision, renameDivision } from "@/features/division/api/division.api";
@@ -27,9 +26,10 @@ import TournamentStructureModals from "@/features/tournament/ui/tree/TournamentS
  * outstanding overview request.
  *
  * The glyphs the tree draws are derived from this structure, so they have to
- * follow the live ones: the realtime versions published by
- * `TournamentUpdatesProvider` invalidate the overview query, which is what
- * stops a pool from showing yesterday's state.
+ * follow the live ones. Nothing here arranges that: `TournamentUpdatesProvider`
+ * invalidates the overview query when an event says the tree moved, and the
+ * mutations below rely on the same path rather than re-reading by hand. That is
+ * why each one only awaits its write — the redraw is not theirs to trigger.
  */
 
 export type StructureDialog =
@@ -110,33 +110,19 @@ export function TournamentTreeProvider({
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { tournamentVersion, divisionDetailVersions, matchListVersions } = useTournamentUpdates();
   const query = useTournamentOverviewQuery(tournamentId);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(getExpandedNodes);
   const [dialog, setDialog] = useState<StructureDialog>({ kind: "none" });
 
   const divisions = useMemo(() => query.data ?? [], [query.data]);
 
-  /* One string that changes whenever any realtime version does, so the effect
-     below does not have to diff three maps by hand. */
-  const versionSignature = useMemo(
-    () =>
-      [
-        tournamentVersion,
-        [...divisionDetailVersions.entries()].map(([id, version]) => `${id}.${version}`).join(","),
-        [...matchListVersions.entries()].map(([id, version]) => `${id}.${version}`).join(","),
-      ].join("|"),
-    [tournamentVersion, divisionDetailVersions, matchListVersions],
-  );
-  const previousSignature = useRef(versionSignature);
-
-  useEffect(() => {
-    if (previousSignature.current === versionSignature) return;
-    previousSignature.current = versionSignature;
-    if (tournamentId === null) return;
-    queryClient.invalidateQueries({ queryKey: tournamentKeys.overview(tournamentId) });
-  }, [versionSignature, tournamentId, queryClient]);
-
+  /**
+   * Re-reads the tree now.
+   *
+   * The mutations below do not use it: their events refresh the tree by
+   * themselves. Bracket generation does, because it navigates into the phase and
+   * pool it just built and cannot arrive before the tree holds them.
+   */
   const refreshTree = useCallback(async () => {
     if (tournamentId === null) return;
     await queryClient.invalidateQueries({ queryKey: tournamentKeys.overview(tournamentId) });
@@ -207,21 +193,21 @@ export function TournamentTreeProvider({
   const collapseAll = useCallback(() => setExpanded(new Set()), []);
 
   /* ---- structural mutations ----
-     Every one of these ends in a tree refresh rather than a local patch: the
-     server decides what a phase or a pool is called when the request omits it,
-     so the authoritative answer is the one worth drawing. */
+     None of these draws its own result. The server decides what a phase or a
+     pool is called when the request omits it, and it announces the tree it
+     produced; the listener invalidates the overview, and the tree redraws from
+     the same read everybody else gets. */
 
   const run = useCallback(
     async (work: () => Promise<void>, success: string, failure: string) => {
       try {
         await work();
-        await refreshTree();
         toast.success(success);
       } catch {
         toast.error(failure);
       }
     },
-    [refreshTree],
+    [],
   );
 
   const addDivision = useCallback(

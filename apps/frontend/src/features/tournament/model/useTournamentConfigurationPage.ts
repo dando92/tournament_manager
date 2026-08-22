@@ -153,10 +153,9 @@ export function useTournamentConfigurationPage() {
     if (!confirmed) return;
     setChangingStatus(true);
     try {
-      const closed = await closeTournament(tournamentId);
-      setConfiguration((current) =>
-        current ? { ...current, status: closed.status, closedAt: closed.closedAt } : current,
-      );
+      await closeTournament(tournamentId);
+      const closed = await getTournamentConfiguration(tournamentId);
+      setConfiguration(closed);
       setTournamentStatus("closed");
       toast.success("Tournament closed. It is now read-only.");
     } catch {
@@ -170,10 +169,9 @@ export function useTournamentConfigurationPage() {
     if (!configuration || changingStatus) return;
     setChangingStatus(true);
     try {
-      const reopened = await reopenTournament(tournamentId);
-      setConfiguration((current) =>
-        current ? { ...current, status: reopened.status, closedAt: reopened.closedAt } : current,
-      );
+      await reopenTournament(tournamentId);
+      const reopened = await getTournamentConfiguration(tournamentId);
+      setConfiguration(reopened);
       setTournamentStatus("open");
       toast.success("Tournament reopened.");
     } catch {
