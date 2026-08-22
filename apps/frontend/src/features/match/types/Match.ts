@@ -1,47 +1,28 @@
-import { Entrant } from "@/features/entrant/types/Entrant";
-import { Round } from "@/features/match/types/Round";
+import type { AdvancementRuleDto } from "@tournament-manager/contracts";
 
-export interface MatchResultPlayerPoints {
-  playerId: number;
-  points: number;
-}
-
-export interface MatchResult {
-  id: number;
-  playerPoints: MatchResultPlayerPoints[];
-}
+export type {
+  AdvancementCompetitionKind,
+  AdvancementRuleDto as AdvancementRule,
+  MatchDto as Match,
+  MatchResultDto as MatchResult,
+  MatchResultEntryDto as MatchResultPlayerPoints,
+} from "@tournament-manager/contracts";
 
 export type MatchCommitState = "Disabled" | "Pending" | "Completed";
-export type AdvancementCompetitionKind = "match" | "phase_group";
 
-export interface AdvancementRule {
-  id?: number;
-  sourceKind: AdvancementCompetitionKind;
-  sourceId: number;
-  sourcePlacement: number;
-  targetKind: AdvancementCompetitionKind;
-  targetId: number;
-  targetSlot: number;
-}
-
-export type AdvancementRuleInput = Pick<AdvancementRule, "sourcePlacement" | "targetKind" | "targetId" | "targetSlot">;
+/**
+ * A rule as the editor holds it before it is saved. The identifier is the
+ * server's to assign, so a draft carries the four fields that describe the
+ * destination and nothing else.
+ */
+export type AdvancementRuleInput = Pick<
+  AdvancementRuleDto,
+  "sourcePlacement" | "targetKind" | "targetId" | "targetSlot"
+>;
 export type MatchAdvancementRuleInput = AdvancementRuleInput;
 
+/** Which match the interface is pointing at. A view concern, never a response. */
 export type MatchHighlight = {
   matchId: number | null;
   phaseGroupId: number | null;
 };
-
-export interface Match {
-  id: number;
-  name: string;
-  subtitle: string;
-  notes: string;
-  scoringSystem: string;
-  active: boolean;
-  entrants: Entrant[];
-  rounds: Round[];
-  advancementRules: AdvancementRule[];
-  matchResult?: MatchResult | null;
-  phaseGroupId: number;
-}

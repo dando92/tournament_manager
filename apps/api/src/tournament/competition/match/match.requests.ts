@@ -12,7 +12,6 @@ import {
   SCORING_SYSTEM_TYPES,
   type ScoringSystemType,
 } from '@tournament-manager/scoring';
-import { MatchListDto } from '@match/match-list.dto';
 
 export class CreateMatchDto {
   @ApiProperty({ description: 'The name of the match', example: 'Match 1' })
@@ -168,16 +167,3 @@ export class UpdateMatchActiveDto {
   @IsBoolean()
   active: boolean;
 }
-
-export const STARTGG_REPORT_STATUSES = ['reported', 'skipped', 'failed'] as const;
-
-/**
- * Outcome of the start.gg reporting attempt that follows a local match completion.
- * `skipped` means the match is not linked to a start.gg set or the tournament has no API key.
- */
-export type StartggReportStatus = (typeof STARTGG_REPORT_STATUSES)[number];
-
-export type CommitMatchResultResponseDto = {
-  match: MatchListDto | null;
-  startggReport: StartggReportStatus;
-};

@@ -1,5 +1,1 @@
-export interface Player {
-  id: number;
-  playerName: string;
-  score?: number;
-}
+export type { PlayerRefDto as Player } from "@tournament-manager/contracts";

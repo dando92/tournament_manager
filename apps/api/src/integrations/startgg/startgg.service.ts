@@ -9,6 +9,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import type { ScoringSystemType } from '@tournament-manager/scoring';
 import {
+    StartggImportEntrantPlanDto,
+    StartggImportMatchPlanDto,
+    StartggImportParticipantPlanDto,
+    StartggImportPhasePlanDto,
+    StartggImportPreviewResponseDto,
+    StartggImportResponseDto,
+} from '@tournament-manager/contracts';
+import {
     Division,
     Entrant,
     ExternalMapping,
@@ -95,7 +103,7 @@ export class StartggService {
         private readonly externalMappingRepository: Repository<ExternalMapping>,
     ) {}
 
-    async previewImport(dto: StartggImportPreviewDto, user?: AuthUser) {
+    async previewImport(dto: StartggImportPreviewDto, user?: AuthUser): Promise<StartggImportPreviewResponseDto> {
         const previewStartedAt = Date.now();
         this.logger.log(`[timing] start previewImport eventSlug=${dto.eventSlug} targetTournamentId=${dto.targetTournamentId ?? 'none'}`);
         if (!dto.targetTournamentId) {
@@ -136,7 +144,7 @@ export class StartggService {
             () => this.uniqueBy(participants, (participant) => participant.id),
         );
 
-        const participantPlan = this.timeSyncOperation('previewImport.participantPlan', () => uniqueParticipants.map((participant) => {
+        const participantPlan: StartggImportParticipantPlanDto[] = this.timeSyncOperation('previewImport.participantPlan', () => uniqueParticipants.map((participant) => {
             const mappedParticipant = context
                 ? this.findMappedLocalEntity(context.mappings, 'participant', 'participant', participant.id, context.participantsById)
                 : null;
@@ -182,7 +190,7 @@ export class StartggService {
             };
         }));
 
-        const entrantPlan = this.timeSyncOperation('previewImport.entrantPlan', () => snapshot.entrants.map((entrant) => {
+        const entrantPlan: StartggImportEntrantPlanDto[] = this.timeSyncOperation('previewImport.entrantPlan', () => snapshot.entrants.map((entrant) => {
             const mappedEntrant = context
                 ? this.findMappedLocalEntity(context.mappings, 'entrant', 'entrant', entrant.id, context.entrantsById)
                 : null;
@@ -213,7 +221,7 @@ export class StartggService {
             };
         }));
 
-        const phasePlan = this.timeSyncOperation('previewImport.phasePlan', () => remotePhases.map((phase) => {
+        const phasePlan: StartggImportPhasePlanDto[] = this.timeSyncOperation('previewImport.phasePlan', () => remotePhases.map((phase) => {
             const mappedPhase = context
                 ? this.findMappedLocalEntity(context.mappings, 'phase', 'phase', phase.id, context.phasesById)
                 : null;
@@ -227,7 +235,7 @@ export class StartggService {
 
         const snapshotSets = this.timeSyncOperation('previewImport.flattenSets', () => this.getSnapshotSets(snapshot));
         const defaultPhaseId = remotePhases[0]?.id ?? `event:${snapshot.id}:default-phase`;
-        const matchPlan = this.timeSyncOperation('previewImport.matchPlan', () => snapshotSets.map((set) => {
+        const matchPlan: StartggImportMatchPlanDto[] = this.timeSyncOperation('previewImport.matchPlan', () => snapshotSets.map((set) => {
             const mappedMatch = context
                 ? this.findMappedLocalEntity(context.mappings, 'match', 'set', set.id, context.matchesById)
                 : null;
@@ -241,7 +249,7 @@ export class StartggService {
             };
         }));
 
-        const result = {
+        const result: StartggImportPreviewResponseDto = {
             event: {
                 id: snapshot.id,
                 name: snapshot.name,
@@ -276,7 +284,7 @@ export class StartggService {
         return result;
     }
 
-    async importEvent(dto: StartggImportDto, user?: AuthUser) {
+    async importEvent(dto: StartggImportDto, user?: AuthUser): Promise<StartggImportResponseDto> {
         const importStartedAt = Date.now();
         this.logger.log(`[timing] start importEvent eventSlug=${dto.eventSlug} tournamentId=${dto.targetTournamentId}`);
         await this.timeOperation(

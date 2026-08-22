@@ -1,15 +1,15 @@
 import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Tournament } from '@tournament-manager/persistence';
 import {
-    CreateTournamentDto,
-    UpdateTournamentDto,
-    TournamentOverviewDto,
-    TournamentResponseDto,
+    MyTournamentRolesDto,
     TournamentConfigurationDto,
-} from '@tournament/dtos';
+    TournamentDto,
+    TournamentOverviewDto,
+} from '@tournament-manager/contracts';
+import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
 import { AuthService } from '@auth/services/auth.service';
-import { MyTournamentRoles, TournamentService } from '@tournament/services/tournament.service';
+import { TournamentService } from '@tournament/services/tournament.service';
 import { TournamentManager } from '@tournament/services/tournament.manager';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -26,7 +26,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, CreatorOrAdminGuard)
     @Post()
-    async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<TournamentResponseDto> {
+    async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<TournamentDto> {
         const tournament = await this.tournamentManager.create(dto, req.user?.id);
         if (tournament.syncstartUrl) {
             await this.syncStart.configureTournament(tournament.id, tournament.syncstartUrl);
@@ -41,7 +41,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard)
     @Get('my-roles')
-    async getMyRoles(@Request() req): Promise<MyTournamentRoles> {
+    async getMyRoles(@Request() req): Promise<MyTournamentRolesDto> {
         const roles = await this.tournamentService.getMyRoles(req.user.id);
         const permissions = await this.authService.getPermissions(req.user.id);
         return {
@@ -69,14 +69,14 @@ export class TournamentsController {
     }
 
     @Get(':id')
-    findOne(@Param('id') id: number): Promise<TournamentResponseDto | null> {
+    findOne(@Param('id') id: number): Promise<TournamentDto | null> {
         return this.tournamentManager.findOne(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Patch(':id')
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<TournamentResponseDto> {
+    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<TournamentDto> {
         const { tournament, previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
         if (dto.syncstartUrl !== undefined && dto.syncstartUrl !== previousSyncstartUrl) {
             await this.syncStart.configureTournament(Number(id), dto.syncstartUrl);
@@ -86,7 +86,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/close')
-    async close(@Param('id') id: number): Promise<TournamentResponseDto> {
+    async close(@Param('id') id: number): Promise<TournamentDto> {
         const tournament = await this.tournamentManager.close(Number(id));
         await this.syncStart.closeTournament(Number(id));
         return tournament;
@@ -94,7 +94,7 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/reopen')
-    async reopen(@Param('id') id: number): Promise<TournamentResponseDto> {
+    async reopen(@Param('id') id: number): Promise<TournamentDto> {
         const tournament = await this.tournamentManager.reopen(Number(id));
         await this.syncStart.configureTournament(Number(id), tournament.syncstartUrl ?? '');
         return tournament;

@@ -7,78 +7,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { TournamentStatus } from '@tournament-manager/persistence';
 import {
     SCORING_SYSTEM_TYPES,
     type ScoringSystemType,
 } from '@tournament-manager/scoring';
-
-export class TournamentStaffDto {
-    @ApiProperty({ example: 'd9c42b76-3c5f-4d2f-8f4c-32a2d93b24ff', description: 'Staff account id.' })
-    id: string;
-
-    @ApiProperty({ example: 'momo', description: 'Staff username.' })
-    username: string;
-}
-
-export class TournamentResponseDto {
-    @ApiProperty({ example: 1, description: 'Tournament id.' })
-    id: number;
-
-    @ApiProperty({ example: 'UEFA Euro 2024', description: 'The name of the tournament.' })
-    name: string;
-
-    @ApiProperty({ enum: ['open', 'closed'], example: 'open' })
-    status: TournamentStatus;
-
-    @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' })
-    closedAt: Date | null;
-
-    @ApiProperty({
-        description: 'WebSocket URL of the syncstart server for this tournament.',
-        required: false,
-        example: 'ws://syncservice.groovestats.com:1337',
-    })
-    syncstartUrl?: string;
-
-    @ApiProperty({ example: 2, description: 'Number of match setups available for this tournament.' })
-    availableSetupsCount: number;
-
-    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.' })
-    defaultScoringSystem: ScoringSystemType;
-
-    @ApiProperty({ type: () => [TournamentStaffDto], description: 'Tournament staff.' })
-    staff: TournamentStaffDto[];
-}
-
-export class TournamentConfigurationDto {
-    @ApiProperty({ example: 1, description: 'Tournament id.' })
-    id: number;
-
-    @ApiProperty({ example: 'UEFA Euro 2024', description: 'The name of the tournament.' })
-    name: string;
-
-    @ApiProperty({ enum: ['open', 'closed'], example: 'open' })
-    status: TournamentStatus;
-
-    @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' })
-    closedAt: Date | null;
-
-    @ApiProperty({ example: 10, description: 'Days after closure before transport data is permanently deleted.' })
-    transportRetentionDays: number;
-
-    @ApiProperty({ description: 'WebSocket URL of the syncstart server for this tournament.' })
-    syncstartUrl: string;
-
-    @ApiProperty({ description: 'start.gg API key for this tournament.', required: false })
-    startggApiKey?: string | null;
-
-    @ApiProperty({ example: 2, description: 'Number of match setups available for this tournament.' })
-    availableSetupsCount: number;
-
-    @ApiProperty({ enum: SCORING_SYSTEM_TYPES, description: 'Default scoring system for newly created matches.' })
-    defaultScoringSystem: ScoringSystemType;
-}
 
 /**
  * Creation accepts only the tournament name (FQ-003). Every other field keeps its

@@ -2,14 +2,8 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Tournament, Song } from '@tournament-manager/persistence';
+import { MyTournamentRolesDto } from '@tournament-manager/contracts';
 import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
-
-export interface MyTournamentRoles {
-    isAdmin: boolean;
-    canCreateTournament: boolean;
-    ownedTournamentIds: number[];
-    staffTournamentIds: number[];
-}
 
 @Injectable()
 export class TournamentService {
@@ -103,7 +97,7 @@ export class TournamentService {
         return this.tournamentRepository.save(tournament);
     }
 
-    async getMyRoles(accountId: string): Promise<MyTournamentRoles> {
+    async getMyRoles(accountId: string): Promise<MyTournamentRolesDto> {
         const ownedTournaments = await this.tournamentRepository
             .createQueryBuilder('tournament')
             .leftJoin('tournament.participants', 'participant')

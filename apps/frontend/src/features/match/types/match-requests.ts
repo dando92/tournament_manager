@@ -1,4 +1,7 @@
-import { Match } from "@/features/match/types/Match";
+export type {
+  CommitMatchResultResponseDto as CommitMatchResultResponse,
+  StartggReportStatus,
+} from "@tournament-manager/contracts";
 
 export interface CreateMatchRequest {
   phaseGroupId: number;
@@ -22,12 +25,4 @@ export interface RoundSourceRequest {
   divisionId?: number;
   group?: string;
   level?: string;
-}
-
-/** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */
-export type StartggReportStatus = "reported" | "skipped" | "failed";
-
-export interface CommitMatchResultResponse {
-  match: Match;
-  startggReport: StartggReportStatus;
 }

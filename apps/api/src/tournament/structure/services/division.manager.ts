@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DivisionStandingRowDto, DivisionSummaryDto } from '@tournament/dtos';
+import { DivisionStandingRowDto, DivisionSummaryDto } from '@tournament-manager/contracts';
+import { toEntrantDto } from '@tournament/shared/projections';
 import { DivisionService } from './division.service';
 import { AdvancementRuleService } from './advancement-rule.service';
 
@@ -20,21 +21,7 @@ export class DivisionManager {
         return {
             id: division.id,
             name: division.name,
-            entrants: (division.entrants ?? []).map((entrant) => ({
-                id: entrant.id,
-                name: entrant.name,
-                type: entrant.type,
-                status: entrant.status,
-                participants: (entrant.participants ?? []).map((participant) => ({
-                    id: participant.id,
-                    roles: participant.roles ?? [],
-                    status: participant.status,
-                    player: {
-                        id: participant.player.id,
-                        playerName: participant.player.playerName,
-                    },
-                })),
-            })),
+            entrants: (division.entrants ?? []).map(toEntrantDto),
             phases: (division.phases ?? []).map((phase) => ({
                 id: phase.id,
                 name: phase.name,
@@ -99,4 +86,3 @@ export class DivisionManager {
         );
     }
 }
-

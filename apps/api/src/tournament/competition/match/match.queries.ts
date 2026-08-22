@@ -3,12 +3,12 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { ScoringSystemType } from '@tournament-manager/scoring';
 import {
-    MatchListAdvancementRuleDto,
-    MatchListDto,
-    MatchListEntrantDto,
-    MatchListResultEntryDto,
-    MatchListRoundDto,
-} from '@match/match-list.dto';
+    AdvancementRuleDto,
+    MatchDto,
+    EntrantDto,
+    MatchResultEntryDto,
+    MatchRoundDto,
+} from '@tournament-manager/contracts';
 
 /**
  * Which matches a projection covers. The three read routes differ in this and
@@ -45,9 +45,9 @@ type MatchRow = {
     active: boolean;
     phaseGroupId: number;
     matchResultId: number | null;
-    matchResultPlayerPoints: MatchListResultEntryDto[] | null;
-    entrants: MatchListEntrantDto[];
-    rounds: MatchListRoundDto[];
+    matchResultPlayerPoints: MatchResultEntryDto[] | null;
+    entrants: EntrantDto[];
+    rounds: MatchRoundDto[];
 };
 
 const matchesInScope = (scope: MatchScope): string => `
@@ -136,7 +136,7 @@ const matchesInScope = (scope: MatchScope): string => `
 `;
 
 /** The rows `ADVANCEMENT_RULES_FOR_MATCHES` produces. */
-type AdvancementRuleRow = MatchListAdvancementRuleDto;
+type AdvancementRuleRow = AdvancementRuleDto;
 
 /**
  * Every rule a set of matches takes part in, incoming and outgoing together, in
@@ -253,16 +253,16 @@ export class MatchQueries {
         private readonly dataSource: DataSource,
     ) {}
 
-    async byId(id: number): Promise<MatchListDto | null> {
+    async byId(id: number): Promise<MatchDto | null> {
         const [match] = await this.inScope('match', id);
         return match ?? null;
     }
 
-    async byPhaseGroup(phaseGroupId: number): Promise<MatchListDto[]> {
+    async byPhaseGroup(phaseGroupId: number): Promise<MatchDto[]> {
         return await this.inScope('phaseGroup', phaseGroupId);
     }
 
-    async byDivision(divisionId: number): Promise<MatchListDto[]> {
+    async byDivision(divisionId: number): Promise<MatchDto[]> {
         return await this.inScope('division', divisionId);
     }
 
@@ -279,7 +279,7 @@ export class MatchQueries {
         return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.pendingMatchCount)]));
     }
 
-    private async inScope(scope: MatchScope, id: number): Promise<MatchListDto[]> {
+    private async inScope(scope: MatchScope, id: number): Promise<MatchDto[]> {
         const rows: MatchRow[] = await this.dataSource.query(matchesInScope(scope), [id]);
         if (rows.length === 0) return [];
 
@@ -302,9 +302,9 @@ export class MatchQueries {
         }));
     }
 
-    private async advancementRulesOf(matchIds: number[]): Promise<Map<number, MatchListAdvancementRuleDto[]>> {
+    private async advancementRulesOf(matchIds: number[]): Promise<Map<number, AdvancementRuleDto[]>> {
         const rows: AdvancementRuleRow[] = await this.dataSource.query(ADVANCEMENT_RULES_FOR_MATCHES, [matchIds]);
-        const byMatch = new Map<number, MatchListAdvancementRuleDto[]>();
+        const byMatch = new Map<number, AdvancementRuleDto[]>();
 
         /* A rule reaches the match it leaves and the match it feeds, and the
            same rule can do both for two different matches in the same list. A
@@ -320,7 +320,7 @@ export class MatchQueries {
         return byMatch;
     }
 
-    private append(byMatch: Map<number, MatchListAdvancementRuleDto[]>, matchId: number, rule: MatchListAdvancementRuleDto): void {
+    private append(byMatch: Map<number, AdvancementRuleDto[]>, matchId: number, rule: AdvancementRuleDto): void {
         const rules = byMatch.get(matchId);
         if (rules) rules.push(rule);
         else byMatch.set(matchId, [rule]);

@@ -4,12 +4,26 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 2 complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 3 complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 3 of [ApiRefactoring.md](ApiRefactoring.md) — move the response DTOs into `@tournament-manager/contracts`, replace the frontend's redeclared types with imports, and write the shared projections once, on branch `refactor/3-contracts`. It is a type-level change: both workspaces building is the verification.
+- Next action: phase 4 of [ApiRefactoring.md](ApiRefactoring.md) — the frontend's `api`, `model` and `ui` split, one feature at a time starting with `tournament`, on branch `refactor/4-tournament-feature`. The response types are now imported rather than declared, so `features/*/types/` collapses into `model/types.ts` in the same pass.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 3: shared contracts
+
+- Added the HTTP response contracts to `@tournament-manager/contracts`: `vocabulary.ts` for the closed sets a response branches on, `projections.ts` for the three shapes a competitor is read in, and one file per subject behind the package entry point. Both workspaces now import what only the API used to declare, so removing a field breaks the client at compile time.
+- Deleted the five DTO files that held responses under `apps/api/src`: `match-list.dto.ts`, `tournament-overview.dto.ts`, `division-summary.dto.ts`, `division-standings.dto.ts` and `account-profile.dto.ts`. `tournament.dto.ts` and `match.requests.ts` keep only their requests, and the two barrels stop re-exporting what they no longer hold.
+- Wrote the entrant projection once in `tournament/shared/projections.ts`. It had four copies — `DivisionManager.findSummary`, `TournamentManager.findOverview` and `toParticipantDto`, and `PhaseGroupManager.toEntrantDto` — mapping into three DTOs that were identical. `MatchQueries` still builds the same JSON in the database, against the field names of the same types, because that is what keeps a list of matches to one query.
+- Replaced the frontend's seventeen redeclarations with imports. The shapes already agreed, so eighty-two consumers compiled unchanged; the three disagreements the compiler found were defects, not naming differences.
+- Recorded FQ-015 in [FunctionalQuestions.md](FunctionalQuestions.md): the seeding tab sorted the division roster by a `seedNum` the summary projection has never carried, so it has always opened alphabetically. The dead sort key is gone; nothing on screen changes, because it never ran. Phase 5 rewrites that read model and is where the seed would be added.
+- Made `CommitMatchResultResponseDto.match` non-optional. It was nullable only because `MatchQueries.byId` is; a commit answers with the match it committed.
+- Gave the statistics page its own type. It reads the raw entity dump of `GET /divisions`, four levels deep, and was typed as a division summary; `TournamentStats.ts` states the fields it actually reads and goes when phase 5 replaces that endpoint.
+- Two new dependency edges, both recorded in `check-architecture`: contracts on `@tournament-manager/scoring`, so `ScoringSystemType` stays declared once, and the frontend on contracts. Scoring has no dependencies of its own and now builds first. The unions the persistence entities own were not taken the same way — the browser must not depend on TypeORM, so contracts declares them and the API's projections are checked against them where they map a row.
+- `SongDto`, `ScoreDto` and `PlayerRefDto` describe routes that still answer with entities, so nothing on the API asserts them yet. They state what the interface reads; phase 5 makes the API produce them.
+- `tournament.dto.ts` was emptied but not moved: phase 8 already claims the move of what remains, which is a request DTO, together with the barrel that re-exports it.
+- Verification passed: `npx tsc --noEmit` in both workspaces, `npm run build` across every workspace, `npm run lint` (four pre-existing warnings in the API and six in the frontend, none in the changed files), `npm run test:contract`, 126 unit tests, 27 end-to-end tests against PostgreSQL, and `npm run check:architecture`. No behaviour changed and the wire is unchanged: `closedAt` is now projected with `toISOString()`, which is the string `Date.toJSON` already produced.
 
 ### Structure refactoring phase 2: match directory layout
 

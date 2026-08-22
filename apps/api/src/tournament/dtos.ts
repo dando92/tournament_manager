@@ -7,10 +7,7 @@ import { CreateScoreDto, UpdateScoreDto } from './competition/dtos/score.dto';
 import { CreateSongDto, UpdateSongDto } from './competition/dtos/song.dto';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 
-import { CreateTournamentDto, UpdateTournamentDto, TournamentConfigurationDto, TournamentStaffDto, TournamentResponseDto } from './dtos/tournament.dto';
-import { TournamentOverviewDto, TournamentOverviewDivisionDto, TournamentOverviewDivisionPhaseDto, TournamentOverviewDivisionPlayerDto, TournamentOverviewEntrantDto, TournamentOverviewParticipantDto } from './dtos/tournament-overview.dto';
-import { DivisionSummaryDto, DivisionSummaryPhaseDto, DivisionSummaryPlayerDto, DivisionSummaryEntrantDto, DivisionSummaryParticipantDto } from './structure/dtos/division-summary.dto';
-import { DivisionStandingRowDto } from './structure/dtos/division-standings.dto';
+import { CreateTournamentDto, UpdateTournamentDto } from './dtos/tournament.dto';
 import { CreateParticipantDto, ImportParticipantEntryDto, ImportParticipantsDto, ImportParticipantsPreviewDto } from './dtos/participant-management.dto';
 import { AdvancementRuleInputDto, CreateAdvancementRuleDto, UpdateAdvancementRuleDto, UpdateAdvancementRulesDto } from './structure/dtos/advancement-rule.dto';
 import {
@@ -27,10 +24,7 @@ export { CreateScoreDto, UpdateScoreDto };
 export { CreateSongDto, UpdateSongDto };
 export { UpsertPointsDto, UpsertScoreDto };
 
-export { CreateTournamentDto, UpdateTournamentDto, TournamentConfigurationDto, TournamentStaffDto, TournamentResponseDto };
-export { TournamentOverviewDto, TournamentOverviewDivisionDto, TournamentOverviewDivisionPhaseDto, TournamentOverviewDivisionPlayerDto, TournamentOverviewEntrantDto, TournamentOverviewParticipantDto };
-export { DivisionSummaryDto, DivisionSummaryPhaseDto, DivisionSummaryPlayerDto, DivisionSummaryEntrantDto, DivisionSummaryParticipantDto };
-export { DivisionStandingRowDto };
+export { CreateTournamentDto, UpdateTournamentDto };
 export { CreateParticipantDto, ImportParticipantEntryDto, ImportParticipantsDto, ImportParticipantsPreviewDto };
 export { AdvancementRuleInputDto, CreateAdvancementRuleDto, UpdateAdvancementRuleDto, UpdateAdvancementRulesDto };
 export {

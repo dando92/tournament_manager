@@ -1,31 +1,19 @@
-import { Player } from "@/features/player/types/Player";
+import type { EntrantDto, PlayerRefDto } from "@tournament-manager/contracts";
 
-export type ParticipantRole = "competitor" | "spectator" | "owner" | "staff" | "unknown";
-export type ParticipantStatus = "registered" | "checked_in" | "withdrawn" | "unknown";
-export type EntrantType = "player" | "team";
-export type EntrantStatus = "active" | "dropped" | "withdrawn" | "dq" | "unknown";
+export type {
+  EntrantStatus,
+  EntrantType,
+  ParticipantDto as Participant,
+  ParticipantRole,
+  ParticipantStatus,
+} from "@tournament-manager/contracts";
+export type { EntrantDto as Entrant };
 
-export interface Participant {
-  id: number;
-  roles: ParticipantRole[];
-  status: ParticipantStatus;
-  player: Player;
-}
-
-export interface Entrant {
-  id: number;
-  name: string;
-  type: EntrantType;
-  status: EntrantStatus;
-  seedNum?: number | null;
-  participants: Participant[];
-}
-
-export function entrantPlayer(entrant: Entrant): Player | null {
+export function entrantPlayer(entrant: EntrantDto): PlayerRefDto | null {
   if (entrant.type !== "player") return null;
   return entrant.participants?.[0]?.player ?? null;
 }
 
-export function entrantPlayers(entrants: Entrant[] = []): Player[] {
-  return entrants.map(entrantPlayer).filter((player): player is Player => Boolean(player));
+export function entrantPlayers(entrants: EntrantDto[] = []): PlayerRefDto[] {
+  return entrants.map(entrantPlayer).filter((player): player is PlayerRefDto => Boolean(player));
 }

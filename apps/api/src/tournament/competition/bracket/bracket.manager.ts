@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { GenerateBracketResultDto } from '@tournament-manager/contracts';
 import { BracketSystemProvider } from "@bracket/BracketSystemProvider";
 import { GenerateDivisionBracketDto } from "@tournament/dtos";
 import { DivisionService } from "@tournament/structure/services/division.service";
@@ -38,7 +39,7 @@ export class BracketManager {
     async generateForDivision(
         divisionId: number,
         dto: GenerateDivisionBracketDto,
-    ): Promise<{ phaseId: number; phaseGroupId: number }> {
+    ): Promise<GenerateBracketResultDto> {
         const division = await this.divisionService.findOneForBracketGeneration(divisionId);
         if (!division) {
             throw new Error(`Division ${divisionId} not found`);

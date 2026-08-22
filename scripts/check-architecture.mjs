@@ -123,7 +123,7 @@ if (/type=raw,value=(latest|testing)/.test(deliveryWorkflow)) {
 }
 
 const allowedDependencies = new Map([
-  ["@tournament-manager/contracts", []],
+  ["@tournament-manager/contracts", ["@tournament-manager/scoring"]],
   ["@tournament-manager/scoring", []],
   ["@tournament-manager/persistence", ["@tournament-manager/scoring"]],
   ["@tournament-manager/live-messaging", ["@tournament-manager/contracts"]],
@@ -160,7 +160,7 @@ const allowedDependencies = new Map([
     "@tournament-manager/realtime",
     ["@tournament-manager/contracts", "@tournament-manager/live-messaging"],
   ],
-  ["tournament-viewer", []],
+  ["tournament-viewer", ["@tournament-manager/contracts"]],
 ]);
 
 for (const workspace of [

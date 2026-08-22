@@ -121,3 +121,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should advancement refuse a completed target, or is writing through it correct? Refusing leaves a bracket half advanced when a downstream match was committed early, which is worse than the current behavior; the alternative is to reopen the target and cascade, which nothing asks for today.
 - Evidence: `apps/api/src/tournament/competition/match/match.aggregate.ts`, `apps/api/src/tournament/competition/match/match.commands.ts`, and `apps/api/src/tournament/competition/match/services/advancement.manager.ts`.
 - Rule: keep the current behavior until the user names a case where it produces a wrong bracket.
+
+### FQ-015 — The seeding tab cannot read back the order it saved
+
+- Status: Open.
+- Observed behavior: `SeedingTab` sorted the division's entrants by `seedNum`, falling back to the name. Its entrants come from `GET /divisions/:id/summary`, whose projection carries `id`, `name`, `type`, `status` and participants and never carried a seed, so the sort key was always undefined and the tab has always opened on the alphabetical order. `PATCH /divisions/:id/entrants/seeding` writes `seedNum`, and `GET /divisions/:id/entrants` returns it, but the page the person seeds from reads neither. Phase 3 of the API refactoring made the type honest and removed the dead sort key; the display is unchanged, because it never ran.
+- Question: Should the summary carry each entrant's seed, so the tab reopens on the saved order? The alternative is that seeding is a one-way instruction and the persisted order is only ever consumed by bracket generation, in which case the tab should say so rather than presenting an order that looks like the stored one.
+- Evidence: `apps/frontend/src/features/division/components/SeedingTab.tsx`, `apps/api/src/tournament/shared/projections.ts`, and `apps/api/src/tournament/structure/services/division.service.ts` (`findOneForSummary`).
+- Rule: leave the display as it is. Phase 5 of [ApiRefactoring.md](ApiRefactoring.md) rewrites this read model and is where the seed would be added.
