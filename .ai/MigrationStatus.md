@@ -2,15 +2,27 @@
 
 ## Current Position
 
-- Last updated: 2026-08-22.
+- Last updated: 2026-08-23.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 in progress. Phase 4 is complete and merged.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 complete. Every read endpoint answers from a `*.queries.ts` class; no controller reaches a service for a `GET`.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5 closes with `TreeQueries` and the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope, dropping the always-empty `entrants: []` on a pool. It is the last slice because the tree is the read every other one narrows away from, and it folds in `MatchQueries.pendingCountsByPhaseGroup`. Phase 5 is subdivided one branch per read model, as phase 4 was.
-- Awaiting the user's manual UI check: `refactor/5-tournament-reads`, `refactor/5-participant-reads`, `refactor/5-division-reads` and `refactor/5-catalog-reads`. The home page and the search dialog read a two-field response; every other page reads the shapes the frontend already declared, which the API now actually produces.
+- Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
+- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order; every other page reads the shapes the frontend already declared.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 5, the tree and the projection collapse
+
+- Added `structure/tree.queries.ts`. One query parameterized by scope answers the tournament overview, the division summary and a single pool node; two more give it the pending-match count of every pool in scope and the advancement rules of all of them at once. Three queries whatever the scope holds.
+- The two projections it replaces had drifted. `TournamentOverviewDto` carried `pendingMatchCount` and no advancement rules, `DivisionSummaryDto` carried the rules and no pending count, and both carried an `entrants: []` on a pool that no loader ever filled. They are one shape now, so a pool reads the same wherever it appears.
+- A division states `entrantCount` instead of carrying its roster. The tournament tree was downloading every entrant of every division, with participants and players, to draw a list of names it never showed. The three places that show people — the players tab, the seeding tab and the add-players dialog — read `GET /divisions/:id/entrants`, which phase 5 had already made a projection, through one cache entry per division.
+- That route orders by the persisted seed, so the seeding tab opens on the order its last save wrote rather than alphabetically. FQ-015 is partly resolved: the order is visible, and whether `seedNum` itself should be on the wire is what remains.
+- Pool mutations answer with `TreeQueries.phaseGroup`, so `POST /phases/:phaseId/phase-groups` and `PATCH /phase-groups/:id` return the node the tree draws. `PhaseGroupManager.toDto` is gone.
+- The tree orders divisions, phases and pools by id. Neither previous read stated an order for them, and the end-to-end test of the overview had been asserting `phaseGroups[0]` against whatever PostgreSQL returned; it addresses the pool by id now, and asserts the default pool a phase is created with as well.
+- Removed: `TournamentManager.findOverview`, `DivisionManager` entirely, `DivisionService.findOneForSummary` and `findOverviewData`, `PhaseService.findOverviewDataForDivision`, `AdvancementRuleService.findBySources`, and `MatchQueries.pendingCountsByPhaseGroup`, which the tree now owns. `RoundRobinMatchesView` lost the `phaseGroup` prop it read the empty entrant list from; the players of its axes have always come from the matches.
+- Phase 5 is complete. Eight `*.queries.ts` classes cover every read endpoint, no controller reaches a service for a `GET`, and no route answers with a TypeORM entity except the phase and division write paths that phase 7 turns into commands.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), 116 unit tests across the workspaces, and 36 end-to-end tests against PostgreSQL — three of them new, covering the collapsed projection at the division scope, the pool node a mutation answers with, and the exact key set of a pool. The manual UI check is the user's.
 
 ### Structure refactoring phase 5, catalogue and score read models
 
