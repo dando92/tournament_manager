@@ -28,13 +28,6 @@ export class DivisionService {
         return savedDivision;
     }
 
-    async findAll(tournamentId?: number): Promise<Division[]> {
-        if (tournamentId) {
-            return this.findAllForTournamentCards(tournamentId);
-        }
-        return this.divisionRepository.find();
-    }
-
     async findOneForSummary(id: number): Promise<Division | null> {
         return this.divisionRepository.findOne({
             where: { id },
@@ -77,42 +70,6 @@ export class DivisionService {
                                     player: true,
                                     score: {
                                         player: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        });
-    }
-
-    async findAllForTournamentCards(tournamentId: number): Promise<Division[]> {
-        return this.divisionRepository.find({
-            where: { tournament: { id: tournamentId } },
-            relations: {
-                tournament: true,
-                entrants: {
-                    participants: {
-                        player: true,
-                    },
-                },
-                phases: {
-                    phaseGroups: {
-                        matches: {
-                            matchResult: true,
-                            entrants: {
-                                participants: {
-                                    player: true,
-                                },
-                            },
-                            rounds: {
-                                song: true,
-                                standings: {
-                                    player: true,
-                                    score: {
-                                        player: true,
-                                        song: true,
                                     },
                                 },
                             },

@@ -4,7 +4,6 @@ import {
   TournamentConfiguration,
 } from "@/features/tournament/model/types";
 import { TournamentOverview } from "@/features/tournament/model/types";
-import { TournamentStatsDivision } from "@/features/tournament/model/types";
 
 /**
  * Every request the tournament itself answers.
@@ -71,16 +70,4 @@ export async function hasStartggApiKey(tournamentId: number): Promise<boolean> {
     `tournaments/${tournamentId}/startgg/api-key-status`,
   );
   return response.data.hasStartggApiKey;
-}
-
-/**
- * The whole tournament graph, as `GET /divisions?tournamentId=` still returns
- * it, for the statistics page.
- *
- * Phase 5 of the API refactoring replaces this endpoint with a standings
- * query on the tournament itself; the call moves with it.
- */
-export async function listTournamentStatsDivisions(tournamentId: number): Promise<TournamentStatsDivision[]> {
-  const response = await axios.get<TournamentStatsDivision[]>("divisions", { params: { tournamentId } });
-  return response.data;
 }
