@@ -16,7 +16,7 @@ import {
   PhaseGroup,
 } from '@tournament-manager/persistence';
 import { MatchStore } from '@match/match.store';
-import { ScoreService } from '@tournament/competition/services/score.service';
+import { ScoreQueries } from '@tournament/competition/score.queries';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -27,7 +27,7 @@ import {
 describe('Score and match-result persistence (e2e)', () => {
   const database = getTestDatabaseName('persistence');
   let app: INestApplication;
-  let scoreService: ScoreService;
+  let scoreQueries: ScoreQueries;
   let matchStore: MatchStore;
   let playerRepository: Repository<Player>;
   let songRepository: Repository<Song>;
@@ -57,12 +57,12 @@ describe('Score and match-result persistence (e2e)', () => {
           PhaseGroup,
         ]),
       ],
-      providers: [ScoreService, MatchStore],
+      providers: [ScoreQueries, MatchStore],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
-    scoreService = moduleFixture.get(ScoreService);
+    scoreQueries = moduleFixture.get(ScoreQueries);
     matchStore = moduleFixture.get(MatchStore);
     playerRepository = moduleFixture.get(getRepositoryToken(Player));
     songRepository = moduleFixture.get(getRepositoryToken(Song));
@@ -78,9 +78,12 @@ describe('Score and match-result persistence (e2e)', () => {
     await dropTestDatabase(database);
   });
 
-  it('creates, loads, filters, and updates a score with its relations', async () => {
+  it('offers the runs one player already has on one song, newest first', async () => {
     const player = await playerRepository.save(
       playerRepository.create({ playerName: 'Persistence Player' }),
+    );
+    const otherPlayer = await playerRepository.save(
+      playerRepository.create({ playerName: 'Other Player' }),
     );
     const song = await songRepository.save(
       songRepository.create({
@@ -90,43 +93,33 @@ describe('Score and match-result persistence (e2e)', () => {
         difficulty: 10,
       }),
     );
+    const otherSong = await songRepository.save(
+      songRepository.create({ title: 'Other Song', group: 'Test Group', difficulty: 8 }),
+    );
 
-    const created = await scoreService.create({
-      playerId: player.id,
-      songId: song.id,
-      percentage: 98.5,
-      isFailed: false,
-    });
+    const first = await scoreRepository.save(
+      scoreRepository.create({ player, song, percentage: 98.5, isFailed: false }),
+    );
+    const second = await scoreRepository.save(
+      scoreRepository.create({ player, song, percentage: 75, isFailed: true }),
+    );
+    /* Neither of these belongs to the pair asked for, and both would be
+       returned by a filter that dropped one of its two conditions. */
+    await scoreRepository.save(
+      scoreRepository.create({ player: otherPlayer, song, percentage: 60, isFailed: false }),
+    );
+    await scoreRepository.save(
+      scoreRepository.create({ player, song: otherSong, percentage: 50, isFailed: false }),
+    );
 
-    await expect(scoreService.findOne(created.id)).resolves.toMatchObject({
-      id: created.id,
-      percentage: 98.5,
-      isFailed: false,
-      player: { id: player.id },
-      song: { id: song.id },
-    });
-    await expect(
-      scoreService.find({ playerId: player.id, songId: song.id }),
-    ).resolves.toHaveLength(1);
-
-    await scoreService.update(created.id, { percentage: 75, isFailed: true });
-    await expect(
-      scoreRepository.findOneByOrFail({ id: created.id }),
-    ).resolves.toMatchObject({
-      percentage: 75,
-      isFailed: true,
-    });
+    await expect(scoreQueries.history(song.id, player.id)).resolves.toEqual([
+      { id: second.id, percentage: 75, isFailed: true },
+      { id: first.id, percentage: 98.5, isFailed: false },
+    ]);
   });
 
-  it('rejects a score whose player or song does not exist', async () => {
-    await expect(
-      scoreService.create({
-        playerId: 999999,
-        songId: 999999,
-        percentage: 90,
-        isFailed: false,
-      }),
-    ).rejects.toThrow('Song with ID 999999 not found');
+  it('answers with nothing when the player has never run the song', async () => {
+    await expect(scoreQueries.history(999999, 999999)).resolves.toEqual([]);
   });
 
   /**

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Tournament, Song } from '@tournament-manager/persistence';
+import { Tournament } from '@tournament-manager/persistence';
 import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 
 @Injectable()
@@ -9,8 +9,6 @@ export class TournamentService {
     constructor(
         @InjectRepository(Tournament)
         private readonly tournamentRepository: Repository<Tournament>,
-        @InjectRepository(Song)
-        private readonly songRepository: Repository<Song>,
         private readonly dataSource: DataSource,
     ) {}
 
@@ -20,12 +18,6 @@ export class TournamentService {
         return this.dataSource.transaction(async (manager) => {
             const saved = await manager.getRepository(Tournament).save(tournament);
             return saved;
-        });
-    }
-
-    async findSongsByTournamentId(tournamentId: number): Promise<Song[]> {
-        return this.songRepository.find({
-            where: { tournament: { id: tournamentId } },
         });
     }
 

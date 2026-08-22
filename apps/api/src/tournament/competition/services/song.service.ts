@@ -30,6 +30,17 @@ export class SongService {
         return this.songRepository.save(song);
     }
 
+    /**
+     * The pool of a tournament as entities, for the roller, which attaches one
+     * to a round rather than showing it. `SongQueries.forTournament` answers the
+     * same question for a reader, and returns DTOs.
+     */
+    async findByTournament(tournamentId: number): Promise<Song[]> {
+        return this.songRepository.find({
+            where: { tournament: { id: tournamentId } },
+        });
+    }
+
     async delete(id: number): Promise<void> {
         await this.songRepository.delete(id);
     }

@@ -39,3 +39,16 @@ export type SongRefDto = {
     id: number;
     title: string;
 };
+
+/**
+ * A run on a song: the result and nothing about what it was run on.
+ *
+ * A standing shows one as the evidence behind its points, and the standing
+ * dialog offers the ones a player already has on the song it is editing. Both
+ * already know the song and the player, so the projection does not repeat them.
+ */
+export type ScoreDto = {
+    id: number;
+    percentage: number;
+    isFailed: boolean;
+};
