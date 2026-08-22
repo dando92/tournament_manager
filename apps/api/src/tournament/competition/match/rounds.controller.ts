@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchCommands } from '@match/match.commands';
-import { MatchListDto } from '@match/dtos/match-list.dto';
-import { UpsertPointsDto, UpsertScoreDto } from './standing.dto';
-import { RoundSourceDto } from '@match/dtos/match.dto';
+import { MatchListDto } from '@match/match-list.dto';
+import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
+import { RoundSourceDto } from '@match/match.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 /**

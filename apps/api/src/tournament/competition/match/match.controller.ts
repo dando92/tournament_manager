@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
-import { MatchListDto } from '@match/dtos/match-list.dto';
-import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { MatchListDto } from '@match/match-list.dto';
+import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/match.requests';
 import { MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';

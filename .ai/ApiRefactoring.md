@@ -468,6 +468,16 @@ moves files; the two go in separate commits.
 Phases 0 through 4 leave the HTTP contract untouched, so they can be verified
 against the existing end-to-end tests by comparing responses before and after.
 
+**Every phase leaves the files it touched in the target layout**: the position
+described under "Directory layout", a kebab-case file name, and camelCase
+methods. The move is the phase's last commit, after its verification passes, so
+it never shares a diff with a change of behaviour. A phase that rewrites an
+aggregate and leaves it in the old directory has not finished.
+
+What belongs to no aggregate — file names under `bracket/`, the barrels,
+`shared/`, and the mirroring of `tests/unit` — is collected in phase 8 rather
+than left to whichever phase happens to pass nearby.
+
 ### Branching
 
 Each phase is developed on its own branch and merged into `main` when its
@@ -580,9 +590,16 @@ that resolves it:
   `pendingCountsByPhaseGroup`, which phase 5 folds into `TreeQueries`, and
   `exists`, which the advancement rules make. No service remains between a
   controller and a match.
-- The file moves — `dtos/match.dto.ts` to `match.requests.ts`, the controllers
-  out of `controllers/` — were not made. Phase 3 moves the response DTOs to
-  `@tournament-manager/contracts` and would move them twice.
+- The file moves were deferred and then made, in their own commit once the
+  phase had been verified, under the rule that a phase leaves what it touched
+  in the target layout. The fear of moving them twice held for one file of
+  five: phase 3 does not relocate `match.controller.ts`, `rounds.controller.ts`,
+  `rounds.requests.ts` or `match.requests.ts` — it takes one response type out
+  of the last of them — and it deletes `match-list.dto.ts` outright once its
+  types live in `@tournament-manager/contracts`. A delete is not a second move,
+  and leaving it behind would have kept `dtos/` alive for one file.
+  `competition/standing/` is gone: a round is a match being scored, not a
+  directory of its own.
 
 Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
 pre-existing warnings, none in the changed files), 70 unit tests — thirteen more
@@ -647,7 +664,27 @@ must ship together.
   it, so a reviewer sees the move in one commit and the change of roles in the
   next.
 
-### Phase 8 — Freeze
+### Phase 8 — File tree and naming
+
+What the aggregate phases cannot carry, because it belongs to no aggregate.
+
+- Rename `bracket/` to kebab-case and split it into `bracket.controller.ts`,
+  `bracket.commands.ts` and `systems/`. `IBracketSystem` becomes
+  `bracket-system.ts`.
+- Delete the barrels: `tournament/dtos.ts`, `account/dtos.ts`, `auth/guards.ts`
+  and `auth/strategies.ts`. Phase 3 empties the first of its response types;
+  what remains are request DTOs, which move beside their controller.
+- Create `shared/` and move `tournament-open.guard.ts`,
+  `ui-update.publisher.ts` and the common projections into it. The publisher
+  currently lives under `competition/match/services/`, where six files outside
+  the match aggregate import it from.
+- Move `song.service.ts`, `song.roller.ts` and the songs and scores controllers
+  into `catalog/`.
+- Mirror `tests/unit` onto the final source tree.
+- Verification: build, lint, and every suite. No behaviour change anywhere in
+  the phase.
+
+### Phase 9 — Freeze
 
 - Add the grep checks to CI.
 - Fold the rules from this document into [Backend.md](Backend.md) and
