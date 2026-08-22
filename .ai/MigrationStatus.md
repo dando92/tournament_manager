@@ -8,9 +8,20 @@
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
-- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order; every other page reads the shapes the frontend already declared.
+- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`, and `feature/division-pages`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order and its rows can now be dragged; the division standings page is gone.
 
 ## Completed Checkpoints
+
+### Division pages: standings removed, seeding made reorderable
+
+Requested by the user on 2026-08-23, outside the phase sequence.
+
+- Removed the division standings page, its route and its tree destination. Every number a tournament reports is to be composed on Stats instead. `useDivisionStandings` went with it, which was one of the last fetching effects outside react-query.
+- Kept `GET /divisions/:id/standings` and `StandingsQueries.forDivision`, which now have no consumer. They are the one aggregate already written and tested against a real PostgreSQL, and FQ-016 names a per-division roll-up as a candidate for what Stats should show. Recorded there as a deliberate exception to the rule that an endpoint has a caller.
+- Fixed the seeding tab, which could not be reordered at all: it passed `canEdit={false}` to `EntrantMembershipRow`, and the row drew its drag handle only when `canEdit` was true, so the handle never rendered and the save button had nothing to save. The drag context around it had been in place the whole time.
+- The whole row is the drag handle now rather than a grip beside it, which is the target a person aims at when they mean to pick up a name, and the handle props carry keyboard reordering — space to lift, arrows to move. The grip stays as the cue and a row being dragged is drawn raised.
+- Known and not changed: dragging while the search box is filtering permutes the visible rows among their absolute positions and leaves hidden rows pinned. That is the defensible reading of a filtered reorder, but it means a drop between two filtered names can move somebody many places. Raise it with the user before changing the semantics.
+- Verification passed: `npm run build` across every workspace, `npx tsc --noEmit` in both workspaces, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), and 116 unit tests. No API contract changed. The manual UI check is the user's, and the drag is the part only it can confirm.
 
 ### Structure refactoring phase 5, the tree and the projection collapse
 

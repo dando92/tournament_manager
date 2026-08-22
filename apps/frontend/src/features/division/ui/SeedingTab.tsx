@@ -88,23 +88,34 @@ export default function SeedingTab({ division, entrants: roster, canEdit, onSeed
                 const entrant = entrantsById.get(entrantId);
                 if (!entrant) return null;
 
+                const reorderable = canEdit && !saving;
+
                 return (
                   <Draggable
                     key={entrantId}
                     draggableId={`entrant-${entrantId}`}
                     index={index}
-                    isDragDisabled={!canEdit || saving}
+                    isDragDisabled={!reorderable}
                   >
-                    {(draggableProvided) => (
-                      <div ref={draggableProvided.innerRef} {...draggableProvided.draggableProps}>
+                    {(draggableProvided, draggableSnapshot) => (
+                      /* The whole line is the handle, so a person picks a name
+                         up by pressing on it rather than by hitting a grip. The
+                         handle props also carry the keyboard affordance —
+                         space to lift, arrows to move — which a row that only
+                         listened for a mouse would lose. */
+                      <div
+                        ref={draggableProvided.innerRef}
+                        {...draggableProvided.draggableProps}
+                        {...draggableProvided.dragHandleProps}
+                      >
                         <EntrantMembershipRow
                           name={entrant.name}
                           present
                           canEdit={false}
                           saving={saving}
                           seedNumber={draftEntrantIds.indexOf(entrantId) + 1}
-                          editingSeeding={canEdit}
-                          dragHandleProps={draggableProvided.dragHandleProps}
+                          draggable={reorderable}
+                          dragging={draggableSnapshot.isDragging}
                         />
                       </div>
                     )}
