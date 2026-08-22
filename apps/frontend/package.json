@@ -7,7 +7,7 @@
     "dev": "cross-env VITE_PUBLIC_API_URL=http://localhost:3001/ VITE_PUBLIC_REALTIME_URL=http://localhost:3003/ vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives",
-    "test": "node --experimental-strip-types --test tests/unit/tree-selection.test.ts tests/unit/tree-status.test.ts",
+    "test": "node --experimental-strip-types --import ./tests/unit/alias-resolver.mjs --test tests/unit/tree-selection.test.ts tests/unit/tree-status.test.ts tests/unit/stale-after-update.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

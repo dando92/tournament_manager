@@ -6,6 +6,8 @@ import { DataSource, Repository } from 'typeorm';
 
 import { AppModule } from '../../../src/app.module';
 import { Account } from '@tournament-manager/persistence';
+import { LIVE_EVENT_PUBLISHER } from '@tournament-manager/live-messaging';
+import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { TournamentSyncStartService } from '../../../src/tournament/syncstart/tournament-syncstart.service';
 import {
   dropTestDatabase,
@@ -60,6 +62,15 @@ describe('Match writes (e2e)', () => {
   let secondEntrantId: number;
   let firstPlayerId: number;
   let secondPlayerId: number;
+  const published: EventEnvelope[] = [];
+
+  /** The event types one request published, in order. */
+  async function announcedBy(send: () => request.Test): Promise<string[]> {
+    published.length = 0;
+    await send();
+
+    return published.map((event) => event.type);
+  }
 
   beforeAll(async () => {
     const migrations = await resetMigratedTestDatabase(database);
@@ -68,6 +79,14 @@ describe('Match writes (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(LIVE_EVENT_PUBLISHER)
+      .useValue({
+        publish: (event: EventEnvelope) => {
+          published.push(event);
+
+          return Promise.resolve();
+        },
+      })
       .overrideProvider(TournamentSyncStartService)
       .useValue({
         configureTournament: jest.fn().mockResolvedValue(undefined),
@@ -381,6 +400,49 @@ describe('Match writes (e2e)', () => {
     await expect(
       dataSource.query('SELECT COUNT(*)::int AS "count" FROM "round" WHERE "matchId" = $1', [match.id]),
     ).resolves.toEqual([{ count: 0 }]);
+  });
+
+  /**
+   * What a write announces decides what every open page re-reads, so the events
+   * are part of the contract rather than a detail of the transport.
+   *
+   * A score that leaves a match still waiting on somebody changes that match and
+   * nothing the tree draws. The score that settles it changes the pool's pending
+   * count too, and says so. Without the second event the tree would go stale;
+   * without the first rule, typing a percentage would re-read the tournament.
+   */
+  it('announces the pool only when the pool it draws has moved', async () => {
+    const match = await createMatch('Announcing Match', [firstEntrantId, secondEntrantId], [songId]);
+    const roundId = match.rounds[0].id;
+
+    const partial = () =>
+      request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 91, isFailed: false })
+        .expect(204);
+
+    expect(await announcedBy(partial)).toEqual(['ui.match-changed']);
+
+    expect(
+      await announcedBy(() =>
+        request(app.getHttpServer())
+          .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+          .send({ percentage: 90, isFailed: false })
+          .expect(204),
+      ),
+    ).toEqual(['ui.match-changed', 'ui.phase-group-changed']);
+
+    /* Re-scoring a player of a settled match leaves it settled, so the pool is
+       where it was and hears nothing. */
+    expect(await announcedBy(partial)).toEqual(['ui.match-changed']);
+
+    expect(
+      await announcedBy(() =>
+        request(app.getHttpServer())
+          .delete(`/rounds/${roundId}/standings/${firstPlayerId}`)
+          .expect(204),
+      ),
+    ).toEqual(['ui.match-changed', 'ui.phase-group-changed']);
   });
 
   /**
