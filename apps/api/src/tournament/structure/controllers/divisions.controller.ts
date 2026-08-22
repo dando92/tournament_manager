@@ -47,11 +47,6 @@ export class DivisionsController {
         return this.bracketManager.generateForDivision(Number(id), dto);
     }
 
-    @Get(':id')
-    async findOne(@Param('id') id: number): Promise<Division> {
-        return this.divisionService.findOne(id);
-    }
-
     @Patch(':id')
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateDivisionDto): Promise<Division> {

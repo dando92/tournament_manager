@@ -2,13 +2,22 @@
 
 ## Current Position
 
-- Last updated: 2026-08-21.
+- Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- State: Migration complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 0 complete.
+- State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: none; future work follows the normal product backlog and the deferred questions in [FunctionalQuestions.md](FunctionalQuestions.md).
+- Next action: phase 1 of [ApiRefactoring.md](ApiRefactoring.md) — add `MatchQueries` and point the three match read routes at it, on branch `refactor/1-match-queries`.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 0: removals
+
+- Recorded the refactoring plan in [ApiRefactoring.md](ApiRefactoring.md): questions and commands separated, four roles per aggregate, one aggregate load per command, two database access styles chosen by a rule, and the target directory layout for both workspaces.
+- Deleted six unreferenced files under `src/tournament`, 694 lines. `accountplayer.dto.ts` was the largest file in the directory and duplicated `account/dtos/accountplayer.dto.ts`, which is the one the account controller imports. `pad.roller.ts` was never a registered provider, which left `match_assignment.dto.ts` with no consumer. The `MatchAssignment` entity is unaffected.
+- Removed three read routes no client calls, with the service and manager methods that existed only to serve them: `GET /divisions/:id`, `GET /phase-groups/:id`, and `GET /phases/:phaseId/phase-groups`. This also removed `DivisionService.findOneForView`, the heaviest relations tree in the structure services.
+- Kept `GET /phase-groups/:id/entrants` despite having no client. Its end-to-end test is the only coverage of derived pool membership, which phases 2 and 7 refactor; it is removed in phase 7.
+- Verification passed: `npm run build`, `npm run lint` (four pre-existing warnings, none in the changed files), 57 unit tests, 11 end-to-end tests against PostgreSQL, and `npm run check:architecture`.
 
 ### Hosted-target preparation and local replica contract
 

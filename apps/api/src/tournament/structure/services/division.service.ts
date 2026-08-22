@@ -35,12 +35,6 @@ export class DivisionService {
         return this.divisionRepository.find();
     }
 
-    async findOne(id: number): Promise<Division> {
-        const division = await this.findOneForView(id);
-        if (!division) throw new NotFoundException(`Division ${id} not found`);
-        return division;
-    }
-
     async findOneForSummary(id: number): Promise<Division | null> {
         return this.divisionRepository.findOne({
             where: { id },
@@ -140,47 +134,6 @@ export class DivisionService {
             .loadRelationCountAndMap('phaseGroup.matchCount', 'phaseGroup.matches')
             .where('division.tournamentId = :tournamentId', { tournamentId })
             .getMany();
-    }
-
-    async findOneForView(id: number): Promise<Division | null> {
-        return this.divisionRepository.findOne({
-            where: { id },
-            relations: {
-                entrants: {
-                    participants: {
-                        player: true,
-                    },
-                },
-                phases: {
-                    phaseGroups: {
-                        entrants: {
-                            entrant: {
-                                participants: {
-                                    player: true,
-                                },
-                            },
-                        },
-                        matches: {
-                            matchResult: true,
-                            entrants: {
-                                participants: {
-                                    player: true,
-                                },
-                            },
-                            rounds: {
-                                song: true,
-                                standings: {
-                                    player: true,
-                                    score: {
-                                        player: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        });
     }
 
     async findOneForBracketGeneration(id: number): Promise<Division | null> {

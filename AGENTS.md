@@ -51,6 +51,7 @@ Tournament Manager is a self-contained, provider-independent application for man
 - [Design system and design decisions](.ai/Design.md)
 - [SyncStart protocol refactoring decisions](.ai/SyncStartRefactoring.md)
 - [Scoring model refactoring plan and decisions](.ai/ScoringRefactoring.md)
+- [API and frontend structure refactoring plan and decisions](.ai/ApiRefactoring.md)
 
 ## Repository Architecture
 
