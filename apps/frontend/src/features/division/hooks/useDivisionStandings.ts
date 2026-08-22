@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
 import { useTournamentUpdates } from "@/features/tournament/model/TournamentUpdatesContext";
+import { listDivisionStandings } from "@/features/division/services/divisions.api";
 import { DivisionStandingRow } from "@/features/division/types/DivisionStandingRow";
 
 export function useDivisionStandings(divisionId: number) {
@@ -11,8 +11,7 @@ export function useDivisionStandings(divisionId: number) {
   const [loaded, setLoaded] = useState(false);
 
   const refreshRows = useCallback(async () => {
-    const response = await axios.get<DivisionStandingRow[]>(`divisions/${divisionId}/standings`);
-    setRows(response.data);
+    setRows(await listDivisionStandings(divisionId));
     setLoaded(true);
   }, [divisionId]);
 
