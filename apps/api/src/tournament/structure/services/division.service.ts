@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Division, Entrant, Participant, Tournament } from '@tournament-manager/persistence';
+import { Division, Entrant, Tournament } from '@tournament-manager/persistence';
 import { CreateDivisionDto, UpdateDivisionDto } from '@tournament/dtos';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 
@@ -40,40 +40,6 @@ export class DivisionService {
                 phases: {
                     phaseGroups: {
                         matches: true,
-                    },
-                },
-            },
-        });
-    }
-
-    async findOneForStandings(id: number): Promise<Division | null> {
-        return this.divisionRepository.findOne({
-            where: { id },
-            relations: {
-                phases: {
-                    phaseGroups: {
-                        entrants: {
-                            entrant: {
-                                participants: {
-                                    player: true,
-                                },
-                            },
-                        },
-                        matches: {
-                            matchResult: true,
-                            rounds: {
-                                /* The song decides whether a standing counts as
-                                   a song played, so the roll-up needs it even
-                                   though it shows nothing about the song. */
-                                song: true,
-                                standings: {
-                                    player: true,
-                                    score: {
-                                        player: true,
-                                    },
-                                },
-                            },
-                        },
                     },
                 },
             },
@@ -170,12 +136,6 @@ export class DivisionService {
         await this.uiUpdateGateway.emitTournamentUpdate(tournamentId);
     }
 
-    async getEntrants(id: number): Promise<Entrant[]> {
-        const division = await this.findEntrantsOnly(id);
-        if (!division) throw new NotFoundException(`Division ${id} not found`);
-        return this.sortBySeed(division.entrants ?? []);
-    }
-
     async updateSeeding(id: number, entrantIds: number[]): Promise<void> {
         const division = await this.findEntrantsOnly(id);
         if (!division) throw new NotFoundException(`Division ${id} not found`);
@@ -190,40 +150,4 @@ export class DivisionService {
 
         await this.uiUpdateGateway.emitDivisionUpdateByDivisionId(id);
     }
-
-    private sortBySeed(entrants: Entrant[]): Entrant[] {
-        return [...entrants].sort(
-            (left, right) =>
-                (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER)
-                || left.name.localeCompare(right.name),
-        );
-    }
-
-    async getAvailableParticipants(id: number): Promise<Participant[]> {
-        const division = await this.divisionRepository.findOne({
-            where: { id },
-            relations: {
-                tournament: {
-                    participants: {
-                        player: true,
-                        account: true,
-                    },
-                },
-                entrants: {
-                    participants: true,
-                },
-            },
-        });
-        if (!division) throw new NotFoundException(`Division ${id} not found`);
-
-        const assignedParticipantIds = new Set(
-            (division.entrants ?? [])
-                .flatMap((entrant) => entrant.participants ?? [])
-                .map((participant) => participant.id),
-        );
-
-        return (division.tournament.participants ?? [])
-            .filter((participant) => !assignedParticipantIds.has(participant.id));
-    }
 }
-

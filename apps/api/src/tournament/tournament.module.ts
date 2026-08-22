@@ -9,7 +9,9 @@ import { StartggModule } from '../integrations/startgg/startgg.module';
 import { StartggService } from '../integrations/startgg/startgg.service';
 import { TournamentStartggController } from '../integrations/startgg/tournament-startgg.controller';
 import { AdvancementRulesController } from './structure/controllers/advancement-rules.controller';
-import { DivisionsController } from './structure/controllers/divisions.controller';
+import { DivisionsController } from './structure/division/division.controller';
+import { DivisionQueries } from './structure/division/division.queries';
+import { StandingsQueries } from './competition/standings.queries';
 import { PhaseGroupsController } from './structure/controllers/phase-groups.controller';
 import { PhasesController } from './structure/controllers/phases.controller';
 import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
@@ -90,7 +92,9 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         AdvancementRuleManager,
         UiUpdatePublisher,
         CompletedSongService,
+        DivisionQueries,
         ParticipantQueries,
+        StandingsQueries,
         TournamentQueries,
         TournamentService,
         TournamentManager,
