@@ -8,9 +8,19 @@
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
-- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`, and `feature/division-pages`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order and its rows can now be dragged; the division standings page is gone.
+- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`, plus `feature/division-pages` and `fix/withdrawn-entrants`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order and its rows can now be dragged; the division standings page is gone; removing somebody from a division can be undone.
 
 ## Completed Checkpoints
+
+### Withdrawing an entrant now means withdrawn
+
+Reported by the user on 2026-08-23: removing the last of five entrants made the person vanish from the entrants page entirely, and a reload brought them back with their Remove button, so nothing could be added back.
+
+- Root cause: removal withdraws an entrant rather than deleting it — `EntrantService.removeSinglesEntrantByParticipant` sets `status = 'withdrawn'`, and `addSinglesEntrant` reactivates that same row — but neither read respected the status. `DivisionQueries.availableParticipants` treated any entrant, withdrawn included, as occupying its participant, so a removed person was never offered again; `usePlayersTab` counted any entrant's participants as competing, so after a refetch they read as present. The two together made a removal irreversible from the interface.
+- The behaviour predates the phase 5 rewrite: `DivisionService.getAvailableParticipants` built its assigned set from `division.entrants` with no status filter, and the players tab read the summary's entrants the same way. The rewrite preserved it faithfully and the empty `available-participants` response is what made it visible.
+- Fixed in both reads. The `NOT EXISTS` behind `availableParticipants` now matches only an active entrant, and `usePlayersTab` counts only active ones as competing. The roster keeps returning withdrawn entrants with their status, which is what the seeding tab and the create-match modal already filter on and what `entrantCount` in the tree already counted.
+- Covered end to end: add, remove, and add back, asserting the entrant's status and the offer at each step. Confirmed the case fails without the `status` predicate and passes with it.
+- Verification passed: `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), 116 unit tests, and 37 end-to-end tests against PostgreSQL, one of them new.
 
 ### Division pages: standings removed, seeding made reorderable
 

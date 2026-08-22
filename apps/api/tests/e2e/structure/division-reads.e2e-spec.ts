@@ -335,6 +335,45 @@ describe('Division reads (e2e)', () => {
       });
   });
 
+  it('offers a withdrawn participant again, so a removal from a division can be undone', async () => {
+    const participantId = participantIdByName.get('Dee Player');
+
+    await request(app.getHttpServer())
+      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .expect(201);
+
+    const available = async (): Promise<number[]> => {
+      const response = await request(app.getHttpServer())
+        .get(`/divisions/${divisionId}/available-participants`)
+        .expect(200);
+      return response.body.map((participant) => participant.id);
+    };
+    const entrantOf = async (playerName: string) => {
+      const response = await request(app.getHttpServer()).get(`/divisions/${divisionId}/entrants`).expect(200);
+      return response.body.find((entrant) => entrant.name === playerName);
+    };
+
+    expect(await available()).not.toContain(participantId);
+
+    /* Removing withdraws the entrant rather than deleting it, and adding the
+       same participant back reactivates that row. The roster therefore keeps
+       the entrant and states its status, and the participant has to be on offer
+       again — without that, a removal could not be undone from the interface. */
+    await request(app.getHttpServer())
+      .delete(`/divisions/${divisionId}/participants/${participantId}`)
+      .expect(200);
+
+    expect(await entrantOf('Dee Player')).toMatchObject({ status: 'withdrawn' });
+    expect(await available()).toContain(participantId);
+
+    await request(app.getHttpServer())
+      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .expect(201);
+
+    expect(await entrantOf('Dee Player')).toMatchObject({ status: 'active' });
+    expect(await available()).not.toContain(participantId);
+  });
+
   it('answers 404 for a division that does not exist', async () => {
     for (const route of ['entrants', 'available-participants', 'standings']) {
       await request(app.getHttpServer()).get(`/divisions/999999/${route}`).expect(404);
