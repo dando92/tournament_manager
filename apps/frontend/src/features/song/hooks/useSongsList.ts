@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Song } from "@/features/song/types/Song";
+import { deleteSong, listSongs } from "@/features/song/api/song.api";
 
 type Params = {
   tournamentId?: number;
@@ -14,18 +14,18 @@ export function useSongsList({ tournamentId, songsVersion }: Params) {
   const [songSearch, setSongSearch] = useState("");
 
   useEffect(() => {
-    const url = tournamentId ? `songs?tournamentId=${tournamentId}` : "songs";
-    axios.get<Song[]>(url).then((response) => {
-      const { data } = response;
-      setSongs(data);
-      setGroups([...new Set(data.map((song) => song.group))].sort());
-    });
+    listSongs(tournamentId)
+      .then((catalog) => {
+        setSongs(catalog);
+        setGroups([...new Set(catalog.map((song) => song.group))].sort());
+      })
+      .catch(() => {});
   }, [songsVersion, tournamentId]);
 
   const packOptions = useMemo(() => groups, [groups]);
 
   async function handleDeleteSong(id: number) {
-    await axios.delete(`songs/${id}`);
+    await deleteSong(id);
     setSongs((prev) => {
       const merged = prev.filter((song) => song.id !== id);
       setGroups([...new Set(merged.map((song) => song.group))].sort());
@@ -35,7 +35,7 @@ export function useSongsList({ tournamentId, songsVersion }: Params) {
 
   async function handleDeletePack(pack: string) {
     const packSongs = songs.filter((song) => song.group === pack);
-    await Promise.allSettled(packSongs.map((song) => axios.delete(`songs/${song.id}`)));
+    await Promise.allSettled(packSongs.map((song) => deleteSong(song.id)));
     setSongs((prev) => {
       const merged = prev.filter((song) => song.group !== pack);
       setGroups([...new Set(merged.map((song) => song.group))].sort());

@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
-import { Song } from "@/features/song/types/Song";
+import { CreateSongRequest, Song } from "@/features/song/types/Song";
+import { createSong, listSongs } from "@/features/song/api/song.api";
 
 type UseTournamentHeaderSongsManageMenuOptions = {
   tournamentId: number;
@@ -23,11 +23,8 @@ export function useTournamentHeaderSongsManageMenu({
 
   useEffect(() => {
     setLoadingSongsMeta(true);
-    axios
-      .get<Song[]>(`songs?tournamentId=${tournamentId}`)
-      .then((response) => {
-        setSongs(response.data);
-      })
+    listSongs(tournamentId)
+      .then(setSongs)
       .catch(() => {})
       .finally(() => setLoadingSongsMeta(false));
   }, [songsVersion, tournamentId]);
@@ -59,8 +56,7 @@ export function useTournamentHeaderSongsManageMenu({
     group: string,
     artist?: string,
   ) => {
-    axios
-      .post<Song>("songs", { title, artist, difficulty, group, tournamentId })
+    createSong(tournamentId, { title, artist, difficulty, group })
       .then(() => {
         refreshSongs();
         toast.success("Song created.");
@@ -84,7 +80,7 @@ export function useTournamentHeaderSongsManageMenu({
       }
 
       const results = await Promise.allSettled(
-        data.map((dto) => axios.post<Song>("songs", { ...dto, tournamentId })),
+        data.map((dto: CreateSongRequest) => createSong(tournamentId, dto)),
       );
       const created = results.filter((result) => result.status === "fulfilled").length;
       const failed = results.filter((result) => result.status === "rejected").length;
