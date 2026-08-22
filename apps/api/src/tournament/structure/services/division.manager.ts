@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DivisionStandingRowDto, DivisionSummaryDto } from '@tournament-manager/contracts';
+import { DivisionSummaryDto } from '@tournament-manager/contracts';
 import { toEntrantDto } from '@tournament/shared/projections';
 import { DivisionService } from './division.service';
 import { AdvancementRuleService } from './advancement-rule.service';
@@ -48,41 +48,5 @@ export class DivisionManager {
                 })),
             })),
         };
-    }
-
-    async findStandings(id: number): Promise<DivisionStandingRowDto[]> {
-        const division = await this.divisionService.findOneForStandings(id);
-        if (!division) throw new NotFoundException(`Division ${id} not found`);
-
-        const playerTotals = new Map<number, DivisionStandingRowDto>();
-
-        for (const phase of division.phases ?? []) {
-            for (const phaseGroup of phase.phaseGroups ?? []) {
-            for (const match of phaseGroup.matches ?? []) {
-                for (const round of match.rounds ?? []) {
-                    for (const standing of round.standings ?? []) {
-                        const player = standing.player;
-                        const current = playerTotals.get(player.id) ?? {
-                            id: player.id,
-                            playerName: player.playerName,
-                            points: 0,
-                            songsPlayed: 0,
-                        };
-
-                        current.points += standing.points ?? 0;
-                        /* A hand-scored round awards points without a song
-                           having been played, so it counts for one and not the
-                           other. */
-                        if (round.song) current.songsPlayed += 1;
-                        playerTotals.set(player.id, current);
-                    }
-                }
-            }
-            }
-        }
-
-        return Array.from(playerTotals.values()).sort((a, b) =>
-            b.points - a.points || b.songsPlayed - a.songsPlayed || a.playerName.localeCompare(b.playerName),
-        );
     }
 }

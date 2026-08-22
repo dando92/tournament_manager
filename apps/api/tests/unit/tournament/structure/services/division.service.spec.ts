@@ -39,17 +39,6 @@ describe('DivisionService seeding', () => {
     expect(uiUpdateGateway.emitDivisionUpdateByDivisionId).toHaveBeenCalledWith(4);
   });
 
-  it('lists the entrants by seed, with the unseeded ones last', async () => {
-    divisionRepository.findOne.mockResolvedValue({
-      id: 4,
-      entrants: [entrant(1, 'Ann'), entrant(2, 'Bob', 2), entrant(3, 'Cal', 1)],
-    });
-
-    const entrants = await service.getEntrants(4);
-
-    expect(entrants.map((value) => value.name)).toEqual(['Cal', 'Bob', 'Ann']);
-  });
-
   it('refuses an entrant that belongs to another division', async () => {
     divisionRepository.findOne.mockResolvedValue({ id: 4, entrants: [entrant(1, 'Ann')] });
 

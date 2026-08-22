@@ -1,10 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
 import { Division, Entrant } from '@tournament-manager/persistence';
-import { DivisionStandingRowDto, DivisionSummaryDto, GenerateBracketResultDto } from '@tournament-manager/contracts';
+import {
+    DivisionStandingRowDto,
+    DivisionSummaryDto,
+    EntrantDto,
+    GenerateBracketResultDto,
+    ParticipantDto,
+} from '@tournament-manager/contracts';
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
 import { DivisionManager } from '../services/division.manager';
 import { DivisionService } from '../services/division.service';
+import { DivisionQueries } from '@tournament/structure/division/division.queries';
+import { StandingsQueries } from '@tournament/competition/standings.queries';
 import { EntrantService } from '@tournament/services/entrant.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
@@ -12,11 +20,18 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 @Controller('divisions')
 export class DivisionsController {
     constructor(
+        private readonly divisionQueries: DivisionQueries,
+        private readonly standingsQueries: StandingsQueries,
         private readonly divisionService: DivisionService,
         private readonly divisionManager: DivisionManager,
         private readonly entrantService: EntrantService,
         private readonly bracketManager: BracketManager,
     ) {}
+
+    /** The three read routes below answer `404` for a division that does not exist, which an empty collection cannot say. */
+    private async assertExists(divisionId: number): Promise<void> {
+        if (!(await this.divisionQueries.exists(divisionId))) throw new NotFoundException(`Division ${divisionId} not found`);
+    }
 
     @Post()
     @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
@@ -31,7 +46,8 @@ export class DivisionsController {
 
     @Get(':id/standings')
     async findStandings(@Param('id') id: number): Promise<DivisionStandingRowDto[]> {
-        return this.divisionManager.findStandings(Number(id));
+        await this.assertExists(Number(id));
+        return this.standingsQueries.forDivision(Number(id));
     }
 
     @Post(':id/generate-bracket')
@@ -56,8 +72,9 @@ export class DivisionsController {
     }
 
     @Get(':id/entrants')
-    async getEntrants(@Param('id') id: number): Promise<Entrant[]> {
-        return this.divisionService.getEntrants(id);
+    async getEntrants(@Param('id') id: number): Promise<EntrantDto[]> {
+        await this.assertExists(Number(id));
+        return this.divisionQueries.entrants(Number(id));
     }
 
     @Patch(':id/entrants/seeding')
@@ -70,8 +87,9 @@ export class DivisionsController {
     }
 
     @Get(':id/available-participants')
-    async getAvailableParticipants(@Param('id') id: number) {
-        return this.divisionService.getAvailableParticipants(Number(id));
+    async getAvailableParticipants(@Param('id') id: number): Promise<ParticipantDto[]> {
+        await this.assertExists(Number(id));
+        return this.divisionQueries.availableParticipants(Number(id));
     }
 
     @Post(':id/participants/:participantId')

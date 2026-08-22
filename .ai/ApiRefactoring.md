@@ -911,6 +911,25 @@ Neither route's contract changed; both already answered with the shapes the
 frontend declares. `tournament-participants.controller.ts` is
 `participants.controller.ts`.
 
+#### Division (done)
+
+`structure/division/division.queries.ts` holds `entrants` and
+`availableParticipants`; `competition/standings.queries.ts` holds `forDivision`.
+All three are SQL and all three replace a graph load: `availableParticipants` is
+a `NOT EXISTS` where the tournament, its participants and the division's
+entrants were all loaded and subtracted in JavaScript, and `forDivision` is a
+`GROUP BY` where the division was loaded through phases, pools, matches,
+results, rounds, songs, standings, scores and players.
+
+Both entrant routes answer with `EntrantDto[]` and `ParticipantDto[]` where they
+used to answer with raw entities. The frontend already declared those shapes, so
+no file there changed.
+
+`DivisionQueries.exists` keeps the `404` these routes give for a division that
+does not exist, which an empty collection cannot say. It is the third method on
+a class the inventory gave two, the same way `MatchQueries` took `exists` in
+phase 2.
+
 ### Phase 6 — One update path
 
 - Mutations answer `204`.
