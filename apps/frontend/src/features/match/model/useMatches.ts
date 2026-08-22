@@ -4,7 +4,7 @@ import { initialState, matchesReducer } from "@/features/match/model/matchesRedu
 import * as MatchesApi from "@/features/match/api/match.api";
 import { CreateMatchRequest, RoundSourceRequest, Match, MatchAdvancementRuleInput } from "@/features/match/model/types";
 import { matchKeys } from "@/features/match/api/match.keys";
-import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
+import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { toast } from "react-toastify";
 
 export function useMatches(divisionId: number, phaseGroupId?: number) {

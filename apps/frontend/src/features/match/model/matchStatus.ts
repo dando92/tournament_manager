@@ -1,6 +1,6 @@
-import { entrantPlayers } from "@/features/entrant/types/Entrant";
+import { entrantPlayers } from "@/features/participant/model/entrant";
 import { Match, MatchCommitState, Round } from "@/features/match/model/types";
-import { Player } from "@/features/player/types/Player";
+import { Player } from "@/features/participant/model/types";
 import type { Status } from "@/shared/components/ui/status";
 
 /**

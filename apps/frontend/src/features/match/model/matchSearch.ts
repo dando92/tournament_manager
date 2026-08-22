@@ -1,4 +1,4 @@
-import { entrantPlayers } from "@/features/entrant/types/Entrant";
+import { entrantPlayers } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
 
 /**

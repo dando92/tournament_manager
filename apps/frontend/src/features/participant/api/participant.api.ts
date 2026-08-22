@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { ParticipantImportPreviewRowDto } from "@tournament-manager/contracts";
-import { Participant } from "@/features/entrant/types/Entrant";
+import { Participant } from "@/features/participant/model/types";
 
 export type ParticipantImportPreviewEntry = ParticipantImportPreviewRowDto;
 

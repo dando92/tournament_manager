@@ -8,9 +8,9 @@ import EditMatchNotesModal from "@/features/match/ui/EditMatchNotesModal";
 import MatchHeader from "@/features/match/ui/MatchHeader";
 import MatchEmptySlots from "@/features/match/ui/MatchEmptySlots";
 import MatchTable from "@/features/match/ui/MatchTable";
-import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
+import AdvancementRulesEditor from "@/features/match/ui/AdvancementRulesEditor";
 import { getMatchCommitState } from "@/features/match/model/matchStatus";
-import { entrantPlayers } from "@/features/entrant/types/Entrant";
+import { entrantPlayers } from "@/features/participant/model/entrant";
 
 type MatchCardProps = {
   division: Division;

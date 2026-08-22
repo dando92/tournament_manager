@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Division } from "@/features/division/model/types";
-import { Participant } from "@/features/entrant/types/Entrant";
+import { Participant } from "@/features/participant/model/types";
 import {
   addParticipantToDivision,
   listAvailableParticipantsForDivision,
   removeParticipantFromDivision,
-} from "@/features/participant/services/participant.api";
+} from "@/features/participant/api/participant.api";
 
 type UsePlayersTabOptions = {
   division: Division;

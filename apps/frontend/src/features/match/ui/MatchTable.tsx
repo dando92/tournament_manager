@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
-import { entrantPlayers } from "@/features/entrant/types/Entrant";
+import { entrantPlayers } from "@/features/participant/model/entrant";
 import MatchRow from "@/features/match/ui/MatchRow";
 import PathRow from "@/features/match/ui/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";

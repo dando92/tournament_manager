@@ -5,7 +5,7 @@ import EntrantMembershipRow from "@/features/division/ui/EntrantMembershipRow";
 import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
 import { updateDivisionSeeding } from "@/features/division/api/division.api";
 import { Division } from "@/features/division/model/types";
-import { Entrant } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
 type SeedingTabProps = {

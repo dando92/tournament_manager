@@ -1,6 +1,5 @@
 import axios from "axios";
-import { Entrant } from "@/features/entrant/types/Entrant";
-import { Player } from "@/features/player/types/Player";
+import { Entrant, Player } from "@/features/participant/model/types";
 
 export async function getAllPlayers(): Promise<Player[]> {
   const response = await axios.get<Player[]>("players");

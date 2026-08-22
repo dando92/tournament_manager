@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
-import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
+import AdvancementRulesEditor from "@/features/match/ui/AdvancementRulesEditor";
+import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { Division, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/model/types";
 import { Match } from "@/features/match/model/types";
 

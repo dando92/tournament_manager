@@ -1,4 +1,4 @@
-import { Participant } from "@/features/entrant/types/Entrant";
+import { Participant } from "@/features/participant/model/types";
 import EntrantMembershipRow from "@/features/division/ui/EntrantMembershipRow";
 
 type PlayersByNameListProps = {

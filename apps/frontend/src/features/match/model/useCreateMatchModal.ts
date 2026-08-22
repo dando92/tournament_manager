@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Entrant } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
 import { Song } from "@/features/song/model/types";
 import { CreateMatchRequest, MatchPhaseOption } from "@/features/match/model/types";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
