@@ -1,23 +1,24 @@
 import axios from "axios";
 import { Entrant } from "@/features/entrant/types/Entrant";
-import {
-  GenerateBracketRequest,
-  GenerateBracketResultDto,
-} from "@/features/division/types/GenerateBracket";
+import { Division, DivisionStandingRow, GenerateBracketRequest, GenerateBracketResultDto } from "@/features/division/model/types";
 
-export type DivisionSummary = {
-  id: number;
-  name: string;
-};
-
-export async function createDivision(tournamentId: number, name: string): Promise<DivisionSummary> {
-  const response = await axios.post<DivisionSummary>("divisions", { tournamentId, name });
+/** The division as every page under it reads it: the roster and the structure. */
+export async function getDivisionSummary(divisionId: number): Promise<Division> {
+  const response = await axios.get<Division>(`divisions/${divisionId}/summary`);
   return response.data;
 }
 
-export async function renameDivision(divisionId: number, name: string): Promise<DivisionSummary> {
-  const response = await axios.patch<DivisionSummary>(`divisions/${divisionId}`, { name });
+export async function listDivisionStandings(divisionId: number): Promise<DivisionStandingRow[]> {
+  const response = await axios.get<DivisionStandingRow[]>(`divisions/${divisionId}/standings`);
   return response.data;
+}
+
+export async function createDivision(tournamentId: number, name: string): Promise<void> {
+  await axios.post("divisions", { tournamentId, name });
+}
+
+export async function renameDivision(divisionId: number, name: string): Promise<void> {
+  await axios.patch(`divisions/${divisionId}`, { name });
 }
 
 export async function deleteDivision(divisionId: number): Promise<void> {

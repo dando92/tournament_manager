@@ -31,7 +31,7 @@ import {
   poolPath,
   tournamentPagePath,
 } from "@/features/tournament/model/treeSelection";
-import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
+import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import ContextMenu, { useContextMenu, type ContextMenuItem } from "@/shared/components/ui/ContextMenu";
 import { treeNodeKey } from "@/shared/lib/treeState";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";

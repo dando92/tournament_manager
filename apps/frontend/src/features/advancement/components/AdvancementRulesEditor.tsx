@@ -1,5 +1,5 @@
 import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
-import { Division } from "@/features/division/types/Division";
+import { Division } from "@/features/division/model/types";
 import { btnSecondary } from "@/styles/buttonStyles";
 
 type AdvancementRulesEditorProps = {

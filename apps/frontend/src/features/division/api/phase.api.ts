@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Phase } from "@/features/division/types/Phase";
+import { Phase } from "@/features/division/model/types";
 
 type UpdatePhaseRequest = {
   name?: string;

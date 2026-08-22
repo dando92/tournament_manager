@@ -1,4 +1,4 @@
-import { isEliminationBracket, isRoundRobinBracket } from "@/features/division/utils/bracketType";
+import { isEliminationBracket, isRoundRobinBracket } from "@/features/division/model/bracketType";
 
 /** How the matches of a pool are laid out. This is a device preference, not domain data. */
 export type PoolViewMode = "raw" | "roundRobin" | "bracket";

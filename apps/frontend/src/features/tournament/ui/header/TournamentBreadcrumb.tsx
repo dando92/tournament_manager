@@ -8,7 +8,7 @@ import {
   tournamentPagePath,
 } from "@/features/tournament/model/treeSelection";
 import { TOURNAMENT_TREE_PAGES, DIVISION_TREE_PAGES } from "@/features/tournament/ui/tree/treePages";
-import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
+import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 
 /**
  * Where you are, said once.

@@ -1,5 +1,5 @@
-import SeedingTab from "@/features/division/components/SeedingTab";
-import { useDivisionPageContext } from "@/features/division/context/DivisionPageContext";
+import SeedingTab from "@/features/division/ui/SeedingTab";
+import { useDivisionPageContext } from "@/features/division/model/DivisionPageContext";
 
 export default function DivisionSeedingPage() {
   const { division, controls, refreshDivision } = useDivisionPageContext();

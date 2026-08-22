@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react";
-import { Division } from "@/features/division/types/Division";
-import { PoolViewMode } from "@/features/division/services/poolViewMode";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { Division, PhaseGroup } from "@/features/division/model/types";
+import { PoolViewMode } from "@/shared/lib/poolViewMode";
 import EliminationMatchesView from "@/features/match/ui/bracket/EliminationMatchesView";
 import MatchCard from "@/features/match/ui/MatchCard";
 import RawMatchCardsView from "@/features/match/ui/RawMatchCardsView";

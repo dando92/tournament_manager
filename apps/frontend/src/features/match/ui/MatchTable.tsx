@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
-import { Division } from "@/features/division/types/Division";
+import { Division } from "@/features/division/model/types";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import MatchRow from "@/features/match/ui/MatchRow";
 import PathRow from "@/features/match/ui/PathRow";

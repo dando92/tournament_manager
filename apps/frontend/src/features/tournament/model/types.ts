@@ -1,5 +1,5 @@
 import { Entrant } from "@/features/entrant/types/Entrant";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/model/types";
 
 /**
  * What the tournament feature reads and what it shapes for itself.

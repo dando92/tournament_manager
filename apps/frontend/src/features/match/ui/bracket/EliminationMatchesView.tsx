@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/model/types";
 import MatchBracketTree from "@/features/match/ui/bracket/MatchBracketTree";
 import { Match } from "@/features/match/model/types";
 

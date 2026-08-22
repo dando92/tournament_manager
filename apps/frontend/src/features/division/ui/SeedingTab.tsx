@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
 import { toast } from "react-toastify";
-import EntrantMembershipRow from "@/features/division/components/EntrantMembershipRow";
-import PlayersSearchBar from "@/features/division/components/PlayersSearchBar";
-import { updateDivisionSeeding } from "@/features/division/services/divisions.api";
-import { Division } from "@/features/division/types/Division";
+import EntrantMembershipRow from "@/features/division/ui/EntrantMembershipRow";
+import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
+import { updateDivisionSeeding } from "@/features/division/api/division.api";
+import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/entrant/types/Entrant";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 

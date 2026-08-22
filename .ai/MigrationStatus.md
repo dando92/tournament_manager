@@ -4,12 +4,25 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament` and `match` slices are complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament`, `match` and `division` slices are complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: the `division` slice of phase 4, on branch `refactor/4-division-feature`. It owns `divisions.keys.ts`, still in `services/` where the tournament slice declared it, and it hosts the match feature: `DivisionMatchesPage`, `DivisionPlayersPage`, `DivisionSeedingPage` and `DivisionStandingsPage` move to `src/pages/tournament/division/` with it. `song`, `live`, `auth` and `participant` follow, one branch each; `song` inherits `listSongs`, which the match slice created.
+- Next action: the `song` slice of phase 4, on branch `refactor/4-song-feature`. It inherits `api/song.api.ts`, which the match slice created for `listSongs`; its two hooks still hold three more copies of the same request plus the song writes. `live`, `auth` (absorbing `admin` and `PermissionContext`) and `participant` (absorbing `player`) follow, one branch each.
+- Awaiting the user's manual UI check: branches `refactor/4-match-feature` and `refactor/4-division-feature`, neither merged into `main` yet. The division branch is built on the match branch, so they merge in that order.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 4, division slice: frontend api, model, ui
+
+- Split `features/division/` from ten directories into three. `api/` holds `division.api.ts`, `division.keys.ts`, `phase.api.ts` and `phase-group.api.ts`; `model/` holds the hooks, the page context, the pure functions and the view types; `ui/` holds everything that renders.
+- Collapsed the four modules under `features/division/types/` into one `model/types.ts`, dropping two exports nothing imported: `GenerateBracketResult` and `PhaseGroupEntrant`.
+- Moved the two requests `useDivisionPage` and `useDivisionStandings` spelled with their own `axios.get` into `division.api.ts` as `getDivisionSummary` and `listDivisionStandings`. The feature already had an api module beside those hooks, so a route change would have had to be found in three places.
+- Extracted `useDivisionMatchesPage`, which took the match list page from 297 lines to 186 of JSX. It holds state about the page rather than about a match: the scope the tree opened, the pool grouping, and the two search parameters — the open match and the pool advancement editor.
+- Made `createDivision` and `renameDivision` answer `void`. They declared a `DivisionSummary` type for a response body neither caller reads, and that name collided with `DivisionSummaryDto`, which is the whole division projection.
+- Moved the four division pages to `src/pages/tournament/division/`, mirroring the router, and folded `DivisionLayout` into `DivisionPage`, which is the layout route. The layout held an outlet and nothing else, the same shape `TournamentLayout` had.
+- Moved `poolViewMode.ts` to `shared/lib/`, where the target layout puts persisted local state.
+- Left `useDivisionStandings` reading into `useState` and refetching on the realtime version counters rather than through the query cache. That is a change of update path, which phase 6 owns; making it here would have put it inside a layout slice.
+- Verification passed: `npx tsc --noEmit` in the frontend, `npm run build` across every workspace, `npx eslint src` (six pre-existing warnings, none in the changed files), 9 frontend unit tests, and the grep rules for the feature. No HTTP contract changed. The manual UI check is the user's.
 
 ### Structure refactoring phase 4, match slice: frontend api, model, ui
 

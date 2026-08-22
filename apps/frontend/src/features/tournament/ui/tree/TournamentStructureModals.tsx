@@ -1,6 +1,6 @@
-import CreateDivisionModal from "@/features/division/modals/CreateDivisionModal";
-import CreatePhaseModal from "@/features/division/modals/CreatePhaseModal";
-import GenerateBracketModal from "@/features/division/modals/GenerateBracketModal";
+import CreateDivisionModal from "@/features/division/ui/CreateDivisionModal";
+import CreatePhaseModal from "@/features/division/ui/CreatePhaseModal";
+import GenerateBracketModal from "@/features/division/ui/GenerateBracketModal";
 import StartggImportModal from "@/features/tournament/ui/StartggImportModal";
 import RenameModal from "@/shared/components/ui/RenameModal";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";

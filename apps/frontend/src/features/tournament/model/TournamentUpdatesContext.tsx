@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 import { matchKeys } from "@/features/match/api/match.keys";
-import { divisionKeys } from "@/features/division/services/divisions.keys";
+import { divisionKeys } from "@/features/division/api/division.keys";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
