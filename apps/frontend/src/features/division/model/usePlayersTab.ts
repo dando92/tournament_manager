@@ -14,10 +14,23 @@ type UsePlayersTabOptions = {
   onPlayersChanged: () => void;
 };
 
+/**
+ * Who is competing in the division right now.
+ *
+ * Removing somebody withdraws their entrant rather than deleting it, so the
+ * roster keeps the row and states its status. A withdrawn entrant is not
+ * somebody the division holds: counting it made a removed person keep their
+ * Remove button, while the division they had left went on holding their seat.
+ */
+function competing(entrants: Entrant[]): Participant[] {
+  return entrants
+    .filter((entrant) => entrant.status === "active")
+    .flatMap((entrant) => entrant.participants ?? [])
+    .filter(Boolean);
+}
+
 export function usePlayersTab({ division, entrants, orderByName, onPlayersChanged }: UsePlayersTabOptions) {
-  const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(
-    entrants.flatMap((entrant) => entrant.participants ?? []).filter(Boolean),
-  );
+  const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(competing(entrants));
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
 
@@ -31,7 +44,7 @@ export function usePlayersTab({ division, entrants, orderByName, onPlayersChange
   }, [loadAvailableParticipants]);
 
   useEffect(() => {
-    setDivisionParticipants(entrants.flatMap((entrant) => entrant.participants ?? []).filter(Boolean));
+    setDivisionParticipants(competing(entrants));
   }, [entrants]);
 
   const divisionParticipantIds = useMemo(

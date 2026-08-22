@@ -51,6 +51,12 @@ type AvailableParticipantRow = ParticipantDto;
 /**
  * Everybody in the tournament who does not yet compete in this division.
  *
+ * Only an **active** entrant occupies a participant. Removing somebody from a
+ * division withdraws their entrant rather than deleting it, and adding them
+ * back reactivates that same row, so a withdrawn participant has to be offered
+ * again — otherwise a removal is irreversible from the interface, which is what
+ * it was.
+ *
  * This was the most expensive read left in the structure routes: it loaded the
  * division, its tournament, every participant of that tournament with its
  * player and account, and every entrant of the division with its participants,
@@ -72,7 +78,9 @@ const AVAILABLE_PARTICIPANTS_OF_DIVISION = `
         SELECT  1
         FROM    "entrant_participants_participant" ep
         JOIN    "entrant" e ON e."id" = ep."entrantId"
-        WHERE   ep."participantId" = pa."id" AND e."divisionId" = $1
+        WHERE   ep."participantId" = pa."id"
+            AND e."divisionId" = $1
+            AND e."status" = 'active'
     )
     ORDER BY LOWER(pl."playerName"), pa."id"
 `;
