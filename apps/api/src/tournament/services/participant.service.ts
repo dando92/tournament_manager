@@ -18,27 +18,6 @@ export class ParticipantService {
         private readonly accountService: AccountService,
     ) {}
 
-    async listForTournament(tournamentId: number): Promise<Participant[]> {
-        const participants = await this.participantRepository.find({
-            where: { tournament: { id: tournamentId } },
-            relations: { player: true, account: true },
-        });
-
-        return participants.sort((left, right) => left.player.playerName.localeCompare(right.player.playerName));
-    }
-
-    async findForTournamentByPlayerNameNormalized(tournamentId: number, playerName: string): Promise<Participant | null> {
-        const normalized = playerName.trim().toLowerCase();
-
-        return this.participantRepository
-            .createQueryBuilder('participant')
-            .leftJoinAndSelect('participant.player', 'player')
-            .leftJoinAndSelect('participant.account', 'account')
-            .where('participant.tournamentId = :tournamentId', { tournamentId })
-            .andWhere('LOWER(TRIM(player.playerName)) = :normalized', { normalized })
-            .getOne();
-    }
-
     async ensureForPlayer(tournamentId: number, playerId: number, roles: ParticipantRole[] = ['competitor']): Promise<Participant> {
         const participant = await this.participantRepository.findOne({
             where: { tournament: { id: tournamentId }, player: { id: playerId } },
@@ -129,14 +108,6 @@ export class ParticipantService {
         participant.roles = (participant.roles ?? []).filter((role) => role !== 'staff');
         if (participant.roles.length === 0) participant.roles = ['unknown'];
         return this.participantRepository.save(participant);
-    }
-
-    async listStaff(tournamentId: number): Promise<Participant[]> {
-        const participants = await this.participantRepository.find({
-            where: { tournament: { id: tournamentId } },
-            relations: { account: true, player: true },
-        });
-        return participants.filter((participant) => participant.roles?.includes('staff'));
     }
 
     async canEdit(tournamentId: number, accountId: string): Promise<boolean> {

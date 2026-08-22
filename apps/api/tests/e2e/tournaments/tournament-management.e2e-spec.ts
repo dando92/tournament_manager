@@ -281,6 +281,71 @@ describe('Tournament management (e2e)', () => {
       .expect(403);
   });
 
+  it('lists the participants of a tournament and previews what importing a list of names would do', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/tournaments')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Registration Tournament' })
+      .expect(201);
+    const tournamentId = createResponse.body.id;
+
+    for (const playerName of ['Zeta Player', 'alpha player']) {
+      await request(app.getHttpServer())
+        .post(`/tournaments/${tournamentId}/participants`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ playerName })
+        .expect(201);
+    }
+
+    /* Creating the tournament made its creator a participant too, so the list
+       holds three. It is ordered by the name each competes under, ignoring
+       case: an ASCII order would put both capitalized names first. */
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/participants`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.map((participant) => participant.player.playerName)).toEqual([
+          'alpha player',
+          fixture.account.playerName,
+          'Zeta Player',
+        ]);
+        expect(body[0]).toEqual({
+          id: expect.any(Number),
+          roles: ['competitor'],
+          status: 'registered',
+          player: { id: expect.any(Number), playerName: 'alpha player' },
+        });
+      });
+
+    /* Names are distinct by their trimmed form and keep the order they were
+       sent in; matching a player against them ignores case as well. */
+    await request(app.getHttpServer())
+      .post(`/tournaments/${tournamentId}/participants/import-preview`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ playerNames: ['  alpha player  ', 'ALPHA PLAYER', 'Brand New Player', '   '] })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body).toEqual([
+          {
+            name: 'alpha player',
+            matchedPlayer: { id: expect.any(Number), playerName: 'alpha player' },
+            alreadyParticipant: true,
+          },
+          {
+            name: 'ALPHA PLAYER',
+            matchedPlayer: { id: expect.any(Number), playerName: 'alpha player' },
+            alreadyParticipant: true,
+          },
+          {
+            name: 'Brand New Player',
+            matchedPlayer: null,
+            alreadyParticipant: false,
+          },
+        ]);
+      });
+  });
+
   it('makes a closed tournament read-only until an authorized user reopens it', async () => {
     const tournamentResponse = await request(app.getHttpServer())
       .post('/tournaments')

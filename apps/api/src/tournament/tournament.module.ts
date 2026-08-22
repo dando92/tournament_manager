@@ -46,7 +46,8 @@ import { TournamentQueries } from './management/tournament.queries';
 import { TournamentService } from './services/tournament.service';
 import { TournamentOpenGuard } from './guards/tournament-open.guard';
 import { TournamentsController } from './management/tournaments.controller';
-import { TournamentParticipantsController } from './registration/tournament-participants.controller';
+import { ParticipantQueries } from './registration/participants.queries';
+import { TournamentParticipantsController } from './registration/participants.controller';
 import { TournamentLobbiesController } from './syncstart/tournament-lobbies.controller';
 import { TournamentSyncStartBootstrap } from './syncstart/tournament-syncstart.bootstrap';
 import { TournamentSyncStartModule } from './syncstart/syncstart.module';
@@ -89,6 +90,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         AdvancementRuleManager,
         UiUpdatePublisher,
         CompletedSongService,
+        ParticipantQueries,
         TournamentQueries,
         TournamentService,
         TournamentManager,
