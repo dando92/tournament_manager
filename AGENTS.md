@@ -1,5 +1,12 @@
 # Project Instructions
 
+## Agent Instruction Files
+
+- `AGENTS.md` is the single source of truth for agent instructions in this repository. It applies to every coding agent, regardless of the tool that reads it.
+- `CLAUDE.md` must contain only the `@AGENTS.md` import stub, so Claude Code loads this file automatically. Never duplicate instruction text in `CLAUDE.md`.
+- Add every new project instruction, rule, or documentation index entry to `AGENTS.md` only.
+- Tool-specific instructions also belong here. Mark them with the tool they apply to, and let other agents ignore them.
+
 ## Project Purpose
 
 Tournament Manager is a self-contained, provider-independent application for managing tournaments. The repository is an npm workspace monorepo containing the application services, the React frontend, shared contracts, and application-owned integrations.
@@ -35,6 +42,17 @@ Tournament Manager is a self-contained, provider-independent application for man
 - Perform all project work in English.
 - Write all project documentation and project information in English.
 - Write source code, comments, identifiers, configuration text, user-facing strings, commit messages, and other technical artifacts in English unless the user explicitly requests a different language for a specific deliverable.
+
+## Agent Tooling
+
+### graphify (Claude Code)
+
+This project has a knowledge graph at `graphify-out/` with god nodes, community structure, and cross-file relationships.
+
+- For codebase questions, first run `graphify query "<question>"` when `graphify-out/graph.json` exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than `GRAPH_REPORT.md` or raw grep output.
+- If `graphify-out/wiki/index.md` exists, use it for broad navigation instead of raw source browsing.
+- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review or when query, path, and explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
 ## Documentation Index
 
