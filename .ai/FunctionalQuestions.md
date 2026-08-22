@@ -129,3 +129,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should the summary carry each entrant's seed, so the tab reopens on the saved order? The alternative is that seeding is a one-way instruction and the persisted order is only ever consumed by bracket generation, in which case the tab should say so rather than presenting an order that looks like the stored one.
 - Evidence: `apps/frontend/src/features/division/components/SeedingTab.tsx`, `apps/api/src/tournament/shared/projections.ts`, and `apps/api/src/tournament/structure/services/division.service.ts` (`findOneForSummary`).
 - Rule: leave the display as it is. Phase 5 of [ApiRefactoring.md](ApiRefactoring.md) rewrites this read model and is where the seed would be added.
+
+### FQ-016 — What a tournament's statistics page should show
+
+- Status: Open. The page is empty by decision, taken on 2026-08-22.
+- Observed behavior: the statistics page had two halves, neither of which answered a question anybody had asked. The lower half listed every score every player had run, built by downloading the whole tournament graph over `GET /divisions?tournamentId=` — raw TypeORM entities, divisions through phases, matches, rounds, standings and scores — and recomputing the totals in the browser. The upper half showed three counters, divisions, players and matches, taken from the tournament overview because the overview happened to carry them. The endpoint, the score table, the counters and the types that described them have been removed, and the page says it is being rebuilt.
+- Question: What numbers does a tournament need, and who reads them? A table of every score is a log, not a statistic. Candidates the removed page hinted at without answering: per-player averages across a division, a song's difficulty measured by how people actually score on it, a pool's progress against its schedule, a player's results across the tournaments they have entered.
+- Evidence: the removal commit on branch `refactor/5-stats-placeholder`; `apps/frontend/src/pages/tournament/StatsPage.tsx`.
+- Rule: do not add a statistics read model to phase 5 of [ApiRefactoring.md](ApiRefactoring.md). The page stays empty until the question above has an answer, and the answer decides the query rather than the other way round.

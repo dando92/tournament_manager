@@ -7,10 +7,19 @@
 - Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 complete: every feature is `api/`, `model/`, `ui/`, every page mirrors the router, and `axios` appears only in `features/*/api/*.api.ts` and `app/providers.tsx`.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5, the remaining read models. The HTTP contract changes there, so it is the first phase whose end-to-end tests move with it. `GET /divisions?tournamentId=` becomes `GET /tournaments/:id/standings`, and the statistics page stops downloading the tournament graph.
+- Next action: phase 5, the remaining read models — the seven `*.queries.ts` and the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. The HTTP contract changes there, so it is the first phase whose end-to-end tests move with it. The statistics endpoint is already gone; see the checkpoint below.
 - Awaiting the user's manual UI check: branches `refactor/4-match-feature`, `refactor/4-division-feature` and `refactor/4-song-feature`, none merged into `main` yet. Each is built on the one before, so they merge in that order; the last carries the `song`, `live`, `auth` and `participant` slices.
 
 ## Completed Checkpoints
+
+### Statistics page emptied and its endpoint removed
+
+- Removed `GET /divisions?tournamentId=` with `DivisionService.findAll` and `findAllForTournamentCards`, the largest `relations` block in the codebase: divisions through entrants, phases, pools, matches, results, rounds, songs, standings and scores. No end-to-end test covered it and it had one consumer.
+- Emptied the statistics page. Its score table downloaded that graph and recomputed every total in the browser; its three counters — divisions, players, matches — came from the tournament overview because the overview happened to carry them. Neither answered a question anybody had asked.
+- Removed with them: `useTournamentStatsData`, `useTournamentStatsPage`, `TournamentStatsPlayerList`, `TournamentStatsSearch`, `TournamentOverviewSummary`, the seven `TournamentStats*` types and `listTournamentStatsDivisions`. Nothing else called any of them.
+- Recorded FQ-016 in [FunctionalQuestions.md](FunctionalQuestions.md): what numbers a tournament needs, and who reads them. The page stays empty until that has an answer, and the answer decides the query rather than the other way round.
+- Amended phase 5 of [ApiRefactoring.md](ApiRefactoring.md): `GET /tournaments/:id/standings` is no longer part of it, and no read model replaces the removed endpoint. This also leaves `division.entrants` in the overview projection with no frontend consumer, which the projection collapse should take.
+- Verification passed: `npx tsc --noEmit` in both workspaces, `npm run build` across every workspace, `npm run lint` (six pre-existing frontend warnings, none in the changed files), 70 API unit tests, 9 frontend unit tests, and `npm run check:architecture`. The HTTP contract lost one route and no other route changed. The manual UI check is the user's.
 
 ### Structure refactoring phase 4, closing slices: song, live, auth, participant
 
