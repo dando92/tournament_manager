@@ -10,7 +10,6 @@ import {
 } from './browser/websocket-browser-event.broadcaster';
 import { HealthController } from './health.controller';
 import { RealtimeEventService } from './live-events/realtime-event.service';
-import { SnapshotController } from './snapshot.controller';
 import { RedisHealthService } from './redis-health.service';
 import { REALTIME_SNAPSHOT_READER } from './snapshots/realtime-snapshot-reader';
 import { TournamentRealtimeRegistry } from './state/tournament-realtime-registry';
@@ -18,7 +17,7 @@ import { WebSocketServer } from 'ws';
 
 @Module({
   imports: [ConfigModule.forRoot({ envFilePath: ['../../.env', '.env'], isGlobal: true })],
-  controllers: [HealthController, SnapshotController],
+  controllers: [HealthController],
   providers: [
     RedisLiveEventSubscriber,
     { provide: LIVE_EVENT_SUBSCRIBER, useExisting: RedisLiveEventSubscriber },

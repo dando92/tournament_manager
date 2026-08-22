@@ -44,42 +44,42 @@ describe('realtime service extraction', () => {
     unrelated.close();
   });
 
-  it('exposes an HTTP snapshot after a disconnect and keeps sequence gaps detectable', async () => {
-    const client = await connect(replicas[0], tournamentId);
-    await delay(50);
-    const address = replicas[0].getHttpServer().address() as { port: number };
-    const before = await fetch(
-      `http://127.0.0.1:${address.port}/realtime/snapshot?tournamentId=${tournamentId}&path=${encodeURIComponent('/uiupdatehub')}`,
-    ).then((response) => response.json() as Promise<{ sequence: number }>);
-    client.close();
+  it('hands a connecting client what it missed in a single ready frame', async () => {
+    /* An observer that stays connected proves the replica applied the event
+       before the client under test asks for it, which is what makes the
+       assertion below about the ready frame and not about timing. */
+    const observer = collect(replicas[0], tournamentId);
+    await opened(observer.socket);
+    await waitUntil(() => observer.messages.some((message) => message.event === 'RealtimeReady'));
+    const before = observer.messages[0];
 
     await publish({
       type: 'ui.warning',
       tournamentId,
-      payload: { message: 'Recover from HTTP' },
+      payload: { message: 'Recover from the ready frame' },
     });
+    await waitUntil(() => observer.messages.some((message) => message.event === 'UiWarning'));
 
-    const response = await fetch(
-      `http://127.0.0.1:${address.port}/realtime/snapshot?tournamentId=${tournamentId}&path=${encodeURIComponent('/uiupdatehub')}`,
-    );
-    const snapshot = await response.json() as { sequence: number; messages: Array<{ event: string }> };
-    expect(response.ok).toBe(true);
-    expect(snapshot.sequence).toBeGreaterThan(before.sequence);
-    expect(snapshot.messages).toEqual(expect.arrayContaining([expect.objectContaining({ event: 'UiWarning' })]));
+    const arriving = collect(replicas[0], tournamentId);
+    await opened(arriving.socket);
+    await waitUntil(() => arriving.messages.length > 0);
 
-    const recoveredMessages: any[] = [];
-    const reconnected = new WebSocket(`ws://127.0.0.1:${address.port}/uiupdatehub?tournamentId=${tournamentId}`);
-    reconnected.on('message', (data) => recoveredMessages.push(JSON.parse(data.toString())));
-    await new Promise<void>((resolve, reject) => {
-      reconnected.once('open', resolve);
-      reconnected.once('error', reject);
-    });
-    await waitUntil(() => recoveredMessages.some((message) => message.event === 'UiWarning'));
-    expect(recoveredMessages).toEqual(expect.arrayContaining([
-      expect.objectContaining({ event: 'RealtimeReady', sequence: snapshot.sequence }),
-      expect.objectContaining({ event: 'UiWarning' }),
-    ]));
-    reconnected.close();
+    /* One frame, not one plus the state it describes: a client learns the
+       sequence and what it missed at the same instant, so it never has to
+       fetch the same snapshot again to tell the two apart. */
+    expect(arriving.messages).toEqual([
+      expect.objectContaining({
+        event: 'RealtimeReady',
+        data: expect.objectContaining({
+          tournamentId,
+          messages: expect.arrayContaining([expect.objectContaining({ event: 'UiWarning' })]),
+        }),
+      }),
+    ]);
+    expect(arriving.messages[0].sequence).toBeGreaterThan(before.sequence);
+
+    observer.socket.close();
+    arriving.socket.close();
   });
 
   async function publish(event: EventEnvelope): Promise<void> {
@@ -101,6 +101,22 @@ async function connect(app: INestApplication, tournamentId: number): Promise<Web
     socket.once('error', reject);
   });
   return socket;
+}
+
+/** A socket that records from its first frame, ready one included. */
+function collect(app: INestApplication, tournamentId: number): { socket: WebSocket; messages: any[] } {
+  const address = app.getHttpServer().address() as { port: number };
+  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/uiupdatehub?tournamentId=${tournamentId}`);
+  const messages: any[] = [];
+  socket.on('message', (data) => messages.push(JSON.parse(data.toString())));
+  return { socket, messages };
+}
+
+function opened(socket: WebSocket): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    socket.once('open', () => resolve());
+    socket.once('error', reject);
+  });
 }
 
 function nextMessage(socket: WebSocket): Promise<any> {

@@ -148,8 +148,15 @@ export function TournamentUpdatesProvider({
       }
     }
 
-  useRealtimeSocket("/uiupdatehub", tournamentId, (message: SequencedRealtimeMessage) => {
+  useRealtimeSocket("/uiupdatehub", tournamentId, (message: SequencedRealtimeMessage, replayed: boolean) => {
         const msg = message as TournamentSocketMessage & SequencedRealtimeMessage;
+
+        /* Replayed messages are history, and nothing here keeps state of its
+           own: every case below only says which query went stale, which the
+           pages have just fetched anyway. Acting on them would refetch the
+           whole tournament on load and toast warnings that are already old.
+           What a client that was away actually needs is the recovery below. */
+        if (replayed) return;
 
         if (!msg?.data || msg.data.tournamentId !== tournamentId) {
           return;
@@ -188,6 +195,10 @@ export function TournamentUpdatesProvider({
             break;
         }
   }, async () => {
+    /* Reached only after events were missed. Which ones is unknowable by
+       then, and the query keys are scoped to divisions and pools rather than
+       to a tournament, so there is no narrower filter to pass: everything on
+       screen has to be re-read. */
     await queryClient.invalidateQueries();
     setTournamentVersion((value) => value + 1);
   });

@@ -105,3 +105,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Observed behavior: a match with no songs was scored by hand through a switch and a points draft kept in `localStorage`. The points reached the server only on commit, so two staff members scoring the same match each held their own draft, the sidebar could not mark a match that was waiting, and the division standings never saw the result.
 - Decision taken: hand scoring is no longer a device state. It is a round with no song, and its points are standings like any other, written to the server as they are typed. The draft, its store and its hook are gone. See [ScoringRefactoring.md](ScoringRefactoring.md).
 - What the answer turned out to be: the question asked whether the draft should be shared or stay local. Neither: the draft itself was the accident. Once a hand-scored match has a round, there is nothing left that only one device knows.
+
+### FQ-013 — Changes between an HTTP read and the realtime connection
+
+- Status: Open.
+- Observed behavior: a page loads its state over HTTP and opens its realtime socket at roughly the same moment. The `RealtimeReady` frame carries the cached messages of the tournament, but `TournamentUpdatesProvider` ignores replayed messages, because on `/uiupdatehub` they are only invalidation signals and re-reading history would refetch the whole tournament on every load. A change committed in the window between the HTTP read and the socket connection is therefore announced by a signal the client discards, and the page keeps showing the value it fetched until the next live event arrives.
+- Question: Should an HTTP response state the realtime sequence it reflects, so a connecting client can compare it against the ready frame and recover only when it is genuinely behind? That is the only way to tell "history I already have" from "history I missed" without re-reading everything.
+- Evidence: `apps/frontend/src/shared/realtime/useRealtimeSocket.ts`, `apps/frontend/src/features/tournament/context/TournamentUpdatesContext.tsx`, and `apps/realtime/src/browser/websocket-browser-event.broadcaster.ts`.
+- Rule: the window is the page-load gap only, and any later event repairs the view. Do not add sequence stamping to the HTTP contracts before the user asks for it.

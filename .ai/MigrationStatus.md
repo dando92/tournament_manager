@@ -190,6 +190,17 @@
 - `MatchCard` no longer takes `onCommitMatchResult`. The parked bracket and round-robin views render cards, so re-wiring them will need a commit affordance of their own.
 - Verification: `npx tsc --noEmit` clean, `npx eslint src` zero errors, `npx vite build` succeeds, `npm test` 5/5.
 
+### Connecting is the realtime snapshot
+
+- Moved the cached state into the `RealtimeReady` frame the server opens every connection with, so a client learns the sequence and what it missed in one frame. It used to receive the two separately and could not tell a first connection from a reconnection with a gap, which is why it re-fetched the same snapshot over HTTP on every page load.
+- Deleted `SnapshotController` and `GET /realtime/snapshot`; nothing calls it now that the ready frame carries the state. `RealtimeSnapshotReader` stays, because the broadcaster fills that frame through it.
+- Replayed messages now reach a consumer marked as such. `TournamentUpdatesProvider` ignores them: on `/uiupdatehub` they are only invalidation signals, and acting on history refetched the whole tournament on load and raised warning toasts that were already old.
+- Restricted the authoritative recovery to a socket that resumes at a sequence it has not seen. The invalidation it triggers stays unfiltered, because the query keys are scoped to divisions and pools rather than to a tournament.
+- Split the effect in `useTournamentPage`, which refetched the tournament whenever `canControl` flipped as permissions resolved.
+- Result on a pool page load: one `overview` request instead of three, and no snapshot fetches.
+- Open question recorded as FQ-013: a change committed between the HTTP read and the socket connection is announced by a signal the client now discards.
+- Verification: `npm run check:architecture` passes, realtime `tsc --noEmit` clean and 16/16 unit tests, API `tsc --noEmit` clean with tests included, realtime e2e 2/2 against a real Redis, frontend `vite build` and `eslint` clean.
+
 ## Verification
 
 ```text

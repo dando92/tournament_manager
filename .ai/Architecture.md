@@ -43,6 +43,7 @@ PostgreSQL is authoritative for application data. Redis carries replaceable live
 ### Realtime
 
 - Is the only browser WebSocket surface.
+- Opens every browser connection with a `RealtimeReady` frame carrying the tournament's cached state and the sequence it belongs to, so connecting is itself the snapshot and no separate snapshot endpoint exists.
 - Subscribes to Redis Pub/Sub and forwards messages to tournament-scoped clients.
 - Performs no domain mutation and owns no authoritative application state.
 - Uses `RealtimeEventService` as the subscription and routing coordinator, `WebSocketBrowserEventBroadcaster` as the browser transport owner, and one `TournamentRealtimeState` per observed tournament and replica for replaceable sequencing and snapshots.

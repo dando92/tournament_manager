@@ -35,6 +35,10 @@ export function useTournamentPage({ tournamentId, canControl }: UseTournamentPag
   const [hasStartggApiKey, setHasStartggApiKey] = useState(false);
   const [tournamentStatus, setTournamentStatus] = useState<"open" | "closed">("open");
 
+  /* The tournament itself does not depend on who is looking at it, so it is
+     read on its own. Kept in the same effect as the key check below it was
+     fetched a second time the moment permissions resolved and `canControl`
+     flipped. */
   useEffect(() => {
     axios
       .get<Tournament>(`tournaments/${tournamentId}`)
@@ -47,16 +51,17 @@ export function useTournamentPage({ tournamentId, canControl }: UseTournamentPag
       })
       .catch(() => {});
 
-    if (canControl) {
-      axios
-        .get<{ hasStartggApiKey: boolean }>(`tournaments/${tournamentId}/startgg/api-key-status`)
-        .then((response) => setHasStartggApiKey(response.data.hasStartggApiKey))
-        .catch(() => setHasStartggApiKey(false));
-    }
-
     return () => {
       document.title = "Tournament Manager";
     };
+  }, [tournamentId]);
+
+  useEffect(() => {
+    if (!canControl) return;
+    axios
+      .get<{ hasStartggApiKey: boolean }>(`tournaments/${tournamentId}/startgg/api-key-status`)
+      .then((response) => setHasStartggApiKey(response.data.hasStartggApiKey))
+      .catch(() => setHasStartggApiKey(false));
   }, [canControl, tournamentId]);
 
   return {

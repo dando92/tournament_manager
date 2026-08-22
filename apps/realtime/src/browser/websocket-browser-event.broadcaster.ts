@@ -8,6 +8,7 @@ import {
   isRealtimePath,
   type RealtimeMessage,
   type RealtimePath,
+  type RealtimeReadyMessage,
 } from '../realtime-message';
 import {
   REALTIME_SNAPSHOT_READER,
@@ -79,13 +80,18 @@ export class WebSocketBrowserEventBroadcaster
       this.clients.set(client, { tournamentId, path });
       this.server.emit('connection', client, request);
 
+      /* The cached state travels inside the ready frame rather than as the
+         frames that follow it. Sent separately, those messages carry sequences
+         the client has to accept before it knows its own baseline, which is
+         what used to force it to re-fetch the snapshot over HTTP just to tell
+         a first connection apart from a reconnection that missed events. */
       const snapshot = this.snapshots.snapshot(tournamentId, path);
-      client.send(JSON.stringify({
+      const ready: RealtimeReadyMessage = {
         event: 'RealtimeReady',
-        data: { tournamentId },
+        data: { tournamentId, messages: snapshot.messages },
         sequence: snapshot.sequence,
-      }));
-      for (const message of snapshot.messages) client.send(JSON.stringify(message));
+      };
+      client.send(JSON.stringify(ready));
     });
   }
 }

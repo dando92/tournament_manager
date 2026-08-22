@@ -50,13 +50,12 @@ describe('WebSocketBrowserEventBroadcaster', () => {
     expect(snapshots.snapshot).toHaveBeenCalledWith(7, '/uiupdatehub');
     expect(client.send).toHaveBeenNthCalledWith(1, JSON.stringify({
       event: 'RealtimeReady',
-      data: { tournamentId: 7 },
+      data: {
+        tournamentId: 7,
+        messages: [{ event: 'MatchUpdate', data: { matchId: 3 }, sequence: 4 }],
+      },
       sequence: 4,
     }));
-    expect(client.send).toHaveBeenNthCalledWith(
-      2,
-      JSON.stringify({ event: 'MatchUpdate', data: { matchId: 3 }, sequence: 4 }),
-    );
 
     broadcaster.broadcast(7, '/uiupdatehub', {
       event: 'TournamentUpdate',
@@ -68,7 +67,7 @@ describe('WebSocketBrowserEventBroadcaster', () => {
       data: { tournamentId: 8 },
       sequence: 1,
     });
-    expect(client.send).toHaveBeenCalledTimes(3);
+    expect(client.send).toHaveBeenCalledTimes(2);
 
     broadcaster.onModuleDestroy();
     expect(client.close).toHaveBeenCalledWith(1001, 'Service shutting down');
