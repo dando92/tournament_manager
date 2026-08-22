@@ -4,12 +4,21 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 0 complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 1 complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 1 of [ApiRefactoring.md](ApiRefactoring.md) — add `MatchQueries` and point the three match read routes at it, on branch `refactor/1-match-queries`.
+- Next action: phase 2 of [ApiRefactoring.md](ApiRefactoring.md) — add `match.aggregate.ts`, `match.store.ts` and `match.commands.ts`, absorbing `StandingManager`, `MatchWorkflowManager` and the write half of `MatchManager` and `MatchService`, on branch `refactor/2-match-aggregate`.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 1: match read side
+
+- Added `competition/match/match.queries.ts` with `byId`, `byPhaseGroup` and `byDivision`. The three differ in one predicate and share one query, one mapper and one batched advancement-rule lookup, so a read costs two queries whatever the size of its scope. The per-match form issued two rule lookups inside the map over a pool's matches, which cost `1 + 2N` queries: 81 for a forty-match pool, 5 for the two-match pool the new test reads.
+- Aggregated both child collections into JSON in the database, so one match is one row. A flat join would multiply entrants by standings and move the grouping back into JavaScript; the JSON keys are the DTO field names, which keeps the mapper a copy rather than a translation.
+- Pointed `GET /matches/:id`, `GET /matches/division/:id` and `GET /matches/phase-group/:id` at it, and made `MatchManager.GetMatchForView` delegate to `byId`. Every write that answers with a match now returns the projection its `GET` returns, so a match is described in one place. `MatchManager` keeps the write paths, which phase 2 moves.
+- Removed `MatchManager.toMatchListDto`, `FindMatchesForDivision`, `FindMatchesForPhaseGroup`, `MatchService.findByDivisionForView` and `findByPhaseGroupForView`. `findOneForView` stays: the write paths still load their match through it.
+- Added `tests/e2e/competition/match-reads.e2e-spec.ts`, six cases against a real PostgreSQL, covering an entrant with a participant and a player, a played round with a score, a hand-scored round without one, a rule leaving one match and reaching another, a second pool only the division scope sees, and the query count of a pool read. Raw SQL is not checked by the compiler, so this suite is the safety net a renamed column has to fail against.
+- Verification passed: `npx tsc --noEmit`, `npm run build` (every workspace), `npm run lint` (the four pre-existing warnings, none in the changed files), 57 unit tests, 17 end-to-end tests against PostgreSQL, and `npm run check:architecture`.
 
 ### Structure refactoring phase 0: removals
 

@@ -515,16 +515,29 @@ Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
 pre-existing warnings, none in the changed files), 57 unit tests, 11
 end-to-end tests against PostgreSQL, and `npm run check:architecture`.
 
-### Phase 1 — Match read side
+### Phase 1 — Match read side (done)
 
-- Add `competition/match/match.queries.ts` with `byId`, `byPhaseGroup` and
-  `byDivision`, sharing one scope-parameterized query, plus one batched
-  advancement-rule query.
-- Point `GET /matches/:id`, `GET /matches/division/:id` and
-  `GET /matches/phase-group/:id` at it.
-- `MatchManager` keeps the write paths for now.
-- Verification: responses identical for a fixture tournament; the query count
-  for a forty-match pool drops from 81 to 2.
+`competition/match/match.queries.ts` holds `byId`, `byPhaseGroup` and
+`byDivision`. They share one scope-parameterized query and one batched
+advancement-rule query, so a read costs two queries whatever its scope holds,
+against `1 + 2N` before — 81 for a forty-match pool.
+
+The two child collections are aggregated into JSON in the database rather than
+joined flat, which is what keeps one match to one row: a flat join multiplies
+entrants by standings and moves the grouping back into JavaScript. The JSON
+keys are the DTO field names, so the mapper is a copy rather than a
+translation.
+
+The three read routes call it, and `MatchManager.GetMatchForView` delegates to
+`byId`, so a write that answers with a match returns the projection its `GET`
+returns. `MatchManager` keeps the write paths for phase 2. `toMatchListDto`,
+both list methods and the two `*ForView` list loaders are gone.
+
+Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
+pre-existing warnings, none in the changed files), 57 unit tests, 17 end-to-end
+tests against PostgreSQL — six of them new, covering every branch of the
+projection and the query count of a pool read — and
+`npm run check:architecture`.
 
 ### Phase 2 — Match write side
 
