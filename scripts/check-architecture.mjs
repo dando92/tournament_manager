@@ -181,6 +181,75 @@ for (const workspace of [
   }
 }
 
+/*
+ * An image builds its workspaces by a hand-written chain, so nothing forces
+ * that chain to agree with the dependency graph. When contracts gained its
+ * dependency on scoring, three Dockerfiles kept building contracts first and
+ * every image stopped building — the graph and the images had drifted with no
+ * failing check between them.
+ */
+const workspaceDirectories = [
+  "packages/contracts",
+  "packages/scoring",
+  "packages/persistence",
+  "packages/live-messaging",
+  "packages/syncstart-protocol",
+  "packages/startgg",
+  ...apps.map((app) => `apps/${app}`),
+];
+const dependencyGraph = new Map(
+  workspaceDirectories.map((directory) => {
+    const pkg = packageJson(directory);
+    return [pkg.name, internalDependencies(pkg)];
+  }),
+);
+
+function transitiveDependencies(name, seen = new Set()) {
+  for (const dependency of dependencyGraph.get(name) ?? []) {
+    if (seen.has(dependency)) continue;
+    seen.add(dependency);
+    transitiveDependencies(dependency, seen);
+  }
+  return seen;
+}
+
+for (const app of apps) {
+  const dockerfilePath = join(root, "apps", app, "Dockerfile");
+  if (!existsSync(dockerfilePath)) {
+    errors.push(`apps/${app}/Dockerfile is required`);
+    continue;
+  }
+
+  const name = packageJson(`apps/${app}`).name;
+  const built = readFileSync(dockerfilePath, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line.includes("npm run build"))
+    .flatMap((line) => [...line.matchAll(/--workspace=(\S+)/g)].map((match) => match[1]));
+  const position = new Map(built.map((workspace, index) => [workspace, index]));
+
+  if (!position.has(name)) {
+    errors.push(`apps/${app}/Dockerfile must build ${name}`);
+    continue;
+  }
+
+  const required = transitiveDependencies(name);
+  for (const dependency of required) {
+    if (!position.has(dependency)) {
+      errors.push(`apps/${app}/Dockerfile must build ${dependency}, which ${name} depends on`);
+    }
+  }
+  for (const dependent of [name, ...required]) {
+    for (const dependency of dependencyGraph.get(dependent) ?? []) {
+      if (!position.has(dependency) || !position.has(dependent)) continue;
+      if (position.get(dependency) > position.get(dependent)) {
+        errors.push(
+          `apps/${app}/Dockerfile builds ${dependent} before its dependency ${dependency}`,
+        );
+      }
+    }
+  }
+}
+
 for (const path of [
   ...filesBelow(join(root, "packages", "contracts", "src")),
   ...filesBelow(join(root, "packages", "scoring", "src")),

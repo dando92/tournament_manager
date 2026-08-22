@@ -15,9 +15,13 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
-RUN npm ci --workspace=tournament-viewer
+RUN npm ci --workspace=tournament-viewer --workspace=@tournament-manager/contracts --workspace=@tournament-manager/scoring
+# The viewer reads its response types from the contracts package, which reads
+# ScoringSystemType from scoring. Both are built here, in dependency order.
+COPY packages/scoring packages/scoring
+COPY packages/contracts packages/contracts
 COPY apps/frontend apps/frontend
-RUN npm run build --workspace=tournament-viewer
+RUN npm run build --workspace=@tournament-manager/scoring && npm run build --workspace=@tournament-manager/contracts && npm run build --workspace=tournament-viewer
 
 # ---- Serve stage ----
 FROM nginx:alpine
