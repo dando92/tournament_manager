@@ -1,10 +1,8 @@
 import { Inject } from "@nestjs/common";
-import { CreateMatchDto } from "@tournament/dtos";
 
-import { Entrant, Match, Division, Phase, PhaseGroup } from "@tournament-manager/persistence";
+import { Entrant, Division, Phase, PhaseGroup } from "@tournament-manager/persistence";
 import { DivisionService } from "@tournament/structure/services/division.service";
-import { MatchManager } from "@match/services/match.manager";
-import { MatchService } from "@match/services/match.service";
+import { MatchCommands } from "@match/match.commands";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
 import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";
@@ -12,9 +10,7 @@ import { PhaseGroupService } from "@tournament/structure/services/phase-group.se
 export class IBracketSystem {
     constructor(
         @Inject()
-        protected readonly matchService: MatchService,
-        @Inject()
-        protected readonly matchManager: MatchManager,
+        protected readonly matchCommands: MatchCommands,
         @Inject()
         protected readonly divisionService: DivisionService,
         @Inject()
@@ -61,54 +57,52 @@ export class IBracketSystem {
         return p;
     }
 
-    protected async fillFirstWave(entrants: Entrant[], firstRound: Match[], playerPerMatch: number): Promise<void> {
+    protected async fillFirstWave(entrants: Entrant[], firstRound: number[], playerPerMatch: number): Promise<void> {
         for (let i = 0; i < entrants.length; i++) {
             const matchIndex = Math.floor(i / playerPerMatch);
             if (matchIndex < firstRound.length) {
-                await this.AddEntrantToMatch(entrants[i], firstRound[matchIndex].id);
+                await this.AddEntrantToMatch(entrants[i], firstRound[matchIndex]);
             }
         }
     }
 
-    protected async CreateMatchesInPhase(namePrefix: string, _phase: Phase, matchCount: number, phaseGroupId: number): Promise<Match[]> {
-        const matches: Match[] = [];
+    /** A structure is built out of match ids: nothing here reads a match back. */
+    protected async CreateMatchesInPhase(namePrefix: string, _phase: Phase, matchCount: number, phaseGroupId: number): Promise<number[]> {
+        const matchIds: number[] = [];
         for (let i = 0; i < matchCount; i++) {
-            const match = await this.CreateEmptyMatch(namePrefix + "_Match_" + i, "MatchDescription", phaseGroupId);
-            matches.push(match);
+            matchIds.push(await this.CreateEmptyMatch(namePrefix + "_Match_" + i, "MatchDescription", phaseGroupId));
         }
-        return matches;
+        return matchIds;
     }
 
     protected async CreateMatchAdvancementRule(
-        sourceMatch: Match,
+        sourceMatchId: number,
         sourcePlacementIndex: number,
-        targetMatch: Match,
+        targetMatchId: number,
         targetSlotIndex: number,
     ): Promise<void> {
         await this.advancementRuleService.createMatchToMatchRule(
-            sourceMatch.id,
+            sourceMatchId,
             sourcePlacementIndex + 1,
-            targetMatch.id,
+            targetMatchId,
             targetSlotIndex + 1,
         );
     }
 
-    protected async CreateEmptyMatch(name: string, desc: string, phaseGroupId: number): Promise<Match> {
-        const dto = new CreateMatchDto();
-
-        dto.phaseGroupId = phaseGroupId;
-        dto.name = name;
-        dto.notes = desc;
-        dto.scoringSystem = "EurocupScoreCalculator";
-
-        return await this.matchService.create(dto);
+    protected async CreateEmptyMatch(name: string, desc: string, phaseGroupId: number): Promise<number> {
+        return await this.matchCommands.create({
+            name,
+            notes: desc,
+            phaseGroupId,
+            scoringSystem: "EurocupScoreCalculator",
+        });
     }
 
     protected async AddEntrantToMatch(entrant: Entrant, matchId: number) {
-        return await this.matchManager.AddEntrantInMatch(matchId, entrant.id);
+        return await this.matchCommands.addEntrant(matchId, entrant.id);
     }
 
     protected async RemoveEntrantFromMatch(entrant: Entrant, matchId: number) {
-        await this.matchManager.RemoveEntrantInMatch(matchId, entrant.id);
+        await this.matchCommands.removeEntrant(matchId, entrant.id);
     }
 }

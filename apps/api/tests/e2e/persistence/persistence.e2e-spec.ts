@@ -3,8 +3,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Match, MatchResult, Player, Score, Song } from '@tournament-manager/persistence';
-import { MatchResultService } from '@match/services/match-result.service';
+import {
+  Entrant,
+  Match,
+  MatchResult,
+  Participant,
+  Player,
+  Round,
+  Score,
+  Song,
+  Standing,
+  PhaseGroup,
+} from '@tournament-manager/persistence';
+import { MatchStore } from '@match/match.store';
 import { ScoreService } from '@tournament/competition/services/score.service';
 import {
   dropTestDatabase,
@@ -17,12 +28,14 @@ describe('Score and match-result persistence (e2e)', () => {
   const database = getTestDatabaseName('persistence');
   let app: INestApplication;
   let scoreService: ScoreService;
-  let matchResultService: MatchResultService;
+  let matchStore: MatchStore;
   let playerRepository: Repository<Player>;
   let songRepository: Repository<Song>;
   let scoreRepository: Repository<Score>;
   let matchRepository: Repository<Match>;
   let matchResultRepository: Repository<MatchResult>;
+  let participantRepository: Repository<Participant>;
+  let entrantRepository: Repository<Entrant>;
 
   beforeAll(async () => {
     const migrations = await resetMigratedTestDatabase(database);
@@ -31,20 +44,33 @@ describe('Score and match-result persistence (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         TypeOrmModule.forRoot(getTestDataSourceOptions(database)),
-        TypeOrmModule.forFeature([Player, Song, Score, Match, MatchResult]),
+        TypeOrmModule.forFeature([
+          Player,
+          Song,
+          Score,
+          Match,
+          MatchResult,
+          Round,
+          Standing,
+          Entrant,
+          Participant,
+          PhaseGroup,
+        ]),
       ],
-      providers: [ScoreService, MatchResultService],
+      providers: [ScoreService, MatchStore],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
     scoreService = moduleFixture.get(ScoreService);
-    matchResultService = moduleFixture.get(MatchResultService);
+    matchStore = moduleFixture.get(MatchStore);
     playerRepository = moduleFixture.get(getRepositoryToken(Player));
     songRepository = moduleFixture.get(getRepositoryToken(Song));
     scoreRepository = moduleFixture.get(getRepositoryToken(Score));
     matchRepository = moduleFixture.get(getRepositoryToken(Match));
     matchResultRepository = moduleFixture.get(getRepositoryToken(MatchResult));
+    participantRepository = moduleFixture.get(getRepositoryToken(Participant));
+    entrantRepository = moduleFixture.get(getRepositoryToken(Entrant));
   });
 
   afterAll(async () => {
@@ -103,39 +129,56 @@ describe('Score and match-result persistence (e2e)', () => {
     ).rejects.toThrow('Song with ID 999999 not found');
   });
 
-  it('creates, replaces, and deletes the result associated with a match', async () => {
-    const match = await matchRepository.save(
+  /**
+   * One save writes the whole aggregate: the round it grew, the standing inside
+   * that round, and the result the commit produced. Reopening it takes the
+   * result row away rather than leaving it unreferenced.
+   */
+  it('writes a match, its rounds and its result through one store', async () => {
+    const player = await playerRepository.save(playerRepository.create({ playerName: 'Aggregate Player' }));
+    const participant = await participantRepository.save(
+      participantRepository.create({ player, roles: [], status: 'registered' }),
+    );
+    const entrant = await entrantRepository.save(
+      entrantRepository.create({ name: 'Aggregate Entrant', type: 'player', participants: [participant] }),
+    );
+    const stored = await matchRepository.save(
       matchRepository.create({
-        name: 'Persistence Match',
+        name: 'Aggregate Match',
         scoringSystem: 'EurocupScoreCalculator',
-        active: false,
+        active: true,
+        entrants: [entrant],
       }),
     );
 
-    const created = await matchResultService.upsertForMatch(match.id, [
-      { playerId: 1, points: 2 },
-      { playerId: 2, points: 1 },
-    ]);
-    const updated = await matchResultService.upsertForMatch(match.id, [
-      { playerId: 2, points: 3 },
-      { playerId: 1, points: 0 },
-    ]);
+    const match = await matchStore.loadOrFail(stored.id);
+    match.addRound(null);
+    await matchStore.save(match);
 
-    expect(updated.id).toBe(created.id);
-    expect(updated.playerPoints).toEqual([
-      { playerId: 2, points: 3 },
-      { playerId: 1, points: 0 },
-    ]);
+    const withRound = await matchStore.loadOrFail(stored.id);
+    const roundId = withRound.rounds[0].id;
+    withRound.upsertPoints(roundId, player, 3);
+    withRound.commit();
+    await matchStore.save(withRound);
+
+    const committed = await matchStore.loadOrFail(stored.id);
+    expect(committed.entity.active).toBe(false);
+    expect(committed.entity.matchResult.playerPoints).toEqual([{ playerId: player.id, points: 3 }]);
+    expect(committed.rounds[0].standings[0].points).toBe(3);
     await expect(matchResultRepository.count()).resolves.toBe(1);
 
-    await matchResultService.deleteForMatch(match.id);
+    committed.reopen();
+    await matchStore.save(committed);
 
     await expect(matchResultRepository.count()).resolves.toBe(0);
-    await expect(
-      matchRepository.findOne({
-        where: { id: match.id },
-        relations: { matchResult: true },
-      }),
-    ).resolves.toMatchObject({ matchResult: null });
+    await expect(matchStore.loadOrFail(stored.id)).resolves.toMatchObject({ isCompleted: false });
+
+    const reopened = await matchStore.loadOrFail(stored.id);
+    reopened.removeStanding(roundId, player.id);
+    reopened.removeRound(roundId);
+    await matchStore.save(reopened);
+
+    await expect(matchStore.loadOrFail(stored.id)).resolves.toMatchObject({ rounds: [] });
   });
+
 });

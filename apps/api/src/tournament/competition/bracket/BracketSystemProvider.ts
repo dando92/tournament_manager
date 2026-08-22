@@ -4,9 +4,8 @@ import { DoubleElimination } from "@bracket/DoubleElimination";
 import { SingleElimination } from "@bracket/SingleElimination";
 import { IBracketSystem } from "@bracket/IBracketSystem";
 import { KingOfTheHill } from "@bracket/KingOfTheHill";
-import { MatchService } from "@match/services/match.service";
+import { MatchCommands } from "@match/match.commands";
 import { DivisionService } from "@tournament/structure/services/division.service";
-import { MatchManager } from "@match/services/match.manager";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
 import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";
@@ -16,9 +15,7 @@ export class BracketSystemProvider {
     private readonly systems: Map<string, IBracketSystem>;
     constructor(
         @Inject()
-        private readonly matchService: MatchService,
-        @Inject()
-        private readonly matchManager: MatchManager,
+        private readonly matchCommands: MatchCommands,
         @Inject()
         private readonly divisionService: DivisionService,
         @Inject()
@@ -28,8 +25,8 @@ export class BracketSystemProvider {
         @Inject()
         private readonly phaseGroupService: PhaseGroupService,
     ) {
-        const args: [MatchService, MatchManager, DivisionService, PhaseService, AdvancementRuleService, PhaseGroupService] =
-            [matchService, matchManager, divisionService, phaseService, advancementRuleService, phaseGroupService];
+        const args: [MatchCommands, DivisionService, PhaseService, AdvancementRuleService, PhaseGroupService] =
+            [matchCommands, divisionService, phaseService, advancementRuleService, phaseGroupService];
 
         const all: IBracketSystem[] = [
             new DoubleElimination(...args),

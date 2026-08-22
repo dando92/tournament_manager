@@ -24,22 +24,17 @@ import { BracketManager } from './competition/bracket/bracket.manager';
 import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
 import { MatchesController } from './competition/match/controllers/matches.controller';
 import { AdvancementManager } from './competition/match/services/advancement.manager';
-import { MatchManager } from './competition/match/services/match.manager';
+import { MatchCommands } from './competition/match/match.commands';
 import { MatchQueries } from './competition/match/match.queries';
-import { MatchResultService } from './competition/match/services/match-result.service';
-import { MatchService } from './competition/match/services/match.service';
-import { MatchWorkflowManager } from './competition/match/services/match-workflow.manager';
+import { MatchStore } from './competition/match/match.store';
 import { UiUpdateContextService } from './competition/match/services/ui-update-context.service';
 import { UiUpdatePublisher } from './competition/match/services/ui-update.publisher';
 import { ScoresController } from './competition/controllers/scores.controller';
 import { SongsController } from './competition/controllers/songs.controller';
 import { CompletedSongService } from './competition/services/completed-song.service';
-import { RoundService } from './competition/services/round.service';
 import { ScoreService } from './competition/services/score.service';
 import { SongRoller } from './competition/services/song.roller';
 import { SongService } from './competition/services/song.service';
-import { StandingManager } from './competition/standing/standing.manager';
-import { StandingService } from './competition/standing/standing.service';
 import { RoundsController } from './competition/standing/rounds.controller';
 import { PlayersController } from './player/players.controller';
 import { PlayerManager } from './player/player.manager';
@@ -66,15 +61,11 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         TournamentSyncStartModule,
     ],
     providers: [
-        MatchService,
-        MatchResultService,
-        MatchManager,
+        MatchCommands,
         MatchQueries,
+        MatchStore,
         AdvancementManager,
-        MatchWorkflowManager,
         SongRoller,
-        StandingManager,
-        StandingService,
         ScoringSystemProvider,
         BracketSystemProvider,
         BracketManager,
@@ -91,7 +82,6 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         PhaseGroupManager,
         SongService,
         ScoreService,
-        RoundService,
         UiUpdateContextService,
         StartggService,
         AdvancementRuleService,

@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
-import { StandingManager } from './standing.manager';
-import { MatchManager } from '@match/services/match.manager';
+import { MatchCommands } from '@match/match.commands';
 import { MatchListDto } from '@match/dtos/match-list.dto';
 import { UpsertPointsDto, UpsertScoreDto } from './standing.dto';
 import { RoundSourceDto } from '@match/dtos/match.dto';
@@ -16,15 +15,13 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
  *
  * Every route answers with the whole match in the shape every other match
  * endpoint uses, so a client can apply one response the same way wherever it
- * came from.
+ * came from. A round is part of the match aggregate, so its writes are commands
+ * on the match.
  */
 @UseGuards(TournamentOpenGuard)
 @Controller('rounds')
 export class RoundsController {
-    constructor(
-        private readonly standingManager: StandingManager,
-        private readonly matchManager: MatchManager,
-    ) {}
+    constructor(private readonly matchCommands: MatchCommands) {}
 
     @Put(':roundId')
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
@@ -32,13 +29,13 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Body(new ValidationPipe()) dto: RoundSourceDto,
     ): Promise<MatchListDto | null> {
-        return await this.matchManager.ReplaceRoundSong(Number(roundId), dto);
+        return await this.matchCommands.replaceRoundSong(Number(roundId), dto);
     }
 
     @Delete(':roundId')
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
     async removeRound(@Param('roundId') roundId: number): Promise<MatchListDto | null> {
-        return await this.matchManager.RemoveRound(Number(roundId));
+        return await this.matchCommands.removeRound(Number(roundId));
     }
 
     @Put(':roundId/scores/:playerId')
@@ -48,8 +45,7 @@ export class RoundsController {
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertScoreDto,
     ): Promise<MatchListDto | null> {
-        const match = await this.standingManager.upsertScore(Number(roundId), Number(playerId), dto);
-        return await this.matchManager.GetMatchForView(match.id);
+        return await this.matchCommands.upsertScore(Number(roundId), Number(playerId), dto);
     }
 
     @Put(':roundId/points/:playerId')
@@ -59,8 +55,7 @@ export class RoundsController {
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertPointsDto,
     ): Promise<MatchListDto | null> {
-        const match = await this.standingManager.upsertPoints(Number(roundId), Number(playerId), dto.points);
-        return await this.matchManager.GetMatchForView(match.id);
+        return await this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points);
     }
 
     @Delete(':roundId/standings/:playerId')
@@ -69,7 +64,6 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
     ): Promise<MatchListDto | null> {
-        const match = await this.standingManager.removeStanding(Number(roundId), Number(playerId));
-        return await this.matchManager.GetMatchForView(match.id);
+        return await this.matchCommands.removeStanding(Number(roundId), Number(playerId));
     }
 }

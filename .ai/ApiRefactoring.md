@@ -539,17 +539,57 @@ tests against PostgreSQL — six of them new, covering every branch of the
 projection and the query count of a pool read — and
 `npm run check:architecture`.
 
-### Phase 2 — Match write side
+### Phase 2 — Match write side (done)
 
-- Add `match.aggregate.ts`, `match.store.ts` and `match.commands.ts`. They
-  absorb `StandingManager`, `MatchWorkflowManager`, and the write half of
-  `MatchManager` and `MatchService`.
-- Move `assertEditable`, `buildMatchResultPlayerPoints`, the round-settled rule
-  and the song-versus-hand-scored rule into the aggregate.
-- Extend the store graph to the tournament and delete `UiUpdateContextService`.
-- Mutations still answer with `match.queries.byId`, so the contract is unchanged.
-- Verification: the commit path loads the match once instead of five times; the
-  existing scoring and advancement unit tests pass against the aggregate.
+`match.aggregate.ts` holds the rules and no dependencies, `match.store.ts` the
+one graph definition and the one transaction that puts it back, and
+`match.commands.ts` the order of the steps. They absorbed `MatchManager`,
+`MatchWorkflowManager`, `StandingManager`, `MatchResultService`, `RoundService`,
+`StandingService` and the write half of `MatchService`: about 900 lines, each
+layer of which reloaded what its caller already held.
+
+`assertEditable`, the commit points, the round-settled rule and the
+song-versus-hand-scored rule are aggregate methods, so they are unit-tested
+without a database — the two mock-driven manager specs became one aggregate spec
+of thirty cases.
+
+The store's graph reaches the tournament, so a write publishes an address it
+already holds. `UiUpdateContextService` lost its match lookup and the publisher
+gained `emitMatchUpdate`; the rest of the context service still serves the
+aggregates that have no store yet and goes with the last of them, rather than in
+this phase as first written. The start.gg reporter is handed the loaded match
+for the same reason, which is what brought the commit down to one load.
+
+Every mutation answers with `MatchQueries.byId`. That now includes creation and
+update, which previously answered with a bare entity carrying neither
+`advancementRules` nor `phaseGroupId` while the client already declared it was
+reading a projection; the other routes were unchanged.
+
+Four departures from the plan as written, each of which stands until the phase
+that resolves it:
+
+- `applyCompletedSong` is not a command. `CompletedSongService` ingests inside
+  its own transaction and produces warnings alongside its effect; moving it
+  belongs with the `syncstart/` split, and its copy of the ranking rule stays
+  until then. `StandingManager.applyPlayedScore`, the entry point it replaced,
+  was dead and was removed.
+- `addEntrant` and `removeEntrant` are commands, because the bracket systems
+  fill a match one entrant at a time while building it. Fourteen commands, not
+  thirteen.
+- `MatchQueries` took in the two reads left stranded in `MatchService`:
+  `pendingCountsByPhaseGroup`, which phase 5 folds into `TreeQueries`, and
+  `exists`, which the advancement rules make. No service remains between a
+  controller and a match.
+- The file moves — `dtos/match.dto.ts` to `match.requests.ts`, the controllers
+  out of `controllers/` — were not made. Phase 3 moves the response DTOs to
+  `@tournament-manager/contracts` and would move them twice.
+
+Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
+pre-existing warnings, none in the changed files), 70 unit tests — thirteen more
+than before, and none of them mocking a service to reach a rule — 26 end-to-end
+tests against PostgreSQL, nine of them new, and `npm run check:architecture`.
+The last of the new tests counts loads of the match graph: writing one score and
+committing a result each load it once, against five for the commit before.
 
 ### Phase 3 — Shared contracts
 

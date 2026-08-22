@@ -4,12 +4,24 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 1 complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 2 complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 2 of [ApiRefactoring.md](ApiRefactoring.md) — add `match.aggregate.ts`, `match.store.ts` and `match.commands.ts`, absorbing `StandingManager`, `MatchWorkflowManager` and the write half of `MatchManager` and `MatchService`, on branch `refactor/2-match-aggregate`.
+- Next action: phase 3 of [ApiRefactoring.md](ApiRefactoring.md) — move the response DTOs into `@tournament-manager/contracts`, replace the frontend's redeclared types with imports, and write the shared projections once, on branch `refactor/3-contracts`. It is a type-level change: both workspaces building is the verification.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 2: match write side
+
+- Added `competition/match/match.aggregate.ts`, `match.store.ts` and `match.commands.ts`. The aggregate holds the rules and takes no dependencies, the store holds the one graph definition and the one transaction that puts it back, and the commands hold the order of the steps: load once, change in memory, save once, publish once.
+- Removed `MatchManager`, `MatchWorkflowManager`, `StandingManager`, `MatchResultService`, `RoundService`, `StandingService` and `MatchService`, about 900 lines in which each layer reloaded what its caller already held. Nothing now sits between a controller and the match.
+- Committing a result read the match graph five times: in the workflow manager, for the pool, again after the commit, inside the start.gg reporter, and once more to answer. It reads it once. Writing one score read it twice and now reads it once. The last case of the new end-to-end suite counts those loads, so a reload put back between the steps of a write fails a test.
+- The store's graph reaches the tournament, so a write publishes an address it already holds. `UiUpdateContextService` lost its match lookup and the publisher gained `emitMatchUpdate` and `emitPhaseGroupUpdate`. The rest of the context service still serves the aggregates that have no store yet; deleting it outright, as phase 2 was first written, would have meant giving each of them a lookup of its own.
+- The rules moved into the aggregate, where they are testable without a database: what a completed match refuses, when a round may carry a song, when a round is settled, the points a commit writes, and how a standing is written and ranked. The two mock-driven manager specs became one aggregate spec of thirty cases, and the advancement spec now asserts on saved aggregates rather than on calls to a service.
+- `POST /matches` and `PATCH /matches/:id` answer with `MatchQueries.byId` like every other mutation. They used to answer with a bare entity carrying neither `advancementRules` nor `phaseGroupId`, while the client already declared it was reading a projection.
+- Four departures from the plan, each recorded in [ApiRefactoring.md](ApiRefactoring.md): `applyCompletedSong` stays in `CompletedSongService` until the `syncstart/` split, `addEntrant` and `removeEntrant` are commands because the bracket systems need them, `MatchQueries` took in the two reads stranded in `MatchService` (`pendingCountsByPhaseGroup` and `exists`), and the file moves wait for phase 3 rather than being made twice.
+- Recorded FQ-014 in [FunctionalQuestions.md](FunctionalQuestions.md): advancement writes entrants into a target match that already holds a result, while every edit a person makes is refused. The behaviour predates the aggregate and was kept.
+- Verification passed: `npx tsc --noEmit`, `npm run build`, `npm run lint` (the four pre-existing warnings, none in the changed files), 70 unit tests, 26 end-to-end tests against PostgreSQL, and `npm run check:architecture`.
 
 ### Structure refactoring phase 1: match read side
 

@@ -113,3 +113,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should an HTTP response state the realtime sequence it reflects, so a connecting client can compare it against the ready frame and recover only when it is genuinely behind? That is the only way to tell "history I already have" from "history I missed" without re-reading everything.
 - Evidence: `apps/frontend/src/shared/realtime/useRealtimeSocket.ts`, `apps/frontend/src/features/tournament/context/TournamentUpdatesContext.tsx`, and `apps/realtime/src/browser/websocket-browser-event.broadcaster.ts`.
 - Rule: the window is the page-load gap only, and any later event repairs the view. Do not add sequence stamping to the HTTP contracts before the user asks for it.
+
+### FQ-014 — Advancement writes into a completed target match
+
+- Status: Open.
+- Observed behavior: a completed match refuses every edit a person makes — its entrants, its pool, its scoring system, its rounds and its standings are all frozen until the result is reopened. Advancement is not held to that rule: committing or reopening a match places its entrants into the target matches its rules name, and a target that already holds a result of its own is written just the same. The behavior predates the match aggregate, where the check sat in `MatchManager` rather than in the write path itself; phase 2 kept it by calling `MatchAggregate.assertEditable` from the commands a person reaches and not from the advancement path.
+- Question: Should advancement refuse a completed target, or is writing through it correct? Refusing leaves a bracket half advanced when a downstream match was committed early, which is worse than the current behavior; the alternative is to reopen the target and cascade, which nothing asks for today.
+- Evidence: `apps/api/src/tournament/competition/match/match.aggregate.ts`, `apps/api/src/tournament/competition/match/match.commands.ts`, and `apps/api/src/tournament/competition/match/services/advancement.manager.ts`.
+- Rule: keep the current behavior until the user names a case where it produces a wrong bracket.

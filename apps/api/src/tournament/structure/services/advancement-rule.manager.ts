@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AdvancementCompetitionKind } from '@tournament-manager/persistence';
 import { AdvancementRuleInputDto } from '@tournament/dtos';
-import { MatchService } from '@match/services/match.service';
+import { MatchQueries } from '@match/match.queries';
 import { PhaseGroupService } from './phase-group.service';
 import { AdvancementRuleService } from './advancement-rule.service';
 
@@ -9,7 +9,7 @@ import { AdvancementRuleService } from './advancement-rule.service';
 export class AdvancementRuleManager {
   constructor(
     private readonly advancementRuleService: AdvancementRuleService,
-    private readonly matchService: MatchService,
+    private readonly matchQueries: MatchQueries,
     private readonly phaseGroupService: PhaseGroupService,
   ) {}
 
@@ -35,8 +35,7 @@ export class AdvancementRuleManager {
 
   private async assertSourceExists(sourceKind: AdvancementCompetitionKind, sourceId: number): Promise<void> {
     if (sourceKind === 'match') {
-      const match = await this.matchService.findOneBasic(sourceId);
-      if (!match) throw new NotFoundException(`Match with ID ${sourceId} not found`);
+      if (!(await this.matchQueries.exists(sourceId))) throw new NotFoundException(`Match with ID ${sourceId} not found`);
       return;
     }
 
