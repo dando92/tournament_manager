@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { CreateSongRequest, Song } from "@/features/song/types/Song";
+import { CreateSongRequest, Song } from "@/features/song/model/types";
 import { createSong, listSongs } from "@/features/song/api/song.api";
 
 type UseTournamentHeaderSongsManageMenuOptions = {

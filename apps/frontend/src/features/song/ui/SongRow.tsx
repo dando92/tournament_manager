@@ -1,4 +1,4 @@
-import { Song } from "@/features/song/types/Song";
+import { Song } from "@/features/song/model/types";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 
 function difficultyColor(difficulty: number): string {

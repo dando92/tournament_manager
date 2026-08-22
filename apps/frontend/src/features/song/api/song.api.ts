@@ -1,5 +1,5 @@
 import axios from "axios";
-import { CreateSongRequest, Song } from "@/features/song/types/Song";
+import { CreateSongRequest, Song } from "@/features/song/model/types";
 
 /**
  * The songs a tournament may draw from, or the whole catalog when no

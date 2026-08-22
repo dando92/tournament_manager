@@ -1,5 +1,5 @@
-import SongsToolbar from "@/features/song/components/SongsToolbar";
-import { useSongsList } from "@/features/song/hooks/useSongsList";
+import SongsToolbar from "@/features/song/ui/SongsToolbar";
+import { useSongsList } from "@/features/song/model/useSongsList";
 import SongListView from "./SongListView";
 
 type SongsListProps = {

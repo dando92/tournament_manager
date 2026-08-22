@@ -1,4 +1,4 @@
-import SongsList from "@/features/song/components/SongsList";
+import SongsList from "@/features/song/ui/SongsList";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 
 export default function SongsPage() {
