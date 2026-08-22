@@ -1,17 +1,11 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 
+import { AccountProfileDto, AdminAccountDto } from '@tournament-manager/contracts';
 import { AccountService } from '../services/account.service';
-import { CreateAccountPlayerDto, AccountProfileDto } from '../dtos';
+import { CreateAccountPlayerDto } from '../dtos';
 
 import { JwtAuthGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
 import { Account } from '@tournament-manager/persistence';
-
-type AdminAccountDto = {
-    id: string;
-    username: string;
-    isAdmin: boolean;
-    isTournamentCreator: boolean;
-};
 
 @Controller('user')
 export class AccountController {

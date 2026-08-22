@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
 import { Division, Entrant } from '@tournament-manager/persistence';
-import { CreateDivisionDto, DivisionStandingRowDto, DivisionSummaryDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
+import { DivisionStandingRowDto, DivisionSummaryDto, GenerateBracketResultDto } from '@tournament-manager/contracts';
+import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
 import { DivisionManager } from '../services/division.manager';
 import { DivisionService } from '../services/division.service';
 import { EntrantService } from '@tournament/services/entrant.service';
@@ -43,7 +44,7 @@ export class DivisionsController {
     async generateBracket(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: GenerateDivisionBracketDto,
-    ): Promise<{ phaseId: number; phaseGroupId: number }> {
+    ): Promise<GenerateBracketResultDto> {
         return this.bracketManager.generateForDivision(Number(id), dto);
     }
 

@@ -2,6 +2,7 @@ export * from './account';
 export * from './catalog';
 export * from './match';
 export * from './projections';
+export * from './registration';
 export * from './startgg-import';
 export * from './structure';
 export * from './syncstart';

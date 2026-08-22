@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchCommands } from '@match/match.commands';
-import { MatchListDto } from '@match/match-list.dto';
+import { MatchDto } from '@tournament-manager/contracts';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 import { RoundSourceDto } from '@match/match.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -28,13 +28,13 @@ export class RoundsController {
     async replaceSong(
         @Param('roundId') roundId: number,
         @Body(new ValidationPipe()) dto: RoundSourceDto,
-    ): Promise<MatchListDto | null> {
+    ): Promise<MatchDto | null> {
         return await this.matchCommands.replaceRoundSong(Number(roundId), dto);
     }
 
     @Delete(':roundId')
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async removeRound(@Param('roundId') roundId: number): Promise<MatchListDto | null> {
+    async removeRound(@Param('roundId') roundId: number): Promise<MatchDto | null> {
         return await this.matchCommands.removeRound(Number(roundId));
     }
 
@@ -44,7 +44,7 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertScoreDto,
-    ): Promise<MatchListDto | null> {
+    ): Promise<MatchDto | null> {
         return await this.matchCommands.upsertScore(Number(roundId), Number(playerId), dto);
     }
 
@@ -54,7 +54,7 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertPointsDto,
-    ): Promise<MatchListDto | null> {
+    ): Promise<MatchDto | null> {
         return await this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points);
     }
 
@@ -63,7 +63,7 @@ export class RoundsController {
     async removeStanding(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
-    ): Promise<MatchListDto | null> {
+    ): Promise<MatchDto | null> {
         return await this.matchCommands.removeStanding(Number(roundId), Number(playerId));
     }
 }

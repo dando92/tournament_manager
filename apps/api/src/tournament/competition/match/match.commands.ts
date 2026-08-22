@@ -8,8 +8,8 @@ import { MatchQueries } from '@match/match.queries';
 import { MatchStore } from '@match/match.store';
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { MatchListDto } from '@match/match-list.dto';
-import { CommitMatchResultResponseDto, RoundSourceDto, StartggReportStatus } from '@match/match.requests';
+import { CommitMatchResultResponseDto, MatchDto, StartggReportStatus } from '@tournament-manager/contracts';
+import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
@@ -77,7 +77,7 @@ export class MatchCommands {
         return match.id;
     }
 
-    async update(matchId: number, input: UpdateMatchInput): Promise<MatchListDto | null> {
+    async update(matchId: number, input: UpdateMatchInput): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(matchId);
         const membershipChanged = input.entrantIds !== undefined || input.phaseGroupId !== undefined;
         if (membershipChanged || input.scoringSystem !== undefined) match.assertEditable();
@@ -115,7 +115,7 @@ export class MatchCommands {
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 
-    async setActive(matchId: number, active: boolean): Promise<MatchListDto | null> {
+    async setActive(matchId: number, active: boolean): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(matchId);
         match.activate(active);
 
@@ -146,7 +146,7 @@ export class MatchCommands {
         await this.saveAndAnnounceMembership(match);
     }
 
-    async addRound(matchId: number, source: RoundSourceDto): Promise<MatchListDto | null> {
+    async addRound(matchId: number, source: RoundSourceDto): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(matchId);
         match.assertEditable();
         await this.addRounds(match, source);
@@ -157,7 +157,7 @@ export class MatchCommands {
         return await this.queries.byId(match.id);
     }
 
-    async removeRound(roundId: number): Promise<MatchListDto | null> {
+    async removeRound(roundId: number): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
         match.assertEditable();
         match.removeRound(roundId);
@@ -173,7 +173,7 @@ export class MatchCommands {
      * the standings under it were scored on the song that is leaving. Both halves
      * are one change to one aggregate, so they are one load and one save.
      */
-    async replaceRoundSong(roundId: number, source: RoundSourceDto): Promise<MatchListDto | null> {
+    async replaceRoundSong(roundId: number, source: RoundSourceDto): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
         match.assertEditable();
         match.removeRound(roundId);
@@ -185,7 +185,7 @@ export class MatchCommands {
         return await this.queries.byId(match.id);
     }
 
-    async upsertScore(roundId: number, playerId: number, input: ScoreInput): Promise<MatchListDto | null> {
+    async upsertScore(roundId: number, playerId: number, input: ScoreInput): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
         match.assertEditable();
 
@@ -202,7 +202,7 @@ export class MatchCommands {
         return await this.queries.byId(match.id);
     }
 
-    async upsertPoints(roundId: number, playerId: number, points: number): Promise<MatchListDto | null> {
+    async upsertPoints(roundId: number, playerId: number, points: number): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
         match.assertEditable();
         match.upsertPoints(roundId, await this.store.loadPlayer(playerId), points);
@@ -213,7 +213,7 @@ export class MatchCommands {
         return await this.queries.byId(match.id);
     }
 
-    async removeStanding(roundId: number, playerId: number): Promise<MatchListDto | null> {
+    async removeStanding(roundId: number, playerId: number): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
         match.assertEditable();
         match.removeStanding(roundId, playerId);
@@ -249,7 +249,7 @@ export class MatchCommands {
         };
     }
 
-    async reopenResult(matchId: number): Promise<MatchListDto | null> {
+    async reopenResult(matchId: number): Promise<MatchDto | null> {
         const match = await this.store.loadOrFail(matchId);
         if (match.isCompleted) await this.advancement.revertFromMatch(match);
 

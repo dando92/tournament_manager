@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
+import { PhaseGroupDto, PhaseGroupEntrantDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
-import { DivisionSummaryPhaseGroupDto } from '@tournament/structure/dtos/division-summary.dto';
+import { toEntrantDto } from '@tournament/shared/projections';
 import { PhaseGroupService } from './phase-group.service';
 
 @Injectable()
@@ -11,18 +12,16 @@ export class PhaseGroupManager {
         private readonly phaseGroupService: PhaseGroupService,
     ) {}
 
-    async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<DivisionSummaryPhaseGroupDto> {
+    async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<PhaseGroupDto> {
         return this.toDto(await this.phaseGroupService.createForPhase(phaseId, dto));
     }
 
-    async getEntrants(id: number): Promise<DivisionSummaryPhaseGroupDto['entrants']> {
+    async getEntrants(id: number): Promise<PhaseGroupEntrantDto[]> {
         const entrants = await this.phaseGroupService.getEntrants(id);
-        return entrants
-            .sort((left, right) => (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER))
-            .map((entry) => this.toEntrantDto(entry));
+        return this.bySeed(entrants);
     }
 
-    async update(id: number, dto: UpdatePhaseGroupDto): Promise<DivisionSummaryPhaseGroupDto> {
+    async update(id: number, dto: UpdatePhaseGroupDto): Promise<PhaseGroupDto> {
         return this.toDto(await this.phaseGroupService.update(id, dto));
     }
 
@@ -30,7 +29,7 @@ export class PhaseGroupManager {
         await this.phaseGroupService.delete(id);
     }
 
-    private toDto(phaseGroup: PhaseGroup): DivisionSummaryPhaseGroupDto {
+    private toDto(phaseGroup: PhaseGroup): PhaseGroupDto {
         return {
             id: phaseGroup.id,
             name: phaseGroup.name,
@@ -38,35 +37,25 @@ export class PhaseGroupManager {
             bracketType: phaseGroup.bracketType ?? null,
             state: phaseGroup.state,
             matchCount: phaseGroup.matches?.length ?? 0,
-            entrants: (phaseGroup.entrants ?? [])
-                .sort((left, right) => (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER))
-                .map((entry) => this.toEntrantDto(entry)),
+            entrants: this.bySeed(phaseGroup.entrants ?? []),
             advancementRules: [],
         };
     }
 
-    private toEntrantDto(entry: PhaseGroupEntrant) {
+    /** An unseeded entrant sorts last, so a partially seeded pool still reads in order. */
+    private bySeed(entrants: PhaseGroupEntrant[]): PhaseGroupEntrantDto[] {
+        return [...entrants]
+            .sort((left, right) => (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER))
+            .map((entry) => this.toEntrantSeatDto(entry));
+    }
+
+    private toEntrantSeatDto(entry: PhaseGroupEntrant): PhaseGroupEntrantDto {
         return {
             id: entry.id,
             seedNum: entry.seedNum ?? null,
             slot: entry.slot ?? null,
             status: entry.status,
-            entrant: {
-                id: entry.entrant.id,
-                name: entry.entrant.name,
-                type: entry.entrant.type,
-                status: entry.entrant.status,
-                participants: (entry.entrant.participants ?? []).map((participant) => ({
-                    id: participant.id,
-                    roles: participant.roles ?? [],
-                    status: participant.status,
-                    player: {
-                        id: participant.player.id,
-                        playerName: participant.player.playerName,
-                    },
-                })),
-            },
+            entrant: toEntrantDto(entry.entrant),
         };
     }
 }
-

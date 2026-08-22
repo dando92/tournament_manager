@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
-import { MatchListDto } from '@match/match-list.dto';
-import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/match.requests';
+import { CommitMatchResultResponseDto, MatchDto } from '@tournament-manager/contracts';
+import { RoundSourceDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/match.requests';
 import { MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
@@ -22,30 +22,30 @@ export class MatchesController {
 
     @Post()
     @RequireOpenTournament({ entity: 'phase-group', location: 'body', field: 'phaseGroupId' })
-    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<MatchListDto | null> {
+    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<MatchDto | null> {
         const matchId = await this.matchCommands.create(dto);
 
         return await this.matchQueries.byId(matchId);
     }
 
     @Get('division/:divisionId')
-    findByDivision(@Param('divisionId') divisionId: number): Promise<MatchListDto[]> {
+    findByDivision(@Param('divisionId') divisionId: number): Promise<MatchDto[]> {
         return this.matchQueries.byDivision(Number(divisionId));
     }
 
     @Get('phase-group/:phaseGroupId')
-    findByPhaseGroup(@Param('phaseGroupId') phaseGroupId: number): Promise<MatchListDto[]> {
+    findByPhaseGroup(@Param('phaseGroupId') phaseGroupId: number): Promise<MatchDto[]> {
         return this.matchQueries.byPhaseGroup(Number(phaseGroupId));
     }
 
     @Get(':id')
-    findOne(@Param('id') id: number): Promise<MatchListDto | null> {
+    findOne(@Param('id') id: number): Promise<MatchDto | null> {
         return this.matchQueries.byId(Number(id));
     }
 
     @Patch(':id')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<MatchListDto | null> {
+    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<MatchDto | null> {
         return this.matchCommands.update(Number(id), dto);
     }
 
@@ -57,13 +57,13 @@ export class MatchesController {
 
     @Post(':matchId/rounds')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<MatchListDto | null> {
+    async addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<MatchDto | null> {
         return await this.matchCommands.addRound(Number(matchId), dto);
     }
 
     @Put(':matchId/active')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<MatchListDto | null> {
+    async updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<MatchDto | null> {
         return await this.matchCommands.setActive(Number(matchId), dto.active);
     }
 
@@ -75,7 +75,7 @@ export class MatchesController {
 
     @Delete(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async reopenMatchResult(@Param('matchId') matchId: number): Promise<MatchListDto | null> {
+    async reopenMatchResult(@Param('matchId') matchId: number): Promise<MatchDto | null> {
         return await this.matchCommands.reopenResult(Number(matchId));
     }
 }

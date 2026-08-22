@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Participant, Player, Tournament } from '@tournament-manager/persistence';
+import { Player, Tournament } from '@tournament-manager/persistence';
+import {
+    ParticipantDto,
+    ParticipantImportPreviewRowDto,
+    TournamentConfigurationDto,
+    TournamentDto,
+    TournamentOverviewDto,
+} from '@tournament-manager/contracts';
 import {
     CreateParticipantDto,
     CreateTournamentDto,
     ImportParticipantEntryDto,
-    TournamentConfigurationDto,
-    TournamentOverviewDto,
-    TournamentResponseDto,
     UpdateTournamentDto,
 } from '@tournament/dtos';
+import { toEntrantDto, toParticipantDto, toPlayerRefDto } from '@tournament/shared/projections';
 import { DivisionService } from '@tournament/structure/services/division.service';
 import { MatchQueries } from '@match/match.queries';
 import { TournamentService } from './tournament.service';
@@ -31,24 +36,12 @@ export class TournamentManager {
         return value.trim().toLowerCase();
     }
 
-    private toParticipantDto(participant: Participant) {
-        return {
-            id: participant.id,
-            roles: participant.roles ?? [],
-            status: participant.status,
-            player: {
-                id: participant.player.id,
-                playerName: participant.player.playerName,
-            },
-        };
-    }
-
-    private toResponseDto(tournament: Tournament): TournamentResponseDto {
+    private toResponseDto(tournament: Tournament): TournamentDto {
         return {
             id: tournament.id,
             name: tournament.name,
             status: tournament.status,
-            closedAt: tournament.closedAt,
+            closedAt: tournament.closedAt?.toISOString() ?? null,
             syncstartUrl: tournament.syncstartUrl,
             availableSetupsCount: tournament.availableSetupsCount,
             defaultScoringSystem: tournament.defaultScoringSystem,
@@ -66,7 +59,7 @@ export class TournamentManager {
             id: tournament.id,
             name: tournament.name,
             status: tournament.status,
-            closedAt: tournament.closedAt,
+            closedAt: tournament.closedAt?.toISOString() ?? null,
             transportRetentionDays: Number(this.config.get('TOURNAMENT_TRANSPORT_RETENTION_DAYS') ?? 10),
             syncstartUrl: tournament.syncstartUrl,
             startggApiKey: tournament.startggApiKey,
@@ -75,7 +68,7 @@ export class TournamentManager {
         };
     }
 
-    async create(dto: CreateTournamentDto, ownerId?: string): Promise<TournamentResponseDto> {
+    async create(dto: CreateTournamentDto, ownerId?: string): Promise<TournamentDto> {
         const tournament = await this.tournamentService.create(dto, ownerId);
         if (ownerId) {
             await this.participantService.ensureOwner(tournament.id, ownerId);
@@ -84,7 +77,7 @@ export class TournamentManager {
         return this.toResponseDto(reloaded ?? tournament);
     }
 
-    async findOne(tournamentId: number): Promise<TournamentResponseDto | null> {
+    async findOne(tournamentId: number): Promise<TournamentDto | null> {
         const tournament = await this.tournamentService.findOne(tournamentId);
         return tournament ? this.toResponseDto(tournament) : null;
     }
@@ -101,7 +94,7 @@ export class TournamentManager {
         return { hasStartggApiKey: Boolean(tournament.startggApiKey?.trim()) };
     }
 
-    async update(tournamentId: number, dto: UpdateTournamentDto): Promise<{ tournament: TournamentResponseDto; previousSyncstartUrl: string | undefined }> {
+    async update(tournamentId: number, dto: UpdateTournamentDto): Promise<{ tournament: TournamentDto; previousSyncstartUrl: string | undefined }> {
         const result = await this.tournamentService.update(tournamentId, dto);
         return {
             tournament: this.toResponseDto(result.tournament),
@@ -109,20 +102,20 @@ export class TournamentManager {
         };
     }
 
-    async close(tournamentId: number): Promise<TournamentResponseDto> {
+    async close(tournamentId: number): Promise<TournamentDto> {
         return this.toResponseDto(await this.tournamentService.close(tournamentId));
     }
 
-    async reopen(tournamentId: number): Promise<TournamentResponseDto> {
+    async reopen(tournamentId: number): Promise<TournamentDto> {
         return this.toResponseDto(await this.tournamentService.reopen(tournamentId));
     }
 
-    async listParticipants(tournamentId: number) {
+    async listParticipants(tournamentId: number): Promise<ParticipantDto[]> {
         const participants = await this.participantService.listForTournament(tournamentId);
-        return participants.map((participant) => this.toParticipantDto(participant));
+        return participants.map((participant) => toParticipantDto(participant));
     }
 
-    async createParticipant(tournamentId: number, dto: CreateParticipantDto) {
+    async createParticipant(tournamentId: number, dto: CreateParticipantDto): Promise<ParticipantDto> {
         const trimmedName = dto.playerName?.trim();
         if (!dto.playerId && !trimmedName) {
             throw new NotFoundException('playerId or playerName is required');
@@ -141,24 +134,24 @@ export class TournamentManager {
         }
 
         const participant = await this.participantService.ensureForPlayer(tournamentId, player!.id, ['competitor']);
-        return this.toParticipantDto(participant);
+        return toParticipantDto(participant);
     }
 
     async removeParticipant(tournamentId: number, participantId: number): Promise<void> {
         await this.participantService.removeFromTournament(tournamentId, participantId);
     }
 
-    async addParticipantStaffRole(tournamentId: number, participantId: number) {
+    async addParticipantStaffRole(tournamentId: number, participantId: number): Promise<ParticipantDto> {
         const participant = await this.participantService.addStaffRole(tournamentId, participantId);
-        return this.toParticipantDto(participant);
+        return toParticipantDto(participant);
     }
 
-    async removeParticipantStaffRole(tournamentId: number, participantId: number) {
+    async removeParticipantStaffRole(tournamentId: number, participantId: number): Promise<ParticipantDto> {
         const participant = await this.participantService.removeStaffRole(tournamentId, participantId);
-        return this.toParticipantDto(participant);
+        return toParticipantDto(participant);
     }
 
-    async previewParticipantImport(tournamentId: number, playerNames: string[]) {
+    async previewParticipantImport(tournamentId: number, playerNames: string[]): Promise<ParticipantImportPreviewRowDto[]> {
         const participants = await this.participantService.listForTournament(tournamentId);
         const players = await this.playerService.findAll();
         const playerByNormalizedName = new Map(players.map((player) => [this.normalizeName(player.playerName), player]));
@@ -168,14 +161,14 @@ export class TournamentManager {
             const matchedPlayer = playerByNormalizedName.get(this.normalizeName(name)) ?? null;
             return {
                 name,
-                matchedPlayer: matchedPlayer ? { id: matchedPlayer.id, playerName: matchedPlayer.playerName } : null,
+                matchedPlayer: matchedPlayer ? toPlayerRefDto(matchedPlayer) : null,
                 alreadyParticipant: matchedPlayer ? participantPlayerIds.has(matchedPlayer.id) : false,
             };
         });
     }
 
-    async importParticipants(tournamentId: number, entries: ImportParticipantEntryDto[]) {
-        const imported = [];
+    async importParticipants(tournamentId: number, entries: ImportParticipantEntryDto[]): Promise<ParticipantDto[]> {
+        const imported: ParticipantDto[] = [];
 
         for (const entry of entries) {
             const trimmedName = entry.name.trim();
@@ -190,7 +183,7 @@ export class TournamentManager {
             }
 
             const participant = await this.participantService.ensureForPlayer(tournamentId, player.id, ['competitor']);
-            imported.push(this.toParticipantDto(participant));
+            imported.push(toParticipantDto(participant));
         }
 
         return imported;
@@ -224,21 +217,7 @@ export class TournamentManager {
             divisions: divisions.map((division) => ({
                 id: division.id,
                 name: division.name,
-                entrants: (division.entrants ?? []).map((entrant) => ({
-                    id: entrant.id,
-                    name: entrant.name,
-                    type: entrant.type,
-                    status: entrant.status,
-                    participants: (entrant.participants ?? []).map((participant) => ({
-                        id: participant.id,
-                        roles: participant.roles ?? [],
-                        status: participant.status,
-                        player: {
-                            id: participant.player.id,
-                            playerName: participant.player.playerName,
-                        },
-                    })),
-                })),
+                entrants: (division.entrants ?? []).map(toEntrantDto),
                 phases: (division.phases ?? []).map((phase) => ({
                     id: phase.id,
                     name: phase.name,

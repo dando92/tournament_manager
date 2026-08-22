@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { PhaseGroupDto, PhaseGroupEntrantDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
-import { DivisionSummaryPhaseGroupDto } from '@tournament/structure/dtos/division-summary.dto';
 import { PhaseGroupManager } from '@tournament/structure/services/phase-group.manager';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
@@ -14,12 +14,12 @@ export class PhaseGroupsController {
     async createForPhase(
         @Param('phaseId') phaseId: number,
         @Body(new ValidationPipe()) dto: CreatePhaseGroupDto,
-    ): Promise<DivisionSummaryPhaseGroupDto> {
+    ): Promise<PhaseGroupDto> {
         return this.phaseGroupManager.createForPhase(Number(phaseId), dto);
     }
 
     @Get('phase-groups/:id/entrants')
-    async getEntrants(@Param('id') id: number): Promise<DivisionSummaryPhaseGroupDto['entrants']> {
+    async getEntrants(@Param('id') id: number): Promise<PhaseGroupEntrantDto[]> {
         return this.phaseGroupManager.getEntrants(Number(id));
     }
 
@@ -28,7 +28,7 @@ export class PhaseGroupsController {
     async update(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: UpdatePhaseGroupDto,
-    ): Promise<DivisionSummaryPhaseGroupDto> {
+    ): Promise<PhaseGroupDto> {
         return this.phaseGroupManager.update(Number(id), dto);
     }
 

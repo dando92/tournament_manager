@@ -7,12 +7,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { Account } from '@tournament-manager/persistence';
-import { AccountProfileDto } from '@account/dtos';
-
-export interface AuthPermissionsDto {
-    isAdmin: boolean;
-    isTournamentCreator: boolean;
-}
+import { AccountPermissionsDto, AccountProfileDto } from '@tournament-manager/contracts';
 
 @Injectable()
 export class AuthService {
@@ -59,7 +54,7 @@ export class AuthService {
         };
     }
 
-    async getPermissions(userId: string): Promise<AuthPermissionsDto> {
+    async getPermissions(userId: string): Promise<AccountPermissionsDto> {
         const account = await this.accountRepo.findOne({
             where: { id: userId },
             select: {
