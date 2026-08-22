@@ -1,5 +1,5 @@
 import { IBracketSystem } from "@bracket/IBracketSystem";
-import { Division, Entrant, Match, Phase } from "@tournament-manager/persistence";
+import { Division, Entrant, Phase } from "@tournament-manager/persistence";
 
 type PlayerInfo = {
     match: number;
@@ -20,7 +20,7 @@ export class SingleElimination extends IBracketSystem {
         await this.fillFirstWave(entrants, firstRound, playerPerMatch);
     }
 
-    private async buildStructure(playerCount: number, playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<Match[]> {
+    private async buildStructure(playerCount: number, playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<number[]> {
         const nextEffN = playerPerMatch * this.nextPow2(Math.ceil(playerCount / playerPerMatch));
         const byes = nextEffN - playerCount;
 
@@ -31,8 +31,8 @@ export class SingleElimination extends IBracketSystem {
         let count = nextEffN;
         let matchCount = count / playerPerMatch;
         let indexes: PlayerInfo[][] = null;
-        let currentMatches: Match[] = null;
-        let firstRound: Match[] = null;
+        let currentMatches: number[] = null;
+        let firstRound: number[] = null;
         let roundIndex = 1;
 
         while (matchCount >= 1) {

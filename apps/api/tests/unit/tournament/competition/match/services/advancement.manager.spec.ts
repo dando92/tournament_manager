@@ -1,10 +1,11 @@
-import { AdvancementRule, Entrant, Match, Player } from '@tournament-manager/persistence';
+import { AdvancementRule, Entrant, Match, MatchResult, Player } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
 
 import { AdvancementManager } from '@match/services/advancement.manager';
-import { MatchService } from '@match/services/match.service';
+import { MatchAggregate } from '@match/match.aggregate';
+import { MatchStore } from '@match/match.store';
 
 function entrant(id: number, playerId: number): Entrant {
   return {
@@ -19,7 +20,8 @@ function completedMatch(id: number, entrants: Entrant[], playerPoints: Array<{ p
   return {
     id,
     entrants,
-    matchResult: { id: id + 1000, playerPoints },
+    phaseGroup: { id: 30 },
+    matchResult: { id: id + 1000, playerPoints } as MatchResult,
   } as Match;
 }
 
@@ -37,9 +39,9 @@ function rule(overrides: Partial<AdvancementRule>): AdvancementRule {
 }
 
 describe('AdvancementManager', () => {
-  const matchService = {
-    getMatch: jest.fn(),
-    update: jest.fn(),
+  const matchStore = {
+    load: jest.fn(),
+    save: jest.fn(),
   };
   const advancementRuleService = {
     findBySource: jest.fn(),
@@ -49,66 +51,74 @@ describe('AdvancementManager', () => {
     removeEntrant: jest.fn(),
     findOne: jest.fn(),
     markEntrantsAdvanced: jest.fn(),
+    syncDerivedEntrants: jest.fn(),
     update: jest.fn(),
   };
-  const uiUpdateGateway = {
-    emitMatchUpdateByMatchId: jest.fn(),
+  const publisher = {
+    emitMatchUpdate: jest.fn(),
   };
 
   const manager = new AdvancementManager(
-    matchService as unknown as MatchService,
+    matchStore as unknown as MatchStore,
     advancementRuleService as unknown as AdvancementRuleService,
     phaseGroupService as unknown as PhaseGroupService,
-    uiUpdateGateway as unknown as UiUpdatePublisher,
+    publisher as unknown as UiUpdatePublisher,
   );
+
+  /** What the store handed back, which is what the save was called with. */
+  function savedEntrantIds(call: number): number[] {
+    const saved = matchStore.save.mock.calls[call][0] as MatchAggregate;
+
+    return saved.entrants.map((each) => each.id);
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
+    advancementRuleService.findBySource.mockResolvedValue([]);
+    phaseGroupService.findOne.mockResolvedValue(null);
   });
 
-  it('places match-result entrants into configured target slots and emits one update per target match', async () => {
+  it('places result entrants into the slots their rules name', async () => {
     const winner = entrant(1, 101);
     const runnerUp = entrant(2, 102);
-    const existingTargetEntrant = entrant(3, 103);
-    const sourceMatch = completedMatch(10, [runnerUp, winner], [
+    const alreadyThere = entrant(3, 103);
+    const source = MatchAggregate.of(completedMatch(10, [runnerUp, winner], [
       { playerId: 101, points: 3 },
       { playerId: 102, points: 1 },
-    ]);
-    const targetMatch = { id: 20, entrants: [existingTargetEntrant] } as Match;
-    advancementRuleService.findBySource.mockResolvedValue([
-      rule({ id: 11, sourcePlacement: 1, targetSlot: 2 }),
-      rule({ id: 12, sourcePlacement: 2, targetSlot: 1 }),
-    ]);
-    matchService.getMatch.mockResolvedValue(targetMatch);
+    ]));
+    advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
+      Promise.resolve(sourceKind === 'match'
+        ? [rule({ id: 11, sourcePlacement: 1, targetSlot: 2 }), rule({ id: 12, sourcePlacement: 2, targetSlot: 1 })]
+        : []),
+    );
+    matchStore.load.mockImplementation(() =>
+      Promise.resolve(MatchAggregate.of({ id: 20, entrants: [alreadyThere], phaseGroup: { id: 31 } } as Match)),
+    );
 
-    await manager.AdvanceFromCompletedMatch(sourceMatch);
+    await manager.advanceFromMatch(source);
 
-    expect(matchService.update).toHaveBeenNthCalledWith(1, 20, {
-      entrantIds: [existingTargetEntrant.id, winner.id],
-    });
-    expect(matchService.update).toHaveBeenNthCalledWith(2, 20, {
-      entrantIds: [runnerUp.id, existingTargetEntrant.id],
-    });
-    expect(uiUpdateGateway.emitMatchUpdateByMatchId).toHaveBeenCalledTimes(1);
-    expect(uiUpdateGateway.emitMatchUpdateByMatchId).toHaveBeenCalledWith(20);
+    expect(savedEntrantIds(0)).toEqual([alreadyThere.id, winner.id]);
+    expect(savedEntrantIds(1)).toEqual([runnerUp.id, alreadyThere.id]);
+    expect(publisher.emitMatchUpdate).toHaveBeenCalledTimes(2);
   });
 
   it('does not duplicate an entrant already present in a target match', async () => {
     const winner = entrant(1, 101);
-    const existingTargetEntrant = entrant(3, 103);
-    const sourceMatch = completedMatch(10, [winner], [{ playerId: 101, points: 3 }]);
-    const targetMatch = { id: 20, entrants: [winner, existingTargetEntrant] } as Match;
-    advancementRuleService.findBySource.mockResolvedValue([rule({ targetSlot: 2 })]);
-    matchService.getMatch.mockResolvedValue(targetMatch);
+    const alreadyThere = entrant(3, 103);
+    const source = MatchAggregate.of(completedMatch(10, [winner], [{ playerId: 101, points: 3 }]));
+    advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
+      Promise.resolve(sourceKind === 'match' ? [rule({ targetSlot: 2 })] : []),
+    );
+    matchStore.load.mockResolvedValue(
+      MatchAggregate.of({ id: 20, entrants: [winner, alreadyThere], phaseGroup: { id: 31 } } as Match),
+    );
 
-    await manager.AdvanceFromCompletedMatch(sourceMatch);
+    await manager.advanceFromMatch(source);
 
-    expect(matchService.update).toHaveBeenCalledWith(20, {
-      entrantIds: [existingTargetEntrant.id, winner.id],
-    });
+    expect(savedEntrantIds(0)).toEqual([alreadyThere.id, winner.id]);
   });
 
-  it('completes a phase group only after every match has a result and advances aggregate placement', async () => {
+  it('completes a phase group only after every match in it has a result', async () => {
     const firstEntrant = entrant(1, 101);
     const secondEntrant = entrant(2, 102);
     const firstMatch = completedMatch(10, [firstEntrant, secondEntrant], [
@@ -119,7 +129,6 @@ describe('AdvancementManager', () => {
       { playerId: 101, points: 0 },
       { playerId: 102, points: 2 },
     ]);
-    firstMatch.phaseGroup = { id: 30 } as Match['phaseGroup'];
     advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
       Promise.resolve(sourceKind === 'phase_group'
         ? [rule({ id: 50, sourceKind: 'phase_group', sourceId: 30, targetKind: 'phase_group', targetId: 40 })]
@@ -127,7 +136,7 @@ describe('AdvancementManager', () => {
     );
     phaseGroupService.findOne.mockResolvedValue({ id: 30, matches: [firstMatch, secondMatch] });
 
-    await manager.AdvanceFromCompletedMatch(firstMatch);
+    await manager.advanceFromMatch(MatchAggregate.of(firstMatch));
 
     expect(phaseGroupService.addEntrant).toHaveBeenCalledWith(40, firstEntrant.id, 1, 50);
     expect(phaseGroupService.markEntrantsAdvanced).toHaveBeenCalledWith(30, [firstEntrant.id]);
@@ -135,16 +144,14 @@ describe('AdvancementManager', () => {
   });
 
   it('leaves a phase group active while any match result is missing', async () => {
-    const firstEntrant = entrant(1, 101);
-    const sourceMatch = completedMatch(10, [firstEntrant], [{ playerId: 101, points: 1 }]);
-    sourceMatch.phaseGroup = { id: 30 } as Match['phaseGroup'];
-    advancementRuleService.findBySource.mockResolvedValue([]);
+    const only = entrant(1, 101);
+    const source = completedMatch(10, [only], [{ playerId: 101, points: 1 }]);
     phaseGroupService.findOne.mockResolvedValue({
       id: 30,
-      matches: [sourceMatch, { id: 11, matchResult: null }],
+      matches: [source, { id: 11, matchResult: null }],
     });
 
-    await manager.AdvanceFromCompletedMatch(sourceMatch);
+    await manager.advanceFromMatch(MatchAggregate.of(source));
 
     expect(phaseGroupService.markEntrantsAdvanced).not.toHaveBeenCalled();
     expect(phaseGroupService.update).not.toHaveBeenCalled();
@@ -152,8 +159,7 @@ describe('AdvancementManager', () => {
 
   it('removes previously advanced entrants and reopens their phase group', async () => {
     const winner = entrant(1, 101);
-    const sourceMatch = completedMatch(10, [winner], [{ playerId: 101, points: 1 }]);
-    sourceMatch.phaseGroup = { id: 30 } as Match['phaseGroup'];
+    const source = completedMatch(10, [winner], [{ playerId: 101, points: 1 }]);
     const matchRule = rule({ targetKind: 'match', targetId: 20 });
     const phaseGroupRule = rule({
       id: 2,
@@ -165,15 +171,29 @@ describe('AdvancementManager', () => {
     advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
       Promise.resolve(sourceKind === 'phase_group' ? [phaseGroupRule] : [matchRule]),
     );
-    matchService.getMatch.mockResolvedValue({ id: 20, entrants: [winner] });
-    phaseGroupService.findOne.mockResolvedValue({ id: 30, matches: [sourceMatch] });
+    matchStore.load.mockResolvedValue(
+      MatchAggregate.of({ id: 20, entrants: [winner], phaseGroup: { id: 31 } } as Match),
+    );
+    phaseGroupService.findOne.mockResolvedValue({ id: 30, matches: [source] });
 
-    await manager.RevertAdvancementFromMatch(sourceMatch);
+    await manager.revertFromMatch(MatchAggregate.of(source));
 
-    expect(matchService.update).toHaveBeenCalledWith(20, { entrantIds: [] });
+    expect(savedEntrantIds(0)).toEqual([]);
     expect(phaseGroupService.removeEntrant).toHaveBeenCalledWith(40, winner.id);
     expect(phaseGroupService.markEntrantsAdvanced).toHaveBeenCalledWith(30, []);
     expect(phaseGroupService.update).toHaveBeenCalledWith(30, { state: 'active' });
   });
-});
 
+  it('leaves a target match alone when the entrant to remove is not in it', async () => {
+    const winner = entrant(1, 101);
+    const source = completedMatch(10, [winner], [{ playerId: 101, points: 1 }]);
+    advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
+      Promise.resolve(sourceKind === 'match' ? [rule({ targetKind: 'match', targetId: 20 })] : []),
+    );
+    matchStore.load.mockResolvedValue(MatchAggregate.of({ id: 20, entrants: [], phaseGroup: { id: 31 } } as Match));
+
+    await manager.revertFromMatch(MatchAggregate.of(source));
+
+    expect(matchStore.save).not.toHaveBeenCalled();
+  });
+});

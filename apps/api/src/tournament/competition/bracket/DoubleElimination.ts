@@ -1,5 +1,5 @@
 import { IBracketSystem } from "@bracket/IBracketSystem";
-import { Division, Entrant, Match, Phase } from "@tournament-manager/persistence";
+import { Division, Entrant, Phase } from "@tournament-manager/persistence";
 
 export class DoubleElimination extends IBracketSystem {
     getName(): string {
@@ -19,7 +19,7 @@ export class DoubleElimination extends IBracketSystem {
         await this.fillFirstWave(entrants, firstRound, playerPerMatch);
     }
 
-    private async buildStructure(playerCount: number, playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<Match[]> {
+    private async buildStructure(playerCount: number, playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<number[]> {
         const passingPlayers = playerPerMatch / 2;
         const r1MatchCount = Math.max(2, this.nextPow2(Math.ceil(playerCount / playerPerMatch)));
         const nextEffN = playerPerMatch * r1MatchCount;
@@ -32,7 +32,7 @@ export class DoubleElimination extends IBracketSystem {
         const wbRoundCount = Math.log2(r1MatchCount) + 1;
 
         // --- Create Winners Bracket rounds ---
-        const wbRounds: Match[][] = [];
+        const wbRounds: number[][] = [];
         let wbMatchCount = r1MatchCount;
         for (let k = 0; k < wbRoundCount; k++) {
             const matches = await this.CreateMatchesInPhase(`WB_Round_${k + 1}`, phase, wbMatchCount, phaseGroupId);
@@ -41,7 +41,7 @@ export class DoubleElimination extends IBracketSystem {
         }
 
         // --- Create Losers Bracket rounds ---
-        const lbRounds: Match[][] = [];
+        const lbRounds: number[][] = [];
         let lbMatchCount = Math.floor(r1MatchCount / 2);
         for (let i = 0; i < 2 * (wbRoundCount - 1); i++) {
             const isDropRound = i % 2 === 1;
@@ -96,7 +96,7 @@ export class DoubleElimination extends IBracketSystem {
             for (let m = 0; m < round.length; m++) {
                 const match = round[m];
                 // Top placements continue through losers, lower placements are eliminated.
-                let winnerDest: Match;
+                let winnerDest: number;
                 if (isLast) {
                     winnerDest = grandFinalMatch;
                 } else if (i % 2 === 0) {

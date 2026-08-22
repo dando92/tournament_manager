@@ -5,6 +5,7 @@ import {
   LIVE_EVENT_PUBLISHER,
   type LiveEventPublisher,
 } from '@tournament-manager/live-messaging';
+import { MatchAddress } from '@match/match.aggregate';
 import { UiUpdateContextService } from './ui-update-context.service';
 
 @Injectable()
@@ -38,10 +39,20 @@ export class UiUpdatePublisher {
     if (payload) await this.publish('ui.phase-group-changed', payload.tournamentId, payload);
   }
 
-  async emitMatchUpdateByMatchId(matchId: number | null | undefined): Promise<void> {
-    if (!matchId) return;
-    const payload = await this.context.getMatchUpdatePayload(matchId);
-    if (payload) await this.publish('ui.match-changed', payload.tournamentId, payload);
+  /**
+   * The match writes carry the address of what they changed, because the graph
+   * they loaded reaches the tournament. Nothing has to be looked up to route
+   * the event.
+   */
+  emitMatchUpdate(address: MatchAddress): Promise<void> {
+    if (!address?.tournamentId) return Promise.resolve();
+    return this.publish('ui.match-changed', address.tournamentId, address);
+  }
+
+  emitPhaseGroupUpdate(address: MatchAddress): Promise<void> {
+    if (!address?.tournamentId) return Promise.resolve();
+    const { tournamentId, divisionId, phaseId, phaseGroupId } = address;
+    return this.publish('ui.phase-group-changed', tournamentId, { tournamentId, divisionId, phaseId, phaseGroupId });
   }
 
   emitWarning(tournamentId: number | null | undefined, message: string): Promise<void> {

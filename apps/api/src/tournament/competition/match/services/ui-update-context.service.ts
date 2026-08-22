@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Division, Match, Phase, PhaseGroup } from '@tournament-manager/persistence';
+import { Division, Phase, PhaseGroup } from '@tournament-manager/persistence';
 
 type DivisionUpdatePayload = {
     tournamentId: number;
@@ -21,14 +21,14 @@ type PhaseGroupUpdatePayload = {
     phaseGroupId: number;
 };
 
-type MatchUpdatePayload = {
-    tournamentId: number;
-    divisionId: number;
-    phaseId: number;
-    phaseGroupId: number;
-    matchId: number;
-};
-
+/**
+ * Where a division, a phase or a pool sits, for the events that name one.
+ *
+ * The match writes no longer come here: their store loads a graph that reaches
+ * the tournament, so they publish an address they already hold. What is left
+ * serves the aggregates that have not been given a store yet, and goes with the
+ * last of them.
+ */
 @Injectable()
 export class UiUpdateContextService {
     constructor(
@@ -38,8 +38,6 @@ export class UiUpdateContextService {
         private readonly phaseRepository: Repository<Phase>,
         @InjectRepository(PhaseGroup)
         private readonly phaseGroupRepository: Repository<PhaseGroup>,
-        @InjectRepository(Match)
-        private readonly matchRepository: Repository<Match>,
     ) {}
 
     async getDivisionUpdatePayload(divisionId: number): Promise<DivisionUpdatePayload | null> {
@@ -105,34 +103,6 @@ export class UiUpdateContextService {
             divisionId: Number(data.divisionId),
             phaseId: Number(data.phaseId),
             phaseGroupId: Number(data.phaseGroupId),
-        };
-    }
-
-    async getMatchUpdatePayload(matchId: number): Promise<MatchUpdatePayload | null> {
-        const data = await this.matchRepository
-            .createQueryBuilder('match')
-            .leftJoin('match.phaseGroup', 'phaseGroup')
-            .leftJoin('phaseGroup.phase', 'phase')
-            .leftJoin('phase.division', 'division')
-            .leftJoin('division.tournament', 'tournament')
-            .select('tournament.id', 'tournamentId')
-            .addSelect('division.id', 'divisionId')
-            .addSelect('phase.id', 'phaseId')
-            .addSelect('phaseGroup.id', 'phaseGroupId')
-            .addSelect('match.id', 'matchId')
-            .where('match.id = :matchId', { matchId })
-            .getRawOne<MatchUpdatePayload>();
-
-        if (!data?.tournamentId || !data?.divisionId || !data?.phaseId || !data?.phaseGroupId || !data?.matchId) {
-            return null;
-        }
-
-        return {
-            tournamentId: Number(data.tournamentId),
-            divisionId: Number(data.divisionId),
-            phaseId: Number(data.phaseId),
-            phaseGroupId: Number(data.phaseGroupId),
-            matchId: Number(data.matchId),
         };
     }
 }

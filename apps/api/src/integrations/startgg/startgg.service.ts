@@ -464,25 +464,11 @@ export class StartggService {
      * Reports a completed match to its mapped start.gg set.
      * Returns null when the match is not linked to start.gg, which is the normal
      * case for matches that were not imported from a start.gg event.
+     *
+     * The match arrives loaded, because the commit that produced the result is
+     * holding the same graph: reporting it does not read it again.
      */
-    async reportCompletedMatch(matchId: number): Promise<StartggReportedSetNode[] | null> {
-        const match = await this.matchRepository.findOne({
-            where: { id: matchId },
-            relations: {
-                matchResult: true,
-                rounds: {
-                    standings: {
-                        player: true,
-                        score: {
-                            player: true,
-                        },
-                    },
-                },
-                entrants: { participants: { player: true } },
-                phaseGroup: { phase: { division: { tournament: true } } },
-            },
-        });
-        if (!match) throw new NotFoundException(`Match ${matchId} not found`);
+    async reportCompletedMatch(match: Match): Promise<StartggReportedSetNode[] | null> {
         if (!match.matchResult) {
             throw new BadRequestException(`Match ${match.id} has no completed result to report to start.gg`);
         }

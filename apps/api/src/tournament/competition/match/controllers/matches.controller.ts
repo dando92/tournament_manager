@@ -1,10 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchListDto } from '@match/dtos/match-list.dto';
-import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
-import { Match } from '@tournament-manager/persistence';
-import { MatchManager } from '@match/services/match.manager';
+import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
-import { MatchService } from '@match/services/match.service';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
@@ -12,8 +10,7 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 @Controller('matches')
 export class MatchesController {
     constructor(
-        private readonly matchService: MatchService,
-        private readonly matchManager: MatchManager,
+        private readonly matchCommands: MatchCommands,
         private readonly matchQueries: MatchQueries,
         private readonly scoringSystemProvider: ScoringSystemProvider,
     ) {}
@@ -25,24 +22,10 @@ export class MatchesController {
 
     @Post()
     @RequireOpenTournament({ entity: 'phase-group', location: 'body', field: 'phaseGroupId' })
-    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<Match> {
-        const createMatchDto: CreateMatchDto = {
-            name: dto.name,
-            subtitle: dto.subtitle,
-            notes: dto.notes,
-            entrantIds: dto.entrantIds,
-            phaseGroupId: dto.phaseGroupId,
-            scoringSystem: dto.scoringSystem,
-        };
-        const match = await this.matchService.create(createMatchDto);
+    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<MatchListDto | null> {
+        const matchId = await this.matchCommands.create(dto);
 
-        if (dto.songIds) {
-            return await this.matchManager.AddSongsToMatch(match, dto.songIds);
-        } else if (dto.levels) {
-            return await this.matchManager.AddRandomSongsToMatch(match, dto.tournamentId, dto.divisionId, dto.group, dto.levels);
-        }
-
-        return match;
+        return await this.matchQueries.byId(matchId);
     }
 
     @Get('division/:divisionId')
@@ -62,37 +45,37 @@ export class MatchesController {
 
     @Patch(':id')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<Match> {
-        return this.matchManager.UpdateMatch(Number(id), dto);
+    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<MatchListDto | null> {
+        return this.matchCommands.update(Number(id), dto);
     }
 
     @Delete(':id')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
     remove(@Param('id') id: number): Promise<void> {
-        return this.matchService.delete(id);
+        return this.matchCommands.delete(Number(id));
     }
 
     @Post(':matchId/rounds')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<MatchListDto | null> {
-        return await this.matchManager.AddRound(Number(matchId), dto);
+        return await this.matchCommands.addRound(Number(matchId), dto);
     }
 
     @Put(':matchId/active')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<MatchListDto | null> {
-        return await this.matchManager.UpdateMatchActive(Number(matchId), dto);
+        return await this.matchCommands.setActive(Number(matchId), dto.active);
     }
 
     @Put(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async commitMatchResult(@Param('matchId') matchId: number): Promise<CommitMatchResultResponseDto> {
-        return await this.matchManager.CommitMatchResult(Number(matchId));
+        return await this.matchCommands.commitResult(Number(matchId));
     }
 
     @Delete(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async reopenMatchResult(@Param('matchId') matchId: number): Promise<MatchListDto | null> {
-        return await this.matchManager.ReopenMatchResult(Number(matchId));
+        return await this.matchCommands.reopenResult(Number(matchId));
     }
 }
