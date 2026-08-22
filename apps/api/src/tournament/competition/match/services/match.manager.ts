@@ -8,6 +8,7 @@ import { MatchService } from '@match/services/match.service';
 import { RoundService } from '@tournament/competition/services/round.service';
 import { StandingService } from '@tournament/competition/standing/standing.service';
 import { MatchListDto } from '@match/dtos/match-list.dto';
+import { MatchQueries } from '@match/match.queries';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 
@@ -28,6 +29,8 @@ export class MatchManager {
         private readonly matchWorkflowManager: MatchWorkflowManager,
         @Inject()
         private readonly advancementRuleService: AdvancementRuleService,
+        @Inject()
+        private readonly matchQueries: MatchQueries,
     ) {
     }
 
@@ -35,10 +38,12 @@ export class MatchManager {
         return await this.matchService.getMatch(id);
     }
 
+    /**
+     * The response a write answers with is the projection its `GET` returns, so
+     * a match is described in one place whichever route produced it.
+     */
     async GetMatchForView(id: number): Promise<MatchListDto | null> {
-        const match = await this.matchService.getMatch(id);
-        if (!match) return null;
-        return await this.toMatchListDto(match);
+        return await this.matchQueries.byId(id);
     }
 
     async UpdateMatch(id: number, dto: UpdateMatchDto): Promise<Match> {
