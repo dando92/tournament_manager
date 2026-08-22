@@ -3,6 +3,7 @@ import { MatchListDto } from '@match/dtos/match-list.dto';
 import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@tournament-manager/persistence';
 import { MatchManager } from '@match/services/match.manager';
+import { MatchQueries } from '@match/match.queries';
 import { MatchService } from '@match/services/match.service';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -13,6 +14,7 @@ export class MatchesController {
     constructor(
         private readonly matchService: MatchService,
         private readonly matchManager: MatchManager,
+        private readonly matchQueries: MatchQueries,
         private readonly scoringSystemProvider: ScoringSystemProvider,
     ) {}
 
@@ -45,17 +47,17 @@ export class MatchesController {
 
     @Get('division/:divisionId')
     findByDivision(@Param('divisionId') divisionId: number): Promise<MatchListDto[]> {
-        return this.matchManager.FindMatchesForDivision(Number(divisionId));
+        return this.matchQueries.byDivision(Number(divisionId));
     }
 
     @Get('phase-group/:phaseGroupId')
     findByPhaseGroup(@Param('phaseGroupId') phaseGroupId: number): Promise<MatchListDto[]> {
-        return this.matchManager.FindMatchesForPhaseGroup(Number(phaseGroupId));
+        return this.matchQueries.byPhaseGroup(Number(phaseGroupId));
     }
 
     @Get(':id')
     findOne(@Param('id') id: number): Promise<MatchListDto | null> {
-        return this.matchManager.GetMatchForView(Number(id));
+        return this.matchQueries.byId(Number(id));
     }
 
     @Patch(':id')

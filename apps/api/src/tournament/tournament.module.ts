@@ -25,6 +25,7 @@ import { BracketSystemProvider } from './competition/bracket/BracketSystemProvid
 import { MatchesController } from './competition/match/controllers/matches.controller';
 import { AdvancementManager } from './competition/match/services/advancement.manager';
 import { MatchManager } from './competition/match/services/match.manager';
+import { MatchQueries } from './competition/match/match.queries';
 import { MatchResultService } from './competition/match/services/match-result.service';
 import { MatchService } from './competition/match/services/match.service';
 import { MatchWorkflowManager } from './competition/match/services/match-workflow.manager';
@@ -68,6 +69,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         MatchService,
         MatchResultService,
         MatchManager,
+        MatchQueries,
         AdvancementManager,
         MatchWorkflowManager,
         SongRoller,
