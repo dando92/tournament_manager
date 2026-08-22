@@ -7,10 +7,21 @@
 - Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 in progress. Phase 4 is complete and merged.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5 continues with `SongQueries` and `ScoreQueries`, then `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
-- Awaiting the user's manual UI check: `refactor/5-tournament-reads`, `refactor/5-participant-reads` and `refactor/5-division-reads`. The home page and the search dialog read a two-field response; the participants page, the import preview, the create-match modal, the players tab and the division standings read the shapes the frontend already declared, which the API now actually produces.
+- Next action: phase 5 closes with `TreeQueries` and the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope, dropping the always-empty `entrants: []` on a pool. It is the last slice because the tree is the read every other one narrows away from, and it folds in `MatchQueries.pendingCountsByPhaseGroup`. Phase 5 is subdivided one branch per read model, as phase 4 was.
+- Awaiting the user's manual UI check: `refactor/5-tournament-reads`, `refactor/5-participant-reads`, `refactor/5-division-reads` and `refactor/5-catalog-reads`. The home page and the search dialog read a two-field response; every other page reads the shapes the frontend already declared, which the API now actually produces.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 5, catalogue and score read models
+
+- Added `catalog/song.queries.ts` with `forTournament` and `competition/score.queries.ts` with `history`. `GET /songs` answers `SongDto[]` and `GET /scores` answers `ScoreDto[]`; both used to answer with TypeORM entities while the frontend already declared the DTOs, so no frontend file changed.
+- `ScoreDto` is one shape now. `catalog.ts` declared it with its player and its song, and `match.ts` declared the same three fields again as `MatchScoreDto`. A standing shows the run behind its points and the standing dialog offers the runs a player already has on the song it is editing; both know the song and the player already, so the projection carries neither. It lives in `projections.ts` beside the other shapes written once.
+- `GET /scores` now requires both `songId` and `playerId`. It treated each as optional and answered with every score in the database when neither was given, which no client asked for and nothing bounded.
+- Removed `GET /songs/:id/scores`, which no client called, and `ScoreService` with it: `create`, `update` and `findOne` had no caller either, because the match store owns score writes. `competition/dtos/score.dto.ts` and its two barrel exports went with the service.
+- `TournamentService.findSongsByTournamentId` became `SongService.findByTournament`, which is where `SongRoller` reads it. The roller needs entities to attach one to a round, so that load stays on the write side; `SongQueries.forTournament` answers the same question for a reader.
+- `songs.controller.ts` is `catalog/song.controller.ts` and `scores.controller.ts` is `competition/score.controller.ts`, each beside the queries it reads. `competition/controllers/` no longer exists. Phase 8 had claimed both moves and put the scores controller in `catalog/`; the target tree puts `score.queries.ts` under `competition/`, and a controller belongs beside its queries, so the tree decided it.
+- The two `ScoreService` cases in the persistence end-to-end suite became two `ScoreQueries.history` cases: the order it returns, and that neither of its two conditions may be dropped. Added `tests/e2e/catalog/song-reads.e2e-spec.ts` with two more, covering the scope of the list and each key of its sort.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), 116 unit tests across the workspaces, and 34 end-to-end tests against PostgreSQL. The manual UI check is the user's.
 
 ### Structure refactoring phase 5, division read models
 
