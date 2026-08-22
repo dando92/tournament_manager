@@ -22,8 +22,8 @@ const StatsPage = lazy(() => import("@/pages/tournament/StatsPage"));
 const ConfigurationPage = lazy(() => import("@/pages/tournament/ConfigurationPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
-const AccountInfoPage = lazy(() => import("@/pages/AccountInfoPage"));
-const ManageRolesPage = lazy(() => import("@/pages/ManageRolesPage"));
+const AccountInfoPage = lazy(() => import("@/pages/account/AccountInfoPage"));
+const ManageRolesPage = lazy(() => import("@/pages/admin/ManageRolesPage"));
 const OBSPage = lazy(() => import("@/pages/OBSPage"));
 
 function KeyedTournamentPage() {

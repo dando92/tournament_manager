@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
+import { useAuthContext } from "@/features/auth/model/AuthContext";
 import { getMyTournamentRoles } from "@/features/auth/api/roles.api";
 
 interface PermissionState {

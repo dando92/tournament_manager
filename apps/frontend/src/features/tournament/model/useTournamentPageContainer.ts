@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMatch } from "react-router-dom";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 import {
   ParticipantsManageModal,
   TournamentPageContextValue,

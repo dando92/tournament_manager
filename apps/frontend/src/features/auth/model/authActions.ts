@@ -1,4 +1,4 @@
-import { Account } from "@/features/player/types/Account";
+import { Account } from "@/features/auth/model/types";
 
 export type onLogin = {
   type: "onLogin";

@@ -12,11 +12,11 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import Logo from "@/assets/icon.png";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
+import { useAuthContext } from "@/features/auth/model/AuthContext";
 import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
 import TournamentTree from "@/features/tournament/ui/tree/TournamentTree";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 
 /**
  * The sidebar: a header that acts on the whole list, the tree, and the account.

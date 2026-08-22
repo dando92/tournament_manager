@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, ReactNode } from "react";
-import { useAuth } from "@/features/auth/services/useAuth";
-import { AuthState } from "@/features/auth/services/auth.reducer";
-import { Account } from "@/features/player/types/Account";
+import { useAuth } from "@/features/auth/model/useAuth";
+import { AuthState } from "@/features/auth/model/authReducer";
+import { Account } from "@/features/auth/model/types";
 
 interface AuthContextValue {
   state: AuthState;

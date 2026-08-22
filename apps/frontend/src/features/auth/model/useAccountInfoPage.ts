@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
+import { useAuthContext } from "@/features/auth/model/AuthContext";
 import { updateAccountProfile } from "@/features/auth/api/account.api";
 
 /**

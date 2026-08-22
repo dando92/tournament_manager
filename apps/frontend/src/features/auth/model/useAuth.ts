@@ -1,6 +1,6 @@
 import { useReducer } from "react";
-import { authReducer, initialState } from "@/features/auth/services/auth.reducer";
-import * as AuthApi from "@/features/auth/services/auth.api";
+import { authReducer, initialState } from "@/features/auth/model/authReducer";
+import * as AuthApi from "@/features/auth/api/auth.api";
 import { toast } from "react-toastify";
 
 export function useAuth() {

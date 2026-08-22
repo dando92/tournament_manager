@@ -1,5 +1,5 @@
-import { Account } from "@/features/player/types/Account";
-import { AuthActions } from "@/features/auth/services/auth.actions";
+import { Account } from "@/features/auth/model/types";
+import { AuthActions } from "@/features/auth/model/authActions";
 
 export interface AuthState {
   token: string | null;

@@ -1,4 +1,4 @@
-import { AdminAccount } from "@/features/player/types/Account";
+import { AdminAccount } from "@/features/auth/model/types";
 
 type Props = {
   account: AdminAccount;

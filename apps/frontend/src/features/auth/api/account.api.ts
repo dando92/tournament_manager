@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AdminAccount } from "@/features/player/types/Account";
+import { AdminAccount } from "@/features/auth/model/types";
 
 /** What a person may change about their own account. */
 export type AccountProfilePatch = {

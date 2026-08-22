@@ -34,7 +34,7 @@ import {
 import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import ContextMenu, { useContextMenu, type ContextMenuItem } from "@/shared/components/ui/ContextMenu";
 import { treeNodeKey } from "@/shared/lib/treeState";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 
 /**
  * The tournament tree: the whole navigation of the application in one column.

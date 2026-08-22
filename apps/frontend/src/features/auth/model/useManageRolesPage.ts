@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { AdminAccount } from "@/features/player/types/Account";
+import { AdminAccount } from "@/features/auth/model/types";
 import { listAccounts, updateAccountFlags } from "@/features/auth/api/account.api";
 
 type AccountFlag = "isAdmin" | "isTournamentCreator";

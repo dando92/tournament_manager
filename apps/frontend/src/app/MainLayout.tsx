@@ -8,7 +8,7 @@ import { TournamentUpdatesProvider } from "@/features/tournament/model/Tournamen
 import { TournamentTreeProvider } from "@/features/tournament/model/TournamentTreeContext";
 import { getSelectedTournament, getSidebarTournaments } from "@/shared/lib/recentTournaments";
 import { parseTreeSelection } from "@/features/tournament/model/treeSelection";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 import "react-toastify/dist/ReactToastify.css";
 
 /**

@@ -1,5 +1,5 @@
 import { useManageRolesPage } from "@/features/auth/model/useManageRolesPage";
-import RoleAccountItem from "@/features/admin/components/RoleAccountItem";
+import RoleAccountItem from "@/features/auth/ui/RoleAccountItem";
 
 export default function ManageRolesPage() {
   const { accounts, loading, changeFlag } = useManageRolesPage();

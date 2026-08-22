@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { useAuthContext } from "@/features/auth/model/AuthContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 
 interface ProtectedRouteProps {
   require?: "auth" | "admin" | "owner";

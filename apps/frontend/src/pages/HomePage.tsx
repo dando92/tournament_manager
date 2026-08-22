@@ -6,7 +6,7 @@ import { usePublicTournamentsQuery } from "@/features/tournament/model/usePublic
 import TournamentCard from "@/features/tournament/ui/TournamentCard";
 import CreateTournamentModal from "@/features/tournament/ui/CreateTournamentModal";
 import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
