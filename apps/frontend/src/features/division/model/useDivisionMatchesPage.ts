@@ -26,7 +26,7 @@ export type PoolGroup = {
  * the card.
  */
 export function useDivisionMatchesPage() {
-  const { division, tournamentId, controls, refreshDivision } = useDivisionPageContext();
+  const { division, entrants, tournamentId, controls, refreshDivision } = useDivisionPageContext();
   const { phaseId: phaseIdParam, poolId: poolIdParam } = useParams<{ phaseId?: string; poolId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -102,6 +102,7 @@ export function useDivisionMatchesPage() {
 
   return {
     division,
+    entrants,
     tournamentId,
     controls,
     matches: state.matches,

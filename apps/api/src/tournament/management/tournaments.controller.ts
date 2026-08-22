@@ -10,6 +10,7 @@ import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
 import { AuthService } from '@auth/services/auth.service';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
+import { TreeQueries } from '@tournament/structure/tree.queries';
 import { TournamentManager } from '@tournament/services/tournament.manager';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -20,6 +21,7 @@ export class TournamentsController {
     constructor(
         private readonly authService: AuthService,
         private readonly tournamentQueries: TournamentQueries,
+        private readonly treeQueries: TreeQueries,
         private readonly tournamentManager: TournamentManager,
         private readonly syncStart: TournamentSyncStartService,
     ) {}
@@ -53,7 +55,7 @@ export class TournamentsController {
 
     @Get(':id/overview')
     findOverview(@Param('id') id: number): Promise<TournamentOverviewDto> {
-        return this.tournamentManager.findOverview(Number(id));
+        return this.treeQueries.forTournament(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)

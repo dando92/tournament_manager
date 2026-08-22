@@ -6,16 +6,18 @@ import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
 import PlayersWarning from "@/features/division/ui/PlayersWarning";
 import { usePlayersTab } from "@/features/division/model/usePlayersTab";
 import { Division } from "@/features/division/model/types";
+import { Entrant } from "@/features/participant/model/types";
 
 type Props = {
   division: Division;
+  entrants: Entrant[];
   canEdit: boolean;
   onPlayersChanged: () => void;
 };
 
-export default function PlayersTab({ division, canEdit, onPlayersChanged }: Props) {
+export default function PlayersTab({ division, entrants, canEdit, onPlayersChanged }: Props) {
   const [orderByName, setOrderByName] = useState(false);
-  const state = usePlayersTab({ division, orderByName, onPlayersChanged });
+  const state = usePlayersTab({ division, entrants, orderByName, onPlayersChanged });
 
   return (
     <div className="flex flex-col gap-4 w-full">

@@ -1,19 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Player } from '@tournament-manager/persistence';
-import {
-    ParticipantDto,
-    TournamentDto,
-    TournamentOverviewDto,
-} from '@tournament-manager/contracts';
+import { ParticipantDto, TournamentDto } from '@tournament-manager/contracts';
 import {
     CreateParticipantDto,
     CreateTournamentDto,
     ImportParticipantEntryDto,
     UpdateTournamentDto,
 } from '@tournament/dtos';
-import { toEntrantDto, toParticipantDto } from '@tournament/shared/projections';
-import { DivisionService } from '@tournament/structure/services/division.service';
-import { MatchQueries } from '@match/match.queries';
+import { toParticipantDto } from '@tournament/shared/projections';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TournamentService } from './tournament.service';
 import { ParticipantService } from './participant.service';
@@ -22,8 +16,6 @@ import { PlayerService } from '@player/player.service';
 @Injectable()
 export class TournamentManager {
     constructor(
-        private readonly divisionService: DivisionService,
-        private readonly matchQueries: MatchQueries,
         private readonly tournamentQueries: TournamentQueries,
         private readonly tournamentService: TournamentService,
         private readonly participantService: ParticipantService,
@@ -119,57 +111,5 @@ export class TournamentManager {
         }
 
         return imported;
-    }
-
-    async findOverview(tournamentId: number): Promise<TournamentOverviewDto> {
-        const divisions = await this.divisionService.findOverviewData(tournamentId);
-        /* The tree marks a branch that is waiting on a person, so the overview
-           carries the count the sidebar rolls up. One aggregate for the whole
-           tournament rather than a load of its matches. */
-        const pendingMatchCounts = await this.matchQueries.pendingCountsByPhaseGroup(tournamentId);
-        const divisionCount = divisions.length;
-        const playerCount = divisions.reduce(
-            (count, division) => count + (division.entrants?.filter((entrant) => entrant.status === 'active').length ?? 0),
-            0,
-        );
-        const matchCount = divisions.reduce(
-            (count, division) =>
-                count + (division.phases ?? []).reduce(
-                    (phaseCount, phase) =>
-                        phaseCount + (phase.phaseGroups ?? []).reduce((groupCount, phaseGroup) => groupCount + this.getPhaseGroupMatchCount(phaseGroup), 0),
-                    0,
-                ),
-            0,
-        );
-
-        return {
-            divisionCount,
-            playerCount,
-            matchCount,
-            divisions: divisions.map((division) => ({
-                id: division.id,
-                name: division.name,
-                entrants: (division.entrants ?? []).map(toEntrantDto),
-                phases: (division.phases ?? []).map((phase) => ({
-                    id: phase.id,
-                    name: phase.name,
-                    matchCount: (phase.phaseGroups ?? []).reduce((count, phaseGroup) => count + this.getPhaseGroupMatchCount(phaseGroup), 0),
-                    phaseGroups: (phase.phaseGroups ?? []).map((phaseGroup) => ({
-                        id: phaseGroup.id,
-                        name: phaseGroup.name,
-                        displayIdentifier: phaseGroup.displayIdentifier ?? null,
-                        bracketType: phaseGroup.bracketType ?? null,
-                        state: phaseGroup.state,
-                        entrants: [],
-                        matchCount: this.getPhaseGroupMatchCount(phaseGroup),
-                        pendingMatchCount: pendingMatchCounts.get(phaseGroup.id) ?? 0,
-                    })),
-                })),
-            })),
-        };
-    }
-
-    private getPhaseGroupMatchCount(phaseGroup: { matches?: unknown[]; matchCount?: number }): number {
-        return phaseGroup.matchCount ?? phaseGroup.matches?.length ?? 0;
     }
 }

@@ -11,12 +11,12 @@ import { TournamentStartggController } from '../integrations/startgg/tournament-
 import { AdvancementRulesController } from './structure/controllers/advancement-rules.controller';
 import { DivisionsController } from './structure/division/division.controller';
 import { DivisionQueries } from './structure/division/division.queries';
+import { TreeQueries } from './structure/tree.queries';
 import { StandingsQueries } from './competition/standings.queries';
 import { PhaseGroupsController } from './structure/controllers/phase-groups.controller';
 import { PhasesController } from './structure/controllers/phases.controller';
 import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
 import { AdvancementRuleService } from './structure/services/advancement-rule.service';
-import { DivisionManager } from './structure/services/division.manager';
 import { DivisionService } from './structure/services/division.service';
 import { PhaseGroupManager } from './structure/services/phase-group.manager';
 import { PhaseGroupService } from './structure/services/phase-group.service';
@@ -79,7 +79,6 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         PlayerService,
         PlayerManager,
         DivisionService,
-        DivisionManager,
         ParticipantService,
         EntrantService,
         PhaseService,
@@ -97,6 +96,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         SongQueries,
         ParticipantQueries,
         StandingsQueries,
+        TreeQueries,
         TournamentQueries,
         TournamentService,
         TournamentManager,

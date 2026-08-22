@@ -9,9 +9,9 @@ import {
     ParticipantDto,
 } from '@tournament-manager/contracts';
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
-import { DivisionManager } from '../services/division.manager';
 import { DivisionService } from '../services/division.service';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
+import { TreeQueries } from '@tournament/structure/tree.queries';
 import { StandingsQueries } from '@tournament/competition/standings.queries';
 import { EntrantService } from '@tournament/services/entrant.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -21,9 +21,9 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 export class DivisionsController {
     constructor(
         private readonly divisionQueries: DivisionQueries,
+        private readonly treeQueries: TreeQueries,
         private readonly standingsQueries: StandingsQueries,
         private readonly divisionService: DivisionService,
-        private readonly divisionManager: DivisionManager,
         private readonly entrantService: EntrantService,
         private readonly bracketManager: BracketManager,
     ) {}
@@ -41,7 +41,9 @@ export class DivisionsController {
 
     @Get(':id/summary')
     async findSummary(@Param('id') id: number): Promise<DivisionSummaryDto> {
-        return this.divisionManager.findSummary(Number(id));
+        const division = await this.treeQueries.forDivision(Number(id));
+        if (!division) throw new NotFoundException(`Division ${id} not found`);
+        return division;
     }
 
     @Get(':id/standings')

@@ -260,9 +260,85 @@ describe('Division reads (e2e)', () => {
       .expect(({ body }) => expect(body).toEqual(expected));
   });
 
+  it('summarizes the division as one node of the tree, with the pending count and rules of each pool', async () => {
+    /* Creating the phase gave it a default pool, so the phase holds two. The
+       one this suite named carries both matches. */
+    const rules = [{ sourcePlacement: 1, targetKind: 'phase_group', targetId: poolId, targetSlot: 1 }];
+    await request(app.getHttpServer())
+      .put(`/advancement-rules/sources/phase_group/${poolId}`)
+      .send({ rules })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/divisions/${divisionId}/summary`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          id: divisionId,
+          name: 'Main Division',
+          entrantCount: 3,
+          matchCount: 2,
+        });
+        expect(body.phases).toHaveLength(1);
+        expect(body.phases[0].matchCount).toBe(2);
+
+        const pool = body.phases[0].phaseGroups.find((candidate) => candidate.id === poolId);
+        /* Both matches have every score in and neither has a committed result,
+           so both are waiting on a person. */
+        expect(pool).toMatchObject({
+          name: 'Pool A',
+          displayIdentifier: 'A',
+          state: 'pending',
+          matchCount: 2,
+          pendingMatchCount: 2,
+        });
+        expect(pool.advancementRules).toEqual([
+          {
+            id: expect.any(Number),
+            sourceKind: 'phase_group',
+            sourceId: poolId,
+            sourcePlacement: 1,
+            targetKind: 'phase_group',
+            targetId: poolId,
+            targetSlot: 1,
+          },
+        ]);
+        /* A pool states how many matches it holds and never the matches
+           themselves, and it no longer states an entrant list that was always
+           empty. */
+        expect(Object.keys(pool).sort()).toEqual([
+          'advancementRules',
+          'bracketType',
+          'displayIdentifier',
+          'id',
+          'matchCount',
+          'name',
+          'pendingMatchCount',
+          'state',
+        ]);
+      });
+  });
+
+  it('answers a pool mutation with the node the tree draws', async () => {
+    await request(app.getHttpServer())
+      .patch(`/phase-groups/${poolId}`)
+      .send({ name: 'Pool A renamed' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          id: poolId,
+          name: 'Pool A renamed',
+          matchCount: 2,
+          pendingMatchCount: 2,
+        });
+        expect(body.advancementRules).toHaveLength(1);
+      });
+  });
+
   it('answers 404 for a division that does not exist', async () => {
     for (const route of ['entrants', 'available-participants', 'standings']) {
       await request(app.getHttpServer()).get(`/divisions/999999/${route}`).expect(404);
     }
+    await request(app.getHttpServer()).get('/divisions/999999/summary').expect(404);
   });
 });

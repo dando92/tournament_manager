@@ -1,4 +1,3 @@
-import { Entrant } from "@/features/participant/model/types";
 import { PhaseGroup } from "@/features/division/model/types";
 
 /**
@@ -29,7 +28,8 @@ export type StartggImportPreviewRequest = {
 
 /**
  * A division as the tree draws it: its phases and pools flattened to what a
- * node needs, with the entrants the overview already carried.
+ * node needs. The roster is not among them — the tree shows names of divisions,
+ * phases and pools, and the pages that show people ask for them separately.
  */
 export interface TournamentDivisionOptionPhase {
   id: number;
@@ -41,7 +41,6 @@ export interface TournamentDivisionOptionPhase {
 export interface TournamentDivisionOption {
   id: number;
   name: string;
-  entrants: Entrant[];
   phases: TournamentDivisionOptionPhase[];
 }
 

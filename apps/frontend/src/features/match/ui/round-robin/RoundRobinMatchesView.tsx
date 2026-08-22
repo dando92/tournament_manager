@@ -1,5 +1,4 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { PhaseGroup } from "@/features/division/model/types";
 import { entrantPlayer } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
 import { Player } from "@/features/participant/model/types";
@@ -8,7 +7,6 @@ import StatusIcon from "@/shared/components/ui/StatusIcon";
 
 type RoundRobinMatchesViewProps = {
   matches: Match[];
-  phaseGroup?: PhaseGroup;
   renderMatchCard: (match: Match) => ReactNode;
 };
 
@@ -54,21 +52,15 @@ function getCellResultClass(cell: PairCell): string {
 
 export default function RoundRobinMatchesView({
   matches,
-  phaseGroup,
   renderMatchCard,
 }: RoundRobinMatchesViewProps) {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
+  /* The players are the ones the matches hold. The pool projection used to
+     carry a seeded list as well, but it was always empty, so this loop is what
+     has always decided the axes. */
   const basePlayers = useMemo(() => {
     const playersById = new Map<number, { player: Player; order: number }>();
-    const phaseGroupEntrants = phaseGroup?.entrants ?? [];
-
-    phaseGroupEntrants.forEach((entry, index) => {
-      const player = entrantPlayer(entry.entrant);
-      if (player && !playersById.has(player.id)) {
-        playersById.set(player.id, { player, order: index });
-      }
-    });
 
     matches.forEach((match) => {
       getMatchPlayers(match).forEach((player) => {
@@ -79,7 +71,7 @@ export default function RoundRobinMatchesView({
     });
 
     return Array.from(playersById.values());
-  }, [matches, phaseGroup?.entrants]);
+  }, [matches]);
 
   const matchByPairKey = useMemo(() => {
     const pairs = new Map<string, Match>();

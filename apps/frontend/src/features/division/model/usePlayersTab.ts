@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Division } from "@/features/division/model/types";
-import { Participant } from "@/features/participant/model/types";
+import { Entrant, Participant } from "@/features/participant/model/types";
 import {
   addParticipantToDivision,
   listAvailableParticipantsForDivision,
@@ -9,13 +9,14 @@ import {
 
 type UsePlayersTabOptions = {
   division: Division;
+  entrants: Entrant[];
   orderByName: boolean;
   onPlayersChanged: () => void;
 };
 
-export function usePlayersTab({ division, orderByName, onPlayersChanged }: UsePlayersTabOptions) {
+export function usePlayersTab({ division, entrants, orderByName, onPlayersChanged }: UsePlayersTabOptions) {
   const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(
-    (division.entrants ?? []).flatMap((entrant) => entrant.participants ?? []).filter(Boolean),
+    entrants.flatMap((entrant) => entrant.participants ?? []).filter(Boolean),
   );
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
@@ -30,8 +31,8 @@ export function usePlayersTab({ division, orderByName, onPlayersChanged }: UsePl
   }, [loadAvailableParticipants]);
 
   useEffect(() => {
-    setDivisionParticipants((division.entrants ?? []).flatMap((entrant) => entrant.participants ?? []).filter(Boolean));
-  }, [division.entrants]);
+    setDivisionParticipants(entrants.flatMap((entrant) => entrant.participants ?? []).filter(Boolean));
+  }, [entrants]);
 
   const divisionParticipantIds = useMemo(
     () => new Set(divisionParticipants.map((participant) => participant.id)),

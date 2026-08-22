@@ -952,6 +952,40 @@ had claimed both moves and named `catalog/` for the second; the tree above puts
 `score.queries.ts` under `competition/`, and a controller belongs beside its
 queries.
 
+#### The tree and the collapse (done)
+
+`structure/tree.queries.ts` answers all three scopes from one query text:
+`forTournament`, `forDivision` and `phaseGroup`. Two more queries give it the
+pending-match count of every pool in scope and the advancement rules of all of
+them at once, so a read costs three queries whatever it covers.
+`MatchQueries.pendingCountsByPhaseGroup` moved here, as this phase said it
+would.
+
+`TournamentOverviewDto` and `DivisionSummaryDto` are one shape. A division
+states `entrantCount`, not its roster: the tree was downloading every entrant of
+every division, with participants and players, to draw a list of names it never
+showed. The players tab, the seeding tab and the add-players dialog read
+`GET /divisions/:id/entrants` instead, through one cache entry per division.
+A pool no longer states an `entrants: []` nothing ever filled.
+
+That route orders by the persisted seed, so the seeding tab opens on the order
+its last save wrote. FQ-015 is partly answered: the order is visible, and
+whether `seedNum` belongs on the wire is what remains.
+
+The tree orders divisions, phases and pools by id. Neither read stated an order
+before, and the end-to-end test of the overview had been asserting
+`phaseGroups[0]` against whatever PostgreSQL happened to return.
+
+Pool mutations answer with `TreeQueries.phaseGroup`. `PhaseGroupManager.toDto`,
+`DivisionManager`, `TournamentManager.findOverview`,
+`DivisionService.findOneForSummary` and `findOverviewData`,
+`PhaseService.findOverviewDataForDivision` and
+`AdvancementRuleService.findBySources` are gone.
+
+Phase 5 is complete: eight `*.queries.ts` classes cover every read endpoint, no
+controller reaches a service for a `GET`, and no route answers with an entity
+except the phase and division write paths phase 7 turns into commands.
+
 ### Phase 6 — One update path
 
 - Mutations answer `204`.

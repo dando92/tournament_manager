@@ -26,12 +26,13 @@ export default function DivisionPage() {
 
 function DivisionPageContainer({ tournamentId, divisionId }: { tournamentId: number; divisionId: number }) {
   const { canEditTournament } = usePermissions();
-  const { division, refreshDivision } = useDivisionPage(tournamentId, divisionId);
+  const { division, entrants, refreshDivision } = useDivisionPage(tournamentId, divisionId);
 
   if (!division) return null;
 
   const context: DivisionPageContextValue = {
     division,
+    entrants,
     tournamentId,
     divisionId,
     controls: canEditTournament(tournamentId),

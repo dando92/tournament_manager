@@ -124,11 +124,13 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-015 — The seeding tab cannot read back the order it saved
 
-- Status: Open.
+- Status: Partly resolved on 2026-08-23; the remaining question is below.
 - Observed behavior: `SeedingTab` sorted the division's entrants by `seedNum`, falling back to the name. Its entrants come from `GET /divisions/:id/summary`, whose projection carries `id`, `name`, `type`, `status` and participants and never carried a seed, so the sort key was always undefined and the tab has always opened on the alphabetical order. `PATCH /divisions/:id/entrants/seeding` writes `seedNum`, and `GET /divisions/:id/entrants` returns it, but the page the person seeds from reads neither. Phase 3 of the API refactoring made the type honest and removed the dead sort key; the display is unchanged, because it never ran.
 - Question: Should the summary carry each entrant's seed, so the tab reopens on the saved order? The alternative is that seeding is a one-way instruction and the persisted order is only ever consumed by bracket generation, in which case the tab should say so rather than presenting an order that looks like the stored one.
 - Evidence: `apps/frontend/src/features/division/components/SeedingTab.tsx`, `apps/api/src/tournament/shared/projections.ts`, and `apps/api/src/tournament/structure/services/division.service.ts` (`findOneForSummary`).
-- Rule: leave the display as it is. Phase 5 of [ApiRefactoring.md](ApiRefactoring.md) rewrites this read model and is where the seed would be added.
+- Resolution of the display half, 2026-08-23: phase 5 gave the tab the roster from `GET /divisions/:id/entrants`, which the API orders by the persisted seed with the unseeded entrants last. The tab shows that order instead of sorting by name, so it now opens on the order its last save wrote. The summary no longer carries entrants at all; it states how many there are.
+- Still open: no response carries `seedNum` itself, so nothing can show a person the number beside a name or tell a seeded entrant from an unseeded one. Whether it should is the remaining question.
+- Rule: adding `seedNum` to `EntrantDto` needs a reader first. The order is visible now, which is what the tab was for.
 
 ### FQ-016 — What a tournament's statistics page should show
 
