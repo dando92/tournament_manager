@@ -8,7 +8,7 @@ import {
     MatchListEntrantDto,
     MatchListResultEntryDto,
     MatchListRoundDto,
-} from '@match/dtos/match-list.dto';
+} from '@match/match-list.dto';
 
 /**
  * Which matches a projection covers. The three read routes differ in this and

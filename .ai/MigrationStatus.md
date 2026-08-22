@@ -11,6 +11,15 @@
 
 ## Completed Checkpoints
 
+### Structure refactoring phase 2: match directory layout
+
+- Made the layout rule explicit in [ApiRefactoring.md](ApiRefactoring.md): every phase leaves the files it touched in the target position, with a kebab-case name and camelCase methods, as its last commit once verification has passed. It was previously stated only inside phase 7, so phases 2 and 3 did not apply it and the file names under `bracket/`, the barrels and `shared/` belonged to no phase at all.
+- Added phase 8 for what no aggregate can carry: the `bracket/` renames, the four barrels, `shared/`, the `catalog/` move, and mirroring `tests/unit`. Freeze became phase 9.
+- Moved the match aggregate into its target layout: `controllers/matches.controller.ts` to `match.controller.ts`, `dtos/match.dto.ts` to `match.requests.ts`, `dtos/match-list.dto.ts` up one level, and `competition/standing/` into `competition/match/` as `rounds.controller.ts` and `rounds.requests.ts`. `competition/match/controllers/`, `competition/match/dtos/` and `competition/standing/` no longer exist; a round is a match being scored, not a directory of its own.
+- Phase 2 had deferred these moves to avoid making them twice. That held for one file of five: phase 3 relocates none of the four others, and it deletes `match-list.dto.ts` rather than moving it again.
+- `competition/match/services/` still holds the publisher, the context service and the advancement manager. None of the three belongs to the match aggregate in the target tree; they move in phases 7 and 8.
+- Verification passed: `npx tsc --noEmit`, `npm run build`, `npm run lint` (the four pre-existing warnings), 70 unit tests, 26 end-to-end tests against PostgreSQL, and `npm run check:architecture`. No behaviour changed: the commit is moves and import rewrites only.
+
 ### Structure refactoring phase 2: match write side
 
 - Added `competition/match/match.aggregate.ts`, `match.store.ts` and `match.commands.ts`. The aggregate holds the rules and takes no dependencies, the store holds the one graph definition and the one transaction that puts it back, and the commands hold the order of the steps: load once, change in memory, save once, publish once.

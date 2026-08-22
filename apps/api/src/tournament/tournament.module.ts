@@ -22,7 +22,7 @@ import { PhaseService } from './structure/services/phase.service';
 import { BracketController } from './competition/bracket/bracket.controller';
 import { BracketManager } from './competition/bracket/bracket.manager';
 import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
-import { MatchesController } from './competition/match/controllers/matches.controller';
+import { MatchesController } from './competition/match/match.controller';
 import { AdvancementManager } from './competition/match/services/advancement.manager';
 import { MatchCommands } from './competition/match/match.commands';
 import { MatchQueries } from './competition/match/match.queries';
@@ -35,7 +35,7 @@ import { CompletedSongService } from './competition/services/completed-song.serv
 import { ScoreService } from './competition/services/score.service';
 import { SongRoller } from './competition/services/song.roller';
 import { SongService } from './competition/services/song.service';
-import { RoundsController } from './competition/standing/rounds.controller';
+import { RoundsController } from './competition/match/rounds.controller';
 import { PlayersController } from './player/players.controller';
 import { PlayerManager } from './player/player.manager';
 import { PlayerService } from './player/player.service';

@@ -12,7 +12,7 @@ import {
   SCORING_SYSTEM_TYPES,
   type ScoringSystemType,
 } from '@tournament-manager/scoring';
-import { MatchListDto } from '@match/dtos/match-list.dto';
+import { MatchListDto } from '@match/match-list.dto';
 
 export class CreateMatchDto {
   @ApiProperty({ description: 'The name of the match', example: 'Match 1' })
