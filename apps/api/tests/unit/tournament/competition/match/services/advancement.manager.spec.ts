@@ -56,6 +56,7 @@ describe('AdvancementManager', () => {
   };
   const publisher = {
     emitMatchUpdate: jest.fn(),
+    emitPhaseGroupUpdate: jest.fn(),
   };
 
   const manager = new AdvancementManager(
@@ -100,6 +101,9 @@ describe('AdvancementManager', () => {
     expect(savedEntrantIds(0)).toEqual([alreadyThere.id, winner.id]);
     expect(savedEntrantIds(1)).toEqual([runnerUp.id, alreadyThere.id]);
     expect(publisher.emitMatchUpdate).toHaveBeenCalledTimes(2);
+    /* Placing an entrant changes who a match waits on, which is what the pool's
+       counts are made of, so each write announces the pool as well. */
+    expect(publisher.emitPhaseGroupUpdate).toHaveBeenCalledTimes(2);
   });
 
   it('does not duplicate an entrant already present in a target match', async () => {

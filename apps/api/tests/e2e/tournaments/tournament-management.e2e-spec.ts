@@ -81,15 +81,12 @@ describe('Tournament management (e2e)', () => {
       .send(fixture.createTournament)
       .expect(201);
 
+    /* A creation answers with the address of what it made and nothing else, so
+       what the defaults did is read back through the route that projects it. */
     const tournamentId = createResponse.body.id;
-    // FQ-003: creation accepts only the name; configuration keeps its persisted defaults.
-    expect(createResponse.body).toMatchObject({
-      name: fixture.createTournament.name,
-      availableSetupsCount: 2,
-      defaultScoringSystem: 'EurocupScoreCalculator',
-    });
-    expect(createResponse.body.syncstartUrl).toBe('ws://syncservice.groovestats.com:1337');
+    expect(createResponse.body).toEqual({ id: expect.any(Number) });
 
+    // FQ-003: creation accepts only the name; configuration keeps its persisted defaults.
     await request(app.getHttpServer())
       .get(`/tournaments/${tournamentId}`)
       .expect(200)
@@ -97,13 +94,20 @@ describe('Tournament management (e2e)', () => {
         expect(body).toMatchObject({
           id: tournamentId,
           name: fixture.createTournament.name,
+          availableSetupsCount: 2,
+          defaultScoringSystem: 'EurocupScoreCalculator',
         });
+        expect(body.syncstartUrl).toBe('ws://syncservice.groovestats.com:1337');
       });
 
     await request(app.getHttpServer())
       .patch(`/tournaments/${tournamentId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send(fixture.updateTournament)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}`)
       .expect(200)
       .expect(({ body }) => {
         expect(body).toMatchObject({
@@ -264,7 +268,7 @@ describe('Tournament management (e2e)', () => {
       .patch(`/tournaments/${tournamentId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ startggApiKey: 'a-key' })
-      .expect(200);
+      .expect(204);
 
     await request(app.getHttpServer())
       .get(`/tournaments/${tournamentId}/startgg/api-key-status`)
@@ -369,7 +373,11 @@ describe('Tournament management (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/tournaments/${tournamentId}/close`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}`)
+      .expect(200)
       .expect(({ body }) => {
         expect(body.status).toBe('closed');
         expect(body.closedAt).toBeTruthy();
@@ -394,7 +402,11 @@ describe('Tournament management (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/tournaments/${tournamentId}/reopen`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}`)
+      .expect(200)
       .expect(({ body }) => {
         expect(body.status).toBe('open');
         expect(body.closedAt).toBeNull();

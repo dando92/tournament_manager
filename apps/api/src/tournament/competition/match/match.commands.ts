@@ -3,12 +3,11 @@ import { Player, Score, Song } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
 import { StartggService } from '@api/integrations/startgg/startgg.service';
-import { MatchAggregate, MatchDetails } from '@match/match.aggregate';
-import { MatchQueries } from '@match/match.queries';
+import { MatchAggregate, MatchDetails, MatchPoolState } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { CommitMatchResultResponseDto, MatchDto, StartggReportStatus } from '@tournament-manager/contracts';
+import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
@@ -44,6 +43,10 @@ export type ScoreInput = {
  * steps and the collaborators a match reaches outside itself — the pool whose
  * derived entrants follow its membership, the advancement a result sets off,
  * and the start.gg report that follows a completion.
+ *
+ * No command answers with a projection. The change reaches the interface
+ * through the events each one publishes, so a client reads the match once
+ * afterwards instead of being handed a copy here and another over the socket.
  */
 @Injectable()
 export class MatchCommands {
@@ -51,7 +54,6 @@ export class MatchCommands {
 
     constructor(
         private readonly store: MatchStore,
-        private readonly queries: MatchQueries,
         private readonly publisher: UiUpdatePublisher,
         private readonly scoringSystems: ScoringSystemProvider,
         private readonly advancement: AdvancementManager,
@@ -77,8 +79,9 @@ export class MatchCommands {
         return match.id;
     }
 
-    async update(matchId: number, input: UpdateMatchInput): Promise<MatchDto | null> {
+    async update(matchId: number, input: UpdateMatchInput): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
         const membershipChanged = input.entrantIds !== undefined || input.phaseGroupId !== undefined;
         if (membershipChanged || input.scoringSystem !== undefined) match.assertEditable();
 
@@ -99,9 +102,15 @@ export class MatchCommands {
                 await this.phaseGroups.syncDerivedEntrants(phaseGroupId);
             }
         }
-        await this.publisher.emitMatchUpdate(match.address);
 
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
+        /* A match that changed hands or changed pools moves the counts of every
+           pool it touched, whichever way its own standings went. */
+        if (membershipChanged) {
+            for (const phaseGroupId of affectedPhaseGroupIds) {
+                await this.publisher.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
+            }
+        }
     }
 
     async delete(matchId: number): Promise<void> {
@@ -115,14 +124,12 @@ export class MatchCommands {
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 
-    async setActive(matchId: number, active: boolean): Promise<MatchDto | null> {
+    async setActive(matchId: number, active: boolean): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
         match.activate(active);
 
         await this.store.save(match);
         await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
     }
 
     /** The bracket systems fill a match one entrant at a time as they build it. */
@@ -146,26 +153,24 @@ export class MatchCommands {
         await this.saveAndAnnounceMembership(match);
     }
 
-    async addRound(matchId: number, source: RoundSourceDto): Promise<MatchDto | null> {
+    async addRound(matchId: number, source: RoundSourceDto): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
         match.assertEditable();
         await this.addRounds(match, source);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
-    async removeRound(roundId: number): Promise<MatchDto | null> {
+    async removeRound(roundId: number): Promise<void> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+        const before = match.poolState;
         match.assertEditable();
         match.removeRound(roundId);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
     /**
@@ -173,20 +178,20 @@ export class MatchCommands {
      * the standings under it were scored on the song that is leaving. Both halves
      * are one change to one aggregate, so they are one load and one save.
      */
-    async replaceRoundSong(roundId: number, source: RoundSourceDto): Promise<MatchDto | null> {
+    async replaceRoundSong(roundId: number, source: RoundSourceDto): Promise<void> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+        const before = match.poolState;
         match.assertEditable();
         match.removeRound(roundId);
         await this.addRounds(match, source);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
-    async upsertScore(roundId: number, playerId: number, input: ScoreInput): Promise<MatchDto | null> {
+    async upsertScore(roundId: number, playerId: number, input: ScoreInput): Promise<void> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+        const before = match.poolState;
         match.assertEditable();
 
         const player = await this.store.loadPlayer(playerId);
@@ -197,31 +202,27 @@ export class MatchCommands {
         match.upsertScore(roundId, player, score, this.scoringSystems);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
-    async upsertPoints(roundId: number, playerId: number, points: number): Promise<MatchDto | null> {
+    async upsertPoints(roundId: number, playerId: number, points: number): Promise<void> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+        const before = match.poolState;
         match.assertEditable();
         match.upsertPoints(roundId, await this.store.loadPlayer(playerId), points);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
-    async removeStanding(roundId: number, playerId: number): Promise<MatchDto | null> {
+    async removeStanding(roundId: number, playerId: number): Promise<void> {
         const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+        const before = match.poolState;
         match.assertEditable();
         match.removeStanding(roundId, playerId);
 
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
     /**
@@ -232,8 +233,9 @@ export class MatchCommands {
      * with the placements the previous result produced, because those are the
      * ones that were applied.
      */
-    async commitResult(matchId: number): Promise<CommitMatchResultResponseDto> {
+    async commitResult(matchId: number): Promise<StartggReportStatus> {
         const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
         if (match.isCompleted) await this.advancement.revertFromMatch(match);
 
         match.commit();
@@ -241,29 +243,43 @@ export class MatchCommands {
 
         await this.advancement.advanceFromMatch(match);
         const startggReport = await this.report(match);
-        await this.publisher.emitMatchUpdate(match.address);
+        await this.announce(match, before);
 
-        return {
-            match: await this.queries.byId(match.id),
-            startggReport,
-        };
+        return startggReport;
     }
 
-    async reopenResult(matchId: number): Promise<MatchDto | null> {
+    async reopenResult(matchId: number): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
         if (match.isCompleted) await this.advancement.revertFromMatch(match);
 
         match.reopen();
         await this.store.save(match);
-        await this.publisher.emitMatchUpdate(match.address);
-
-        return await this.queries.byId(match.id);
+        await this.announce(match, before);
     }
 
     private async saveAndAnnounceMembership(match: MatchAggregate): Promise<void> {
         await this.store.save(match);
         await this.phaseGroups.syncDerivedEntrants(match.phaseGroupId);
         await this.publisher.emitMatchUpdate(match.address);
+        await this.publisher.emitPhaseGroupUpdate(match.address);
+    }
+
+    /**
+     * The events one write produces.
+     *
+     * Every write announces the match, which is what a pool's match list
+     * follows. It announces the pool as well only when the pool's own
+     * projection moved, because that is the read that costs a whole tree:
+     * typing a percentage leaves the counts the tree draws where they were, and
+     * settling the last standing of a match does not.
+     */
+    private async announce(match: MatchAggregate, before: MatchPoolState): Promise<void> {
+        await this.publisher.emitMatchUpdate(match.address);
+
+        const after = match.poolState;
+        const poolChanged = after.completed !== before.completed || after.awaitingCommit !== before.awaitingCommit;
+        if (poolChanged) await this.publisher.emitPhaseGroupUpdate(match.address);
     }
 
     /**

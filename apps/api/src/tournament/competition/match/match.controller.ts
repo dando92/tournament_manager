@@ -1,11 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
-import { CommitMatchResultResponseDto, MatchDto } from '@tournament-manager/contracts';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { CommitMatchResultResponseDto, CreatedResourceDto, MatchDto } from '@tournament-manager/contracts';
 import { RoundSourceDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/match.requests';
 import { MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
+/**
+ * Every write here answers `204`. What changed reaches the interface through
+ * the event the command published, so a caller reads the match back once
+ * instead of being handed a copy in the response and another over the socket.
+ *
+ * Two routes carry something an event cannot: a creation says where the new
+ * match is, and a commit says what start.gg made of the result.
+ */
 @UseGuards(TournamentOpenGuard)
 @Controller('matches')
 export class MatchesController {
@@ -22,10 +30,8 @@ export class MatchesController {
 
     @Post()
     @RequireOpenTournament({ entity: 'phase-group', location: 'body', field: 'phaseGroupId' })
-    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<MatchDto | null> {
-        const matchId = await this.matchCommands.create(dto);
-
-        return await this.matchQueries.byId(matchId);
+    async create(@Body(new ValidationPipe()) dto: CreateMatchWithSongsDto): Promise<CreatedResourceDto> {
+        return { id: await this.matchCommands.create(dto) };
     }
 
     @Get('division/:divisionId')
@@ -44,38 +50,49 @@ export class MatchesController {
     }
 
     @Patch(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<MatchDto | null> {
+    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<void> {
         return this.matchCommands.update(Number(id), dto);
     }
 
     @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
     remove(@Param('id') id: number): Promise<void> {
         return this.matchCommands.delete(Number(id));
     }
 
     @Post(':matchId/rounds')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<MatchDto | null> {
-        return await this.matchCommands.addRound(Number(matchId), dto);
+    addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<void> {
+        return this.matchCommands.addRound(Number(matchId), dto);
     }
 
     @Put(':matchId/active')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<MatchDto | null> {
-        return await this.matchCommands.setActive(Number(matchId), dto.active);
+    updateMatchActive(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: UpdateMatchActiveDto): Promise<void> {
+        return this.matchCommands.setActive(Number(matchId), dto.active);
     }
 
+    /**
+     * The one write that answers with a body. Reporting to start.gg is a
+     * best-effort side effect of the commit, and its outcome concerns the person
+     * who pressed the button rather than everyone watching the tournament, so it
+     * travels back here instead of over the event channel.
+     */
     @Put(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
     async commitMatchResult(@Param('matchId') matchId: number): Promise<CommitMatchResultResponseDto> {
-        return await this.matchCommands.commitResult(Number(matchId));
+        return { startggReport: await this.matchCommands.commitResult(Number(matchId)) };
     }
 
     @Delete(':matchId/result')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async reopenMatchResult(@Param('matchId') matchId: number): Promise<MatchDto | null> {
-        return await this.matchCommands.reopenResult(Number(matchId));
+    reopenMatchResult(@Param('matchId') matchId: number): Promise<void> {
+        return this.matchCommands.reopenResult(Number(matchId));
     }
 }

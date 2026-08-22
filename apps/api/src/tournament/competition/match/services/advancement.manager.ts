@@ -80,6 +80,9 @@ export class AdvancementManager {
         await this.matches.save(target);
         await this.phaseGroups.syncDerivedEntrants(target.phaseGroupId);
         await this.publisher.emitMatchUpdate(target.address);
+        /* Who is in a match decides whether it is waiting on anyone, so placing
+           an entrant moves the counts of the pool it landed in. */
+        await this.publisher.emitPhaseGroupUpdate(target.address);
     }
 
     /**

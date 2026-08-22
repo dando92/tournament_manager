@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
-import { Division, Entrant } from '@tournament-manager/persistence';
 import {
+    CreatedResourceDto,
     DivisionStandingRowDto,
     DivisionSummaryDto,
     EntrantDto,
@@ -35,8 +35,10 @@ export class DivisionsController {
 
     @Post()
     @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
-    async create(@Body(new ValidationPipe()) dto: CreateDivisionDto): Promise<Division> {
-        return this.divisionService.create(dto);
+    async create(@Body(new ValidationPipe()) dto: CreateDivisionDto): Promise<CreatedResourceDto> {
+        const division = await this.divisionService.create(dto);
+
+        return { id: division.id };
     }
 
     @Get(':id/summary')
@@ -62,12 +64,14 @@ export class DivisionsController {
     }
 
     @Patch(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
-    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateDivisionDto): Promise<Division> {
-        return this.divisionService.update(id, dto);
+    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateDivisionDto): Promise<void> {
+        await this.divisionService.update(id, dto);
     }
 
     @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async remove(@Param('id') id: number): Promise<void> {
         return this.divisionService.delete(id);
@@ -80,6 +84,7 @@ export class DivisionsController {
     }
 
     @Patch(':id/entrants/seeding')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async updateSeeding(
         @Param('id') id: number,
@@ -99,11 +104,14 @@ export class DivisionsController {
     async addParticipantToDivision(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
-    ): Promise<Entrant> {
-        return this.entrantService.addSinglesEntrant(Number(id), Number(participantId));
+    ): Promise<CreatedResourceDto> {
+        const entrant = await this.entrantService.addSinglesEntrant(Number(id), Number(participantId));
+
+        return { id: entrant.id };
     }
 
     @Delete(':id/participants/:participantId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async removeParticipantFromDivision(
         @Param('id') id: number,

@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { AdvancementCompetitionKind } from '@tournament-manager/persistence';
 import { UpdateAdvancementRulesDto } from '@tournament/dtos';
 import { AdvancementRuleManager } from '@tournament/structure/services/advancement-rule.manager';
@@ -10,6 +10,7 @@ export class AdvancementRulesController {
     constructor(private readonly advancementRuleManager: AdvancementRuleManager) {}
 
     @Put('sources/:sourceKind/:sourceId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'advancement-source', location: 'params', field: 'sourceId' })
     async updateForSource(
         @Param('sourceKind') sourceKind: AdvancementCompetitionKind,

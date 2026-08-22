@@ -1,5 +1,6 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 import {
+    CreatedResourceDto,
     MyTournamentRolesDto,
     TournamentConfigurationDto,
     TournamentDto,
@@ -28,12 +29,13 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, CreatorOrAdminGuard)
     @Post()
-    async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<TournamentDto> {
+    async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<CreatedResourceDto> {
         const tournament = await this.tournamentManager.create(dto, req.user?.id);
         if (tournament.syncstartUrl) {
             await this.syncStart.configureTournament(tournament.id, tournament.syncstartUrl);
         }
-        return tournament;
+
+        return { id: tournament.id };
     }
 
     @Get('public')
@@ -81,28 +83,28 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Patch(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<TournamentDto> {
-        const { tournament, previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
+    async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<void> {
+        const { previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
         if (dto.syncstartUrl !== undefined && dto.syncstartUrl !== previousSyncstartUrl) {
             await this.syncStart.configureTournament(Number(id), dto.syncstartUrl);
         }
-        return tournament;
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/close')
-    async close(@Param('id') id: number): Promise<TournamentDto> {
-        const tournament = await this.tournamentManager.close(Number(id));
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async close(@Param('id') id: number): Promise<void> {
+        await this.tournamentManager.close(Number(id));
         await this.syncStart.closeTournament(Number(id));
-        return tournament;
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/reopen')
-    async reopen(@Param('id') id: number): Promise<TournamentDto> {
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async reopen(@Param('id') id: number): Promise<void> {
         const tournament = await this.tournamentManager.reopen(Number(id));
         await this.syncStart.configureTournament(Number(id), tournament.syncstartUrl ?? '');
-        return tournament;
     }
 }

@@ -115,15 +115,25 @@ describe('Division reads (e2e)', () => {
     await dropTestDatabase(database);
   });
 
+  /* A creation answers with the id of what it made and nothing else, so the
+     player behind a participant comes from the read that projects one. */
   async function addParticipant(playerName: string): Promise<void> {
-    const participant = await request(app.getHttpServer())
+    const created = await request(app.getHttpServer())
       .post(`/tournaments/${tournamentId}/participants`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ playerName })
       .expect(201);
 
-    participantIdByName.set(playerName, participant.body.id);
-    playerIdByName.set(playerName, participant.body.player.id);
+    const roster = await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/participants`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    participantIdByName.set(playerName, created.body.id);
+    playerIdByName.set(
+      playerName,
+      roster.body.find((participant) => participant.id === created.body.id).player.id,
+    );
   }
 
   async function addEntrant(playerName: string): Promise<void> {
@@ -138,7 +148,7 @@ describe('Division reads (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/divisions/${divisionId}/entrants/seeding`)
       .send({ entrantIds: [entrantIdByName.get('Bob Player'), entrantIdByName.get('Cal Player')] })
-      .expect(200);
+      .expect(204);
 
     await request(app.getHttpServer())
       .get(`/divisions/${divisionId}/entrants`)
@@ -200,15 +210,16 @@ describe('Division reads (e2e)', () => {
       })
       .expect(201);
 
-    const playedRoundId = match.body.rounds[0].id;
+    const playedMatch = await request(app.getHttpServer()).get(`/matches/${match.body.id}`).expect(200);
+    const playedRoundId = playedMatch.body.rounds[0].id;
     await request(app.getHttpServer())
       .put(`/rounds/${playedRoundId}/scores/${playerIdByName.get('Bob Player')}`)
       .send({ percentage: 95, isFailed: false })
-      .expect(200);
+      .expect(204);
     await request(app.getHttpServer())
       .put(`/rounds/${playedRoundId}/scores/${playerIdByName.get('Cal Player')}`)
       .send({ percentage: 80, isFailed: false })
-      .expect(200);
+      .expect(204);
 
     /* A round with no song is hand-scored: it awards points without anything
        having been played. A match may not mix the two, so the hand-scored round
@@ -223,15 +234,18 @@ describe('Division reads (e2e)', () => {
       })
       .expect(201);
 
-    const withHandScoredRound = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post(`/matches/${handScoredMatch.body.id}/rounds`)
       .send({})
-      .expect(201);
+      .expect(204);
+    const withHandScoredRound = await request(app.getHttpServer())
+      .get(`/matches/${handScoredMatch.body.id}`)
+      .expect(200);
     const handScoredRoundId = withHandScoredRound.body.rounds[0].id;
     await request(app.getHttpServer())
       .put(`/rounds/${handScoredRoundId}/points/${playerIdByName.get('Cal Player')}`)
       .send({ points: 5 })
-      .expect(200);
+      .expect(204);
 
     const scored = await request(app.getHttpServer()).get(`/matches/${match.body.id}`).expect(200);
     const pointsOf = (roundIndex: number, playerName: string): number =>
@@ -267,7 +281,7 @@ describe('Division reads (e2e)', () => {
     await request(app.getHttpServer())
       .put(`/advancement-rules/sources/phase_group/${poolId}`)
       .send({ rules })
-      .expect(200);
+      .expect(204);
 
     await request(app.getHttpServer())
       .get(`/divisions/${divisionId}/summary`)
@@ -319,19 +333,25 @@ describe('Division reads (e2e)', () => {
       });
   });
 
-  it('answers a pool mutation with the node the tree draws', async () => {
+  it('answers a pool mutation with nothing, and shows it in the tree', async () => {
     await request(app.getHttpServer())
       .patch(`/phase-groups/${poolId}`)
       .send({ name: 'Pool A renamed' })
+      .expect(204)
+      .expect(({ text }) => expect(text).toBe(''));
+
+    await request(app.getHttpServer())
+      .get(`/divisions/${divisionId}/summary`)
       .expect(200)
       .expect(({ body }) => {
-        expect(body).toMatchObject({
+        const pool = body.phases.flatMap((phase) => phase.phaseGroups).find((each) => each.id === poolId);
+        expect(pool).toMatchObject({
           id: poolId,
           name: 'Pool A renamed',
           matchCount: 2,
           pendingMatchCount: 2,
         });
-        expect(body.advancementRules).toHaveLength(1);
+        expect(pool.advancementRules).toHaveLength(1);
       });
   });
 
@@ -361,7 +381,7 @@ describe('Division reads (e2e)', () => {
        again — without that, a removal could not be undone from the interface. */
     await request(app.getHttpServer())
       .delete(`/divisions/${divisionId}/participants/${participantId}`)
-      .expect(200);
+      .expect(204);
 
     expect(await entrantOf('Dee Player')).toMatchObject({ status: 'withdrawn' });
     expect(await available()).toContain(participantId);
