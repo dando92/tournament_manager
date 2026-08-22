@@ -1,32 +1,8 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { AdminAccount } from "@/features/player/types/Account";
-import { toast } from "react-toastify";
+import { useManageRolesPage } from "@/features/auth/model/useManageRolesPage";
 import RoleAccountItem from "@/features/admin/components/RoleAccountItem";
 
 export default function ManageRolesPage() {
-  const [accounts, setAccounts] = useState<AdminAccount[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    axios.get<AdminAccount[]>("user").then((r) => {
-      setAccounts(r.data);
-    }).catch(() => {
-      toast.error("Failed to load accounts.");
-    }).finally(() => setLoading(false));
-  }, []);
-
-  async function handleFlagChange(accountId: string, flag: "isAdmin" | "isTournamentCreator", value: boolean) {
-    try {
-      const updated = await axios.patch<AdminAccount>(`user/${accountId}/flags`, { [flag]: value });
-      setAccounts((prev) =>
-        prev.map((a) => (a.id === accountId ? updated.data : a))
-      );
-      toast.success("Updated.");
-    } catch {
-      toast.error("Failed to update.");
-    }
-  }
+  const { accounts, loading, changeFlag } = useManageRolesPage();
 
   if (loading) return <p className="text-ui-text-mute">Loading...</p>;
 
@@ -38,7 +14,7 @@ export default function ManageRolesPage() {
           <RoleAccountItem
             key={account.id}
             account={account}
-            onFlagChange={(flag, value) => handleFlagChange(account.id, flag, value)}
+            onFlagChange={(flag, value) => changeFlag(account.id, flag, value)}
           />
         ))}
         {accounts.length === 0 && (

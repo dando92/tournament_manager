@@ -1,8 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useAuthContext } from "@/features/auth/context/AuthContext";
-import axios from "axios";
+import { useAccountInfoPage } from "@/features/auth/model/useAccountInfoPage";
 import { btnPrimary } from "@/styles/buttonStyles";
-import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faPen, faCamera, faSun, faMoon, faDesktop } from "@fortawesome/free-solid-svg-icons";
 import { useThemePreference } from "@/shared/hooks/useThemePreference";
@@ -66,69 +63,33 @@ const THEME_ICON: Record<ThemePreference, typeof faSun> = {
 };
 
 export default function AccountInfoPage() {
-  const { state, actions } = useAuthContext();
+  const {
+    account,
+    fileInputRef,
+    editingProfile,
+    playerName,
+    nationality,
+    grooveStatsApi,
+    profilePicture,
+    saving,
+    savingPicture,
+    setEditingProfile,
+    setPlayerName,
+    setNationality,
+    setGrooveStatsApi,
+    savePicture,
+    saveProfile,
+    cancelEdit,
+  } = useAccountInfoPage();
   const [theme, chooseTheme] = useThemePreference();
-  const { account } = state;
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [playerName, setPlayerName] = useState(account?.player?.playerName ?? "");
-  const [nationality, setNationality] = useState(account?.nationality ?? "");
-  const [grooveStatsApi, setGrooveStatsApi] = useState(account?.grooveStatsApi ?? "");
-  const [profilePicture, setProfilePicture] = useState(account?.profilePicture ?? "");
-  const [saving, setSaving] = useState(false);
-  const [savingPicture, setSavingPicture] = useState(false);
-
-  useEffect(() => {
-    if (!editingProfile) {
-      setPlayerName(account?.player?.playerName ?? "");
-      setNationality(account?.nationality ?? "");
-      setGrooveStatsApi(account?.grooveStatsApi ?? "");
-      setProfilePicture(account?.profilePicture ?? "");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account]);
 
   if (!account) return null;
 
-  async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !account) return;
-    e.target.value = "";
-    setSavingPicture(true);
-    try {
-      const base64 = await compressImage(file, 256);
-      setProfilePicture(base64);
-      await axios.patch(`user/${account.id}/profile`, { profilePicture: base64 });
-      await actions.loadCurrentUser();
-      toast.success("Profile picture updated.");
-    } catch {
-      toast.error("Failed to update profile picture.");
-    } finally {
-      setSavingPicture(false);
-    }
-  }
-
-  async function saveProfile() {
-    if (!account) return;
-    setSaving(true);
-    try {
-      await axios.patch(`user/${account.id}/profile`, { playerName, nationality, grooveStatsApi });
-      await actions.loadCurrentUser();
-      toast.success("Profile updated.");
-      setEditingProfile(false);
-    } catch {
-      toast.error("Failed to update profile.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function cancelEdit() {
-    setEditingProfile(false);
-    setPlayerName(account?.player?.playerName ?? "");
-    setNationality(account?.nationality ?? "");
-    setGrooveStatsApi(account?.grooveStatsApi ?? "");
+  async function handlePictureChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+    await savePicture(await compressImage(file, 256));
   }
 
   const Avatar = ({ size = "md" }: { size?: "md" | "lg" }) => {
