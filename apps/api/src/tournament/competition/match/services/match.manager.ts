@@ -10,7 +10,6 @@ import { StandingService } from '@tournament/competition/standing/standing.servi
 import { MatchListDto } from '@match/dtos/match-list.dto';
 import { MatchQueries } from '@match/match.queries';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
-import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 
 @Injectable()
 export class MatchManager {
@@ -27,8 +26,6 @@ export class MatchManager {
         private readonly uiUpdateGateway: UiUpdatePublisher,
         @Inject()
         private readonly matchWorkflowManager: MatchWorkflowManager,
-        @Inject()
-        private readonly advancementRuleService: AdvancementRuleService,
         @Inject()
         private readonly matchQueries: MatchQueries,
     ) {
@@ -56,16 +53,6 @@ export class MatchManager {
 
     async DeleteMatch(id: number): Promise<void> {
         return await this.matchService.delete(id);
-    }
-
-    async FindMatchesForDivision(divisionId: number): Promise<MatchListDto[]> {
-        const matches = await this.matchService.findByDivisionForView(divisionId);
-        return await Promise.all(matches.map((match) => this.toMatchListDto(match)));
-    }
-
-    async FindMatchesForPhaseGroup(phaseGroupId: number): Promise<MatchListDto[]> {
-        const matches = await this.matchService.findByPhaseGroupForView(phaseGroupId);
-        return await Promise.all(matches.map((match) => this.toMatchListDto(match)));
     }
 
     async RemovePlayersFromMatch(matchId: number, playerIdsToRemove: number[]): Promise<void> {
@@ -237,77 +224,5 @@ export class MatchManager {
         dto.matchId = match.id;
         dto.songId = songId;
         return dto;
-    }
-
-    private async toMatchListDto(match: Match): Promise<MatchListDto> {
-        const outgoingRules = await this.advancementRuleService.findBySource('match', match.id);
-        const incomingRules = await this.advancementRuleService.findByTarget('match', match.id);
-        const advancementRules = [...outgoingRules, ...incomingRules]
-            .filter((rule, index, rules) => rules.findIndex((candidate) => candidate.id === rule.id) === index)
-            .sort((left, right) => left.sourceId - right.sourceId || left.sourcePlacement - right.sourcePlacement || left.targetSlot - right.targetSlot || left.id - right.id);
-
-        return {
-            id: match.id,
-            name: match.name,
-            subtitle: match.subtitle,
-            notes: match.notes,
-            scoringSystem: match.scoringSystem,
-            active: match.active ?? false,
-            entrants: (match.entrants ?? []).map((entrant) => ({
-                id: entrant.id,
-                name: entrant.name,
-                type: entrant.type,
-                status: entrant.status,
-                participants: (entrant.participants ?? []).map((participant) => ({
-                    id: participant.id,
-                    roles: participant.roles ?? [],
-                    status: participant.status,
-                    player: {
-                        id: participant.player.id,
-                        playerName: participant.player.playerName,
-                    },
-                })),
-            })),
-            rounds: (match.rounds ?? []).map((round) => ({
-                id: round.id,
-                song: round.song
-                    ? {
-                        id: round.song.id,
-                        title: round.song.title,
-                    }
-                    : null,
-                standings: (round.standings ?? []).map((standing) => ({
-                    id: standing.id,
-                    points: standing.points,
-                    player: {
-                        id: standing.player.id,
-                        playerName: standing.player.playerName,
-                    },
-                    score: standing.score
-                        ? {
-                            id: standing.score.id,
-                            percentage: standing.score.percentage,
-                            isFailed: standing.score.isFailed,
-                        }
-                        : null,
-                })),
-            })),
-            advancementRules: advancementRules.map((rule) => ({
-                id: rule.id,
-                sourceKind: rule.sourceKind,
-                sourceId: rule.sourceId,
-                sourcePlacement: rule.sourcePlacement,
-                targetKind: rule.targetKind,
-                targetId: rule.targetId,
-                targetSlot: rule.targetSlot,
-            })),
-            matchResult: match.matchResult
-                ? {
-                    id: match.matchResult.id,
-                    playerPoints: match.matchResult.playerPoints ?? [],
-                }
-                : null,
-            phaseGroupId: match.phaseGroup.id,
-        };
     }
 }

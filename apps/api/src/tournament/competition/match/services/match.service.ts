@@ -177,58 +177,6 @@ export class MatchService {
         return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.pendingMatchCount)]));
     }
 
-    async findByDivisionForView(divisionId: number): Promise<Match[]> {
-        return this.matchRepository.find({
-            where: {
-                phaseGroup: {
-                    phase: {
-                    division: {
-                        id: divisionId,
-                    },
-                    },
-                },
-            },
-            relations: {
-                phaseGroup: { phase: true },
-                entrants: { participants: { player: true } },
-                rounds: {
-                    song: true,
-                    standings: {
-                        player: true,
-                        score: {
-                            player: true,
-                        },
-                    },
-                },
-                matchResult: true,
-            },
-        });
-    }
-
-    async findByPhaseGroupForView(phaseGroupId: number): Promise<Match[]> {
-        return this.matchRepository.find({
-            where: {
-                phaseGroup: {
-                    id: phaseGroupId,
-                },
-            },
-            relations: {
-                phaseGroup: { phase: true },
-                entrants: { participants: { player: true } },
-                rounds: {
-                    song: true,
-                    standings: {
-                        player: true,
-                        score: {
-                            player: true,
-                        },
-                    },
-                },
-                matchResult: true,
-            },
-        });
-    }
-
     async findOneForView(id: number): Promise<Match | null> {
         return await this.matchRepository.findOne({
             where: { id },
