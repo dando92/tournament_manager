@@ -8,7 +8,7 @@
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
-- Awaiting the user's manual UI check: the five phase 5 branches, `refactor/5-tournament-reads` through `refactor/5-tree`, plus `feature/division-pages` and `fix/withdrawn-entrants`. The home page and the search dialog read a two-field response; the division pages read their roster in a second request; the seeding tab opens on the saved order and its rows can now be dragged; the division standings page is gone; removing somebody from a division can be undone.
+- Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, and the song list.
 
 ## Completed Checkpoints
 
