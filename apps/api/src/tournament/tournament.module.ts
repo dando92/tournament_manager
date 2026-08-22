@@ -42,6 +42,7 @@ import { PlayerService } from './player/player.service';
 import { EntrantService } from './services/entrant.service';
 import { ParticipantService } from './services/participant.service';
 import { TournamentManager } from './services/tournament.manager';
+import { TournamentQueries } from './management/tournament.queries';
 import { TournamentService } from './services/tournament.service';
 import { TournamentOpenGuard } from './guards/tournament-open.guard';
 import { TournamentsController } from './management/tournaments.controller';
@@ -88,6 +89,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         AdvancementRuleManager,
         UiUpdatePublisher,
         CompletedSongService,
+        TournamentQueries,
         TournamentService,
         TournamentManager,
         TournamentAccessGuard,

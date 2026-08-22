@@ -137,3 +137,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: What numbers does a tournament need, and who reads them? A table of every score is a log, not a statistic. Candidates the removed page hinted at without answering: per-player averages across a division, a song's difficulty measured by how people actually score on it, a pool's progress against its schedule, a player's results across the tournaments they have entered.
 - Evidence: the removal commit on branch `refactor/5-stats-placeholder`; `apps/frontend/src/pages/tournament/StatsPage.tsx`.
 - Rule: do not add a statistics read model to phase 5 of [ApiRefactoring.md](ApiRefactoring.md). The page stays empty until the question above has an answer, and the answer decides the query rather than the other way round.
+
+### FQ-017 — Whether a tournament response should name its staff
+
+- Status: Open. The field was removed on 2026-08-22.
+- Observed behavior: `TournamentDto` declared `staff: TournamentStaffDto[]`, mapped in `TournamentManager.toResponseDto` from `tournament.participants` filtered to the ones holding the `staff` role and a linked account. Every loader behind that mapping — `findOne`, `findOneForPage`, `findOneForUpdate` — read the tournament row alone and never loaded its participants, so the array was empty in every response the API has ever sent. No frontend consumer read it. Phase 5 of [ApiRefactoring.md](ApiRefactoring.md) removed the field rather than making the load fetch what the mapper assumed.
+- Question: Should a tournament response name its staff? Nothing on screen shows them today; the participants page lists roles per participant and reads `GET /tournaments/:id/participants`, which is a separate call with its own permission. If a header or a card should credit the staff, the field returns as a deliberate projection with a load behind it.
+- Evidence: the removal commit on branch `refactor/5-tournament-reads`; `packages/contracts/src/tournament.ts`; `apps/frontend/src/pages/tournament/ParticipantsPage.tsx`.
+- Rule: do not restore the field speculatively. A reader has to exist first.

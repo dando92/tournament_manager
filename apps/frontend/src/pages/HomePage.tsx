@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Tournament } from "@/features/tournament/model/types";
+import { TournamentRef } from "@/features/tournament/model/types";
 import { rememberTournament } from "@/shared/lib/recentTournaments";
 import { usePublicTournamentsQuery } from "@/features/tournament/model/usePublicTournamentsQuery";
 import TournamentCard from "@/features/tournament/ui/TournamentCard";
@@ -26,7 +26,7 @@ export default function HomePage() {
     }
   }, [searchParams, canCreate]);
 
-  function handleSelect(t: Tournament) {
+  function handleSelect(t: TournamentRef) {
     rememberTournament({ id: t.id, name: t.name });
     navigate(`/tournament/${t.id}`);
   }

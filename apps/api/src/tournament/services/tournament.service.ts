@@ -2,7 +2,6 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Tournament, Song } from '@tournament-manager/persistence';
-import { MyTournamentRolesDto } from '@tournament-manager/contracts';
 import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 
 @Injectable()
@@ -24,27 +23,6 @@ export class TournamentService {
         });
     }
 
-    async findAllPublic(): Promise<Tournament[]> {
-        return this.tournamentRepository.find({
-            select: {
-                id: true,
-                name: true,
-            },
-        });
-    }
-
-    async findOne(id: number): Promise<Tournament | null> {
-        return this.findOneForPage(id);
-    }
-
-    async findOneForPage(id: number): Promise<Tournament | null> {
-        return this.tournamentRepository.findOneBy({ id });
-    }
-
-    async findOneForUpdate(id: number): Promise<Tournament | null> {
-        return this.findOneForPage(id);
-    }
-
     async findSongsByTournamentId(tournamentId: number): Promise<Song[]> {
         return this.songRepository.find({
             where: { tournament: { id: tournamentId } },
@@ -53,7 +31,7 @@ export class TournamentService {
 
     async update(id: number, dto: UpdateTournamentDto): Promise<{ tournament: Tournament; previousSyncstartUrl: string | undefined }> {
         await this.assertOpen(id);
-        const existing = await this.findOneForUpdate(id);
+        const existing = await this.tournamentRepository.findOneBy({ id });
         if (!existing) throw new NotFoundException(`Tournament with id ${id} not found`);
 
         const previousSyncstartUrl = existing.syncstartUrl;
@@ -95,40 +73,5 @@ export class TournamentService {
         tournament.status = status;
         tournament.closedAt = status === 'closed' ? new Date() : null;
         return this.tournamentRepository.save(tournament);
-    }
-
-    async getMyRoles(accountId: string): Promise<MyTournamentRolesDto> {
-        const ownedTournaments = await this.tournamentRepository
-            .createQueryBuilder('tournament')
-            .leftJoin('tournament.participants', 'participant')
-            .leftJoin('participant.account', 'participantAccount')
-            .leftJoin('participant.player', 'player')
-            .leftJoin('player.account', 'playerAccount')
-            .where('(participantAccount.id = :accountId OR playerAccount.id = :accountId)', { accountId })
-            .andWhere('participant.roles LIKE :ownerRole', { ownerRole: '%owner%' })
-            .select('tournament.id')
-            .getMany();
-
-        const staffTournaments = await this.tournamentRepository
-            .createQueryBuilder('tournament')
-            .leftJoin('tournament.participants', 'participant')
-            .leftJoin('participant.account', 'participantAccount')
-            .leftJoin('participant.player', 'player')
-            .leftJoin('player.account', 'playerAccount')
-            .where('(participantAccount.id = :accountId OR playerAccount.id = :accountId)', { accountId })
-            .andWhere('participant.roles LIKE :staffRole', { staffRole: '%staff%' })
-            .select('tournament.id')
-            .getMany();
-
-        return {
-            isAdmin: false,
-            canCreateTournament: false,
-            ownedTournamentIds: ownedTournaments.map((tournament) => tournament.id),
-            staffTournamentIds: staffTournaments.map((tournament) => tournament.id),
-        };
-    }
-
-    async findByPhase(phaseId: number): Promise<Tournament | null> {
-        return this.tournamentRepository.findOne({ where: { divisions: { phases: { id: phaseId } } } });
     }
 }

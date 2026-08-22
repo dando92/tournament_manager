@@ -1,8 +1,8 @@
-import { Tournament } from "@/features/tournament/model/types";
+import { TournamentRef } from "@/features/tournament/model/types";
 import { getBannerGradient } from "@/features/tournament/model/tournamentBanner";
 
 type TournamentCardProps = {
-  tournament: Tournament;
+  tournament: TournamentRef;
   onClick: () => void;
 };
 

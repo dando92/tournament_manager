@@ -864,6 +864,36 @@ holds the question. This also leaves `division.entrants` in the overview
 projection with no frontend consumer, which is a candidate for the collapse
 above rather than a separate change.
 
+The phase is subdivided one branch per read model, the way phases 4 and 7 are.
+Each slice changes the contract of the routes it takes over and moves their
+frontend callers in the same branch, so a slice that merges leaves both
+workspaces speaking the same shapes. `TreeQueries` and the projection collapse
+come last, because the tree is the read every other one narrows away from.
+
+#### Tournament (done)
+
+`management/tournament.queries.ts` holds `byId`, `configuration`, `publicList`,
+`hasStartggApiKey` and `rolesFor`. Four are `find({ select })`; `rolesFor` is the
+one SQL query, replacing two query-builder reads of the same four-table join
+that differed only in the role they matched, and matching a role as an element
+of the stored `simple-array` rather than as a substring of it.
+
+Every write of a tournament answers with `byId`, so `TournamentManager` no
+longer maps the record at all. `TournamentService` keeps its write side and
+`findSongsByTournamentId`, which goes with `SongQueries`.
+
+Two contract changes. `TournamentDto` lost `staff`: no loader behind the mapping
+ever populated `tournament.participants`, so the array was empty in every
+response the API has sent, and no client read it — FQ-017 asks whether it should
+come back. `GET /tournaments/public` answers `TournamentRefDto[]`, which is what
+it already selected and all its two consumers read.
+
+One departure: `tournament.service.ts` and `tournament.manager.ts` stay under
+`services/`. Phase 7 gives Tournament its four roles, and the manager still holds
+the participant write paths that belong to `registration/`; moving the pair into
+`management/` now would move them again one phase later and split them wrongly
+in between.
+
 ### Phase 6 — One update path
 
 - Mutations answer `204`.
