@@ -714,11 +714,52 @@ Three departures from the plan as written:
 - `song.api.ts`, `account.api.ts` and `roles.api.ts`, listed here originally,
   belong to the song, account and auth slices and are created there.
 
+#### Match (done)
+
+`features/match/` had six directories and now has three. `api/` holds
+`match.api.ts` and `match.keys.ts`, which the tournament slice declared and left
+in `services/`; `model/` holds the hooks, the pure functions and the view types;
+`ui/` holds everything that renders, with `row/` flattened into it and
+`bracket/` and `round-robin/` kept. The feature has no pages of its own —
+`DivisionMatchesPage` hosts it and moves with the division slice.
+
+- The five modules under `features/match/types/` became one `model/types.ts`.
+  Six re-exports nothing imported went with them — `MatchResult`,
+  `MatchResultPlayerPoints`, `Standing`, `StandingScore`, `StartggReportStatus`
+  and `isHandScored` — and `Score`, still declared by hand against `Player` and
+  `Song`, became the `ScoreDto` the contracts package already carries. That was
+  the eighteenth redeclaration, which phase 3 missed because the file it lived
+  in declared interfaces rather than re-exporting them.
+- `StandingModal` fetched the scores a player already registered from a
+  `useEffect` in its `.tsx`. `useStandingModal` holds that list, the typed
+  percentage, and the rule that the two are exclusive; the modal is 152 lines of
+  JSX. No `.tsx` in the feature fetches.
+- The advancement editor's wider match list was fetched twice, in
+  `ConnectedMatchCard` and in `MatchList`, each spelling the query key and the
+  request inside a `.tsx`. `useAdvancementTargets` states it once.
+
+Two departures from the plan as written:
+
+- `song.api.ts` was created here rather than in the song slice. Two match hooks
+  addressed `songs` with their own `axios.get`, and the songs belong to the song
+  feature, so the request is declared once in `features/song/api/song.api.ts`
+  and the match hooks ask for the catalog. The song feature's own three copies
+  go when its slice moves its hooks; `listSongs` is what they will call.
+- `matches.reducer.ts` and `matches.actions.ts` moved to `model/` as
+  `matchesReducer.ts` and `matchesActions.ts` rather than disappearing. Phase 6
+  owns the removal of the reducer, and dropping it here would have put a change
+  of update path inside a layout slice.
+
+`MatchList` and the two parked views it renders — the bracket tree and the
+round-robin table — are still unreferenced. They were left in place deliberately
+when the list row took over match state, and moving them keeps that decision
+where it was rather than settling it inside a layout slice.
+
 #### Remaining slices
 
-`match`, `division`, `song`, `live`, `auth` (absorbing `admin` and
-`PermissionContext`) and `participant` (absorbing `player`). `advancement` and
-`entrant` are vestigial and are absorbed rather than given three directories.
+`division`, `song`, `live`, `auth` (absorbing `admin` and `PermissionContext`)
+and `participant` (absorbing `player`). `advancement` and `entrant` are
+vestigial and are absorbed rather than given three directories.
 
 ### Phase 5 — Remaining read models
 
