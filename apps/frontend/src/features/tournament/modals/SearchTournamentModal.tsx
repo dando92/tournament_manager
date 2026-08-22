@@ -5,7 +5,7 @@ import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
-import { listPublicTournaments } from "@/features/tournament/services/tournament.api";
+import { usePublicTournamentsQuery } from "@/features/tournament/hooks/usePublicTournamentsQuery";
 import { getBannerGradient } from "@/features/tournament/utils/tournamentBanner";
 
 type Props = {
@@ -15,15 +15,12 @@ type Props = {
 
 export default function SearchTournamentModal({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const { data: tournaments = [] } = usePublicTournamentsQuery(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
-      listPublicTournaments()
-        .then(setTournaments)
-        .catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       setQuery("");

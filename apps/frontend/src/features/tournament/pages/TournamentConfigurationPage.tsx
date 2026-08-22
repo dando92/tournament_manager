@@ -1,185 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
 import { btnDanger, btnPrimary, btnSecondary } from "@/styles/buttonStyles";
-import { useTournamentPageContext } from "@/features/tournament/context/TournamentPageContext";
-import { TournamentConfiguration } from "@/features/tournament/types/Tournament";
-import { rememberTournament } from "@/features/tournament/services/recentTournaments";
-import {
-  closeTournament,
-  getTournamentConfiguration,
-  reopenTournament,
-  updateTournament,
-} from "@/features/tournament/services/tournament.api";
-import { listScoringSystems } from "@/features/match/services/matches.api";
-
-type FormState = {
-  name: string;
-  syncstartUrl: string;
-  startggApiKey: string;
-  availableSetupsCount: string;
-  defaultScoringSystem: string;
-};
-
-const emptyForm: FormState = {
-  name: "",
-  syncstartUrl: "",
-  startggApiKey: "",
-  availableSetupsCount: "2",
-  defaultScoringSystem: "",
-};
-
-function toForm(configuration: TournamentConfiguration): FormState {
-  return {
-    name: configuration.name ?? "",
-    syncstartUrl: configuration.syncstartUrl ?? "",
-    startggApiKey: configuration.startggApiKey ?? "",
-    availableSetupsCount: String(configuration.availableSetupsCount ?? 2),
-    defaultScoringSystem: configuration.defaultScoringSystem ?? "",
-  };
-}
+import { useTournamentConfigurationPage } from "@/features/tournament/hooks/useTournamentConfigurationPage";
 
 export default function TournamentConfigurationPage() {
   const {
-    tournamentId,
-    setTournamentName,
-    setSyncstartUrl,
-    setHasStartggApiKey,
-    setTournamentStatus,
-  } = useTournamentPageContext();
-  const [initial, setInitial] = useState<FormState>(emptyForm);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [scoringSystems, setScoringSystems] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [configuration, setConfiguration] =
-    useState<TournamentConfiguration | null>(null);
-  const [changingStatus, setChangingStatus] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    Promise.all([getTournamentConfiguration(tournamentId), listScoringSystems()])
-      .then(([loadedConfiguration, systems]) => {
-        if (cancelled) return;
-        const nextForm = toForm(loadedConfiguration);
-        setConfiguration(loadedConfiguration);
-        setTournamentStatus(loadedConfiguration.status);
-        setScoringSystems(systems);
-        if (!nextForm.defaultScoringSystem) {
-          nextForm.defaultScoringSystem = systems[0] ?? "";
-        }
-        setInitial(nextForm);
-        setForm(nextForm);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Failed to load tournament configuration.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [setTournamentStatus, tournamentId]);
-
-  const isDirty = useMemo(
-    () =>
-      form.name !== initial.name ||
-      form.syncstartUrl !== initial.syncstartUrl ||
-      form.startggApiKey !== initial.startggApiKey ||
-      form.availableSetupsCount !== initial.availableSetupsCount ||
-      form.defaultScoringSystem !== initial.defaultScoringSystem,
-    [form, initial],
-  );
-
-  const parsedAvailableSetupsCount = Number(form.availableSetupsCount);
-  const canSave =
-    configuration?.status === "open" &&
-    isDirty &&
-    !saving &&
-    Number.isInteger(parsedAvailableSetupsCount) &&
-    parsedAvailableSetupsCount >= 0 &&
-    Boolean(form.name.trim()) &&
-    Boolean(form.defaultScoringSystem);
-
-  async function handleSave() {
-    if (!canSave) return;
-
-    setSaving(true);
-    try {
-      await updateTournament(tournamentId, {
-        name: form.name.trim(),
-        syncstartUrl: form.syncstartUrl.trim(),
-        startggApiKey: form.startggApiKey.trim() || null,
-        availableSetupsCount: parsedAvailableSetupsCount,
-        defaultScoringSystem: form.defaultScoringSystem,
-      });
-      const saved = {
-        ...form,
-        name: form.name.trim(),
-        syncstartUrl: form.syncstartUrl.trim(),
-        startggApiKey: form.startggApiKey.trim(),
-        availableSetupsCount: String(parsedAvailableSetupsCount),
-      };
-      setInitial(saved);
-      setForm(saved);
-      setTournamentName(saved.name);
-      rememberTournament({ id: tournamentId, name: saved.name });
-      setSyncstartUrl(saved.syncstartUrl);
-      setHasStartggApiKey(Boolean(saved.startggApiKey));
-      toast.success("Configuration saved.");
-    } catch {
-      toast.error("Failed to save tournament configuration.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleClose() {
-    if (!configuration || changingStatus) return;
-    const confirmed = window.confirm(
-      `Close this tournament? It will become read-only, active lobbies will be disconnected, and all transport data will be permanently deleted after ${configuration.transportRetentionDays} days.`,
-    );
-    if (!confirmed) return;
-    setChangingStatus(true);
-    try {
-      const closed = await closeTournament(tournamentId);
-      setConfiguration((current) =>
-        current ? { ...current, status: closed.status, closedAt: closed.closedAt } : current,
-      );
-      setTournamentStatus("closed");
-      toast.success("Tournament closed. It is now read-only.");
-    } catch {
-      toast.error("Failed to close tournament.");
-    } finally {
-      setChangingStatus(false);
-    }
-  }
-
-  async function handleReopen() {
-    if (!configuration || changingStatus) return;
-    setChangingStatus(true);
-    try {
-      const reopened = await reopenTournament(tournamentId);
-      setConfiguration((current) =>
-        current ? { ...current, status: reopened.status, closedAt: reopened.closedAt } : current,
-      );
-      setTournamentStatus("open");
-      toast.success("Tournament reopened.");
-    } catch {
-      toast.error("Failed to reopen tournament.");
-    } finally {
-      setChangingStatus(false);
-    }
-  }
+    form,
+    setForm,
+    scoringSystems,
+    loading,
+    saving,
+    changingStatus,
+    isClosed,
+    isDirty,
+    canSave,
+    resetForm,
+    handleSave,
+    handleClose,
+    handleReopen,
+  } = useTournamentConfigurationPage();
 
   if (loading) {
     return <p className="text-sm text-ui-text-mute">Loading configuration...</p>;
   }
-
-  const isClosed = configuration?.status === "closed";
 
   return (
     <div className="max-w-3xl">
@@ -321,7 +162,7 @@ export default function TournamentConfigurationPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setForm(initial)}
+              onClick={resetForm}
               disabled={!isDirty || saving}
               className={`${btnSecondary} text-sm disabled:cursor-not-allowed disabled:opacity-50`}
             >

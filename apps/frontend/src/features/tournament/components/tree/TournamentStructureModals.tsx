@@ -1,14 +1,10 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import CreateDivisionModal from "@/features/division/modals/CreateDivisionModal";
 import CreatePhaseModal from "@/features/division/modals/CreatePhaseModal";
 import GenerateBracketModal from "@/features/division/modals/GenerateBracketModal";
 import StartggImportModal from "@/features/tournament/modals/StartggImportModal";
 import RenameModal from "@/shared/components/ui/RenameModal";
 import { useTournamentTree } from "@/features/tournament/context/TournamentTreeContext";
-import { GenerateBracketRequest } from "@/features/division/types/GenerateBracket";
-import { generateBracket as requestBracket, listBracketTypes } from "@/features/division/services/divisions.api";
-import { treeNodeKey } from "@/shared/services/treeState";
+import { useTournamentStructureDialogs } from "@/features/tournament/hooks/useTournamentStructureDialogs";
 
 /**
  * The dialogs that change the shape of a tournament.
@@ -19,30 +15,9 @@ import { treeNodeKey } from "@/shared/services/treeState";
  * never be open at once.
  */
 export default function TournamentStructureModals() {
-  const navigate = useNavigate();
   const tree = useTournamentTree();
   const { dialog, closeDialog, tournamentId, tournamentName, divisions } = tree;
-  const [bracketTypes, setBracketTypes] = useState<string[]>([]);
-
-  /* Fetched only when the bracket dialog is actually asked for: nobody needs
-     the list of bracket types to look at a tournament. */
-  useEffect(() => {
-    if (dialog.kind !== "generateBracket" || bracketTypes.length > 0) return;
-    listBracketTypes()
-      .then(setBracketTypes)
-      .catch(() => setBracketTypes([]));
-  }, [dialog.kind, bracketTypes.length]);
-
-  const generateBracket = async (request: GenerateBracketRequest) => {
-    const generated = await requestBracket(request);
-    await tree.refreshTree();
-    closeDialog();
-    tree.expandNode(treeNodeKey("division", request.divisionId));
-    tree.expandNode(treeNodeKey("phase", generated.phaseId));
-    navigate(
-      `/tournament/${tournamentId}/division/${request.divisionId}/phase/${generated.phaseId}/pool/${generated.phaseGroupId}`,
-    );
-  };
+  const { bracketTypes, handleGenerateBracket } = useTournamentStructureDialogs();
 
   return (
     <>
@@ -71,7 +46,7 @@ export default function TournamentStructureModals() {
         divisions={divisions}
         currentDivisionId={dialog.kind === "generateBracket" ? dialog.divisionId : undefined}
         bracketTypes={bracketTypes}
-        onGenerate={generateBracket}
+        onGenerate={handleGenerateBracket}
       />
 
       <StartggImportModal

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -10,156 +9,38 @@ import BaseModal from "@/shared/components/ui/BaseModal";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
-import { Participant } from "@/features/entrant/types/Entrant";
-import { Player } from "@/features/player/types/Player";
-import { getAllPlayers } from "@/features/player/services/player.api";
-import { ParticipantsManageModal, useTournamentPageContext } from "@/features/tournament/context/TournamentPageContext";
-import {
-  createParticipant,
-  importParticipants,
-  listParticipants,
-  makeParticipantStaff,
-  previewParticipantImport,
-  removeParticipant,
-  removeParticipantStaff,
-  type ParticipantImportPreviewEntry,
-} from "@/features/participant/services/participant.api";
+import { useTournamentParticipantsPage } from "@/features/tournament/hooks/useTournamentParticipantsPage";
 
 export default function TournamentParticipantsPage() {
-  const { tournamentId, controls, participantsManageModal, setParticipantsManageModal } = useTournamentPageContext();
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [name, setName] = useState("");
-  const [participantSearch, setParticipantSearch] = useState("");
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
-  const [bulkText, setBulkText] = useState("");
-  const [preview, setPreview] = useState<ParticipantImportPreviewEntry[]>([]);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [previousManageModal, setPreviousManageModal] = useState<ParticipantsManageModal>("none");
-
-  const refreshParticipants = useCallback(async () => {
-    const response = await listParticipants(tournamentId);
-    setParticipants(response);
-  }, [tournamentId]);
-
-  useEffect(() => {
-    refreshParticipants().catch(() => {});
-    getAllPlayers().then(setAllPlayers).catch(() => {});
-  }, [refreshParticipants, tournamentId]);
-
-  useEffect(() => {
-    if (previousManageModal === "startgg" && participantsManageModal === "none") {
-      refreshParticipants().catch(() => {});
-    }
-    setPreviousManageModal(participantsManageModal);
-  }, [participantsManageModal, previousManageModal, refreshParticipants]);
-
-  const participantPlayerIds = useMemo(
-    () => new Set(participants.map((participant) => participant.player.id)),
-    [participants],
-  );
-  const availablePlayers = useMemo(
-    () =>
-      allPlayers
-        .filter((player) => !participantPlayerIds.has(player.id))
-        .sort((a, b) => a.playerName.localeCompare(b.playerName)),
-    [allPlayers, participantPlayerIds],
-  );
-  const availablePlayerOptions = useMemo(
-    () => availablePlayers.map((player) => ({ value: player.id, label: player.playerName })),
-    [availablePlayers],
-  );
-  const selectedPlayerOptions = useMemo(
-    () =>
-      selectedPlayerIds
-        .map((playerId) => availablePlayerOptions.find((option) => option.value === playerId))
-        .filter((option): option is { value: number; label: string } => Boolean(option)),
-    [availablePlayerOptions, selectedPlayerIds],
-  );
-  const filteredParticipants = useMemo(
-    () =>
-      participants.filter((participant) =>
-        participant.player.playerName.toLowerCase().includes(participantSearch.toLowerCase()),
-      ),
-    [participantSearch, participants],
-  );
-
-  async function handleRegister() {
-    if (!name.trim()) return;
-    setSubmitting(true);
-    try {
-      await createParticipant(tournamentId, { playerName: name.trim() });
-      setName("");
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleAddExistingPlayers() {
-    if (selectedPlayerIds.length === 0) return;
-    setSubmitting(true);
-    try {
-      await Promise.all(selectedPlayerIds.map((playerId) => createParticipant(tournamentId, { playerId })));
-      setSelectedPlayerIds([]);
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleRemove(participantId: number) {
-    await removeParticipant(tournamentId, participantId);
-    await refreshParticipants();
-  }
-
-  async function handleMakeStaff(participantId: number) {
-    await makeParticipantStaff(tournamentId, participantId);
-    await refreshParticipants();
-  }
-
-  async function handleRemoveStaff(participantId: number) {
-    await removeParticipantStaff(tournamentId, participantId);
-    await refreshParticipants();
-  }
-
-  async function handlePreviewImport() {
-    const names = bulkText.split("\n").map((entry) => entry.trim()).filter(Boolean);
-    if (names.length === 0) return;
-    setLoadingPreview(true);
-    try {
-      setPreview(await previewParticipantImport(tournamentId, names));
-    } finally {
-      setLoadingPreview(false);
-    }
-  }
-
-  async function handleConfirmImport() {
-    const entries = preview
-      .filter((entry) => !entry.alreadyParticipant)
-      .map((entry) => ({
-        name: entry.name,
-        playerId: entry.matchedPlayer?.id,
-      }));
-    if (entries.length === 0) {
-      setParticipantsManageModal("none");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await importParticipants(tournamentId, entries);
-      setBulkText("");
-      setPreview([]);
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const {
+    tournamentId,
+    controls,
+    participants,
+    filteredParticipants,
+    participantSearch,
+    setParticipantSearch,
+    name,
+    setName,
+    availablePlayers,
+    availablePlayerOptions,
+    selectedPlayerOptions,
+    setSelectedPlayerIds,
+    selectedPlayerIds,
+    bulkText,
+    setBulkText,
+    preview,
+    loadingPreview,
+    submitting,
+    manageModal,
+    closeManageModal,
+    handleRegister,
+    handleAddExistingPlayers,
+    handleRemove,
+    handleMakeStaff,
+    handleRemoveStaff,
+    handlePreviewImport,
+    handleConfirmImport,
+  } = useTournamentParticipantsPage();
 
   if (!controls) {
     return <Navigate to={`/tournament/${tournamentId}/overview`} replace />;
@@ -245,13 +126,13 @@ export default function TournamentParticipantsPage() {
       </div>
 
       <BaseModal
-        open={participantsManageModal === "register"}
-        onClose={() => setParticipantsManageModal("none")}
+        open={manageModal === "register"}
+        onClose={closeManageModal}
         title="Register participant"
         maxWidth="max-w-md"
         footer={
           <div className="flex justify-end gap-2">
-            <button onClick={() => setParticipantsManageModal("none")} className={`${btnSecondary} text-sm`}>
+            <button onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
               Cancel
             </button>
             <button onClick={handleRegister} disabled={submitting || !name.trim()} className={`${btnPrimary} text-sm`}>
@@ -269,7 +150,7 @@ export default function TournamentParticipantsPage() {
         />
       </BaseModal>
 
-      <BaseModal open={participantsManageModal === "database"} onClose={() => setParticipantsManageModal("none")} title="Add from player database" maxWidth="max-w-md">
+      <BaseModal open={manageModal === "database"} onClose={closeManageModal} title="Add from player database" maxWidth="max-w-md">
         <div className="flex flex-col gap-3">
           {availablePlayers.length === 0 ? (
             <p className="text-sm text-ui-text-mute italic">No available players.</p>
@@ -282,7 +163,7 @@ export default function TournamentParticipantsPage() {
             />
           )}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setParticipantsManageModal("none")} className={`${btnSecondary} text-sm`}>
+            <button type="button" onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
               Cancel
             </button>
             <button
@@ -298,8 +179,8 @@ export default function TournamentParticipantsPage() {
       </BaseModal>
 
       <BaseModal
-        open={participantsManageModal === "import"}
-        onClose={() => setParticipantsManageModal("none")}
+        open={manageModal === "import"}
+        onClose={closeManageModal}
         title="Import participants"
         maxWidth="max-w-2xl"
         footer={
@@ -308,7 +189,7 @@ export default function TournamentParticipantsPage() {
               {loadingPreview ? "Previewing..." : "Preview"}
             </button>
             <div className="flex gap-2">
-              <button onClick={() => setParticipantsManageModal("none")} className={`${btnSecondary} text-sm`}>
+              <button onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
                 Cancel
               </button>
               <button

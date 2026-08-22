@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
-import { listPublicTournaments } from "@/features/tournament/services/tournament.api";
+import { usePublicTournamentsQuery } from "@/features/tournament/hooks/usePublicTournamentsQuery";
 import TournamentCard from "@/features/tournament/components/TournamentCard";
 import CreateTournamentModal from "@/features/tournament/modals/CreateTournamentModal";
 import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
@@ -11,8 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export default function HomePage() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: tournaments = [], isPending: isLoading } = usePublicTournamentsQuery();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -26,13 +25,6 @@ export default function HomePage() {
       navigate("/", { replace: true });
     }
   }, [searchParams, canCreate]);
-
-  useEffect(() => {
-    listPublicTournaments()
-      .then(setTournaments)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
 
   function handleSelect(t: Tournament) {
     rememberTournament({ id: t.id, name: t.name });
