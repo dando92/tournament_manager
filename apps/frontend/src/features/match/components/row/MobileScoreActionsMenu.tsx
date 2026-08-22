@@ -11,7 +11,7 @@ export type ScoreEntry = {
 };
 
 export type MobileScoreMenuState = {
-  songId: number;
+  roundId: number;
   scoreId: number;
   x: number;
   y: number;
@@ -26,7 +26,7 @@ type MobileScoreActionsMenuProps = {
   onClose: () => void;
   onOpenEditStanding: (
     playerId: number,
-    songId: number,
+    roundId: number,
     playerName: string,
     songTitle: string,
     scoreId: number,
@@ -34,7 +34,7 @@ type MobileScoreActionsMenuProps = {
     score: number,
     isFailed: boolean,
   ) => void;
-  onDeleteStanding: (playerId: number, songId: number) => void;
+  onDeleteStanding: (playerId: number, roundId: number) => void;
 };
 
 export default function MobileScoreActionsMenu({
@@ -57,7 +57,7 @@ export default function MobileScoreActionsMenu({
           onClose();
           onOpenEditStanding(
             playerId,
-            menu.songId,
+            menu.roundId,
             playerName,
             menu.songTitle,
             menu.scoreData.scoreId,
@@ -74,7 +74,7 @@ export default function MobileScoreActionsMenu({
       <DeleteConfirmButton
         onConfirm={() => {
           onClose();
-          onDeleteStanding(playerId, menu.songId);
+          onDeleteStanding(playerId, menu.roundId);
         }}
         title="Delete score"
         className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-state-failed hover:bg-ui-raised"

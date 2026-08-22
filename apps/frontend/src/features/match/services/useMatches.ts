@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initialState, matchesReducer } from "@/features/match/services/matches.reducer";
 import * as MatchesApi from "@/features/match/services/matches.api";
-import { CommitMatchResultRequest, CreateMatchRequest } from "@/features/match/types/match-requests";
+import { CreateMatchRequest, RoundSourceRequest } from "@/features/match/types/match-requests";
 import { Match, MatchAdvancementRuleInput } from "@/features/match/types/Match";
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { toast } from "react-toastify";
@@ -113,152 +113,87 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     }
   }
 
-  async function deleteSongFromMatch(matchId: number, songId: number) {
+  async function addRound(matchId: number, source: RoundSourceRequest = {}) {
     try {
-      const item = await MatchesApi.deleteSongFromMatch(matchId, songId);
-      dispatch({ type: "onDeleteSongFromMatch", payload: item });
+      const item = await MatchesApi.addRound(matchId, source);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error deleting song from match.");
-      console.error("Error deleting song from match:", error);
-      throw new Error("Unable to delete song from match.");
+      toast.error("Error adding a round to the match.");
+      console.error("Error adding a round to the match:", error);
+      throw new Error("Unable to add a round to the match.");
     }
   }
 
-  async function addSongToMatchByRoll(
-    matchId: number,
-    divisionId: number,
-    group: string,
-    level: string,
-  ) {
+  async function deleteRound(roundId: number) {
     try {
-      const item = await MatchesApi.addSongToMatch(matchId, undefined, divisionId, group, level);
-      dispatch({ type: "onAddSongToMatch", payload: item });
+      const item = await MatchesApi.deleteRound(roundId);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error adding song to match.");
-      console.error("Error adding song to match:", error);
-      throw new Error("Unable to add song to match.");
+      toast.error("Error deleting the round.");
+      console.error("Error deleting the round:", error);
+      throw new Error("Unable to delete the round.");
     }
   }
 
-  async function editSongToMatchByRoll(
-    matchId: number,
-    editSongId: number,
-    divisionId: number,
-    group: string,
-    level: string,
-  ) {
+  async function replaceRoundSong(roundId: number, source: RoundSourceRequest) {
     try {
-      const item = await MatchesApi.editSongInMatch(matchId, editSongId, undefined, divisionId, group, level);
-      dispatch({ type: "onAddSongToMatch", payload: item });
+      const item = await MatchesApi.replaceRoundSong(roundId, source);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error editing song in match.");
-      console.error("Error editing song in match:", error);
-      throw new Error("Unable to edit song in match.");
+      toast.error("Error replacing the song of the round.");
+      console.error("Error replacing the song of the round:", error);
+      throw new Error("Unable to replace the song of the round.");
     }
   }
 
-  async function addSongToMatchBySongId(
-    matchId: number,
-    songId: number,
-  ) {
-    try {
-      const item = await MatchesApi.addSongToMatch(matchId, songId);
-      dispatch({ type: "onAddSongToMatch", payload: item });
-      setCachedMatch(item);
-    } catch (error) {
-      toast.error("Error adding song to match.");
-      console.error("Error adding song to match:", error);
-      throw new Error("Unable to add song to match.");
-    }
-  }
-
-  async function editSongToMatchBySongId(
-    matchId: number,
-    editSongId: number,
-    songId: number,
-  ) {
-    try {
-      const item = await MatchesApi.editSongInMatch(matchId, editSongId, songId);
-      dispatch({ type: "onAddSongToMatch", payload: item });
-      setCachedMatch(item);
-    } catch (error) {
-      toast.error("Error editing song in match.");
-      console.error("Error editing song in match:", error);
-      throw new Error("Unable to edit song in match.");
-    }
-  }
-
-  async function addStandingToMatch(
-    matchId: number,
+  /*
+   * A cell in the table is a player and a round, and every callback in the
+   * interface names them in that order. The routes name the round first,
+   * because the round is what they address. Both are numbers, so nothing would
+   * complain if the two conventions met by accident: they meet here, once, next
+   * to the call that builds the URL.
+   */
+  async function saveScore(
     playerId: number,
-    songId: number,
-    percentage: number,
-    score: number,
-    isFailed: boolean,
-    scoreId?: number,
+    roundId: number,
+    score: { percentage: number; isFailed: boolean; scoreId?: number },
   ) {
     try {
-      const item = await MatchesApi.addStandingToMatch(matchId, {
-        playerId,
-        songId,
-        percentage,
-        score,
-        isFailed,
-        scoreId,
-      });
-      dispatch({ type: "onAddStandingToMatch", payload: item });
+      const item = await MatchesApi.upsertScore(roundId, playerId, score);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error adding standing to match.");
-      console.error("Error adding standing to match:", error);
-      throw new Error("Unable to add standing to match.");
+      toast.error("Error saving the score.");
+      console.error("Error saving the score:", error);
+      throw new Error("Unable to save the score.");
     }
   }
 
-  async function deleteStandingsForPlayerFromMatch(
-    matchId: number,
-    playerId: number,
-    songId: number,
-  ) {
+  /** Hand-scored points. They reach the server as they are typed, like any score. */
+  async function savePoints(playerId: number, roundId: number, points: number) {
     try {
-      const item = await MatchesApi.deleteStandingFromMatch(matchId, playerId, songId);
-      dispatch({ type: "onDeleteStandingFromMatch", payload: item });
+      const item = await MatchesApi.upsertPoints(roundId, playerId, points);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error deleting standings for player from match.");
-      console.error("Error deleting standings for player from match:", error);
-      throw new Error("Unable to delete standings for player from match.");
+      toast.error("Error saving the points.");
+      console.error("Error saving the points:", error);
+      throw new Error("Unable to save the points.");
     }
   }
 
-  async function editStandingFromMatch(
-    matchId: number,
-    songId: number,
-    playerId: number,
-    percentage: number,
-    score: number,
-    isFailed: boolean,
-    scoreId?: number,
-  ) {
+  async function deleteStanding(playerId: number, roundId: number) {
     try {
-      const item = await MatchesApi.editStandingInMatch(
-        matchId,
-        songId,
-        playerId,
-        percentage,
-        score,
-        isFailed,
-        scoreId,
-      );
-      dispatch({ type: "onEditStandingFromMatch", payload: item });
+      const item = await MatchesApi.deleteStanding(roundId, playerId);
+      dispatch({ type: "onRefreshMatch", payload: item });
       setCachedMatch(item);
     } catch (error) {
-      toast.error("Error editing standings for player from match.");
-      console.error("Error editing standings for player from match:", error);
-      throw new Error("Unable to edit standings for player from match.");
+      toast.error("Error deleting the standing.");
+      console.error("Error deleting the standing:", error);
+      throw new Error("Unable to delete the standing.");
     }
   }
 
@@ -296,9 +231,9 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     }
   }
 
-  async function commitMatchResult(matchId: number, request?: CommitMatchResultRequest) {
+  async function commitMatchResult(matchId: number) {
     try {
-      const { match, startggReport } = await MatchesApi.commitMatchResult(matchId, request);
+      const { match, startggReport } = await MatchesApi.commitMatchResult(matchId);
       dispatch({ type: "onRefreshMatch", payload: match });
       setCachedMatch(match);
       if (startggReport === "failed") {
@@ -338,14 +273,12 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
       renameMatch,
       deleteMatch,
       updateMatchEntrants,
-      deleteSongFromMatch,
-      addSongToMatchByRoll,
-      addSongToMatchBySongId,
-      editSongToMatchByRoll,
-      editSongToMatchBySongId,
-      addStandingToMatch,
-      editStandingFromMatch,
-      deleteStandingsForPlayerFromMatch,
+      addRound,
+      deleteRound,
+      replaceRoundSong,
+      saveScore,
+      savePoints,
+      deleteStanding,
       updateMatchAdvancementRules,
       updateMatchActive,
       commitMatchResult,

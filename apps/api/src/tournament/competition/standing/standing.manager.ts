@@ -1,18 +1,39 @@
 import { BadRequestException, Injectable, Inject, NotFoundException } from "@nestjs/common";
-import { CreateScoreDto, CreateStandingDto, UpdateStandingDto } from '@tournament/dtos';
-import { Match, Player, Score } from '@tournament-manager/persistence';
+import { Match, Player, Round, Score, Standing } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { MatchService } from '@match/services/match.service';
 import { MatchWorkflowManager } from '@match/services/match-workflow.manager';
+import { RoundService } from '../services/round.service';
 import { ScoreService } from '../services/score.service';
 import { StandingService } from './standing.service';
 
+type PlayedStanding = Standing & { score: Score };
+
+function isPlayed(standing: Standing): standing is PlayedStanding {
+    return Boolean(standing.score);
+}
+
+/**
+ * Writing the points of a player into a round.
+ *
+ * A round is the address, not a song: a hand-scored round has no song and would
+ * otherwise be unreachable. Both ways of filling a cell end in the same upsert
+ * and the same row, and everything that reads a standing afterwards treats them
+ * alike.
+ *
+ * The two are kept apart only at the door. Points on a round with a song are
+ * not the caller's to set — the scoring system computes them from the
+ * percentages and the next recalculation would overwrite anything written by
+ * hand — and a round without a song has nothing to score.
+ */
 @Injectable()
 export class StandingManager {
     constructor(
         @Inject()
         private readonly standingService: StandingService,
+        @Inject()
+        private readonly roundService: RoundService,
         @Inject()
         private readonly matchService: MatchService,
         @Inject()
@@ -25,188 +46,67 @@ export class StandingManager {
         private readonly uiUpdateGateway: UiUpdatePublisher,
     ) { }
 
-    async AddScoreToMatchById(matchId: number, score: CreateScoreDto, scoreId?: number): Promise<Match> {
-        const match = await this.matchService.getMatch(matchId);
-
-        if (!match) {
-            console.warn(`[StandingManager] No match found with id "${matchId}"`);
-            return;
-        }
-        this.matchWorkflowManager.assertEditable(match);
-
-        const actualScoreEntity = scoreId
-            ? await this.getExistingScoreForStanding(scoreId, score.playerId, score.songId)
-            : await this.scoreService.create(score);
-
-        return await this.AddScoreToMatch(match, actualScoreEntity);
-    }
-
-    async AddScoreToMatch(match: Match, score: Score): Promise<Match> {
-        this.matchWorkflowManager.assertEditable(match);
-        const round = match.rounds.find((candidate) => candidate.song.id == score.song.id);
-
-        if (!round) {
-            return;
-        }
-
-        const alreadyExistentStanding = round.standings.find(
-            (standing) => standing.score.song.id == score.song.id && standing.score.player.id == score.player.id,
-        );
-
-        if (alreadyExistentStanding) {
-            const updateStanding = new UpdateStandingDto();
-            updateStanding.scoreId = score.id;
-            updateStanding.points = 0;
-            await this.standingService.update(alreadyExistentStanding.id, updateStanding);
-            alreadyExistentStanding.score = score;
-            alreadyExistentStanding.points = 0;
-        } else {
-            const newStanding = new CreateStandingDto();
-            newStanding.roundId = round.id;
-            newStanding.scoreId = score.id;
-            newStanding.points = 0;
-
-            const standing = await this.standingService.create(newStanding);
-            round.standings.push(standing);
-        }
-
-        console.log(`[StandingManager]${score.player.playerName} ${score.song.title} standings length ${round.standings.length}`);
-
-        await this.recalculateRoundIfComplete(match, round);
-
-        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
-
-        return match;
-    }
-
-    async AddScoreToEmptyStanding(match: Match, score: Score): Promise<Match> {
-        this.matchWorkflowManager.assertEditable(match);
-        const round = match.rounds.find((candidate) => candidate.song.id == score.song.id);
-
-        if (!round) {
-            return match;
-        }
-
-        const alreadyExistentStanding = round.standings.find(
-            (standing) => standing.score.song.id == score.song.id && standing.score.player.id == score.player.id,
-        );
-
-        if (alreadyExistentStanding) {
-            return match;
-        }
-
-        const newStanding = new CreateStandingDto();
-        newStanding.roundId = round.id;
-        newStanding.scoreId = score.id;
-        newStanding.points = 0;
-
-        const standing = await this.standingService.create(newStanding);
-        round.standings.push(standing);
-
-        await this.recalculateRoundIfComplete(match, round);
-        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
-
-        return match;
-    }
-
-    async RemoveStandingFromMatch(matchId: number, playerId: number, songId: number): Promise<Match> {
-        const match = await this.matchService.getMatch(matchId);
-
-        if (!match) {
-            return;
-        }
-        this.matchWorkflowManager.assertEditable(match);
-
-        const round = match.rounds.find((candidate) => candidate.song.id == songId);
-
-        if (!round) {
-            return;
-        }
-
-        try {
-            let index = -1;
-
-            for (let i = 0; i < round.standings.length; i++) {
-                const standing = round.standings[i];
-
-                if (standing.score.player.id == playerId && standing.score.song.id == songId) {
-                    await this.standingService.delete(standing.id);
-                    index = i;
-                }
-            }
-
-            if (index != -1) {
-                round.standings.splice(index, 1);
-
-                for (let i = 0; i < round.standings.length; i++) {
-                    const standing = round.standings[i];
-                    const dto = new UpdateStandingDto();
-                    dto.points = 0;
-                    await this.standingService.update(standing.id, dto);
-                    standing.points = 0;
-                }
-            }
-        } catch (error) {
-            console.log(error);
-        }
-
-        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
-
-        return match;
-    }
-
-    async EditStandingInMatch(
-        matchId: number,
+    /** A played result: the percentage the cabinet reported, or one typed in its place. */
+    async upsertScore(
+        roundId: number,
         playerId: number,
-        songId: number,
-        percentage: number,
-        isFailed: boolean,
-        scoreId?: number,
+        input: { percentage: number; isFailed: boolean; scoreId?: number },
     ): Promise<Match> {
-        const match = await this.matchService.getMatch(matchId);
-
-        if (!match) {
-            return;
-        }
+        const { match, round } = await this.loadRound(roundId);
         this.matchWorkflowManager.assertEditable(match);
 
-        const round = match.rounds.find((candidate) => candidate.song.id == songId);
-
-        if (!round) {
-            return;
+        if (!round.song) {
+            throw new BadRequestException(`Round ${roundId} is hand-scored and has no song to score`);
         }
 
-        const standing = round.standings.find((candidate) => candidate.score.player.id == playerId);
-
-        if (!standing) {
-            return;
-        }
-
-        if (scoreId) {
-            const updateStandingDto = new UpdateStandingDto();
-            updateStandingDto.scoreId = scoreId;
-            const updatedStanding = await this.standingService.update(standing.id, updateStandingDto);
-            standing.score = updatedStanding.score;
-        } else {
-            const score = await this.scoreService.create({
+        const score = input.scoreId
+            ? await this.getExistingScore(input.scoreId, playerId, round.song.id)
+            : await this.scoreService.create({
                 playerId,
-                songId,
-                percentage,
-                isFailed,
+                songId: round.song.id,
+                percentage: input.percentage,
+                isFailed: input.isFailed,
             });
-            const updateStandingDto = new UpdateStandingDto();
-            updateStandingDto.scoreId = score.id;
-            const updatedStanding = await this.standingService.update(standing.id, updateStandingDto);
-            standing.score = updatedStanding.score;
+
+        await this.writeStanding(round, playerId, { score, points: 0 });
+        await this.recalculateRoundIfComplete(match, round);
+        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
+
+        return match;
+    }
+
+    /** A stated result: points a person assigned, with nothing played behind them. */
+    async upsertPoints(roundId: number, playerId: number, points: number): Promise<Match> {
+        const { match, round } = await this.loadRound(roundId);
+        this.matchWorkflowManager.assertEditable(match);
+
+        if (round.song) {
+            throw new BadRequestException(
+                `Round ${roundId} is scored from song ${round.song.id}; its points are computed, not assigned`,
+            );
         }
 
-        const scoreSystem = this.scoringSystemProvider.getScoringSystem(match.scoringSystem);
-        scoreSystem.recalc(round.standings);
+        await this.writeStanding(round, playerId, { score: null, points });
+        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
 
-        for (const currentStanding of round.standings) {
-            const dto = new UpdateStandingDto();
-            dto.points = currentStanding.points;
-            await this.standingService.update(currentStanding.id, dto);
+        return match;
+    }
+
+    async removeStanding(roundId: number, playerId: number): Promise<Match> {
+        const { match, round } = await this.loadRound(roundId);
+        this.matchWorkflowManager.assertEditable(match);
+
+        const standing = round.standings.find((candidate) => candidate.player.id === playerId);
+        if (standing) {
+            await this.standingService.delete(standing.id);
+            round.standings = round.standings.filter((candidate) => candidate.id !== standing.id);
+
+            /* The round is incomplete again, so the ranking it produced no
+               longer means anything and must not be left behind. */
+            if (round.song) {
+                round.standings.forEach((candidate) => (candidate.points = 0));
+                await this.standingService.savePoints(round.standings);
+            }
         }
 
         await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
@@ -214,7 +114,49 @@ export class StandingManager {
         return match;
     }
 
-    private async getExistingScoreForStanding(scoreId: number, playerId: number, songId: number): Promise<Score> {
+    /**
+     * The SyncStart path. A completed song arrives naming its song, so the round
+     * is resolved from it and the write is the ordinary one.
+     */
+    async applyPlayedScore(match: Match, score: Score): Promise<Match> {
+        this.matchWorkflowManager.assertEditable(match);
+
+        const round = match.rounds.find((candidate) => candidate.song?.id === score.song.id);
+        if (!round) return match;
+
+        await this.writeStanding(round, score.player.id, { score, points: 0 });
+        await this.recalculateRoundIfComplete(match, round);
+        await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
+
+        return match;
+    }
+
+    private async loadRound(roundId: number): Promise<{ match: Match; round: Round }> {
+        const stored = await this.roundService.findOneWithMatch(roundId);
+        if (!stored) throw new NotFoundException(`Round with id ${roundId} not found`);
+
+        const match = await this.matchService.getMatch(stored.match.id);
+        if (!match) throw new NotFoundException(`Match with id ${stored.match.id} not found`);
+
+        const round = match.rounds.find((candidate) => candidate.id === roundId);
+        if (!round) throw new NotFoundException(`Round with id ${roundId} not found in match ${match.id}`);
+
+        return { match, round };
+    }
+
+    /** Keeps the in-memory round in step with the row, so the recalculation below sees it. */
+    private async writeStanding(
+        round: Round,
+        playerId: number,
+        values: { score?: Score | null; points: number },
+    ): Promise<void> {
+        const saved = await this.standingService.upsert(round.id, playerId, values);
+        const existing = round.standings.findIndex((candidate) => candidate.player?.id === playerId);
+        if (existing === -1) round.standings.push(saved);
+        else round.standings[existing] = saved;
+    }
+
+    private async getExistingScore(scoreId: number, playerId: number, songId: number): Promise<Score> {
         const score = await this.scoreService.findOne(scoreId);
         if (!score) {
             throw new NotFoundException(`Score with id ${scoreId} not found`);
@@ -225,26 +167,23 @@ export class StandingManager {
         return score;
     }
 
-    private async recalculateRoundIfComplete(match: Match, round: Match['rounds'][number]): Promise<void> {
+    private async recalculateRoundIfComplete(match: Match, round: Round): Promise<void> {
         const matchPlayers = this.getSinglesPlayers(match);
         const isRoundCompleted = matchPlayers.every((player) =>
-            round.standings.some(
-                (standing) => standing.score.player.id === player.id && standing.score.song.id === round.song.id,
-            ),
+            round.standings.some((standing) => standing.player.id === player.id),
         );
 
-        if (!isRoundCompleted) {
+        if (matchPlayers.length === 0 || !isRoundCompleted) {
             return;
         }
 
+        /* A scoring system ranks percentages, so it is only ever handed the
+           standings that have a score behind them. On a round with a song that
+           is all of them. */
         const scoreSystem = this.scoringSystemProvider.getScoringSystem(match.scoringSystem);
-        scoreSystem.recalc(round.standings);
+        scoreSystem.recalc(round.standings.filter(isPlayed));
 
-        for (const standing of round.standings) {
-            const dto = new UpdateStandingDto();
-            dto.points = standing.points;
-            await this.standingService.update(standing.id, dto);
-        }
+        await this.standingService.savePoints(round.standings);
     }
 
     private getSinglesPlayers(match: Match): Player[] {

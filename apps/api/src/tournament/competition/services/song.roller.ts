@@ -60,7 +60,7 @@ export class SongRoller {
 
     private GetBannedSongs(division: Division): number[] {
         return division.phases.flatMap(p => p.phaseGroups ?? []).flatMap(g => g.matches ?? []).flatMap(
-            match => match.rounds.flatMap(round => round.song.id || []));
+            match => match.rounds.flatMap(round => (round.song ? [round.song.id] : [])));
     }
 
     private GetRandomElement<T>(array: T[]): T {

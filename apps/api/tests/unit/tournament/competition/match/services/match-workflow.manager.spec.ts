@@ -18,16 +18,20 @@ function entrant(id: number, playerId: number): Entrant {
 function standing(playerId: number, points: number): Standing {
   return {
     points,
-    score: { player: { id: playerId } },
+    player: { id: playerId } as Player,
   } as Standing;
 }
 
-function manualMatch(): Match {
+/**
+ * A hand-scored match is an ordinary match whose single round has no song.
+ * The commit path does not know the difference, which is the point.
+ */
+function handScoredMatch(): Match {
   return {
     id: 10,
     active: false,
     entrants: [entrant(1, 101), entrant(2, 102)],
-    rounds: [],
+    rounds: [{ song: null, standings: [standing(101, 3), standing(102, 1)] }],
     matchResult: null,
   } as Match;
 }
@@ -84,7 +88,7 @@ describe('MatchWorkflowManager', () => {
     matchResultService.upsertForMatch.mockResolvedValue(savedResult);
     matchService.updateActive.mockResolvedValue({ ...currentMatch, active: false });
 
-    const result = await manager.CommitMatchResult(currentMatch.id, {});
+    const result = await manager.CommitMatchResult(currentMatch.id);
 
     expect(matchResultService.upsertForMatch).toHaveBeenCalledWith(currentMatch.id, savedResult.playerPoints);
     expect(matchService.updateActive).toHaveBeenCalledWith(currentMatch.id, false);
@@ -95,41 +99,37 @@ describe('MatchWorkflowManager', () => {
   });
 
   it('completes a match that start.gg reporting skips because it is not linked', async () => {
-    const currentMatch = manualMatch();
+    const currentMatch = handScoredMatch();
     matchService.getMatch.mockResolvedValue(currentMatch);
     matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] } as MatchResult);
     startggService.reportCompletedMatch.mockResolvedValue(null);
 
-    const result = await manager.CommitMatchResult(currentMatch.id, {
-      playerPoints: [{ playerId: 101, points: 3 }],
-    });
+    const result = await manager.CommitMatchResult(currentMatch.id);
 
     expect(result.startggReport).toBe('skipped');
   });
 
   it('completes a match even when start.gg reporting fails', async () => {
-    const currentMatch = manualMatch();
+    const currentMatch = handScoredMatch();
     matchService.getMatch.mockResolvedValue(currentMatch);
     matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] } as MatchResult);
     startggService.reportCompletedMatch.mockRejectedValue(new Error('start.gg unavailable'));
 
-    const result = await manager.CommitMatchResult(currentMatch.id, {
-      playerPoints: [{ playerId: 101, points: 3 }],
-    });
+    const result = await manager.CommitMatchResult(currentMatch.id);
 
     expect(matchResultService.upsertForMatch).toHaveBeenCalled();
     expect(result.startggReport).toBe('failed');
   });
 
-  it('rejects completion when any round is missing a player standing', async () => {
+  it('rejects completion when a round played on a song is missing a player standing', async () => {
     const currentMatch = {
       id: 10,
       entrants: [entrant(1, 101), entrant(2, 102)],
-      rounds: [{ standings: [standing(101, 2)] }],
+      rounds: [{ song: { id: 1, title: 'Test Song' }, standings: [standing(101, 2)] }],
     } as Match;
     matchService.getMatch.mockResolvedValue(currentMatch);
 
-    await expect(manager.CommitMatchResult(currentMatch.id, {})).rejects.toThrow(
+    await expect(manager.CommitMatchResult(currentMatch.id)).rejects.toThrow(
       new BadRequestException('Match 10 cannot be completed because not all standings are populated'),
     );
 
@@ -138,30 +138,67 @@ describe('MatchWorkflowManager', () => {
     expect(startggService.reportCompletedMatch).not.toHaveBeenCalled();
   });
 
-  it('normalizes manual results for matches without rounds', async () => {
-    const currentMatch = {
-      id: 10,
-      active: false,
-      entrants: [entrant(1, 101), entrant(2, 102)],
-      rounds: [],
-      matchResult: null,
-    } as Match;
+  it('sums a hand-scored round exactly like a played one', async () => {
+    const currentMatch = handScoredMatch();
     const savedResult = { id: 20, playerPoints: [] } as MatchResult;
     matchService.getMatch.mockResolvedValue(currentMatch);
     matchResultService.upsertForMatch.mockResolvedValue(savedResult);
 
-    await manager.CommitMatchResult(currentMatch.id, {
-      playerPoints: [
-        { playerId: 999, points: 100 },
-        { playerId: 102, points: 1 },
-        { playerId: 101, points: 3 },
-      ],
-    });
+    await manager.CommitMatchResult(currentMatch.id);
 
     expect(matchResultService.upsertForMatch).toHaveBeenCalledWith(currentMatch.id, [
       { playerId: 101, points: 3 },
       { playerId: 102, points: 1 },
     ]);
+  });
+
+  it('completes a hand-scored match that nobody but the winner has points in', async () => {
+    const currentMatch = {
+      id: 10,
+      active: false,
+      entrants: [entrant(1, 101), entrant(2, 102)],
+      rounds: [{ song: null, standings: [standing(101, 1)] }],
+      matchResult: null,
+    } as Match;
+    matchService.getMatch.mockResolvedValue(currentMatch);
+    matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] } as MatchResult);
+
+    await manager.CommitMatchResult(currentMatch.id);
+
+    /* One to nothing is a result: the player nobody gave points to scored none,
+       and is not something the match is still waiting for. */
+    expect(matchResultService.upsertForMatch).toHaveBeenCalledWith(currentMatch.id, [
+      { playerId: 101, points: 1 },
+      { playerId: 102, points: 0 },
+    ]);
+  });
+
+  it('refuses to complete a hand-scored match while every point is zero', async () => {
+    const currentMatch = {
+      id: 10,
+      active: false,
+      entrants: [entrant(1, 101), entrant(2, 102)],
+      rounds: [{ song: null, standings: [standing(101, 0), standing(102, 0)] }],
+      matchResult: null,
+    } as Match;
+    matchService.getMatch.mockResolvedValue(currentMatch);
+
+    await expect(manager.CommitMatchResult(currentMatch.id)).rejects.toThrow(BadRequestException);
+    expect(matchResultService.upsertForMatch).not.toHaveBeenCalled();
+  });
+
+  it('refuses to complete a match that has no rounds at all', async () => {
+    const currentMatch = {
+      id: 10,
+      active: false,
+      entrants: [entrant(1, 101)],
+      rounds: [],
+      matchResult: null,
+    } as Match;
+    matchService.getMatch.mockResolvedValue(currentMatch);
+
+    await expect(manager.CommitMatchResult(currentMatch.id)).rejects.toThrow(BadRequestException);
+    expect(matchResultService.upsertForMatch).not.toHaveBeenCalled();
   });
 
   it('reverts previous advancement before replacing a completed result', async () => {
@@ -170,15 +207,13 @@ describe('MatchWorkflowManager', () => {
       id: 10,
       active: false,
       entrants: [entrant(1, 101)],
-      rounds: [],
+      rounds: [{ song: null, standings: [standing(101, 2)] }],
       matchResult: previousResult,
     } as Match;
     matchService.getMatch.mockResolvedValue(currentMatch);
     matchResultService.upsertForMatch.mockResolvedValue({ id: 20, playerPoints: [] });
 
-    await manager.CommitMatchResult(currentMatch.id, {
-      playerPoints: [{ playerId: 101, points: 2 }],
-    });
+    await manager.CommitMatchResult(currentMatch.id);
 
     expect(advancementManager.RevertAdvancementFromMatch).toHaveBeenCalledWith(currentMatch);
     expect(matchResultService.upsertForMatch).toHaveBeenCalledWith(currentMatch.id, [

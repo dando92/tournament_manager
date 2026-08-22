@@ -101,7 +101,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-012 — Hand-scored points are a per-device draft
 
-- Status: Open.
-- Observed behavior: a match with no songs is scored by hand. That is now an explicit choice per match rather than a state a match falls into by being empty, and both the choice and the points are kept in `localStorage` so closing a tab no longer discards them. The points reach the server only on commit, which means two staff members scoring the same match each hold their own draft and neither can see the other's; whoever commits first decides the result. It also means the sidebar cannot mark it: `MatchService.countPendingByPhaseGroup` reports a branch as waiting on a person from persisted scores, and a hand-scored match that is ready in one browser is empty everywhere else.
-- Question: Should a hand-scored draft be shared — persisted server side and broadcast like any other match change — so two people at the same pool cannot diverge? The alternative is to keep it local and accept that hand scoring is a single-operator activity, in which case the interface should probably say so more strongly than the current note on the card.
-- Evidence: `apps/frontend/src/features/match/services/manualScoring.ts`, `apps/frontend/src/features/match/hooks/useManualScoring.ts`, and `commitMatch` in `apps/frontend/src/features/match/components/MatchCard.tsx`.
+- Status: Closed on 2026-08-22.
+- Observed behavior: a match with no songs was scored by hand through a switch and a points draft kept in `localStorage`. The points reached the server only on commit, so two staff members scoring the same match each held their own draft, the sidebar could not mark a match that was waiting, and the division standings never saw the result.
+- Decision taken: hand scoring is no longer a device state. It is a round with no song, and its points are standings like any other, written to the server as they are typed. The draft, its store and its hook are gone. See [ScoringRefactoring.md](ScoringRefactoring.md).
+- What the answer turned out to be: the question asked whether the draft should be shared or stay local. Neither: the draft itself was the accident. Once a hand-scored match has a round, there is nothing left that only one device knows.

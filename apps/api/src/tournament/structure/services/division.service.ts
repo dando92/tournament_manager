@@ -75,7 +75,12 @@ export class DivisionService {
                         matches: {
                             matchResult: true,
                             rounds: {
+                                /* The song decides whether a standing counts as
+                                   a song played, so the roll-up needs it even
+                                   though it shows nothing about the song. */
+                                song: true,
                                 standings: {
+                                    player: true,
                                     score: {
                                         player: true,
                                     },
@@ -110,6 +115,7 @@ export class DivisionService {
                             rounds: {
                                 song: true,
                                 standings: {
+                                    player: true,
                                     score: {
                                         player: true,
                                         song: true,
@@ -164,6 +170,7 @@ export class DivisionService {
                             rounds: {
                                 song: true,
                                 standings: {
+                                    player: true,
                                     score: {
                                         player: true,
                                     },

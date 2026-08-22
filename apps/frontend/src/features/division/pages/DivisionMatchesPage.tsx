@@ -11,9 +11,6 @@ import { useCreateMatchAction } from "@/features/match/hooks/useCreateMatchActio
 import { useMatches } from "@/features/match/services/useMatches";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
 import { matchMatchesQuery } from "@/features/match/utils/matchSearch";
-import { buildCommitRequest } from "@/features/match/utils/commitRequest";
-import { useManualScoringStore } from "@/features/match/hooks/useManualScoring";
-import { clearManualScoring, manualScoringOf } from "@/features/match/services/manualScoring";
 import PoolAdvancementEditor from "@/features/division/components/PoolAdvancementEditor";
 import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
@@ -55,7 +52,6 @@ export default function DivisionMatchesPage() {
   const { state, actions } = useMatches(division.id);
   /* The list shows commit, so it has to see the hand-scoring drafts the card
      writes — otherwise a match being scored by hand reads as empty here. */
-  const manualScoringStore = useManualScoringStore();
   const matchCreation = useCreateMatchAction(async () => {
     await actions.list();
     await refreshDivision();
@@ -108,8 +104,7 @@ export default function DivisionMatchesPage() {
   }, [selectedMatch, requestedMatchId, searchParams, setSearchParams]);
 
   const commitMatch = async (match: Match) => {
-    await actions.commitMatchResult(match.id, buildCommitRequest(match, manualScoringOf(manualScoringStore, match.id)));
-    clearManualScoring(match.id);
+    await actions.commitMatchResult(match.id);
   };
 
   const selectMatch = (matchId: number) => {
@@ -227,7 +222,6 @@ export default function DivisionMatchesPage() {
                     <div key={match.id} ref={match.id === highlight.matchId ? routedRowRef : undefined}>
                       <MatchListRow
                         match={match}
-                        manualScoring={manualScoringOf(manualScoringStore, match.id)}
                         selected={match.id === selectedMatch?.id}
                         routed={match.id === highlight.matchId}
                         controls={controls}

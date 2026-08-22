@@ -16,6 +16,7 @@ export type TournamentEntityReference =
   | 'phase'
   | 'phase-group'
   | 'match'
+  | 'round'
   | 'song'
   | 'advancement-source';
 
@@ -105,6 +106,7 @@ export class TournamentOpenGuard implements CanActivate {
       phase: `SELECT d."tournamentId" AS id FROM phase p JOIN division d ON d.id = p."divisionId" WHERE p.id = $1`,
       'phase-group': `SELECT d."tournamentId" AS id FROM phase_group pg JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE pg.id = $1`,
       match: `SELECT d."tournamentId" AS id FROM "match" m JOIN phase_group pg ON pg.id = m."phaseGroupId" JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE m.id = $1`,
+      round: `SELECT d."tournamentId" AS id FROM round r JOIN "match" m ON m.id = r."matchId" JOIN phase_group pg ON pg.id = m."phaseGroupId" JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE r.id = $1`,
       song: `SELECT "tournamentId" AS id FROM song WHERE id = $1`,
     };
     return this.queryId(queries[entity], entityId);

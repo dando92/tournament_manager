@@ -1,11 +1,11 @@
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './structure/dtos/division.dto';
 import { CreatePhaseDto, UpdatePhaseDto } from './structure/dtos/phase.dto';
-import { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, AddSongToMatchDto, AddStandingToMatchDto } from '@match/dtos/match.dto';
+import { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto } from '@match/dtos/match.dto';
 import { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto } from '@player/player.dto';
 import { CreateRoundDto, UpdateRoundDto } from './competition/dtos/round.dto';
 import { CreateScoreDto, UpdateScoreDto } from './competition/dtos/score.dto';
 import { CreateSongDto, UpdateSongDto } from './competition/dtos/song.dto';
-import { CreateStandingDto, UpdateStandingDto } from './competition/standing/standing.dto';
+import { UpsertPointsDto, UpsertScoreDto } from './competition/standing/standing.dto';
 
 import { CreateTournamentDto, UpdateTournamentDto, TournamentConfigurationDto, TournamentStaffDto, TournamentResponseDto } from './dtos/tournament.dto';
 import { TournamentOverviewDto, TournamentOverviewDivisionDto, TournamentOverviewDivisionPhaseDto, TournamentOverviewDivisionPlayerDto, TournamentOverviewEntrantDto, TournamentOverviewParticipantDto } from './dtos/tournament-overview.dto';
@@ -24,12 +24,12 @@ import {
 
 export { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto };
 export { CreatePhaseDto, UpdatePhaseDto };
-export { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, AddSongToMatchDto, AddStandingToMatchDto };
+export { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto };
 export { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto };
 export { CreateRoundDto, UpdateRoundDto };
 export { CreateScoreDto, UpdateScoreDto };
 export { CreateSongDto, UpdateSongDto };
-export { CreateStandingDto, UpdateStandingDto };
+export { UpsertPointsDto, UpsertScoreDto };
 
 export { CreateTournamentDto, UpdateTournamentDto, TournamentConfigurationDto, TournamentStaffDto, TournamentResponseDto };
 export { TournamentOverviewDto, TournamentOverviewDivisionDto, TournamentOverviewDivisionPhaseDto, TournamentOverviewDivisionPlayerDto, TournamentOverviewEntrantDto, TournamentOverviewParticipantDto };

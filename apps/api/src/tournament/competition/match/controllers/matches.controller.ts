@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchListDto } from '@match/dtos/match-list.dto';
-import { AddSongToMatchDto, CommitMatchResultDto, CommitMatchResultResponseDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { RoundSourceDto, CommitMatchResultResponseDto, CreateMatchDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@tournament-manager/persistence';
 import { MatchManager } from '@match/services/match.manager';
 import { MatchService } from '@match/services/match.service';
@@ -70,40 +70,10 @@ export class MatchesController {
         return this.matchService.delete(id);
     }
 
-    @Post(':matchId/songs')
+    @Post(':matchId/rounds')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async addSongToMatch(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: AddSongToMatchDto): Promise<Match> {
-        const match = await this.matchService.getMatch(matchId);
-
-        if (dto.songId) {
-            return await this.matchManager.AddSongsToMatch(match, [dto.songId]);
-        } else if (dto.level) {
-            return await this.matchManager.AddRandomSongsToMatch(match, dto.tournamentId, dto.divisionId, dto.group, dto.level);
-        }
-
-        return match;
-    }
-
-    @Delete(':matchId/songs/:songId')
-    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async removeSongFromMatch(@Param('matchId') matchId: number, @Param('songId') songId: number): Promise<Match> {
-        await this.matchManager.RemoveSongFromMatchById(matchId, songId);
-        return await this.matchService.getMatch(matchId);
-    }
-
-    @Put(':matchId/songs/:songId')
-    @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async editSongInMatch(@Param('matchId') matchId: number, @Param('songId') songId: number, @Body(new ValidationPipe()) dto: AddSongToMatchDto): Promise<Match> {
-        await this.matchManager.RemoveSongFromMatchById(matchId, songId);
-        const match = await this.matchService.getMatch(matchId);
-
-        if (dto.songId) {
-            return await this.matchManager.AddSongsToMatch(match, [dto.songId]);
-        } else if (dto.level) {
-            return await this.matchManager.AddRandomSongsToMatch(match, dto.tournamentId, dto.divisionId, dto.group, dto.level);
-        }
-
-        return match;
+    async addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<MatchListDto | null> {
+        return await this.matchManager.AddRound(Number(matchId), dto);
     }
 
     @Put(':matchId/active')
@@ -114,8 +84,8 @@ export class MatchesController {
 
     @Put(':matchId/result')
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    async commitMatchResult(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: CommitMatchResultDto): Promise<CommitMatchResultResponseDto> {
-        return await this.matchManager.CommitMatchResult(Number(matchId), dto);
+    async commitMatchResult(@Param('matchId') matchId: number): Promise<CommitMatchResultResponseDto> {
+        return await this.matchManager.CommitMatchResult(Number(matchId));
     }
 
     @Delete(':matchId/result')

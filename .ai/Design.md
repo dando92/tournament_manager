@@ -111,6 +111,20 @@ repeats the `Ready to commit` rule in one aggregate query
 (`MatchService.countPendingByPhaseGroup`) so the sidebar can count without
 loading matches; the two definitions have to be changed together.
 
+Both read one rule — every round of the match is settled — and a match scored
+by hand moves through the same four steps. In the table its round is a column
+like any other, headed `By hand` instead of a song title, and its cells are the
+points themselves rather than a percentage that ranks into points.
+
+What settles a round is the one place the two kinds part company, and it is not
+about where the data is kept. A round played on a song waits for every player,
+because a missing score is a run nobody has entered yet. A hand-scored round
+waits for nobody in particular: the points are stated, one to nothing is a
+result, and a player nobody gave points to scored none. So it is settled as
+soon as somebody has a point, and empty again if every point goes back to zero
+— which is also when its column can be taken away again. See
+[ScoringRefactoring.md](ScoringRefactoring.md).
+
 ## The tree inherits the state of what it contains
 
 A branch of the sidebar shows the strongest state below it, pool to phase to

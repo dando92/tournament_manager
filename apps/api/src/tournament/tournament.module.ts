@@ -39,7 +39,7 @@ import { SongRoller } from './competition/services/song.roller';
 import { SongService } from './competition/services/song.service';
 import { StandingManager } from './competition/standing/standing.manager';
 import { StandingService } from './competition/standing/standing.service';
-import { StandingsController } from './competition/standing/standings.controller';
+import { RoundsController } from './competition/standing/rounds.controller';
 import { PlayersController } from './player/players.controller';
 import { PlayerManager } from './player/player.manager';
 import { PlayerService } from './player/player.service';
@@ -117,7 +117,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         PlayersController,
         SongsController,
         ScoresController,
-        StandingsController,
+        RoundsController,
         BracketController,
     ],
 })

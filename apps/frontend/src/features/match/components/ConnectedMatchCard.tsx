@@ -57,24 +57,18 @@ export default function ConnectedMatchCard({
       onRenameMatch={actions.renameMatch}
       onDeleteMatch={actions.deleteMatch}
       onAddPlayersToMatch={(entrantIds) => actions.updateMatchEntrants(match.id, entrantIds)}
-      onAddSongToMatchByRoll={(group, level) => actions.addSongToMatchByRoll(match.id, division.id, group, level)}
-      onAddSongToMatchBySongId={(songId) => actions.addSongToMatchBySongId(match.id, songId)}
-      onEditSongToMatchByRoll={(group, level, editSongId) =>
-        actions.editSongToMatchByRoll(match.id, editSongId, division.id, group, level)
+      onAddRounds={(sources) => sources.forEach((source) => actions.addRound(match.id, source))}
+      onReplaceRoundSong={actions.replaceRoundSong}
+      onDeleteRound={actions.deleteRound}
+      onAddHandScoredRound={() => actions.addRound(match.id)}
+      onChangePoints={actions.savePoints}
+      onAddStandingToMatch={(playerId, roundId, percentage, _score, isFailed, scoreId) =>
+        actions.saveScore(playerId, roundId, { percentage, isFailed, scoreId })
       }
-      onEditSongToMatchBySongId={(songId, editSongId) =>
-        actions.editSongToMatchBySongId(match.id, editSongId, songId)
+      onEditStanding={(playerId, roundId, percentage, _score, isFailed, scoreId) =>
+        actions.saveScore(playerId, roundId, { percentage, isFailed, scoreId })
       }
-      onDeleteSongFromMatch={(songId) => actions.deleteSongFromMatch(match.id, songId)}
-      onAddStandingToMatch={(playerId, songId, percentage, score, failed, scoreId) =>
-        actions.addStandingToMatch(match.id, playerId, songId, percentage, score, failed, scoreId)
-      }
-      onEditStanding={(playerId, songId, percentage, score, failed, scoreId) =>
-        actions.editStandingFromMatch(match.id, songId, playerId, percentage, score, failed, scoreId)
-      }
-      onDeleteStanding={(playerId, songId) =>
-        actions.deleteStandingsForPlayerFromMatch(match.id, playerId, songId)
-      }
+      onDeleteStanding={actions.deleteStanding}
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
       onUpdateMatchActive={actions.updateMatchActive}
       onReopenMatchResult={actions.reopenMatchResult}

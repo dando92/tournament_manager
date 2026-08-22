@@ -27,19 +27,24 @@ export type MatchListScoreDto = {
     id: number;
     percentage: number;
     isFailed: boolean;
-    player: MatchListPlayerDto;
-    song: MatchListSongDto;
 };
 
+/**
+ * The points of one player in one round. The score is the evidence behind them
+ * and is absent on a hand-scored round, where the points were stated rather
+ * than played.
+ */
 export type MatchListStandingDto = {
     id: number;
     points: number;
-    score: MatchListScoreDto;
+    player: MatchListPlayerDto;
+    score: MatchListScoreDto | null;
 };
 
+/** A round with no song is the hand-scored one. A match holds at most one. */
 export type MatchListRoundDto = {
     id: number;
-    song: MatchListSongDto;
+    song: MatchListSongDto | null;
     standings: MatchListStandingDto[];
 };
 

@@ -6,7 +6,6 @@ import {
   getMatchProgressLabel,
   getMatchProgressStatus,
 } from "@/features/match/utils/matchStatus";
-import { effectiveManualPoints, type ManualScoring } from "@/features/match/services/manualScoring";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import { Match } from "@/features/match/types/Match";
 
@@ -30,7 +29,6 @@ import { Match } from "@/features/match/types/Match";
 
 type MatchListRowProps = {
   match: Match;
-  manualScoring: ManualScoring;
   selected: boolean;
   /** Lit because an advancement route in the open card points at this match. */
   routed: boolean;
@@ -41,25 +39,28 @@ type MatchListRowProps = {
 
 export default function MatchListRow({
   match,
-  manualScoring,
   selected,
   routed,
   controls,
   onSelect,
   onCommit,
 }: MatchListRowProps) {
-  const manualPoints = effectiveManualPoints(manualScoring);
-  const progress = getMatchProgress(match, manualPoints);
+  const progress = getMatchProgress(match);
   const status = getMatchProgressStatus(progress);
-  const blocker = getCommitBlocker(match, { manualScoringEnabled: manualScoring.enabled, manualPoints });
+  const blocker = getCommitBlocker(match);
   const label = blocker ?? getMatchProgressLabel(progress);
   const canCommit = controls && progress === "readyToCommit";
 
   const playerCount = entrantPlayers(match.entrants).length;
   const players = `${playerCount} player${playerCount !== 1 ? "s" : ""}`;
-  const meta =
-    match.rounds.length > 0
-      ? `${players} · ${match.rounds.length} song${match.rounds.length !== 1 ? "s" : ""}`
+  /* Counting rounds would call the hand-scored one a song, which is the one
+     thing it is not. */
+  const songCount = match.rounds.filter((round) => round.song !== null).length;
+  const handScored = match.rounds.some((round) => round.song === null);
+  const meta = handScored
+    ? `${players} · by hand`
+    : songCount > 0
+      ? `${players} · ${songCount} song${songCount !== 1 ? "s" : ""}`
       : playerCount > 0
         ? players
         : "not started";

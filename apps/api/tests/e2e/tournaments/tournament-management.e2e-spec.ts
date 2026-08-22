@@ -162,15 +162,27 @@ describe('Tournament management (e2e)', () => {
       .expect(201);
     const phaseGroupId = phaseGroupResponse.body.id;
 
+    /* Pool membership is derived: an entrant is in a pool because a match there
+       holds it. The routes that put one in by hand were removed in e9c02ed
+       precisely because they fought that derivation, so the way to seed a pool
+       is to give it a match. */
     await request(app.getHttpServer())
-      .post(`/phase-groups/${phaseGroupId}/entrants/${entrantId}`)
+      .post('/matches')
+      .send({
+        name: 'Qualifier 1',
+        phaseGroupId,
+        scoringSystem: 'EurocupScoreCalculator',
+        entrantIds: [entrantId],
+      })
       .expect(201);
 
     await request(app.getHttpServer())
       .get(`/phase-groups/${phaseGroupId}/entrants`)
       .expect(200)
       .expect(({ body }) => {
-        expect(body).toContainEqual(expect.objectContaining({ id: entrantId }));
+        expect(body).toContainEqual(
+          expect.objectContaining({ entrant: expect.objectContaining({ id: entrantId }) }),
+        );
       });
 
     await request(app.getHttpServer())
@@ -180,7 +192,11 @@ describe('Tournament management (e2e)', () => {
         expect(body).toMatchObject({
           divisionCount: 1,
           playerCount: 1,
-          matchCount: 0,
+          matchCount: 1,
+        });
+        expect(body.divisions[0].phases[0].phaseGroups[0]).toMatchObject({
+          matchCount: 1,
+          pendingMatchCount: 0,
         });
       });
   });

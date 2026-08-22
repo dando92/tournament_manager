@@ -1,20 +1,44 @@
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 import { Match, MatchCommitState } from "@/features/match/types/Match";
+import { Round } from "@/features/match/types/Round";
+import { Player } from "@/features/player/types/Player";
 import type { Status } from "@/shared/components/ui/status";
 
-export type ManualPointsByPlayerId = Record<number, number>;
+/**
+ * Whether a round has everything it is waiting for.
+ *
+ * A round played on a song waits for every player: a missing score is a run
+ * nobody has entered yet. A hand-scored round waits for nobody in particular —
+ * the points are stated, and a match can legitimately end one to nothing — so
+ * it is settled as soon as somebody has been given a point.
+ *
+ * That is the one place the two kinds differ, and it is not about where the
+ * data is kept: it is that a stated result carries no obligation per player.
+ */
+function isRoundSettled(round: Round, players: Player[]): boolean {
+  if (round.song === null) return (round.standings ?? []).some((standing) => standing.points > 0);
+  return players.every((player) => (round.standings ?? []).some((standing) => standing.player.id === player.id));
+}
 
-export function hasAllSongStandings(match: Match): boolean {
+/** Anything a person has put in and would lose by walking away. */
+function roundHasContent(round: Round): boolean {
+  if (round.song === null) return (round.standings ?? []).some((standing) => standing.points > 0);
+  return (round.standings ?? []).length > 0;
+}
+
+/**
+ * The points assigned by hand so far. Zero everywhere reads as an empty match
+ * rather than as a match decided nil-nil: nothing has been stated yet.
+ */
+export function handScoredRoundOf(match: Match): Round | null {
+  return match.rounds.find((round) => round.song === null) ?? null;
+}
+
+export function hasAllStandings(match: Match): boolean {
   const players = entrantPlayers(match.entrants);
   if (players.length === 0 || match.rounds.length === 0) return false;
 
-  return match.rounds.every((round) =>
-    players.every((player) => (round.standings ?? []).some((standing) => standing.score.player.id === player.id)),
-  );
-}
-
-function hasAnySongStanding(match: Match): boolean {
-  return match.rounds.some((round) => (round.standings ?? []).length > 0);
+  return match.rounds.every((round) => isRoundSettled(round, players));
 }
 
 /**
@@ -43,23 +67,12 @@ const PROGRESS_LABEL: Record<MatchProgress, string> = {
   completed: "Completed",
 };
 
-/**
- * `manualPoints` are the card's own draft, held in component state until a
- * commit persists them, so a list that only has the match cannot see them.
- * Omitting them simply means the draft does not count toward progress.
- */
-export function getMatchProgress(match: Match, manualPoints: ManualPointsByPlayerId = {}): MatchProgress {
+export function getMatchProgress(match: Match): MatchProgress {
   if (match.matchResult) return "completed";
+  if (match.rounds.length === 0) return "empty";
+  if (hasAllStandings(match)) return "readyToCommit";
 
-  if (match.rounds.length > 0) {
-    if (hasAllSongStandings(match)) return "readyToCommit";
-    return "started";
-  }
-
-  const players = entrantPlayers(match.entrants);
-  if (players.some((player) => (manualPoints[player.id] ?? 0) > 0)) return "readyToCommit";
-
-  return hasAnySongStanding(match) ? "started" : "empty";
+  return match.rounds.some(roundHasContent) ? "started" : "empty";
 }
 
 export function getMatchProgressStatus(progress: MatchProgress): Status {
@@ -76,8 +89,8 @@ export function getMatchProgressLabel(progress: MatchProgress): string {
  * Derived from the progress above rather than computed again, so the badge a
  * viewer reads and the button they press can never disagree.
  */
-export function getMatchCommitState(match: Match, manualPoints: ManualPointsByPlayerId = {}): MatchCommitState {
-  const progress = getMatchProgress(match, manualPoints);
+export function getMatchCommitState(match: Match): MatchCommitState {
+  const progress = getMatchProgress(match);
   if (progress === "completed") return "Completed";
   return progress === "readyToCommit" ? "Pending" : "Disabled";
 }
@@ -90,23 +103,21 @@ export function getMatchCommitState(match: Match, manualPoints: ManualPointsByPl
  * button's own place is the cheapest place to put it, so the control states its
  * own precondition and nobody has to hover to find out.
  */
-export function getCommitBlocker(
-  match: Match,
-  options: { manualScoringEnabled: boolean; manualPoints: ManualPointsByPlayerId },
-): string | null {
-  if (getMatchCommitState(match, options.manualPoints) !== "Disabled") return null;
+export function getCommitBlocker(match: Match): string | null {
+  if (getMatchCommitState(match) !== "Disabled") return null;
 
   const players = entrantPlayers(match.entrants);
   if (players.length === 0) return "No players yet";
+  if (match.rounds.length === 0) return "No songs yet";
 
-  if (match.rounds.length === 0) {
-    return options.manualScoringEnabled ? "No points assigned" : "No songs yet";
-  }
+  /* Counting the players still without points would promise that every one of
+     them needs some, and a hand-scored match does not: one point is a result. */
+  if (handScoredRoundOf(match)) return "No points assigned";
 
   const missing = match.rounds.reduce(
     (count, round) =>
       count +
-      players.filter((player) => !(round.standings ?? []).some((standing) => standing.score.player.id === player.id))
+      players.filter((player) => !(round.standings ?? []).some((standing) => standing.player.id === player.id))
         .length,
     0,
   );

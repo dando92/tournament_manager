@@ -137,7 +137,11 @@ export class CreateMatchWithSongsDto {
   }
 }
 
-export class AddSongToMatchDto {
+/**
+ * Where a round's song comes from: a chosen song, a roll over a division's
+ * pool, or nothing at all — which is the hand-scored round.
+ */
+export class RoundSourceDto {
   @IsOptional()
   @IsNumber()
   songId?: number;
@@ -165,21 +169,6 @@ export class UpdateMatchActiveDto {
   active: boolean;
 }
 
-export class MatchPlayerPointsDto {
-  @IsNumber()
-  playerId: number;
-
-  @IsNumber()
-  points: number;
-}
-
-export class CommitMatchResultDto {
-  @ApiProperty({ description: 'Manual player points for matches without songs', required: false })
-  @IsOptional()
-  @IsArray()
-  playerPoints?: MatchPlayerPointsDto[];
-}
-
 export const STARTGG_REPORT_STATUSES = ['reported', 'skipped', 'failed'] as const;
 
 /**
@@ -192,24 +181,3 @@ export type CommitMatchResultResponseDto = {
   match: MatchListDto | null;
   startggReport: StartggReportStatus;
 };
-
-export class AddStandingToMatchDto {
-  @IsOptional()
-  @IsNumber()
-  scoreId?: number;
-
-  @IsNumber()
-  playerId: number;
-
-  @IsNumber()
-  songId: number;
-
-  @IsNumber()
-  percentage: number;
-
-  @IsNumber()
-  score: number;
-
-  @IsBoolean()
-  isFailed: boolean;
-}

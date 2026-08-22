@@ -15,8 +15,10 @@ type Props = {
   /** Hidden while the match is still an empty skeleton, which offers its own slots. */
   showAddActions: boolean;
   canAddSong: boolean;
-  manualScoringEnabled: boolean;
-  onToggleManualScoring: () => void;
+  /** True when the match holds the round with no song. */
+  handScored: boolean;
+  canToggleHandScoring: boolean;
+  onToggleHandScoring: () => void;
   onOpenEditNotes: () => void;
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
@@ -34,8 +36,9 @@ export default function MatchHeader({
   commitState,
   showAddActions,
   canAddSong,
-  manualScoringEnabled,
-  onToggleManualScoring,
+  handScored,
+  canToggleHandScoring,
+  onToggleHandScoring,
   onOpenEditNotes,
   onDeleteMatch,
   onOpenAddSong,
@@ -126,7 +129,13 @@ export default function MatchHeader({
                   label="Song"
                   onClick={onOpenAddSong}
                   disabled={!canAddSong}
-                  title={canAddSong ? undefined : "Add a player before adding a song"}
+                  title={
+                    canAddSong
+                      ? undefined
+                      : handScored
+                        ? "This match is scored by hand"
+                        : "Add a player before adding a song"
+                  }
                 />
               </div>
             )}
@@ -142,11 +151,11 @@ export default function MatchHeader({
                   onSelect: onToggleActive,
                 },
                 {
-                  key: "manual-scoring",
-                  label: manualScoringEnabled ? "Score by songs" : "Score by hand",
+                  key: "hand-scoring",
+                  label: handScored ? "Score by songs" : "Score by hand",
                   icon: faCalculator,
-                  hidden: isMatchEnded || match.rounds.length > 0,
-                  onSelect: onToggleManualScoring,
+                  hidden: isMatchEnded || !canToggleHandScoring,
+                  onSelect: onToggleHandScoring,
                 },
                 {
                   key: "advancement",

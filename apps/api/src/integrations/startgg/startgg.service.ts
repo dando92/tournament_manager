@@ -472,6 +472,7 @@ export class StartggService {
                 matchResult: true,
                 rounds: {
                     standings: {
+                        player: true,
                         score: {
                             player: true,
                         },

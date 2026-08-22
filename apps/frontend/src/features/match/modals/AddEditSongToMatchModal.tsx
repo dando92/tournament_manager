@@ -2,38 +2,22 @@ import OkModal from "@/shared/components/ui/OkModal";
 import AddEditSongRollFields from "@/features/match/components/AddEditSongRollFields";
 import AddEditSongTitleFields from "@/features/match/components/AddEditSongTitleFields";
 import { useAddEditSongToMatchModal } from "@/features/match/hooks/useAddEditSongToMatchModal";
+import { RoundSourceRequest } from "@/features/match/types/match-requests";
 
+/**
+ * Picks the song for a round: a title, several titles, or a roll over a group
+ * and a difficulty. Editing replaces the song of one round, which is why it
+ * names a round and not a song.
+ */
 type AddSongToMatchModalProps = {
   divisionId: number;
-  matchId: number;
-  songId?: number | null;
   tournamentId?: number;
+  /** The round whose song is being replaced, or null when adding new rounds. */
+  editingRoundId: number | null;
   open: boolean;
   onClose: () => void;
-  onAddSongToMatchByRoll: (
-    divisionId: number,
-    matchId: number,
-    group: string,
-    level: string,
-  ) => void;
-  onAddSongToMatchBySongId: (
-    divisionId: number,
-    matchId: number,
-    songId: number,
-  ) => void;
-  onEditSongToMatchByRoll: (
-    divisionId: number,
-    matchId: number,
-    group: string,
-    level: string,
-    editSongId: number,
-  ) => void;
-  onEditSongToMatchBySongId: (
-    divisionId: number,
-    matchId: number,
-    songId: number,
-    editSongId: number,
-  ) => void;
+  onAddRounds: (sources: RoundSourceRequest[]) => void;
+  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => void;
 };
 
 export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps) {
@@ -44,51 +28,36 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
 
   const handleSubmit = () => {
     if (state.songAddType === "roll") {
-      if (state.selectedGroupName && state.difficultyInput) {
-        if (props.songId) {
-          props.onEditSongToMatchByRoll(
-            props.divisionId,
-            props.matchId,
-            state.selectedGroupName,
-            state.difficultyInput,
-            props.songId,
-          );
-        } else {
-          props.onAddSongToMatchByRoll(
-            props.divisionId,
-            props.matchId,
-            state.selectedGroupName,
-            state.difficultyInput,
-          );
-        }
-        props.onClose();
-      }
+      if (!state.selectedGroupName || !state.difficultyInput) return;
+      const source: RoundSourceRequest = {
+        divisionId: props.divisionId,
+        group: state.selectedGroupName,
+        level: state.difficultyInput,
+      };
+
+      if (props.editingRoundId !== null) props.onReplaceRoundSong(props.editingRoundId, source);
+      else props.onAddRounds([source]);
+
+      props.onClose();
       return;
     }
 
-    if (state.selectedSongs.length > 0) {
-      if (props.songId) {
-        const selectedSong = state.selectedSongs[0];
-        props.onEditSongToMatchBySongId(
-          props.divisionId,
-          props.matchId,
-          selectedSong.id,
-          props.songId,
-        );
-      } else {
-        state.selectedSongs.forEach((song) =>
-          props.onAddSongToMatchBySongId(props.divisionId, props.matchId, song.id),
-        );
-      }
-      props.onClose();
+    if (state.selectedSongs.length === 0) return;
+
+    if (props.editingRoundId !== null) {
+      props.onReplaceRoundSong(props.editingRoundId, { songId: state.selectedSongs[0].id });
+    } else {
+      props.onAddRounds(state.selectedSongs.map((song) => ({ songId: song.id })));
     }
+
+    props.onClose();
   };
 
   return (
     <OkModal
       open={props.open}
       onClose={props.onClose}
-      title={props.songId ? "Edit song" : "Add song"}
+      title={props.editingRoundId !== null ? "Edit song" : "Add song"}
       onOk={handleSubmit}
     >
       <div className="w-full">

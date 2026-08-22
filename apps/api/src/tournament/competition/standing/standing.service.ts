@@ -1,68 +1,58 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Round, Score, Standing } from '@tournament-manager/persistence';
-import { CreateStandingDto, UpdateStandingDto } from './standing.dto';
+import { Player, Round, Score, Standing } from '@tournament-manager/persistence';
 
+/**
+ * Persistence for the points of one player in one round.
+ *
+ * A standing is addressed by `(roundId, playerId)`, which the database now
+ * enforces as unique, so writing one is an upsert rather than a create followed
+ * by a search for duplicates. The score is optional: a hand-scored round states
+ * its points with nothing played behind them.
+ */
 @Injectable()
 export class StandingService {
     constructor(
         @InjectRepository(Standing)
         private readonly standingRepo: Repository<Standing>,
-        @InjectRepository(Score)
-        private readonly scoreRepo: Repository<Score>,
         @InjectRepository(Round)
         private readonly roundRepo: Repository<Round>,
+        @InjectRepository(Player)
+        private readonly playerRepo: Repository<Player>,
     ) {}
 
-    async create(dto: CreateStandingDto): Promise<Standing> {
-        const score = await this.scoreRepo.findOne({
-            where: { id: dto.scoreId },
-            relations: {
-                player: true,
-                song: true,
-            },
+    async findOne(roundId: number, playerId: number): Promise<Standing | null> {
+        return this.standingRepo.findOne({
+            where: { round: { id: roundId }, player: { id: playerId } },
+            relations: { score: true, player: true },
         });
-        if (!score) throw new NotFoundException(`Score with id ${dto.scoreId} not found. Insert standing failed`);
-
-        const round = await this.roundRepo.findOneBy({ id: dto.roundId });
-        if (!round) throw new NotFoundException(`Round with id ${dto.roundId} not found. Insert standing failed`);
-
-        const newStanding = new Standing();
-        newStanding.score = score;
-        newStanding.round = round;
-        newStanding.points = dto.points;
-
-        await this.standingRepo.save(newStanding);
-        return newStanding;
     }
 
-    async update(id: number, dto: UpdateStandingDto): Promise<Standing> {
-        const standing = await this.standingRepo.findOneBy({ id });
-        if (!standing) throw new NotFoundException(`Standing with id ${id} not found. Update standing failed`);
+    async upsert(
+        roundId: number,
+        playerId: number,
+        values: { score?: Score | null; points: number },
+    ): Promise<Standing> {
+        const round = await this.roundRepo.findOneBy({ id: roundId });
+        if (!round) throw new NotFoundException(`Round with id ${roundId} not found. Standing write failed`);
 
-        if (dto.scoreId) {
-            const updatedScore = await this.scoreRepo.findOne({
-                where: { id: dto.scoreId },
-                relations: {
-                    player: true,
-                    song: true,
-                },
-            });
-            if (!updatedScore) throw new NotFoundException(`Score with id ${dto.scoreId} not found. Update standing failed`);
-            dto.score = updatedScore;
-            delete dto.scoreId;
-        }
+        const player = await this.playerRepo.findOneBy({ id: playerId });
+        if (!player) throw new NotFoundException(`Player with id ${playerId} not found. Standing write failed`);
 
-        if (dto.roundId) {
-            const updatedRound = await this.roundRepo.findOneBy({ id: dto.roundId });
-            if (!updatedRound) throw new NotFoundException(`Round with id ${dto.roundId} not found. Update standing failed`);
-            dto.round = updatedRound;
-            delete dto.roundId;
-        }
+        const standing = (await this.findOne(roundId, playerId)) ?? new Standing();
+        standing.round = round;
+        standing.player = player;
+        standing.points = values.points;
+        if (values.score !== undefined) standing.score = values.score;
 
-        this.standingRepo.merge(standing, dto);
-        return await this.standingRepo.save(standing);
+        return this.standingRepo.save(standing);
+    }
+
+    /** Writes back the points a scoring system just recalculated, and nothing else. */
+    async savePoints(standings: Standing[]): Promise<void> {
+        if (standings.length === 0) return;
+        await this.standingRepo.save(standings.map((standing) => ({ id: standing.id, points: standing.points })));
     }
 
     async delete(id: number): Promise<void> {

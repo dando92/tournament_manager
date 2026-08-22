@@ -82,6 +82,7 @@ export class MatchService {
                 rounds: {
                     song: true,
                     standings: {
+                        player: true,
                         score: {
                             player: true,
                             song: true,
@@ -96,10 +97,15 @@ export class MatchService {
     /**
      * How many matches in each pool of a tournament are waiting on a person.
      *
-     * A match is waiting when it has songs, has players, has a score for every
-     * player on every song, and still has no committed result. That is the same
-     * rule the match card draws as "Ready to commit" (`getMatchProgress` in the
-     * frontend); the two must be changed together.
+     * A match is waiting when it has players, has rounds, has no committed
+     * result, and every one of its rounds is settled. A round played on a song
+     * is settled when every player has a standing in it; a hand-scored round is
+     * settled as soon as somebody has been given a point, because one to
+     * nothing is a result and nobody owes a zero.
+     *
+     * That is the same rule the match card draws as "Ready to commit"
+     * (`getMatchProgress` in the frontend) and the one the commit enforces
+     * (`buildMatchResultPlayerPoints`); the three must be changed together.
      *
      * It is one aggregate rather than a load of the tournament's matches
      * because the caller is the sidebar tree, which needs a count per pool and
@@ -125,30 +131,44 @@ export class MatchService {
                 JOIN "entrant_participants_participant" ep ON ep."entrantId" = e."id"
                 JOIN "participant" pa ON pa."id" = ep."participantId"
             ),
+            player_count AS (
+                SELECT "matchId", COUNT(*) AS "players"
+                FROM match_player
+                GROUP BY "matchId"
+            ),
             match_round AS (
-                SELECT r."matchId", r."id" AS "roundId"
+                SELECT r."matchId", r."id" AS "roundId", r."songId" IS NOT NULL AS "played"
                 FROM "round" r
                 JOIN tournament_match tm ON tm."id" = r."matchId"
             ),
-            expected_score AS (
-                SELECT mr."matchId", COUNT(*) AS "expected"
+            round_fill AS (
+                SELECT
+                    mr."matchId",
+                    mr."roundId",
+                    mr."played",
+                    COUNT(DISTINCT s."playerId") AS "entered",
+                    COUNT(*) FILTER (WHERE s."points" > 0) AS "stated"
                 FROM match_round mr
-                JOIN match_player mp ON mp."matchId" = mr."matchId"
-                GROUP BY mr."matchId"
+                LEFT JOIN "standing" s
+                    ON s."roundId" = mr."roundId"
+                    AND EXISTS (
+                        SELECT 1 FROM match_player mp
+                        WHERE mp."matchId" = mr."matchId" AND mp."playerId" = s."playerId"
+                    )
+                GROUP BY mr."matchId", mr."roundId", mr."played"
             ),
-            entered_score AS (
-                SELECT mr."matchId", COUNT(DISTINCT (s."roundId", sc."playerId")) AS "entered"
-                FROM "standing" s
-                JOIN match_round mr ON mr."roundId" = s."roundId"
-                JOIN "score" sc ON sc."id" = s."scoreId"
-                JOIN match_player mp ON mp."matchId" = mr."matchId" AND mp."playerId" = sc."playerId"
-                GROUP BY mr."matchId"
+            unsettled_round AS (
+                SELECT DISTINCT rf."matchId"
+                FROM round_fill rf
+                JOIN player_count pc ON pc."matchId" = rf."matchId"
+                WHERE (rf."played" AND rf."entered" < pc."players")
+                   OR (NOT rf."played" AND rf."stated" = 0)
             )
             SELECT tm."phaseGroupId" AS "phaseGroupId", COUNT(*)::int AS "pendingMatchCount"
             FROM tournament_match tm
-            JOIN expected_score es ON es."matchId" = tm."id"
-            LEFT JOIN entered_score en ON en."matchId" = tm."id"
-            WHERE COALESCE(en."entered", 0) >= es."expected"
+            JOIN player_count pc ON pc."matchId" = tm."id"
+            WHERE EXISTS (SELECT 1 FROM match_round mr WHERE mr."matchId" = tm."id")
+              AND NOT EXISTS (SELECT 1 FROM unsettled_round ur WHERE ur."matchId" = tm."id")
             GROUP BY tm."phaseGroupId"
             `,
             [tournamentId],
@@ -174,6 +194,7 @@ export class MatchService {
                 rounds: {
                     song: true,
                     standings: {
+                        player: true,
                         score: {
                             player: true,
                         },
@@ -197,6 +218,7 @@ export class MatchService {
                 rounds: {
                     song: true,
                     standings: {
+                        player: true,
                         score: {
                             player: true,
                         },
@@ -216,6 +238,7 @@ export class MatchService {
                 rounds: {
                     song: true,
                     standings: {
+                        player: true,
                         score: {
                             player: true,
                             song: true,

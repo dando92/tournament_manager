@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
-import { CommitMatchResultDto, StartggReportStatus, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { StartggReportStatus, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match, MatchResultEntry } from '@tournament-manager/persistence';
 import { MatchResultService } from '@match/services/match-result.service';
 import { MatchService } from '@match/services/match.service';
@@ -36,11 +36,11 @@ export class MatchWorkflowManager {
         return await this.matchService.updateActive(matchId, dto.active);
     }
 
-    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<CommitMatchResultOutcome> {
+    async CommitMatchResult(matchId: number): Promise<CommitMatchResultOutcome> {
         const match = await this.matchService.getMatch(matchId);
         if (!match) throw new Error(`Match ${matchId} not found`);
 
-        const playerPoints = this.resolvePlayerPoints(match, dto);
+        const playerPoints = this.resolvePlayerPoints(match);
         if (!playerPoints) {
             throw new BadRequestException(`Match ${match.id} cannot be completed because not all standings are populated`);
         }
@@ -124,28 +124,16 @@ export class MatchWorkflowManager {
         }
     }
 
-    private resolvePlayerPoints(match: Match, dto: CommitMatchResultDto): MatchResultEntry[] | null {
-        if ((match.rounds?.length ?? 0) === 0) {
-            return this.normalizeManualPlayerPoints(match, dto.playerPoints ?? []);
-        }
-
+    /**
+     * The points a commit writes.
+     *
+     * One rule, whatever the match was scored on: every player has a standing
+     * in every round, and their result is the sum. A hand-scored match reaches
+     * this through a round with no song, so nothing here has to know it was
+     * scored by hand.
+     */
+    private resolvePlayerPoints(match: Match): MatchResultEntry[] | null {
         return this.buildMatchResultPlayerPoints(match);
-    }
-
-    private normalizeManualPlayerPoints(match: Match, playerPoints: MatchResultEntry[]): MatchResultEntry[] | null {
-        const playerIds = new Set(this.getSinglesPlayerIds(match));
-        const normalized = playerPoints
-            .filter((entry) => playerIds.has(entry.playerId))
-            .map((entry) => ({
-                playerId: entry.playerId,
-                points: Number(entry.points) || 0,
-            }));
-
-        if (normalized.length === 0 || normalized.every((entry) => entry.points <= 0)) {
-            return null;
-        }
-
-        return normalized.sort((left, right) => right.points - left.points || left.playerId - right.playerId);
     }
 
     private buildMatchResultPlayerPoints(match: Match): MatchResultEntry[] | null {
@@ -154,19 +142,25 @@ export class MatchWorkflowManager {
             return null;
         }
 
-        const everyStandingPresent = (match.rounds ?? []).every((round) =>
-            playerIds.every((playerId) =>
-                (round.standings ?? []).some((standing) => standing.score.player.id === playerId),
-            ),
+        /* A round played on a song waits for every player, because a missing
+           score is a run nobody entered. A hand-scored round waits for nobody
+           in particular: the points are stated, one to nothing is a result, and
+           a player nobody gave points to scored none. */
+        const everyRoundSettled = (match.rounds ?? []).every((round) =>
+            round.song
+                ? playerIds.every((playerId) =>
+                    (round.standings ?? []).some((standing) => standing.player.id === playerId),
+                )
+                : (round.standings ?? []).some((standing) => standing.points > 0),
         );
-        if (!everyStandingPresent) {
+        if (!everyRoundSettled) {
             return null;
         }
 
         const playerPoints = playerIds.map((playerId) => ({
             playerId,
             points: (match.rounds ?? []).reduce((acc, round) => {
-                const standing = (round.standings ?? []).find((candidate) => candidate.score.player.id === playerId);
+                const standing = (round.standings ?? []).find((candidate) => candidate.player.id === playerId);
                 return acc + (standing?.points ?? 0);
             }, 0),
         }));

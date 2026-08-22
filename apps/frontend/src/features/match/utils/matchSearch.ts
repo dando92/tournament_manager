@@ -20,7 +20,7 @@ export function matchMatchesQuery(match: Match, query: string, poolName: string,
     match.subtitle,
     poolName,
     phaseName,
-    ...match.rounds.map((round) => round.song.title),
+    ...match.rounds.flatMap((round) => (round.song ? [round.song.title] : [])),
     ...entrantPlayers(match.entrants).map((player) => player.playerName),
     ...match.entrants.map((entrant) => entrant.name),
   ];

@@ -1,15 +1,18 @@
-import { Standing } from '@tournament-manager/persistence';
+import { Score, Standing } from '@tournament-manager/persistence';
 
 import { EurocupScoreCalculator, FinalsCalculator } from '@tournament-manager/scoring';
 
-function standing(percentage: number, isFailed = false, points = 0): Standing {
+/** A scoring system only ever ranks standings that have a score behind them. */
+type PlayedStanding = Standing & { score: Score };
+
+function standing(percentage: number, isFailed = false, points = 0): PlayedStanding {
   return {
     points,
     score: {
       percentage,
       isFailed,
     },
-  } as Standing;
+  } as PlayedStanding;
 }
 
 describe('EurocupScoreCalculator', () => {

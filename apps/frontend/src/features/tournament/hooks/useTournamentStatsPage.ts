@@ -42,21 +42,31 @@ export function useTournamentStatsPage(divisions: Division[]) {
     return divisions.flatMap((division) =>
       (division.phases ?? []).flatMap((phase) =>
         (phase.matches ?? []).flatMap((match) =>
-          (match.rounds ?? []).flatMap((round) =>
-            (round.standings ?? []).map((standing) => ({
-              id: `${match.id}-${round.id}-${standing.id}`,
-              playerId: standing.score.player.id,
-              playerName: standing.score.player.playerName,
-              divisionName: division.name,
-              phaseName: phase.name,
-              matchName: match.name,
-              songTitle: round.song.title,
-              songArtist: round.song.artist,
-              percentage: toNumber(standing.score.percentage),
-              points: toNumber(standing.points),
-              isFailed: standing.score.isFailed,
-            })),
-          ),
+          /* A hand-scored round has no song and no score, so it has nothing
+             to say in a table of songs a player ran. */
+          (match.rounds ?? []).flatMap((round) => {
+            const song = round.song;
+            if (!song) return [];
+
+            return (round.standings ?? []).flatMap((standing) => {
+              const score = standing.score;
+              if (!score) return [];
+
+              return [{
+                id: `${match.id}-${round.id}-${standing.id}`,
+                playerId: standing.player.id,
+                playerName: standing.player.playerName,
+                divisionName: division.name,
+                phaseName: phase.name,
+                matchName: match.name,
+                songTitle: song.title,
+                songArtist: song.artist,
+                percentage: toNumber(score.percentage),
+                points: toNumber(standing.points),
+                isFailed: score.isFailed,
+              }];
+            });
+          }),
         ),
       ),
     );

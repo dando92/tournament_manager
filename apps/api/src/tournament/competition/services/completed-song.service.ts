@@ -201,7 +201,7 @@ export class CompletedSongService {
         entrants: { participants: { player: true } },
         rounds: {
           song: true,
-          standings: { score: { player: true, song: true } },
+          standings: { player: true, score: { player: true, song: true } },
         },
       },
     });
@@ -220,11 +220,7 @@ export class CompletedSongService {
       )
       .find((match) => {
         const round = this.getTargetRound(match, songId);
-        return !round?.standings?.some(
-          (standing) =>
-            standing.score.player.id === playerId &&
-            standing.score.song.id === songId,
-        );
+        return !round?.standings?.some((standing) => standing.player.id === playerId);
       });
   }
 
@@ -244,7 +240,7 @@ export class CompletedSongService {
   }
 
   private getTargetRound(match: Match, songId: number): Round | undefined {
-    return match.rounds.find((round) => round.song.id === songId);
+    return match.rounds.find((round) => round.song?.id === songId);
   }
 
   private async addStanding(
@@ -254,6 +250,7 @@ export class CompletedSongService {
   ): Promise<void> {
     const standing = manager.getRepository(Standing).create({
       round,
+      player: score.player,
       score,
       points: 0,
     });
@@ -268,9 +265,7 @@ export class CompletedSongService {
   ): Promise<void> {
     const playerIds = this.getSinglesPlayerIds(match);
     const isComplete = playerIds.every((playerId) =>
-      round.standings.some(
-        (standing) => standing.score.player.id === playerId,
-      ),
+      round.standings.some((standing) => standing.player.id === playerId),
     );
     if (!isComplete) return;
 
@@ -280,7 +275,7 @@ export class CompletedSongService {
     if (!scoringSystem) {
       throw new Error(`Unknown scoring system ${match.scoringSystem}`);
     }
-    scoringSystem.recalc(round.standings);
+    scoringSystem.recalc(round.standings.filter((standing) => Boolean(standing.score)) as Array<Standing & { score: Score }>);
     await manager.getRepository(Standing).save(round.standings);
   }
 

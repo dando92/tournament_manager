@@ -13,39 +13,15 @@ export interface CreateMatchRequest {
   entrantIds: number[];
 }
 
-export interface AddSongToMatchRequest {
-  matchId: number;
-  group?: string;
-  level?: string;
+/**
+ * Where a round's song comes from. Empty means no song at all, which is the
+ * hand-scored round.
+ */
+export interface RoundSourceRequest {
   songId?: number;
   divisionId?: number;
-}
-
-export interface EditSongToMatchRequest {
-  matchId: number;
-  songId: number;
   group?: string;
   level?: string;
-  newSongId?: number;
-  divisionId?: number;
-}
-
-export interface AddStandingToMatchRequest {
-  scoreId?: number;
-  playerId: number;
-  songId: number;
-  percentage: number;
-  score: number;
-  isFailed: boolean;
-}
-
-export interface MatchPlayerPointsRequest {
-  playerId: number;
-  points: number;
-}
-
-export interface CommitMatchResultRequest {
-  playerPoints?: MatchPlayerPointsRequest[];
 }
 
 /** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */

@@ -80,9 +80,7 @@ export default function MatchList({
       highlight={highlight}
       onHighlight={onHighlight}
       enablePathRowHighlight={enablePathRowHighlight}
-      onDeleteStanding={(playerId, songId) =>
-        actions.deleteStandingsForPlayerFromMatch(match.id, playerId, songId)
-      }
+      onDeleteStanding={actions.deleteStanding}
       onMatchUpdated={refreshMatches}
       onEditMatchNotes={actions.editMatchNotes}
       onRenameMatch={actions.renameMatch}
@@ -90,26 +88,16 @@ export default function MatchList({
       onAddPlayersToMatch={(entrantIds) =>
         actions.updateMatchEntrants(match.id, entrantIds)
       }
-      onAddSongToMatchByRoll={(group, level) =>
-        actions.addSongToMatchByRoll(match.id, division.id, group, level)
+      onAddRounds={(sources) => sources.forEach((source) => actions.addRound(match.id, source))}
+      onReplaceRoundSong={actions.replaceRoundSong}
+      onDeleteRound={actions.deleteRound}
+      onAddHandScoredRound={() => actions.addRound(match.id)}
+      onChangePoints={actions.savePoints}
+      onAddStandingToMatch={(playerId, roundId, percentage, _score, isFailed, scoreId) =>
+        actions.saveScore(playerId, roundId, { percentage, isFailed, scoreId })
       }
-      onAddSongToMatchBySongId={(songId) =>
-        actions.addSongToMatchBySongId(match.id, songId)
-      }
-      onEditSongToMatchByRoll={(group, level, editSongId) =>
-        actions.editSongToMatchByRoll(match.id, editSongId, division.id, group, level)
-      }
-      onEditSongToMatchBySongId={(songId, editSongId) =>
-        actions.editSongToMatchBySongId(match.id, editSongId, songId)
-      }
-      onDeleteSongFromMatch={(songId) =>
-        actions.deleteSongFromMatch(match.id, songId)
-      }
-      onAddStandingToMatch={(playerId, songId, pct, sc, fail, scoreId) =>
-        actions.addStandingToMatch(match.id, playerId, songId, pct, sc, fail, scoreId)
-      }
-      onEditStanding={(playerId, songId, pct, sc, fail, scoreId) =>
-        actions.editStandingFromMatch(match.id, songId, playerId, pct, sc, fail, scoreId)
+      onEditStanding={(playerId, roundId, percentage, _score, isFailed, scoreId) =>
+        actions.saveScore(playerId, roundId, { percentage, isFailed, scoreId })
       }
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
       onUpdateMatchActive={actions.updateMatchActive}

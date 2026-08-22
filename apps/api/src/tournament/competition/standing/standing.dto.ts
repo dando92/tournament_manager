@@ -1,61 +1,38 @@
 import {
+    IsBoolean,
     IsNotEmpty,
     IsNumber,
     IsOptional,
+    Min,
 } from 'class-validator';
-import { Score, Round } from '@tournament-manager/persistence';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateStandingDto {
-    @ApiProperty({
-        example: 2,
-        description: 'ID of the score',
-        required: true,
-    })
+/** A played result on a round that has a song. */
+export class UpsertScoreDto {
+    @ApiProperty({ description: 'EX score percentage', example: 92.5 })
     @IsNotEmpty()
     @IsNumber()
-    scoreId: number;
+    percentage: number;
+
+    @ApiProperty({ description: 'Whether the run failed', example: false })
+    @IsNotEmpty()
+    @IsBoolean()
+    isFailed: boolean;
 
     @ApiProperty({
-        example: 2,
-        description: 'ID of the round',
-        required: true,
+        description: 'An existing score to attach instead of creating one',
+        required: false,
     })
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
-    roundId: number;
-
-    @ApiProperty({ description: 'The score value', example: 1, required: true })
-    @IsNotEmpty()
-    @IsNumber()
-    points: number;
+    scoreId?: number;
 }
 
-export class UpdateStandingDto {
-    @ApiProperty({ description: 'The score value', example: 1, required: true })
-    @IsOptional()
+/** A stated result on a hand-scored round, which has no song behind it. */
+export class UpsertPointsDto {
+    @ApiProperty({ description: 'Points assigned to the player', example: 3 })
+    @IsNotEmpty()
     @IsNumber()
+    @Min(0)
     points: number;
-
-    @ApiProperty({
-        example: 2,
-        description: 'ID of the score',
-        required: false,
-    })
-    @IsOptional()
-    @IsNumber()
-    scoreId: number;
-
-    score?: Score;
-
-    @ApiProperty({
-        example: 2,
-        description: 'ID of the round',
-        required: false,
-    })
-    @IsOptional()
-    @IsNumber()
-    roundId: number;
-
-    round?: Round;
 }

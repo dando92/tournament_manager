@@ -1,4 +1,5 @@
 import { Match, MatchAdvancementRuleInput, MatchHighlight } from "@/features/match/types/Match";
+import { RoundSourceRequest } from "@/features/match/types/match-requests";
 import { Division } from "@/features/division/types/Division";
 import AddEditSongToMatchModal from "@/features/match/modals/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/modals/AddPlayersToMatchModal";
@@ -10,7 +11,6 @@ import MatchEmptySlots from "@/features/match/components/MatchEmptySlots";
 import MatchTable from "@/features/match/components/MatchTable";
 import AdvancementRulesEditor from "@/features/advancement/components/AdvancementRulesEditor";
 import { getMatchCommitState } from "@/features/match/utils/matchStatus";
-import { useManualScoring } from "@/features/match/hooks/useManualScoring";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
 
 type MatchCardProps = {
@@ -26,14 +26,15 @@ type MatchCardProps = {
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
-  onAddSongToMatchByRoll: (group: string, level: string) => void;
-  onAddSongToMatchBySongId: (songId: number) => void;
-  onEditSongToMatchByRoll: (group: string, level: string, editSongId: number) => void;
-  onEditSongToMatchBySongId: (songId: number, editSongId: number) => void;
-  onDeleteSongFromMatch: (songId: number) => void;
+  onAddRounds: (sources: RoundSourceRequest[]) => void;
+  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => void;
+  onDeleteRound: (roundId: number) => void;
+  /** Adds the round with no song, the one whose points are written by hand. */
+  onAddHandScoredRound: () => Promise<void> | void;
+  onChangePoints: (playerId: number, roundId: number, points: number) => void;
   onAddStandingToMatch: (
     playerId: number,
-    songId: number,
+    roundId: number,
     percentage: number,
     score: number,
     isFailed: boolean,
@@ -43,13 +44,13 @@ type MatchCardProps = {
   onRenameMatch?: (matchId: number, name: string) => void;
   onEditStanding: (
     playerId: number,
-    songId: number,
+    roundId: number,
     percentage: number,
     score: number,
     isFailed: boolean,
     scoreId?: number,
   ) => void;
-  onDeleteStanding: (playerId: number, songId: number) => void;
+  onDeleteStanding: (playerId: number, roundId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
@@ -59,6 +60,7 @@ type StandingModalState = {
   open: boolean;
   mode: "add" | "edit";
   playerId: number;
+  roundId: number;
   songId: number;
   playerName: string;
   songTitle: string;
@@ -72,6 +74,7 @@ const closedModal: StandingModalState = {
   open: false,
   mode: "add",
   playerId: 0,
+  roundId: 0,
   songId: 0,
   playerName: "",
   songTitle: "",
@@ -90,11 +93,11 @@ export default function MatchCard({
   onMatchUpdated,
   onDeleteMatch,
   onAddPlayersToMatch,
-  onAddSongToMatchByRoll,
-  onAddSongToMatchBySongId,
-  onEditSongToMatchByRoll,
-  onEditSongToMatchBySongId,
-  onDeleteSongFromMatch,
+  onAddRounds,
+  onReplaceRoundSong,
+  onDeleteRound,
+  onAddHandScoredRound,
+  onChangePoints,
   onAddStandingToMatch,
   onEditMatchNotes,
   onRenameMatch,
@@ -106,20 +109,19 @@ export default function MatchCard({
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
   const [addPlayersToMatchModalOpen, setAddPlayersToMatchModalOpen] = useState(false);
-  const [editSongId, setEditSongId] = useState<number | null>(null);
+  const [editRoundId, setEditRoundId] = useState<number | null>(null);
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
-  const manualScoring = useManualScoring(match.id);
-  const manualPoints = manualScoring.enabled ? manualScoring.points : {};
-
   const cardRef = useRef<HTMLDivElement>(null);
 
+  /* Hand scoring is no longer a switch this card remembers: it is the round
+     with no song, which everyone looking at the match can see. */
+  const handScoredRound = match.rounds.find((round) => round.song === null) ?? null;
   const isHighlighted = match.id === highlight.matchId;
-  const commitState = getMatchCommitState(match, manualPoints);
-  const hasManualDraftPoints = Object.values(manualPoints).some((points) => points > 0);
+  const commitState = getMatchCommitState(match);
   const matchPlayers = entrantPlayers(match.entrants);
   const hasIncomingRoutes = (match.advancementRules ?? []).some(
     (rule) => rule.targetKind === "match" && rule.targetId === match.id,
@@ -132,8 +134,7 @@ export default function MatchCard({
     !editMode &&
     match.rounds.length === 0 &&
     matchPlayers.length === 0 &&
-    !hasIncomingRoutes &&
-    !manualScoring.enabled;
+    !hasIncomingRoutes;
 
   function enterEditMode() {
     setPendingAdvancementRules(
@@ -170,22 +171,34 @@ export default function MatchCard({
   }
 
   function openAddSong() {
-    if (match.matchResult) return;
-    if (match.rounds.length === 0 && hasManualDraftPoints) {
-      const confirmed = window.confirm("Manual points will be reset before adding songs. Continue?");
-      if (!confirmed) return;
-      manualScoring.clear();
-    }
+    if (match.matchResult || handScoredRound) return;
     setAddSongToMatchModalOpen(true);
   }
 
-  function toggleManualScoring() {
-    if (!controls) return;
-    if (manualScoring.enabled && hasManualDraftPoints) {
-      const confirmed = window.confirm("Points assigned by hand will be discarded. Continue?");
-      if (!confirmed) return;
+  /**
+   * Turning hand scoring on and off is adding and removing its round. A match
+   * is scored one way or the other, so the action is refused while songs are
+   * in — the same rule the API enforces.
+   */
+  async function toggleHandScoring() {
+    if (!controls || match.matchResult) return;
+
+    if (handScoredRound) {
+      if ((handScoredRound.standings ?? []).some((standing) => standing.points > 0)) {
+        const confirmed = window.confirm("Points assigned by hand will be deleted. Continue?");
+        if (!confirmed) return;
+      }
+      onDeleteRound(handScoredRound.id);
+      return;
     }
-    manualScoring.setEnabled(!manualScoring.enabled);
+
+    if (match.rounds.length > 0) return;
+    await onAddHandScoredRound();
+  }
+
+  /** The standing modal offers the scores a player already has on that song. */
+  function songIdOfRound(roundId: number): number {
+    return match.rounds.find((round) => round.id === roundId)?.song?.id ?? 0;
   }
 
   async function toggleActive() {
@@ -196,7 +209,6 @@ export default function MatchCard({
   async function reopenMatch() {
     if (!controls || commitState !== "Completed") return;
     await onReopenMatchResult?.(match.id);
-    manualScoring.clear();
   }
 
   return (
@@ -209,18 +221,15 @@ export default function MatchCard({
       }`}
     >
       <AddEditSongToMatchModal
-        songId={editSongId}
-        matchId={match.id}
+        editingRoundId={editRoundId}
         divisionId={division.id}
         tournamentId={tournamentId}
         open={addSongToMatchModalOpen}
-        onAddSongToMatchByRoll={(_, __, group, level) => onAddSongToMatchByRoll(group, level)}
-        onAddSongToMatchBySongId={(_, __, songId) => onAddSongToMatchBySongId(songId)}
-        onEditSongToMatchByRoll={(_, __, group, level, editSongId) => onEditSongToMatchByRoll(group, level, editSongId)}
-        onEditSongToMatchBySongId={(_, __, songId, editSongId) => onEditSongToMatchBySongId(songId, editSongId)}
+        onAddRounds={onAddRounds}
+        onReplaceRoundSong={onReplaceRoundSong}
         onClose={() => {
           setAddSongToMatchModalOpen(false);
-          setEditSongId(null);
+          setEditRoundId(null);
         }}
       />
       <AddPlayersToMatchModal
@@ -233,11 +242,11 @@ export default function MatchCard({
       <StandingModal
         {...standingModal}
         onClose={() => setStandingModal(closedModal)}
-        onSave={(playerId, songId, pct, score, isFailed, scoreId) => {
+        onSave={(playerId, roundId, pct, score, isFailed, scoreId) => {
           if (standingModal.mode === "add") {
-            onAddStandingToMatch(playerId, songId, pct, score, isFailed, scoreId);
+            onAddStandingToMatch(playerId, roundId, pct, score, isFailed, scoreId);
           } else {
-            onEditStanding(playerId, songId, pct, score, isFailed, scoreId);
+            onEditStanding(playerId, roundId, pct, score, isFailed, scoreId);
           }
         }}
       />
@@ -253,9 +262,10 @@ export default function MatchCard({
         controls={controls}
         commitState={commitState}
         showAddActions={!showEmptySlots}
-        canAddSong={matchPlayers.length > 0}
-        manualScoringEnabled={manualScoring.enabled}
-        onToggleManualScoring={toggleManualScoring}
+        canAddSong={matchPlayers.length > 0 && handScoredRound === null}
+        handScored={handScoredRound !== null}
+        canToggleHandScoring={handScoredRound !== null || match.rounds.length === 0}
+        onToggleHandScoring={toggleHandScoring}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}
@@ -297,7 +307,7 @@ export default function MatchCard({
           highlight={highlight}
           onHighlight={onHighlight}
           enablePathRowHighlight={enablePathRowHighlight}
-          onDeleteSong={onDeleteSongFromMatch}
+          onDeleteRound={onDeleteRound}
           onDeletePlayer={(entrantId) =>
             onAddPlayersToMatch(
               (match.entrants ?? [])
@@ -305,25 +315,15 @@ export default function MatchCard({
                 .map((entrant) => entrant.id),
             )
           }
-          onOpenAddStanding={(playerId, songId, playerName, songTitle) =>
-            setStandingModal({ open: true, mode: "add", playerId, songId, playerName, songTitle })
+          onOpenAddStanding={(playerId, roundId, playerName, songTitle) =>
+            setStandingModal({ open: true, mode: "add", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle })
           }
-          onOpenEditStanding={(playerId, songId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
-            setStandingModal({ open: true, mode: "edit", playerId, songId, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
+          onOpenEditStanding={(playerId, roundId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
+            setStandingModal({ open: true, mode: "edit", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
           }
           onDeleteStanding={onDeleteStanding}
-          manualScoringEnabled={manualScoring.enabled}
-          manualPoints={manualPoints}
-          onManualPointsChange={manualScoring.setPoints}
+          onChangePoints={onChangePoints}
         />
-      )}
-
-      {manualScoring.enabled && !match.matchResult && !editMode && (
-        /* Said plainly, because the draft looks exactly like saved data and is
-           not: it lives on this device until a commit sends it. */
-        <p className="mt-2 text-xs text-ui-text-mute">
-          Scored by hand. These points stay on this device until you commit the match — nobody else sees them yet.
-        </p>
       )}
     </div>
   );

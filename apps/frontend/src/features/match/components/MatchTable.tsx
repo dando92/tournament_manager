@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/types/Match";
 import { Division } from "@/features/division/types/Division";
 import { entrantPlayers } from "@/features/entrant/types/Entrant";
@@ -20,12 +18,12 @@ type MatchTableProps = {
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   enablePathRowHighlight?: boolean;
-  onDeleteSong: (songId: number) => void;
+  onDeleteRound: (roundId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
-  onOpenAddStanding: (playerId: number, songId: number, playerName: string, songTitle: string) => void;
+  onOpenAddStanding: (playerId: number, roundId: number, playerName: string, songTitle: string) => void;
   onOpenEditStanding: (
     playerId: number,
-    songId: number,
+    roundId: number,
     playerName: string,
     songTitle: string,
     scoreId: number,
@@ -33,10 +31,9 @@ type MatchTableProps = {
     score: number,
     isFailed: boolean,
   ) => void;
-  onDeleteStanding: (playerId: number, songId: number) => void;
-  manualScoringEnabled: boolean;
-  manualPoints: Record<number, number>;
-  onManualPointsChange: (playerId: number, points: number) => void;
+  onDeleteStanding: (playerId: number, roundId: number) => void;
+  /** Writes the points of the hand-scored round, which has no score to enter. */
+  onChangePoints: (playerId: number, roundId: number, points: number) => void;
 };
 
 export default function MatchTable({
@@ -47,14 +44,12 @@ export default function MatchTable({
   highlight,
   onHighlight,
   enablePathRowHighlight = false,
-  onDeleteSong,
+  onDeleteRound,
   onDeletePlayer,
   onOpenAddStanding,
   onOpenEditStanding,
   onDeleteStanding,
-  manualScoringEnabled,
-  manualPoints,
-  onManualPointsChange,
+  onChangePoints,
 }: MatchTableProps) {
   const [tooltip, setTooltip] = useState<{ roundId: number; title: string; x: number; y: number } | null>(null);
 
@@ -69,11 +64,13 @@ export default function MatchTable({
     };
   }, [tooltip]);
 
+  /* Only played standings appear here: a hand-scored one has no score to show,
+     and its cell reads the points off the round instead. */
   const scoreTable: Record<string, ScoreEntry> = {};
   match.rounds.forEach((round) => {
     (round.standings ?? []).forEach((standing) => {
-      const key = `${standing.score.player.id}-${round.song.id}`;
-      scoreTable[key] = {
+      if (!standing.score) return;
+      scoreTable[`${standing.player.id}-${round.id}`] = {
         scoreId: standing.score.id,
         score: standing.points,
         percentage: Number(standing.score.percentage),
@@ -84,7 +81,7 @@ export default function MatchTable({
 
   const getTotalPoints = (playerId: number) =>
     match.rounds
-      .map((round) => (round.standings ?? []).find((s) => s.score.player.id === playerId))
+      .map((round) => (round.standings ?? []).find((s) => s.player.id === playerId))
       .reduce((acc, standing) => acc + (standing?.points ?? 0), 0);
 
   const matchPlayers = entrantPlayers(match.entrants);
@@ -122,9 +119,6 @@ export default function MatchTable({
   const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
   const canEditMatchContent = controls && !match.matchResult;
 
-  /* With no songs there is nothing to total, so the points column belongs to
-     hand scoring and to a committed result — not to every empty match. */
-  const showManualPointsColumn = match.rounds.length === 0 && (manualScoringEnabled || Boolean(match.matchResult));
   const totalCols = Math.max(3, match.rounds.length + 3);
   const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
   const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Pool ${phaseGroupId}`;
@@ -150,9 +144,6 @@ export default function MatchTable({
               <tr className="bg-ui-raised text-[10px] uppercase tracking-wider text-ui-text-mute">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold">Player</th>
-                {showManualPointsColumn && (
-                  <th className="w-[160px] px-3 py-2.5 text-center font-semibold">Pts</th>
-                )}
               </tr>
             </thead>
           )}
@@ -162,40 +153,48 @@ export default function MatchTable({
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold w-[120px] sm:w-[160px]">Player</th>
                 {match.rounds.map((round, idx) => {
-                  const roundHasStandings = (round.standings ?? []).length > 0;
+                  const song = round.song;
+                  /* A hand-scored round holds nothing while every point is
+                     zero, so it can still be taken away. */
+                  const roundHasStandings = song
+                    ? (round.standings ?? []).length > 0
+                    : (round.standings ?? []).some((standing) => standing.points > 0);
+                  const title = song ? song.title : "By hand";
                   return (
-                    <th key={round.song.id} className="px-1 sm:px-3 py-2.5 text-center font-semibold min-w-[70px] sm:min-w-[130px]">
+                    <th key={round.id} className="px-1 sm:px-3 py-2.5 text-center font-semibold min-w-[70px] sm:min-w-[130px]">
                       <div className="flex items-center justify-center gap-1.5">
                         <div className="sm:hidden">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (tooltip?.roundId === round.song.id) {
+                              if (tooltip?.roundId === round.id) {
                                 setTooltip(null);
                               } else {
                                 const rect = e.currentTarget.getBoundingClientRect();
-                                setTooltip({ roundId: round.song.id, title: round.song.title, x: rect.left + rect.width / 2, y: rect.top - 8 });
+                                setTooltip({ roundId: round.id, title, x: rect.left + rect.width / 2, y: rect.top - 8 });
                               }
                             }}
                             className="font-semibold px-1"
                           >
-                            {idx + 1}
+                            {song ? idx + 1 : "\u2014"}
                           </button>
                         </div>
-                        <span className="hidden sm:inline truncate max-w-[110px]" title={round.song.title}>
-                          {round.song.title}
+                        <span className="hidden sm:inline truncate max-w-[110px]" title={title}>
+                          {title}
                         </span>
                         {canEditMatchContent && !roundHasStandings && (
-                          <>
-                            <DeleteConfirmButton
-                              onConfirm={() => onDeleteSong(round.song.id)}
-                              title="Remove song"
-                              className="shrink-0"
-                              iconClassName="text-xs"
-                              confirmMessage={`Remove song "${round.song.title}" from this match?`}
-                              confirmText="Remove"
-                            />
-                          </>
+                          <DeleteConfirmButton
+                            onConfirm={() => onDeleteRound(round.id)}
+                            title={song ? "Remove song" : "Remove hand scoring"}
+                            className="shrink-0"
+                            iconClassName="text-xs"
+                            confirmMessage={
+                              song
+                                ? `Remove song "${song.title}" from this match?`
+                                : "Stop scoring this match by hand?"
+                            }
+                            confirmText="Remove"
+                          />
                         )}
                       </div>
                     </th>
@@ -215,7 +214,7 @@ export default function MatchTable({
               </tr>
             )}
 
-            {match.rounds.length === 0 && !showManualPointsColumn && sortedPlayers.map((player) => (
+            {match.rounds.length === 0 && sortedPlayers.map((player) => (
               <tr key={player.id} className="border-t border-ui-border odd:bg-ui-surface even:bg-ui-raised">
                 <td className="w-8 px-2 py-2 text-center" />
                 <td className="px-3 py-2">
@@ -223,45 +222,6 @@ export default function MatchTable({
                 </td>
               </tr>
             ))}
-
-            {match.rounds.length === 0 && showManualPointsColumn && sortedPlayers.map((player) => {
-              const committedPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
-              const points = committedPoints ?? manualPoints[player.id] ?? 0;
-              return (
-                <tr key={player.id} className="border-t border-ui-border odd:bg-ui-surface even:bg-ui-raised">
-                  <td className="px-2 py-2 text-center w-8" />
-                  <td className="px-3 py-2">
-                    <span className="font-medium text-ui-text">{player.playerName}</span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {canEditMatchContent ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          type="button"
-                          disabled={points <= 0}
-                          onClick={() => onManualPointsChange(player.id, Math.max(0, points - 1))}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected disabled:cursor-not-allowed disabled:opacity-40"
-                          title="Decrease points"
-                        >
-                          <FontAwesomeIcon icon={faMinus} />
-                        </button>
-                        <span className="w-8 text-center font-bold text-ui-text-soft">{points}</span>
-                        <button
-                          type="button"
-                          onClick={() => onManualPointsChange(player.id, points + 1)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected"
-                          title="Increase points"
-                        >
-                          <FontAwesomeIcon icon={faPlus} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="text-center font-bold text-ui-text-soft">{points}</div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
 
             {sourceKeys.flatMap((sourceKey) => {
               const [sourceKind, rawSourceId] = sourceKey.split(":");
@@ -330,6 +290,7 @@ export default function MatchTable({
                     onOpenAddStanding={onOpenAddStanding}
                     onOpenEditStanding={onOpenEditStanding}
                     onDeleteStanding={onDeleteStanding}
+                    onChangePoints={onChangePoints}
                   />
                 );
               })()

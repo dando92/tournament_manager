@@ -15,6 +15,9 @@ type StandingModalProps = {
   playerName: string;
   songTitle: string;
   playerId: number;
+  /** The round the standing belongs to: the address the save writes to. */
+  roundId: number;
+  /** The song of that round, used to offer scores the player already has. */
   songId: number;
   initialPercentage?: number;
   initialScore?: number;
@@ -23,7 +26,7 @@ type StandingModalProps = {
   onClose: () => void;
   onSave: (
     playerId: number,
-    songId: number,
+    roundId: number,
     percentage: number,
     score: number,
     isFailed: boolean,
@@ -37,6 +40,7 @@ export default function StandingModal({
   playerName,
   songTitle,
   playerId,
+  roundId,
   songId,
   initialPercentage,
   initialScoreId,
@@ -117,7 +121,7 @@ export default function StandingModal({
 
     onSave(
       playerId,
-      songId,
+      roundId,
       parseFloat(normalizedPercentage),
       0,
       isFailed,

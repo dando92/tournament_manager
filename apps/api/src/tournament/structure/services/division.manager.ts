@@ -74,7 +74,7 @@ export class DivisionManager {
             for (const match of phaseGroup.matches ?? []) {
                 for (const round of match.rounds ?? []) {
                     for (const standing of round.standings ?? []) {
-                        const player = standing.score.player;
+                        const player = standing.player;
                         const current = playerTotals.get(player.id) ?? {
                             id: player.id,
                             playerName: player.playerName,
@@ -83,7 +83,10 @@ export class DivisionManager {
                         };
 
                         current.points += standing.points ?? 0;
-                        current.songsPlayed += 1;
+                        /* A hand-scored round awards points without a song
+                           having been played, so it counts for one and not the
+                           other. */
+                        if (round.song) current.songsPlayed += 1;
                         playerTotals.set(player.id, current);
                     }
                 }

@@ -1,6 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { CreateRoundDto } from '@tournament/dtos';
-import { CommitMatchResultDto, CommitMatchResultResponseDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
+import { BadRequestException, Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { CreateRoundDto, RoundSourceDto } from '@tournament/dtos';
+import { CommitMatchResultResponseDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/dtos/match.dto';
 import { Match } from '@tournament-manager/persistence';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
@@ -70,7 +70,7 @@ export class MatchManager {
 
         for (const round of match.rounds ?? []) {
             for (const standing of round.standings ?? []) {
-                if (playerIdsToRemove.includes(standing.score.player.id)) {
+                if (playerIdsToRemove.includes(standing.player.id)) {
                     await this.standingService.delete(standing.id);
                 }
             }
@@ -97,8 +97,8 @@ export class MatchManager {
         return await this.GetMatchForView(matchId);
     }
 
-    async CommitMatchResult(matchId: number, dto: CommitMatchResultDto): Promise<CommitMatchResultResponseDto> {
-        const outcome = await this.matchWorkflowManager.CommitMatchResult(matchId, dto);
+    async CommitMatchResult(matchId: number): Promise<CommitMatchResultResponseDto> {
+        const outcome = await this.matchWorkflowManager.CommitMatchResult(matchId);
 
         return {
             match: await this.GetMatchForView(matchId),
@@ -111,55 +111,89 @@ export class MatchManager {
         return await this.GetMatchForView(matchId);
     }
 
-    public async AddSongsToMatchById(matchId: number, songIds: number[]): Promise<void> {
+    /**
+     * Adds one round to a match.
+     *
+     * A song makes it a played round, a roll picks the song, and nothing at all
+     * makes it the hand-scored one. The database refuses a second hand-scored
+     * round and a repeated song, so those rules do not have to be re-checked
+     * here.
+     */
+    public async AddRound(matchId: number, dto: RoundSourceDto): Promise<MatchListDto | null> {
         const match = await this.GetMatch(matchId);
-
-        if (!match) {
-            return;
-        }
+        if (!match) return null;
         this.matchWorkflowManager.assertEditable(match);
 
-        await this.AddSongsToMatch(match, songIds);
+        /* A match is scored one way or the other. The model allows both kinds of
+           round side by side and the commit would sum them, but mixing them is
+           deliberately not offered yet: see .ai/ScoringRefactoring.md. */
+        const wantsSong = Boolean(dto.songId || dto.level);
+        const handScored = (match.rounds ?? []).some((round) => !round.song);
+
+        if (wantsSong && handScored) {
+            throw new BadRequestException(`Match ${match.id} is scored by hand; remove hand scoring before adding songs`);
+        }
+        if (!wantsSong && (match.rounds ?? []).length > 0) {
+            throw new BadRequestException(`Match ${match.id} already has songs; remove them before scoring it by hand`);
+        }
+
+        if (dto.songId) {
+            await this.AddSongsToMatch(match, [dto.songId]);
+        } else if (dto.level) {
+            await this.AddRandomSongsToMatch(match, dto.tournamentId, dto.divisionId, dto.group, dto.level);
+        } else {
+            await this.AddRoundToMatch(match, null);
+            await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
+        }
+
+        return await this.GetMatchForView(matchId);
     }
 
-    public async AddRandomSongsToMatchById(matchId: number, tournamentId: number, divisionId: number, group: string, levels: string): Promise<void> {
-        const match = await this.GetMatch(matchId);
+    /**
+     * Removes a round, and with it whatever was scored in it.
+     *
+     * Scores are not thrown away on the way past: a round played on a song
+     * keeps them, and asking to drop one that still holds them is refused in
+     * words. The hand-scored round is the exception, because deleting it is how
+     * the interface turns hand scoring off, and it asks first.
+     *
+     * Nothing here answers silently. Refusing without saying so is what leaves
+     * a card showing a round the server has already made up its mind about.
+     */
+    public async RemoveRound(roundId: number): Promise<MatchListDto | null> {
+        const round = await this.roundService.findOneWithMatch(roundId);
+        if (!round) throw new NotFoundException(`Round with id ${roundId} not found`);
 
-        if (!match) {
-            return;
-        }
+        const match = await this.GetMatch(round.match.id);
+        if (!match) throw new NotFoundException(`Match with id ${round.match.id} not found`);
         this.matchWorkflowManager.assertEditable(match);
 
-        await this.AddRandomSongsToMatch(match, tournamentId, divisionId, group, levels);
-    }
-
-    public async RemoveSongFromMatchById(matchId: number, songId: number): Promise<void> {
-        const match = await this.GetMatch(matchId);
-
-        if (!match) {
-            return;
-        }
-        this.matchWorkflowManager.assertEditable(match);
-
-        await this.RemoveSongFromMatch(match, songId);
-    }
-
-    private async RemoveSongFromMatch(match: Match, songId: number): Promise<void> {
-        this.matchWorkflowManager.assertEditable(match);
-        const round = match.rounds.find(round => round.song.id == songId);
-
-        if (!round) {
-            return;
+        const loaded = match.rounds.find((candidate) => candidate.id === roundId);
+        const scored = (loaded?.standings?.length ?? 0) > 0;
+        if (scored && loaded?.song) {
+            throw new BadRequestException(
+                `Round ${roundId} still holds scores for "${loaded.song.title}"; delete them before removing the song`,
+            );
         }
 
-        //TODO: how to request "are you sure???" when standings are filled
-        if (round.standings.length > 0) {
-            return;
-        }
-
-        await this.roundService.delete(round.id);
-        match.rounds = match.rounds.filter((candidate) => candidate.id !== round.id);
+        await this.roundService.delete(roundId);
         await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
+
+        return await this.GetMatchForView(match.id);
+    }
+
+    /**
+     * Swapping the song of a round drops the round and creates another, because
+     * the standings under it were scored on the song that is leaving.
+     */
+    public async ReplaceRoundSong(roundId: number, dto: RoundSourceDto): Promise<MatchListDto | null> {
+        const round = await this.roundService.findOneWithMatch(roundId);
+        if (!round) throw new NotFoundException(`Round with id ${roundId} not found`);
+
+        const matchId = round.match.id;
+        await this.RemoveRound(roundId);
+
+        return await this.AddRound(matchId, dto);
     }
 
     public async AddRandomSongsToMatch(match: Match, tournamentId: number, divisionId: number, group: string, levels: string): Promise<Match> {
@@ -175,22 +209,25 @@ export class MatchManager {
             match.rounds = [];
         }
         for (const songId of songIds) {
-            await this.AddSongToMatch(match, songId);
+            await this.AddRoundToMatch(match, songId);
         }
 
         await this.uiUpdateGateway.emitMatchUpdateByMatchId(match.id);
         return match;
     }
 
-    private async AddSongToMatch(match: Match, songId: number): Promise<void> {
+    private async AddRoundToMatch(match: Match, songId: number | null): Promise<void> {
         const round = await this.roundService.create(this.GetRoundDto(match, songId));
 
         delete round.match;
 
+        if (!match.rounds) {
+            match.rounds = [];
+        }
         match.rounds.push(round);
     }
 
-    private GetRoundDto(match: Match, songId: number): CreateRoundDto {
+    private GetRoundDto(match: Match, songId: number | null): CreateRoundDto {
         const dto = new CreateRoundDto();
         dto.matchId = match.id;
         dto.songId = songId;
@@ -228,26 +265,26 @@ export class MatchManager {
             })),
             rounds: (match.rounds ?? []).map((round) => ({
                 id: round.id,
-                song: {
-                    id: round.song.id,
-                    title: round.song.title,
-                },
+                song: round.song
+                    ? {
+                        id: round.song.id,
+                        title: round.song.title,
+                    }
+                    : null,
                 standings: (round.standings ?? []).map((standing) => ({
                     id: standing.id,
                     points: standing.points,
-                    score: {
-                        id: standing.score.id,
-                        percentage: standing.score.percentage,
-                        isFailed: standing.score.isFailed,
-                        player: {
-                            id: standing.score.player.id,
-                            playerName: standing.score.player.playerName,
-                        },
-                        song: {
-                            id: round.song.id,
-                            title: round.song.title,
-                        },
+                    player: {
+                        id: standing.player.id,
+                        playerName: standing.player.playerName,
                     },
+                    score: standing.score
+                        ? {
+                            id: standing.score.id,
+                            percentage: standing.score.percentage,
+                            isFailed: standing.score.isFailed,
+                        }
+                        : null,
                 })),
             })),
             advancementRules: advancementRules.map((rule) => ({
