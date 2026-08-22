@@ -1,5 +1,4 @@
-import { Standing } from "@/features/match/types/Standing";
-import { Song } from "@/features/song/types/Song";
+import type { MatchRoundDto } from "@tournament-manager/contracts";
 
 /**
  * One unit a match is scored in.
@@ -8,12 +7,8 @@ import { Song } from "@/features/song/types/Song";
  * hand-scored round: its standings carry points somebody wrote. A match holds
  * at most one of those.
  */
-export interface Round {
-  id: number;
-  standings: Standing[];
-  song: Song | null;
-}
+export type { MatchRoundDto as Round };
 
-export function isHandScored(round: Round): boolean {
+export function isHandScored(round: MatchRoundDto): boolean {
   return round.song === null;
 }

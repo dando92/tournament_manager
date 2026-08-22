@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import axios from "axios";
+import type { MyTournamentRolesDto } from "@tournament-manager/contracts";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
 
 interface PermissionState {
@@ -25,13 +26,6 @@ const EMPTY_STATE: PermissionState = {
   isLoaded: false,
 };
 
-type MyTournamentRolesResponse = {
-  isAdmin: boolean;
-  canCreateTournament: boolean;
-  ownedTournamentIds: number[];
-  staffTournamentIds: number[];
-};
-
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { state: authState } = useAuthContext();
   const [permissions, setPermissions] = useState<PermissionState>(EMPTY_STATE);
@@ -55,7 +49,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
     setPermissions((current) => ({ ...current, isLoaded: false }));
     try {
-      const { data } = await axios.get<MyTournamentRolesResponse>("tournaments/my-roles");
+      const { data } = await axios.get<MyTournamentRolesDto>("tournaments/my-roles");
       setPermissions({
         isAdmin: data.isAdmin,
         canCreateTournament: data.canCreateTournament,

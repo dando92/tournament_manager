@@ -72,7 +72,8 @@ export type MatchDto = {
 /** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */
 export type StartggReportStatus = 'reported' | 'skipped' | 'failed';
 
+/** A commit answers with the match it committed, and with what start.gg made of it. */
 export type CommitMatchResultResponseDto = {
-    match: MatchDto | null;
+    match: MatchDto;
     startggReport: StartggReportStatus;
 };

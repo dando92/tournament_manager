@@ -1,7 +1,1 @@
-export interface Song {
-  id: number;
-  title: string;
-  artist?: string;
-  difficulty: number;
-  group: string;
-}
+export type { SongDto as Song } from "@tournament-manager/contracts";

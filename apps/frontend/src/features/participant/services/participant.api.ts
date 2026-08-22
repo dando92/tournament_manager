@@ -1,12 +1,8 @@
 import axios from "axios";
+import type { ParticipantImportPreviewRowDto } from "@tournament-manager/contracts";
 import { Participant } from "@/features/entrant/types/Entrant";
-import { Player } from "@/features/player/types/Player";
 
-export type ParticipantImportPreviewEntry = {
-  name: string;
-  matchedPlayer: Player | null;
-  alreadyParticipant: boolean;
-};
+export type ParticipantImportPreviewEntry = ParticipantImportPreviewRowDto;
 
 export async function listParticipants(tournamentId: number): Promise<Participant[]> {
   const response = await axios.get<Participant[]>(`tournaments/${tournamentId}/participants`);

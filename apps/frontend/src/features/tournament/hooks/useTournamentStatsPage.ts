@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Division } from "@/features/division/types/Division";
+import { TournamentStatsDivision } from "@/features/tournament/types/TournamentStats";
 
 export type PlayerScoreRow = {
   id: string;
@@ -34,7 +34,7 @@ export function scoreBadgeClass(percentage: number, isFailed: boolean): string {
   return "bg-score-base/10 text-score-base border-score-base/25";
 }
 
-export function useTournamentStatsPage(divisions: Division[]) {
+export function useTournamentStatsPage(divisions: TournamentStatsDivision[]) {
   const [search, setSearch] = useState("");
   const [expandedPlayers, setExpandedPlayers] = useState<Set<number>>(new Set());
 

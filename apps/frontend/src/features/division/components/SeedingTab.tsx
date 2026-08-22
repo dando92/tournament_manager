@@ -14,16 +14,18 @@ type SeedingTabProps = {
   onSeedingChanged: () => void;
 };
 
-function bySeed(left: Entrant, right: Entrant): number {
-  return (
-    (left.seedNum ?? Number.MAX_SAFE_INTEGER) - (right.seedNum ?? Number.MAX_SAFE_INTEGER)
-    || left.name.localeCompare(right.name)
-  );
+/**
+ * The summary projection does not carry the persisted seed, so the tab opens on
+ * the alphabetical order and the draft below it is what the person arranges.
+ * FQ-015 records that the saved order is not read back.
+ */
+function byName(left: Entrant, right: Entrant): number {
+  return left.name.localeCompare(right.name);
 }
 
 export default function SeedingTab({ division, canEdit, onSeedingChanged }: SeedingTabProps) {
   const entrants = useMemo(
-    () => [...(division.entrants ?? [])].filter((entrant) => entrant.status === "active").sort(bySeed),
+    () => [...(division.entrants ?? [])].filter((entrant) => entrant.status === "active").sort(byName),
     [division.entrants],
   );
   const entrantsById = useMemo(() => new Map(entrants.map((entrant) => [entrant.id, entrant])), [entrants]);
