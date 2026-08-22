@@ -4,13 +4,24 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 complete: every feature is `api/`, `model/`, `ui/`, every page mirrors the router, and `axios` appears only in `features/*/api/*.api.ts` and `app/providers.tsx`.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 in progress. Phase 4 is complete and merged.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 5, the remaining read models — the seven `*.queries.ts` and the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. The HTTP contract changes there, so it is the first phase whose end-to-end tests move with it. The statistics endpoint is already gone; see the checkpoint below.
-- Awaiting the user's manual UI check: branches `refactor/4-match-feature`, `refactor/4-division-feature` and `refactor/4-song-feature`, none merged into `main` yet. Each is built on the one before, so they merge in that order; the last carries the `song`, `live`, `auth` and `participant` slices.
+- Next action: phase 5 continues with `ParticipantQueries` (`forTournament`, `importPreview`), then `DivisionQueries` and `StandingsQueries`, then `SongQueries` and `ScoreQueries`, and last `TreeQueries` with the collapse of `TournamentOverviewDto` and `DivisionSummaryDto` into one projection parameterized by scope. Phase 5 is subdivided one branch per read model, as phase 4 was, because the HTTP contract changes in each and the frontend callers move with it.
+- Awaiting the user's manual UI check: the tournament read models on branch `refactor/5-tournament-reads`. The home page and the search dialog now read a two-field response.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 5, tournament read models
+
+- Added `management/tournament.queries.ts` with `byId`, `configuration`, `publicList`, `hasStartggApiKey` and `rolesFor`. Four are `find({ select })`; `rolesFor` is one SQL query where `TournamentService.getMyRoles` ran two query-builder reads of the same four-table join differing only in the role they matched.
+- `rolesFor` matches a role as an element of the stored `simple-array` rather than as a substring of it. The previous `LIKE '%owner%'` would have matched any role containing the word; nothing in the current vocabulary does, so no behaviour changes and the query no longer depends on that.
+- Every write of a tournament — create, update, close, reopen — now answers with `TournamentQueries.byId`. `TournamentManager.toResponseDto` and `toConfigurationDto` are gone, and with them the last hand-written mapping of the tournament record.
+- `TournamentDto` lost `staff`, and `TournamentStaffDto` with it. The field was mapped from `tournament.participants`, which no loader behind it ever populated, so every response carried an empty array; no client read it. FQ-017 asks whether a tournament response should name its staff at all.
+- `GET /tournaments/public` answers `TournamentRefDto[]`. It already selected `id` and `name` only, and its two consumers — the home page and the search dialog — read nothing else, so the contract now states what the route always sent.
+- Removed from `TournamentService`: `findAllPublic`, `findOne`, `findOneForPage`, `findOneForUpdate`, `getMyRoles` and `findByPhase`, the last of which had no caller. What remains is the write side plus `findSongsByTournamentId`, which goes when `SongQueries` lands.
+- Departure from the plan as written: `tournament.service.ts` and `tournament.manager.ts` stay under `services/`. Phase 7 gives Tournament its four roles, and `TournamentManager` still holds the participant write paths that belong to `registration/`; moving the pair into `management/` now would move them again a phase later, and split wrongly in between.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (four pre-existing API warnings and six pre-existing frontend warnings, none in the changed files), `npm run test:contract`, 117 unit tests across the workspaces, and 27 end-to-end tests against PostgreSQL — one of them new, covering the record, the configuration, the key status before and after a key is set, and the roles of the account that owns the tournament. The manual UI check is the user's.
 
 ### Container images repaired after the contracts-on-scoring edge
 
