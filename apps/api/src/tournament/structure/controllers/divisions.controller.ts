@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { BracketManager } from '@bracket/bracket.manager';
 import { Division, Entrant } from '@tournament-manager/persistence';
 import { DivisionStandingRowDto, DivisionSummaryDto, GenerateBracketResultDto } from '@tournament-manager/contracts';
@@ -22,11 +22,6 @@ export class DivisionsController {
     @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
     async create(@Body(new ValidationPipe()) dto: CreateDivisionDto): Promise<Division> {
         return this.divisionService.create(dto);
-    }
-
-    @Get()
-    async findAll(@Query('tournamentId') tournamentId?: string): Promise<Division[]> {
-        return this.divisionService.findAll(tournamentId ? Number(tournamentId) : undefined);
     }
 
     @Get(':id/summary')

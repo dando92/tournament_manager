@@ -847,12 +847,22 @@ The HTTP contract changes here.
 
 - Add `TreeQueries`, `StandingsQueries`, `DivisionQueries`,
   `ParticipantQueries`, `TournamentQueries`, `SongQueries` and `ScoreQueries`.
-- Replace `GET /divisions?tournamentId=` with `GET /tournaments/:id/standings`.
 - Collapse `TournamentOverviewDto` and `DivisionSummaryDto` into one projection
-  parameterized by scope, and drop the always-empty `entrants: []` field.
+  parameterized by scope, and drop the always-empty `entrants: []` field on a
+  pool.
 - Update the frontend callers in the same change.
-- Verification: end-to-end tests updated to the new contract; the statistics
-  page no longer downloads the tournament graph.
+- Verification: end-to-end tests updated to the new contract.
+
+`GET /divisions?tournamentId=` was to be replaced by
+`GET /tournaments/:id/standings`. It is removed instead, and no read model takes
+its place. Its only consumer was the statistics page, which downloaded the whole
+tournament graph and recomputed the totals in the browser; what a tournament's
+statistics should show is a question nobody had answered, and building the query
+first would have answered it by accident. The page is empty, the endpoint,
+`DivisionService.findAll` and `findAllForTournamentCards` are gone, and FQ-016
+holds the question. This also leaves `division.entrants` in the overview
+projection with no frontend consumer, which is a candidate for the collapse
+above rather than a separate change.
 
 ### Phase 6 — One update path
 
