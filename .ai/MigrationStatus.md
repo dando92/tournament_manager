@@ -12,6 +12,14 @@
 
 ## Completed Checkpoints
 
+### Container images repaired after the contracts-on-scoring edge
+
+- Fixed the build chains in `apps/api`, `apps/realtime` and `apps/syncstart`, which built `@tournament-manager/contracts` before `@tournament-manager/scoring` or never built scoring at all. Phase 3 added that dependency edge and recorded it in `check-architecture`, but the images build their workspaces by a hand-written chain, so `npm run local:up` had been failing on the first image it reached ever since.
+- Fixed `apps/frontend/Dockerfile`, broken differently for the same reason: its builder copies only the package manifests plus `apps/frontend`, so once the viewer began importing the contracts package there was no `packages/contracts` in the image to resolve. It now copies and builds scoring and contracts before the viewer.
+- Extended `check-architecture` to verify each app's Dockerfile against the dependency graph it reads from the workspace manifests: every transitive dependency must be built, and never after something that depends on it. Confirmed it fails on both original faults — a missing workspace and an inverted order.
+- The `npm run local:reset` and `npm run verify:local` results recorded in the Verification block below predate phase 3 and did not cover this. Re-run them.
+- Verification passed: `docker compose build` builds all seven images, and `npm run check:architecture`.
+
 ### Statistics page emptied and its endpoint removed
 
 - Removed `GET /divisions?tournamentId=` with `DivisionService.findAll` and `findAllForTournamentCards`, the largest `relations` block in the codebase: divisions through entrants, phases, pools, matches, results, rounds, songs, standings and scores. No end-to-end test covered it and it had one consumer.
