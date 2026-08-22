@@ -6,7 +6,7 @@ import {
   poolStatus,
   rollUpStatus,
   tournamentStatus,
-} from '../../src/features/tournament/utils/treeStatus.ts';
+} from '../../src/features/tournament/model/treeStatus.ts';
 
 function pool(overrides: Record<string, unknown> = {}) {
   return {

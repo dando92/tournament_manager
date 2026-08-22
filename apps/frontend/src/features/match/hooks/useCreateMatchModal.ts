@@ -4,9 +4,9 @@ import { Entrant } from "@/features/entrant/types/Entrant";
 import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
-import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { listDivisionEntrants } from "@/features/division/services/divisions.api";
-import { getTournament } from "@/features/tournament/services/tournament.api";
+import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/services/matches.api";
 
 type UseCreateMatchModalOptions = {

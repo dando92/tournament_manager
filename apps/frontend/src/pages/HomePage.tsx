@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Tournament } from "@/features/tournament/types/Tournament";
-import { rememberTournament } from "@/features/tournament/services/recentTournaments";
-import { usePublicTournamentsQuery } from "@/features/tournament/hooks/usePublicTournamentsQuery";
-import TournamentCard from "@/features/tournament/components/TournamentCard";
-import CreateTournamentModal from "@/features/tournament/modals/CreateTournamentModal";
-import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
+import { Tournament } from "@/features/tournament/model/types";
+import { rememberTournament } from "@/shared/lib/recentTournaments";
+import { usePublicTournamentsQuery } from "@/features/tournament/model/usePublicTournamentsQuery";
+import TournamentCard from "@/features/tournament/ui/TournamentCard";
+import CreateTournamentModal from "@/features/tournament/ui/CreateTournamentModal";
+import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";

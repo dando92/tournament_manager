@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
+import { useTournamentUpdates } from "@/features/tournament/model/TournamentUpdatesContext";
 import { DivisionStandingRow } from "@/features/division/types/DivisionStandingRow";
 
 export function useDivisionStandings(divisionId: number) {

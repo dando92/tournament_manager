@@ -7,19 +7,19 @@ const MainLayout = lazy(() => import("@/app/MainLayout"));
 
 const HomePage = lazy(() => import("@/pages/HomePage"));
 const BrowsePage = lazy(() => import("@/pages/BrowsePage"));
-const TournamentPage = lazy(() => import("@/pages/TournamentPage"));
+const TournamentPage = lazy(() => import("@/pages/tournament/TournamentPage"));
 const DivisionPage = lazy(() => import("@/pages/DivisionPage"));
 const DivisionMatchesPage = lazy(() => import("@/features/division/pages/DivisionMatchesPage"));
 const DivisionPlayersPage = lazy(() => import("@/features/division/pages/DivisionPlayersPage"));
 const DivisionSeedingPage = lazy(() => import("@/features/division/pages/DivisionSeedingPage"));
 const DivisionStandingsPage = lazy(() => import("@/features/division/pages/DivisionStandingsPage"));
-const TournamentOverviewPage = lazy(() => import("@/features/tournament/pages/TournamentOverviewPage"));
-const TournamentParticipantsPage = lazy(() => import("@/features/tournament/pages/TournamentParticipantsPage"));
-const TournamentSongsPage = lazy(() => import("@/features/tournament/pages/TournamentSongsPage"));
-const TournamentLobbiesPage = lazy(() => import("@/features/tournament/pages/TournamentLobbiesPage"));
-const TournamentLivePage = lazy(() => import("@/features/tournament/pages/TournamentLivePage"));
-const TournamentStatsPage = lazy(() => import("@/features/tournament/pages/TournamentStatsPage"));
-const TournamentConfigurationPage = lazy(() => import("@/features/tournament/pages/TournamentConfigurationPage"));
+const OverviewPage = lazy(() => import("@/pages/tournament/OverviewPage"));
+const ParticipantsPage = lazy(() => import("@/pages/tournament/ParticipantsPage"));
+const SongsPage = lazy(() => import("@/pages/tournament/SongsPage"));
+const LobbiesPage = lazy(() => import("@/pages/tournament/LobbiesPage"));
+const LivePage = lazy(() => import("@/pages/tournament/LivePage"));
+const StatsPage = lazy(() => import("@/pages/tournament/StatsPage"));
+const ConfigurationPage = lazy(() => import("@/pages/tournament/ConfigurationPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
 const AccountInfoPage = lazy(() => import("@/pages/AccountInfoPage"));
@@ -54,13 +54,13 @@ export default function AppRouter() {
             <Route path="/tournament" element={<TournamentPage />} />
             <Route path="/tournament/:tournamentId" element={<KeyedTournamentPage />}>
               <Route index element={<Navigate to="overview" replace />} />
-              <Route path="overview" element={<TournamentOverviewPage />} />
-              <Route path="participants" element={<TournamentParticipantsPage />} />
-              <Route path="songs" element={<TournamentSongsPage />} />
-              <Route path="lobbies" element={<TournamentLobbiesPage />} />
-              <Route path="live" element={<TournamentLivePage />} />
-              <Route path="stats" element={<TournamentStatsPage />} />
-              <Route path="configuration" element={<TournamentConfigurationPage />} />
+              <Route path="overview" element={<OverviewPage />} />
+              <Route path="participants" element={<ParticipantsPage />} />
+              <Route path="songs" element={<SongsPage />} />
+              <Route path="lobbies" element={<LobbiesPage />} />
+              <Route path="live" element={<LivePage />} />
+              <Route path="stats" element={<StatsPage />} />
+              <Route path="configuration" element={<ConfigurationPage />} />
 
               <Route path="division/:divisionId" element={<DivisionPage />}>
                 <Route index element={<DivisionMatchesPage />} />

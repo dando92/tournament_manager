@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
-import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { GenerateBracketRequest } from "@/features/division/types/GenerateBracket";
 
 type Props = {

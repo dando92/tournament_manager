@@ -15,7 +15,7 @@ import PoolAdvancementEditor from "@/features/division/components/PoolAdvancemen
 import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import CreateCard from "@/shared/components/ui/CreateCard";
-import { poolStatus } from "@/features/tournament/utils/treeStatus";
+import { poolStatus } from "@/features/tournament/model/treeStatus";
 import LiveNowPanel from "@/features/live/components/LiveNowPanel";
 import { btnPrimary } from "@/styles/buttonStyles";
 

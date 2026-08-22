@@ -6,7 +6,7 @@ import CreateMatchScopeFields from "@/features/match/components/CreateMatchScope
 import CreateMatchSongFields from "@/features/match/components/CreateMatchSongFields";
 import { useCreateMatchModal } from "@/features/match/hooks/useCreateMatchModal";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
-import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 
 type CreateMatchModalProps = {

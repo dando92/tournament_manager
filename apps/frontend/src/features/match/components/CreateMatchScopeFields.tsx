@@ -1,7 +1,7 @@
 import Select from "react-select";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
-import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
+import { TournamentDivisionOption } from "@/features/tournament/model/types";
 
 type CreateMatchScopeFieldsProps = {
   divisionId?: number;
