@@ -1,4 +1,4 @@
-import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/types/Match";
+import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
 import { Division } from "@/features/division/types/Division";
 import { btnSecondary } from "@/styles/buttonStyles";
 

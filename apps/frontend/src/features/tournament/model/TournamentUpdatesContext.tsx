@@ -2,7 +2,7 @@ import { ReactNode, createContext, useContext, useEffect, useRef, useState } fro
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
-import { matchKeys } from "@/features/match/services/matches.keys";
+import { matchKeys } from "@/features/match/api/match.keys";
 import { divisionKeys } from "@/features/division/services/divisions.keys";
 
 type TournamentUpdateMessage = {

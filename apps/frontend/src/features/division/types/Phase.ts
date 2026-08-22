@@ -1,4 +1,4 @@
-import type { AdvancementRuleInput } from "@/features/match/types/Match";
+import type { AdvancementRuleInput } from "@/features/match/model/types";
 
 export type {
   DivisionPhaseDto as Phase,

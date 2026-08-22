@@ -4,7 +4,7 @@ import AdvancementRulesEditor from "@/features/advancement/components/Advancemen
 import { updateAdvancementRulesForSource } from "@/features/advancement/services/advancement-rules.api";
 import { Division } from "@/features/division/types/Division";
 import { PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/types/Phase";
-import { Match } from "@/features/match/types/Match";
+import { Match } from "@/features/match/model/types";
 
 /**
  * Where a pool's finishers go next.
