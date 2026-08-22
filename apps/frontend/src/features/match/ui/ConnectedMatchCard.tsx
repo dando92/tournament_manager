@@ -1,7 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import MatchCard from "@/features/match/ui/MatchCard";
-import * as MatchesApi from "@/features/match/api/match.api";
-import { matchKeys } from "@/features/match/api/match.keys";
+import { useAdvancementTargets } from "@/features/match/model/useAdvancementTargets";
 import { useMatches } from "@/features/match/model/useMatches";
 import { Division } from "@/features/division/types/Division";
 import { Match, MatchHighlight } from "@/features/match/model/types";
@@ -35,7 +33,7 @@ export default function ConnectedMatchCard({
   highlight,
   onHighlight,
 }: ConnectedMatchCardProps) {
-  const queryClient = useQueryClient();
+  const loadAdvancementTargets = useAdvancementTargets(division.id);
 
   return (
     <MatchCard
@@ -47,12 +45,7 @@ export default function ConnectedMatchCard({
       highlight={highlight}
       onHighlight={onHighlight}
       enablePathRowHighlight
-      loadAdvancementTargets={() =>
-        queryClient.fetchQuery({
-          queryKey: matchKeys.byDivision(division.id),
-          queryFn: () => MatchesApi.listByDivision(division.id),
-        })
-      }
+      loadAdvancementTargets={loadAdvancementTargets}
       onMatchUpdated={actions.list}
       onEditMatchNotes={actions.editMatchNotes}
       onRenameMatch={actions.renameMatch}

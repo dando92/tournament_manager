@@ -6,11 +6,9 @@ import EliminationMatchesView from "@/features/match/ui/bracket/EliminationMatch
 import MatchCard from "@/features/match/ui/MatchCard";
 import RawMatchCardsView from "@/features/match/ui/RawMatchCardsView";
 import RoundRobinMatchesView from "@/features/match/ui/round-robin/RoundRobinMatchesView";
+import { useAdvancementTargets } from "@/features/match/model/useAdvancementTargets";
 import { useMatches } from "@/features/match/model/useMatches";
-import * as MatchesApi from "@/features/match/api/match.api";
-import { matchKeys } from "@/features/match/api/match.keys";
 import { Match, MatchHighlight } from "@/features/match/model/types";
-import { useQueryClient } from "@tanstack/react-query";
 import CreateCard from "@/shared/components/ui/CreateCard";
 
 type MatchListProps = {
@@ -37,7 +35,7 @@ export default function MatchList({
   onCreateMatch,
 }: MatchListProps) {
   const { state, actions } = useMatches(division.id, phaseGroupId);
-  const queryClient = useQueryClient();
+  const loadAdvancementTargets = useAdvancementTargets(division.id);
   const allMatches = state.matches;
 
   const phaseGroups = useMemo(
@@ -69,14 +67,7 @@ export default function MatchList({
       controls={controls}
       division={division}
       allMatches={allMatches}
-      loadAdvancementTargets={
-        phaseGroupId !== undefined
-          ? () => queryClient.fetchQuery({
-              queryKey: matchKeys.byDivision(division.id),
-              queryFn: () => MatchesApi.listByDivision(division.id),
-            })
-          : undefined
-      }
+      loadAdvancementTargets={phaseGroupId !== undefined ? loadAdvancementTargets : undefined}
       tournamentId={tournamentId}
       highlight={highlight}
       onHighlight={onHighlight}
