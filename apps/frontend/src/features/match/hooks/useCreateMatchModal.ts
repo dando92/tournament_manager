@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Entrant } from "@/features/entrant/types/Entrant";
 import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
@@ -8,6 +7,7 @@ import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { listDivisionEntrants } from "@/features/division/services/divisions.api";
 import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/services/matches.api";
+import { listSongs } from "@/features/song/api/song.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -135,13 +135,13 @@ export function useCreateMatchModal({
 
   useEffect(() => {
     if (!open) return;
-    axios
-      .get<Song[]>(tournamentId ? `songs?tournamentId=${tournamentId}` : "songs")
-      .then((response) => {
-        setSongs(response.data);
-        setSongGroups([...new Set(response.data.map((song) => song.group))]);
-        setSelectedGroupName(response.data[0]?.group ?? "");
-      });
+    listSongs(tournamentId)
+      .then((catalog) => {
+        setSongs(catalog);
+        setSongGroups([...new Set(catalog.map((song) => song.group))]);
+        setSelectedGroupName(catalog[0]?.group ?? "");
+      })
+      .catch(() => setSongs([]));
   }, [open, tournamentId]);
 
   useEffect(() => {

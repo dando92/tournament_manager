@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Song } from "@/features/song/types/Song";
+import { listSongs } from "@/features/song/api/song.api";
 
 type UseAddEditSongToMatchModalOptions = {
   open: boolean;
@@ -20,12 +20,13 @@ export function useAddEditSongToMatchModal({
 
   useEffect(() => {
     if (!open) return;
-    const url = tournamentId ? `songs?tournamentId=${tournamentId}` : "songs";
-    axios.get<Song[]>(url).then((response) => {
-      setSongs(response.data);
-      setSongGroups([...new Set(response.data.map((song) => song.group))]);
-      setSelectedGroupName(response.data[0]?.group ?? "");
-    });
+    listSongs(tournamentId)
+      .then((catalog) => {
+        setSongs(catalog);
+        setSongGroups([...new Set(catalog.map((song) => song.group))]);
+        setSelectedGroupName(catalog[0]?.group ?? "");
+      })
+      .catch(() => setSongs([]));
     setSongAddType("title");
     setSelectedSongs([]);
   }, [open, tournamentId]);
