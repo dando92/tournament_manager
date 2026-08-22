@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { createLobby } from "@/features/tournament/services/lobbies.api";
 
 type UseTournamentHeaderLobbyManageMenuOptions = {
   tournamentId: number;
@@ -36,7 +36,7 @@ export function useTournamentHeaderLobbyManageMenu({
 
     setCreatingLobby(true);
     try {
-      await axios.post(`tournaments/${tournamentId}/lobbies/create`, {
+      await createLobby(tournamentId, {
         name: createLobbyName.trim() || undefined,
         password: createLobbyPassword,
       });

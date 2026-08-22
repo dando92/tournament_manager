@@ -4,10 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
-import {
-  tournamentOverviewKey,
-  useTournamentOverviewQuery,
-} from "@/features/tournament/hooks/useTournamentOverviewQuery";
+import { useTournamentOverviewQuery } from "@/features/tournament/hooks/useTournamentOverviewQuery";
+import { tournamentKeys } from "@/features/tournament/services/tournament.keys";
 import { createDivision, deleteDivision, renameDivision } from "@/features/division/services/divisions.api";
 import { createPhase, deletePhase, updatePhase } from "@/features/division/services/phases.api";
 import { createPhaseGroup, deletePhaseGroup, updatePhaseGroup } from "@/features/division/services/phase-groups.api";
@@ -136,12 +134,12 @@ export function TournamentTreeProvider({
     if (previousSignature.current === versionSignature) return;
     previousSignature.current = versionSignature;
     if (tournamentId === null) return;
-    queryClient.invalidateQueries({ queryKey: tournamentOverviewKey(tournamentId) });
+    queryClient.invalidateQueries({ queryKey: tournamentKeys.overview(tournamentId) });
   }, [versionSignature, tournamentId, queryClient]);
 
   const refreshTree = useCallback(async () => {
     if (tournamentId === null) return;
-    await queryClient.invalidateQueries({ queryKey: tournamentOverviewKey(tournamentId) });
+    await queryClient.invalidateQueries({ queryKey: tournamentKeys.overview(tournamentId) });
   }, [queryClient, tournamentId]);
 
   /* ---- expand state ---- */

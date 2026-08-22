@@ -1,0 +1,56 @@
+import axios from "axios";
+import type {
+  SyncStartLobbiesDto,
+  SyncStartServerStatusDto,
+} from "@tournament-manager/contracts";
+
+/**
+ * The SyncStart connection a tournament owns: the server it is attached to,
+ * and the lobbies it spectates through that server.
+ *
+ * The live state of a lobby — its song, its players, their readiness — does
+ * not arrive here. It is pushed over the lobby gateway, so these routes only
+ * open, close and list connections.
+ */
+
+export type SpectateLobbyRequest = {
+  name: string;
+  lobbyCode: string;
+  password: string;
+};
+
+export type CreateLobbyRequest = {
+  name?: string;
+  password: string;
+};
+
+export async function listTournamentLobbies(tournamentId: number): Promise<SyncStartLobbiesDto> {
+  const response = await axios.get<SyncStartLobbiesDto>(`tournaments/${tournamentId}/lobbies`);
+  return response.data;
+}
+
+export async function connectLobbyServer(tournamentId: number): Promise<SyncStartServerStatusDto> {
+  const response = await axios.post<SyncStartServerStatusDto>(
+    `tournaments/${tournamentId}/lobbies/server/connect`,
+  );
+  return response.data;
+}
+
+export async function disconnectLobbyServer(tournamentId: number): Promise<SyncStartServerStatusDto> {
+  const response = await axios.delete<SyncStartServerStatusDto>(
+    `tournaments/${tournamentId}/lobbies/server/disconnect`,
+  );
+  return response.data;
+}
+
+export async function spectateLobby(tournamentId: number, request: SpectateLobbyRequest): Promise<void> {
+  await axios.post(`tournaments/${tournamentId}/lobbies/connect`, request);
+}
+
+export async function createLobby(tournamentId: number, request: CreateLobbyRequest): Promise<void> {
+  await axios.post(`tournaments/${tournamentId}/lobbies/create`, request);
+}
+
+export async function disconnectLobby(tournamentId: number, lobbyId: string): Promise<void> {
+  await axios.delete(`tournaments/${tournamentId}/lobbies/${lobbyId}/disconnect`);
+}

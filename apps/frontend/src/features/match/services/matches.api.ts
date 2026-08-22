@@ -215,3 +215,8 @@ export async function reopenMatchResult(matchId: number): Promise<Match> {
     throw new Error("Unable to re-open match result.");
   }
 }
+
+export async function listScoringSystems(): Promise<string[]> {
+  const response = await axios.get<string[]>("matches/scoring-systems");
+  return response.data;
+}

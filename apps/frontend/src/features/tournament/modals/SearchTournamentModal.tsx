@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
+import { listPublicTournaments } from "@/features/tournament/services/tournament.api";
 import { getBannerGradient } from "@/features/tournament/utils/tournamentBanner";
 
 type Props = {
@@ -21,9 +21,8 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) {
-      axios
-        .get<Tournament[]>("tournaments/public")
-        .then((r) => setTournaments(r.data))
+      listPublicTournaments()
+        .then(setTournaments)
         .catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {

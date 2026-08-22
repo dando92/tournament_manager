@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { btnDanger, btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { useTournamentPageContext } from "@/features/tournament/context/TournamentPageContext";
-import {
-  Tournament,
-  TournamentConfiguration,
-} from "@/features/tournament/types/Tournament";
+import { TournamentConfiguration } from "@/features/tournament/types/Tournament";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
+import {
+  closeTournament,
+  getTournamentConfiguration,
+  reopenTournament,
+  updateTournament,
+} from "@/features/tournament/services/tournament.api";
+import { listScoringSystems } from "@/features/match/services/matches.api";
 
 type FormState = {
   name: string;
@@ -56,18 +59,12 @@ export default function TournamentConfigurationPage() {
     let cancelled = false;
     setLoading(true);
 
-    Promise.all([
-      axios.get<TournamentConfiguration>(
-        `tournaments/${tournamentId}/configuration`,
-      ),
-      axios.get<string[]>("matches/scoring-systems"),
-    ])
-      .then(([configurationResponse, scoringSystemsResponse]) => {
+    Promise.all([getTournamentConfiguration(tournamentId), listScoringSystems()])
+      .then(([loadedConfiguration, systems]) => {
         if (cancelled) return;
-        const nextForm = toForm(configurationResponse.data);
-        setConfiguration(configurationResponse.data);
-        setTournamentStatus(configurationResponse.data.status);
-        const systems = scoringSystemsResponse.data;
+        const nextForm = toForm(loadedConfiguration);
+        setConfiguration(loadedConfiguration);
+        setTournamentStatus(loadedConfiguration.status);
         setScoringSystems(systems);
         if (!nextForm.defaultScoringSystem) {
           nextForm.defaultScoringSystem = systems[0] ?? "";
@@ -112,7 +109,7 @@ export default function TournamentConfigurationPage() {
 
     setSaving(true);
     try {
-      await axios.patch(`tournaments/${tournamentId}`, {
+      await updateTournament(tournamentId, {
         name: form.name.trim(),
         syncstartUrl: form.syncstartUrl.trim(),
         startggApiKey: form.startggApiKey.trim() || null,
@@ -148,17 +145,9 @@ export default function TournamentConfigurationPage() {
     if (!confirmed) return;
     setChangingStatus(true);
     try {
-      const response = await axios.post<Tournament>(
-        `tournaments/${tournamentId}/close`,
-      );
+      const closed = await closeTournament(tournamentId);
       setConfiguration((current) =>
-        current
-          ? {
-              ...current,
-              status: response.data.status,
-              closedAt: response.data.closedAt,
-            }
-          : current,
+        current ? { ...current, status: closed.status, closedAt: closed.closedAt } : current,
       );
       setTournamentStatus("closed");
       toast.success("Tournament closed. It is now read-only.");
@@ -173,17 +162,9 @@ export default function TournamentConfigurationPage() {
     if (!configuration || changingStatus) return;
     setChangingStatus(true);
     try {
-      const response = await axios.post<Tournament>(
-        `tournaments/${tournamentId}/reopen`,
-      );
+      const reopened = await reopenTournament(tournamentId);
       setConfiguration((current) =>
-        current
-          ? {
-              ...current,
-              status: response.data.status,
-              closedAt: response.data.closedAt,
-            }
-          : current,
+        current ? { ...current, status: reopened.status, closedAt: reopened.closedAt } : current,
       );
       setTournamentStatus("open");
       toast.success("Tournament reopened.");

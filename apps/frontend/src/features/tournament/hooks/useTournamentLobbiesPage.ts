@@ -1,6 +1,6 @@
-import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import type { SyncStartLobbyStatusDto } from "@tournament-manager/contracts";
 import {
   ActiveLobbyDto,
   LobbyCardStateDto,
@@ -9,23 +9,13 @@ import {
   SyncStartConnectionStatusDto,
 } from "@/features/live/services/syncstartGatewayDtos";
 import { useLobbyGateway } from "@/features/tournament/services/useLobbyGateway";
-
-export type TournamentLobbyStatusDto = {
-  id: string;
-  name: string;
-  lobbyCode: string;
-  isPasswordProtected: boolean;
-  playerCount: number;
-  spectatorCount: number;
-};
-
-type TournamentLobbiesDto = {
-  status: {
-    isActive: boolean;
-    isConnected: boolean;
-  };
-  lobbies: TournamentLobbyStatusDto[];
-};
+import {
+  connectLobbyServer,
+  disconnectLobby,
+  disconnectLobbyServer,
+  listTournamentLobbies,
+  spectateLobby,
+} from "@/features/tournament/services/lobbies.api";
 
 type Params = {
   tournamentId: number;
@@ -55,7 +45,7 @@ export function useTournamentLobbiesPage({
     isConnected: false,
   });
   const [lobbyCardStates, setLobbyCardStates] = useState<ReadonlyMap<string, LobbyCardStateDto>>(new Map());
-  const [availableLobbies, setAvailableLobbies] = useState<TournamentLobbyStatusDto[]>([]);
+  const [availableLobbies, setAvailableLobbies] = useState<SyncStartLobbyStatusDto[]>([]);
   const [serverConnectionStatus, setServerConnectionStatus] = useState({ isActive: false, isConnected: false });
   const [connectingServer, setConnectingServer] = useState(false);
   const [disconnectingServer, setDisconnectingServer] = useState(false);
@@ -66,9 +56,9 @@ export function useTournamentLobbiesPage({
   const refreshLobbies = useCallback(async () => {
     setRefreshing(true);
     try {
-      const response = await axios.get<TournamentLobbiesDto>(`tournaments/${tournamentId}/lobbies`);
-      setAvailableLobbies(response.data.lobbies);
-      setServerConnectionStatus(response.data.status);
+      const lobbies = await listTournamentLobbies(tournamentId);
+      setAvailableLobbies(lobbies.lobbies);
+      setServerConnectionStatus(lobbies.status);
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -180,7 +170,7 @@ export function useTournamentLobbiesPage({
   }, refreshLobbies);
 
   const lobbies = useMemo(() => {
-    const merged = new Map<string, TournamentLobbyStatusDto>();
+    const merged = new Map<string, SyncStartLobbyStatusDto>();
 
     for (const lobby of availableLobbies) {
       merged.set(lobby.lobbyCode, lobby);
@@ -237,12 +227,10 @@ export function useTournamentLobbiesPage({
   async function handleConnectServer() {
     setConnectingServer(true);
     try {
-      const response = await axios.post<{ isActive: boolean; isConnected: boolean }>(
-        `tournaments/${tournamentId}/lobbies/server/connect`,
-      );
-      setServerConnectionStatus(response.data);
+      const status = await connectLobbyServer(tournamentId);
+      setServerConnectionStatus(status);
       toast.success("Connected to SyncStart.");
-      if (response.data.isConnected) {
+      if (status.isConnected) {
         refreshLobbies().catch(() => {});
       }
     } catch (error: unknown) {
@@ -258,11 +246,9 @@ export function useTournamentLobbiesPage({
   async function handleDisconnectServer() {
     setDisconnectingServer(true);
     try {
-      const response = await axios.delete<{ isActive: boolean; isConnected: boolean }>(
-        `tournaments/${tournamentId}/lobbies/server/disconnect`,
-      );
-      setServerConnectionStatus(response.data);
-      if (!response.data.isConnected) {
+      const status = await disconnectLobbyServer(tournamentId);
+      setServerConnectionStatus(status);
+      if (!status.isConnected) {
         setAvailableLobbies([]);
       }
       toast.success("Disconnected from SyncStart.");
@@ -284,7 +270,7 @@ export function useTournamentLobbiesPage({
 
     setSpectating(true);
     try {
-      await axios.post(`tournaments/${tournamentId}/lobbies/connect`, {
+      await spectateLobby(tournamentId, {
         name: spectateModal.lobbyName.trim() || spectateModal.lobbyCode.trim().toUpperCase(),
         lobbyCode: spectateModal.lobbyCode.trim().toUpperCase(),
         password: spectateModal.password,
@@ -304,7 +290,7 @@ export function useTournamentLobbiesPage({
 
   async function handleDisconnectLobby(lobbyId: string) {
     try {
-      await axios.delete(`tournaments/${tournamentId}/lobbies/${lobbyId}/disconnect`);
+      await disconnectLobby(tournamentId, lobbyId);
       setActiveLobbies((prev) => {
         const next = new Map(prev);
         next.delete(lobbyId);

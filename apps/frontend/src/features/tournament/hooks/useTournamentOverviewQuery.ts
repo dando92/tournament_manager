@@ -1,5 +1,6 @@
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { getTournamentOverview } from "@/features/tournament/services/tournament.api";
+import { tournamentKeys } from "@/features/tournament/services/tournament.keys";
 import { TournamentOverview } from "@/features/tournament/types/TournamentOverview";
 import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
 
@@ -11,10 +12,6 @@ import { TournamentDivisionOption } from "@/features/tournament/types/Tournament
  * shared query rather than a fetch per caller so the tree and the pages that
  * need the same list resolve to one request.
  */
-
-export function tournamentOverviewKey(tournamentId: number) {
-  return ["tournament-overview", tournamentId] as const;
-}
 
 export function toDivisionOptions(overview: TournamentOverview): TournamentDivisionOption[] {
   return overview.divisions.map((division) => ({
@@ -32,11 +29,8 @@ export function toDivisionOptions(overview: TournamentOverview): TournamentDivis
 
 export function useTournamentOverviewQuery(tournamentId: number | null) {
   return useQuery({
-    queryKey: tournamentOverviewKey(tournamentId ?? 0),
+    queryKey: tournamentKeys.overview(tournamentId ?? 0),
     enabled: tournamentId !== null,
-    queryFn: async () => {
-      const response = await axios.get<TournamentOverview>(`tournaments/${tournamentId}/overview`);
-      return toDivisionOptions(response.data);
-    },
+    queryFn: async () => toDivisionOptions(await getTournamentOverview(tournamentId ?? 0)),
   });
 }

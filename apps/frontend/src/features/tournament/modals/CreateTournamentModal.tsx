@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { Tournament } from "@/features/tournament/types/Tournament";
+import { createTournament } from "@/features/tournament/services/tournament.api";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
@@ -28,9 +28,9 @@ export default function CreateTournamentModal({ open, onClose, onCreated }: Prop
     setApiError(null);
     setLoading(true);
     try {
-      const response = await axios.post<Tournament>("tournaments", { name: trimmed });
+      const created = await createTournament(trimmed);
       setName("");
-      onCreated(response.data);
+      onCreated(created);
     } catch {
       setApiError("Failed to create tournament.");
     } finally {

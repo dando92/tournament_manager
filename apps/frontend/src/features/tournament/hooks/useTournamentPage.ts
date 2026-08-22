@@ -1,7 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { Tournament } from "@/features/tournament/types/Tournament";
+import { getTournament, hasStartggApiKey as loadHasStartggApiKey } from "@/features/tournament/services/tournament.api";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
 
 /**
@@ -40,14 +39,13 @@ export function useTournamentPage({ tournamentId, canControl }: UseTournamentPag
      fetched a second time the moment permissions resolved and `canControl`
      flipped. */
   useEffect(() => {
-    axios
-      .get<Tournament>(`tournaments/${tournamentId}`)
-      .then((response) => {
-        rememberTournament({ id: response.data.id, name: response.data.name });
-        setTournamentName(response.data.name);
-        setSyncstartUrl(response.data.syncstartUrl ?? "");
-        setTournamentStatus(response.data.status);
-        document.title = `${response.data.name} - Tournament Manager`;
+    getTournament(tournamentId)
+      .then((tournament) => {
+        rememberTournament({ id: tournament.id, name: tournament.name });
+        setTournamentName(tournament.name);
+        setSyncstartUrl(tournament.syncstartUrl ?? "");
+        setTournamentStatus(tournament.status);
+        document.title = `${tournament.name} - Tournament Manager`;
       })
       .catch(() => {});
 
@@ -58,9 +56,8 @@ export function useTournamentPage({ tournamentId, canControl }: UseTournamentPag
 
   useEffect(() => {
     if (!canControl) return;
-    axios
-      .get<{ hasStartggApiKey: boolean }>(`tournaments/${tournamentId}/startgg/api-key-status`)
-      .then((response) => setHasStartggApiKey(response.data.hasStartggApiKey))
+    loadHasStartggApiKey(tournamentId)
+      .then(setHasStartggApiKey)
       .catch(() => setHasStartggApiKey(false));
   }, [canControl, tournamentId]);
 

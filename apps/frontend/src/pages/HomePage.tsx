@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
 import { Tournament } from "@/features/tournament/types/Tournament";
 import { rememberTournament } from "@/features/tournament/services/recentTournaments";
+import { listPublicTournaments } from "@/features/tournament/services/tournament.api";
 import TournamentCard from "@/features/tournament/components/TournamentCard";
 import CreateTournamentModal from "@/features/tournament/modals/CreateTournamentModal";
 import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
@@ -28,9 +28,8 @@ export default function HomePage() {
   }, [searchParams, canCreate]);
 
   useEffect(() => {
-    axios
-      .get<Tournament[]>("tournaments/public")
-      .then((r) => setTournaments(r.data))
+    listPublicTournaments()
+      .then(setTournaments)
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);

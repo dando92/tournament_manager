@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
 import { TournamentStatsDivision } from "@/features/tournament/types/TournamentStats";
+import { listTournamentStatsDivisions } from "@/features/tournament/services/tournament.api";
 import { useTournamentUpdates } from "@/features/tournament/context/TournamentUpdatesContext";
 
 export function useTournamentStatsData(tournamentId: number) {
@@ -9,8 +9,7 @@ export function useTournamentStatsData(tournamentId: number) {
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
-    const response = await axios.get<TournamentStatsDivision[]>("divisions", { params: { tournamentId } });
-    setDivisions(response.data);
+    setDivisions(await listTournamentStatsDivisions(tournamentId));
     setLoaded(true);
   }, [tournamentId]);
 
