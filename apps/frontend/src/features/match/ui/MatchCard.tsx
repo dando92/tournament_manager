@@ -1,5 +1,6 @@
 import { Match, MatchAdvancementRuleInput, MatchHighlight, RoundSourceRequest } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
+import { Entrant } from "@/features/participant/model/types";
 import AddEditSongToMatchModal from "@/features/match/ui/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/ui/AddPlayersToMatchModal";
 import { useRef, useState } from "react";
@@ -14,6 +15,8 @@ import { entrantPlayers } from "@/features/participant/model/entrant";
 
 type MatchCardProps = {
   division: Division;
+  /** The division roster, read apart from its structure. Only the add-players dialog needs it. */
+  divisionEntrants: Entrant[];
   match: Match;
   allMatches: Match[];
   loadAdvancementTargets?: () => Promise<Match[]>;
@@ -81,6 +84,7 @@ const closedModal: StandingModalState = {
 
 export default function MatchCard({
   division,
+  divisionEntrants,
   match,
   allMatches,
   loadAdvancementTargets,
@@ -233,7 +237,7 @@ export default function MatchCard({
       />
       <AddPlayersToMatchModal
         open={addPlayersToMatchModalOpen}
-        divisionEntrants={division.entrants ?? []}
+        divisionEntrants={divisionEntrants}
         matchEntrants={match.entrants ?? []}
         onAddPlayers={onAddPlayersToMatch}
         onClose={() => setAddPlayersToMatchModalOpen(false)}

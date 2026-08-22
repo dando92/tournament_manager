@@ -2,6 +2,7 @@ import MatchCard from "@/features/match/ui/MatchCard";
 import { useAdvancementTargets } from "@/features/match/model/useAdvancementTargets";
 import { useMatches } from "@/features/match/model/useMatches";
 import { Division } from "@/features/division/model/types";
+import { Entrant } from "@/features/participant/model/types";
 import { Match, MatchHighlight } from "@/features/match/model/types";
 
 /**
@@ -15,6 +16,7 @@ import { Match, MatchHighlight } from "@/features/match/model/types";
 type ConnectedMatchCardProps = {
   match: Match;
   division: Division;
+  divisionEntrants: Entrant[];
   allMatches: Match[];
   actions: ReturnType<typeof useMatches>["actions"];
   controls: boolean;
@@ -26,6 +28,7 @@ type ConnectedMatchCardProps = {
 export default function ConnectedMatchCard({
   match,
   division,
+  divisionEntrants,
   allMatches,
   actions,
   controls,
@@ -39,6 +42,7 @@ export default function ConnectedMatchCard({
     <MatchCard
       match={match}
       division={division}
+      divisionEntrants={divisionEntrants}
       allMatches={allMatches}
       controls={controls}
       tournamentId={tournamentId}

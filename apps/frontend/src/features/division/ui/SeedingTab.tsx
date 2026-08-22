@@ -10,23 +10,19 @@ import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
 type SeedingTabProps = {
   division: Division;
+  entrants: Entrant[];
   canEdit: boolean;
   onSeedingChanged: () => void;
 };
 
-/**
- * The summary projection does not carry the persisted seed, so the tab opens on
- * the alphabetical order and the draft below it is what the person arranges.
- * FQ-015 records that the saved order is not read back.
- */
-function byName(left: Entrant, right: Entrant): number {
-  return left.name.localeCompare(right.name);
-}
-
-export default function SeedingTab({ division, canEdit, onSeedingChanged }: SeedingTabProps) {
+export default function SeedingTab({ division, entrants: roster, canEdit, onSeedingChanged }: SeedingTabProps) {
+  /* The roster arrives in the order it was seeded in, unseeded entrants last
+     and alphabetical among themselves, so the tab opens on the order the last
+     save wrote. It used to read a projection that carried no seed and sort by
+     name, which is what FQ-015 recorded. */
   const entrants = useMemo(
-    () => [...(division.entrants ?? [])].filter((entrant) => entrant.status === "active").sort(byName),
-    [division.entrants],
+    () => roster.filter((entrant) => entrant.status === "active"),
+    [roster],
   );
   const entrantsById = useMemo(() => new Map(entrants.map((entrant) => [entrant.id, entrant])), [entrants]);
   const [draftEntrantIds, setDraftEntrantIds] = useState<number[]>(() => entrants.map((entrant) => entrant.id));

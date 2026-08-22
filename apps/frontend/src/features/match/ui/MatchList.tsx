@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
-import { Division, PhaseGroup } from "@/features/division/model/types";
+import { Division } from "@/features/division/model/types";
+import { Entrant } from "@/features/participant/model/types";
 import { PoolViewMode } from "@/shared/lib/poolViewMode";
 import EliminationMatchesView from "@/features/match/ui/bracket/EliminationMatchesView";
 import MatchCard from "@/features/match/ui/MatchCard";
@@ -12,10 +13,10 @@ import CreateCard from "@/shared/components/ui/CreateCard";
 
 type MatchListProps = {
   division: Division;
+  divisionEntrants: Entrant[];
   controls?: boolean;
   tournamentId?: number;
   phaseGroupId?: number;
-  phaseGroup?: PhaseGroup;
   viewMode: PoolViewMode;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
@@ -24,10 +25,10 @@ type MatchListProps = {
 
 export default function MatchList({
   division,
+  divisionEntrants,
   controls = false,
   tournamentId,
   phaseGroupId,
-  phaseGroup,
   viewMode,
   highlight,
   onHighlight,
@@ -65,6 +66,7 @@ export default function MatchList({
       key={match.id}
       controls={controls}
       division={division}
+      divisionEntrants={divisionEntrants}
       allMatches={allMatches}
       loadAdvancementTargets={phaseGroupId !== undefined ? loadAdvancementTargets : undefined}
       tournamentId={tournamentId}
@@ -109,7 +111,6 @@ export default function MatchList({
         <>
           <RoundRobinMatchesView
             matches={state.matches}
-            phaseGroup={phaseGroup}
             renderMatchCard={(match) => renderMatchCard(match, true)}
           />
           {onCreateMatch && <CreateCard label="Create match" onClick={onCreateMatch} className="mt-4" />}

@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PhaseGroupEntrant } from '@tournament-manager/persistence';
 import { PhaseGroupDto, PhaseGroupEntrantDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
 import { toEntrantDto } from '@tournament/shared/projections';
+import { TreeQueries } from '@tournament/structure/tree.queries';
 import { PhaseGroupService } from './phase-group.service';
 
 @Injectable()
@@ -10,10 +11,11 @@ export class PhaseGroupManager {
     constructor(
         @Inject()
         private readonly phaseGroupService: PhaseGroupService,
+        private readonly treeQueries: TreeQueries,
     ) {}
 
     async createForPhase(phaseId: number, dto: CreatePhaseGroupDto): Promise<PhaseGroupDto> {
-        return this.toDto(await this.phaseGroupService.createForPhase(phaseId, dto));
+        return this.project((await this.phaseGroupService.createForPhase(phaseId, dto)).id);
     }
 
     async getEntrants(id: number): Promise<PhaseGroupEntrantDto[]> {
@@ -22,24 +24,19 @@ export class PhaseGroupManager {
     }
 
     async update(id: number, dto: UpdatePhaseGroupDto): Promise<PhaseGroupDto> {
-        return this.toDto(await this.phaseGroupService.update(id, dto));
+        return this.project((await this.phaseGroupService.update(id, dto)).id);
     }
 
     async delete(id: number): Promise<void> {
         await this.phaseGroupService.delete(id);
     }
 
-    private toDto(phaseGroup: PhaseGroup): PhaseGroupDto {
-        return {
-            id: phaseGroup.id,
-            name: phaseGroup.name,
-            displayIdentifier: phaseGroup.displayIdentifier ?? null,
-            bracketType: phaseGroup.bracketType ?? null,
-            state: phaseGroup.state,
-            matchCount: phaseGroup.matches?.length ?? 0,
-            entrants: this.bySeed(phaseGroup.entrants ?? []),
-            advancementRules: [],
-        };
+    /** A pool mutation answers with the node the tree draws, which is what its `GET` returns. */
+    private async project(phaseGroupId: number): Promise<PhaseGroupDto> {
+        const phaseGroup = await this.treeQueries.phaseGroup(phaseGroupId);
+        if (!phaseGroup) throw new NotFoundException(`Phase group ${phaseGroupId} not found`);
+
+        return phaseGroup;
     }
 
     /** An unseeded entrant sorts last, so a partially seeded pool still reads in order. */

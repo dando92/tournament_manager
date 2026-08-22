@@ -43,20 +43,6 @@ export class AdvancementRuleService {
     });
   }
 
-  async findBySources(sourceKind: AdvancementCompetitionKind, sourceIds: number[]): Promise<AdvancementRule[]> {
-    if (sourceIds.length === 0) return [];
-
-    return await this.advancementRuleRepository
-      .createQueryBuilder('rule')
-      .where('rule.sourceKind = :sourceKind', { sourceKind })
-      .andWhere('rule.sourceId IN (:...sourceIds)', { sourceIds })
-      .orderBy('rule.sourceId', 'ASC')
-      .addOrderBy('rule.sourcePlacement', 'ASC')
-      .addOrderBy('rule.targetSlot', 'ASC')
-      .addOrderBy('rule.id', 'ASC')
-      .getMany();
-  }
-
   async findByTarget(targetKind: AdvancementCompetitionKind, targetId: number): Promise<AdvancementRule[]> {
     return await this.advancementRuleRepository.find({
       where: { targetKind, targetId },

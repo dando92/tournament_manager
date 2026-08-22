@@ -36,24 +36,6 @@ export class PhaseService {
         return savedPhase;
     }
 
-    async findOverviewDataForDivision(divisionId: number): Promise<Phase[]> {
-        return this.phaseRepository.find({
-            where: { division: { id: divisionId } },
-            relations: {
-                phaseGroups: {
-                    entrants: {
-                        entrant: {
-                            participants: {
-                                player: true,
-                            },
-                        },
-                    },
-                    matches: true,
-                },
-            },
-        });
-    }
-
     async update(id: number, dto: UpdatePhaseDto): Promise<Phase> {
         const phase = await this.phaseRepository.findOne({
             where: { id },

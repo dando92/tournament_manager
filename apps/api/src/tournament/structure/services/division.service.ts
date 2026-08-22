@@ -28,37 +28,6 @@ export class DivisionService {
         return savedDivision;
     }
 
-    async findOneForSummary(id: number): Promise<Division | null> {
-        return this.divisionRepository.findOne({
-            where: { id },
-            relations: {
-                entrants: {
-                    participants: {
-                        player: true,
-                    },
-                },
-                phases: {
-                    phaseGroups: {
-                        matches: true,
-                    },
-                },
-            },
-        });
-    }
-
-    async findOverviewData(tournamentId: number): Promise<Division[]> {
-        return this.divisionRepository
-            .createQueryBuilder('division')
-            .leftJoinAndSelect('division.entrants', 'entrant')
-            .leftJoinAndSelect('entrant.participants', 'participant')
-            .leftJoinAndSelect('participant.player', 'player')
-            .leftJoinAndSelect('division.phases', 'phase')
-            .leftJoinAndSelect('phase.phaseGroups', 'phaseGroup')
-            .loadRelationCountAndMap('phaseGroup.matchCount', 'phaseGroup.matches')
-            .where('division.tournamentId = :tournamentId', { tournamentId })
-            .getMany();
-    }
-
     async findOneForBracketGeneration(id: number): Promise<Division | null> {
         return this.divisionRepository.findOne({
             where: { id },

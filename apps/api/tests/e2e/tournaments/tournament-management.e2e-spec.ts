@@ -185,6 +185,9 @@ describe('Tournament management (e2e)', () => {
         );
       });
 
+    /* Creating a phase gives it a default pool, so the phase holds two: the
+       default one and the one this test named. They come back in the order they
+       were created. */
     await request(app.getHttpServer())
       .get(`/tournaments/${tournamentId}/overview`)
       .expect(200)
@@ -194,10 +197,19 @@ describe('Tournament management (e2e)', () => {
           playerCount: 1,
           matchCount: 1,
         });
-        expect(body.divisions[0].phases[0].phaseGroups[0]).toMatchObject({
+        expect(body.divisions[0]).toMatchObject({ entrantCount: 1, matchCount: 1 });
+        expect(body.divisions[0].phases[0]).toMatchObject({ matchCount: 1 });
+
+        const pools = body.divisions[0].phases[0].phaseGroups;
+        expect(pools.map((pool) => pool.id)).toEqual([...pools.map((pool) => pool.id)].sort((a, b) => a - b));
+        expect(pools.find((pool) => pool.id === phaseGroupId)).toMatchObject({
           matchCount: 1,
           pendingMatchCount: 0,
+          advancementRules: [],
         });
+        expect(pools.filter((pool) => pool.id !== phaseGroupId)).toEqual([
+          expect.objectContaining({ matchCount: 0, pendingMatchCount: 0 }),
+        ]);
       });
   });
 

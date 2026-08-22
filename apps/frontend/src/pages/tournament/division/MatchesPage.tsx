@@ -130,6 +130,7 @@ export default function DivisionMatchesPage() {
           key={selectedMatch.id}
           match={selectedMatch}
           division={division}
+          divisionEntrants={page.entrants}
           allMatches={page.matches}
           actions={page.actions}
           controls={controls}
