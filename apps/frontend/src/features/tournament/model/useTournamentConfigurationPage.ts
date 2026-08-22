@@ -8,7 +8,7 @@ import {
   reopenTournament,
   updateTournament,
 } from "@/features/tournament/api/tournament.api";
-import { listScoringSystems } from "@/features/match/services/matches.api";
+import { listScoringSystems } from "@/features/match/api/match.api";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 
 /**

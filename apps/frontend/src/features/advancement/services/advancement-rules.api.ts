@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AdvancementCompetitionKind, AdvancementRuleInput } from "@/features/match/types/Match";
+import { AdvancementCompetitionKind, AdvancementRuleInput } from "@/features/match/model/types";
 
 export async function updateAdvancementRulesForSource(
   sourceKind: AdvancementCompetitionKind,

@@ -4,12 +4,24 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament` slice is complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament` and `match` slices are complete.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: the `match` slice of phase 4, on branch `refactor/4-match-feature`. It is the largest remaining feature and already owns `matches.keys.ts`, which the tournament slice declared and left in `services/`; moving it into `api/` is part of that slice. `division`, `song`, `live`, `auth` and `participant` follow, one branch each.
+- Next action: the `division` slice of phase 4, on branch `refactor/4-division-feature`. It owns `divisions.keys.ts`, still in `services/` where the tournament slice declared it, and it hosts the match feature: `DivisionMatchesPage`, `DivisionPlayersPage`, `DivisionSeedingPage` and `DivisionStandingsPage` move to `src/pages/tournament/division/` with it. `song`, `live`, `auth` and `participant` follow, one branch each; `song` inherits `listSongs`, which the match slice created.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 4, match slice: frontend api, model, ui
+
+- Split `features/match/` from six directories into three. `api/` holds `match.api.ts` and `match.keys.ts`, which the tournament slice declared and left in `services/`; `model/` holds the hooks, the pure functions and the view types; `ui/` holds everything that renders, with `row/` flattened into it and `bracket/` and `round-robin/` kept. The feature has no pages of its own: `DivisionMatchesPage` hosts it and moves with the division slice.
+- Collapsed the five modules under `features/match/types/` into one `model/types.ts`, dropping six re-exports nothing imported: `MatchResult`, `MatchResultPlayerPoints`, `Standing`, `StandingScore`, `StartggReportStatus` and `isHandScored`.
+- Replaced the hand-written `Score` interface with the `ScoreDto` the contracts package already carries. It was the eighteenth redeclaration, and phase 3 missed it because that file declared interfaces against `Player` and `Song` rather than re-exporting a name.
+- Extracted `useStandingModal`. The standing editor fetched the scores a player already registered from a `useEffect` inside its `.tsx`; the modal is now 152 lines of JSX, and no `.tsx` in the feature fetches.
+- Extracted `useAdvancementTargets`. The wider match list the advancement editor needs was fetched in `ConnectedMatchCard` and again in `MatchList`, each spelling the query key and the request by hand inside a `.tsx` — the same class of defect rule 3 exists to close, one layer up. Nothing under `features/match/ui` reaches the server.
+- Created `features/song/api/song.api.ts` ahead of the song slice. Two match hooks addressed `songs` with their own `axios.get`, and the resource belongs to the song feature; `listSongs` is declared once and the match hooks ask for the catalog. The song feature's own three copies go when its slice moves its hooks.
+- Moved `matches.reducer.ts` and `matches.actions.ts` to `model/` rather than deleting them. Phase 6 owns the removal of the reducer, and dropping it here would have put a change of update path inside a layout slice.
+- Left `MatchList` and the two parked views it renders unreferenced, as they were. The decision about where the bracket visualisation is reached from predates this slice and is not a layout question.
+- Verification passed: `npx tsc --noEmit` in the frontend, `npm run build` across every workspace, `npx eslint src` (six pre-existing warnings, none in the changed files), `npm run test:contract`, 9 frontend unit tests, and `npm run check:architecture`. No HTTP contract changed. The manual UI check is the user's.
 
 ### Structure refactoring phase 4, tournament slice: frontend api, model, ui
 
