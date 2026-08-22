@@ -12,6 +12,7 @@ import { PhaseGroup } from "@/features/division/model/types";
 
 export type {
   TournamentDto as Tournament,
+  TournamentRefDto as TournamentRef,
   TournamentConfigurationDto as TournamentConfiguration,
   TournamentOverviewDto as TournamentOverview,
   StartggImportPreviewResponseDto as StartggImportPreviewResponse,

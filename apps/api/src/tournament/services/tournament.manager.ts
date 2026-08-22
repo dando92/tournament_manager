@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Player, Tournament } from '@tournament-manager/persistence';
+import { Player } from '@tournament-manager/persistence';
 import {
     ParticipantDto,
     ParticipantImportPreviewRowDto,
-    TournamentConfigurationDto,
     TournamentDto,
     TournamentOverviewDto,
 } from '@tournament-manager/contracts';
@@ -16,56 +15,34 @@ import {
 import { toEntrantDto, toParticipantDto, toPlayerRefDto } from '@tournament/shared/projections';
 import { DivisionService } from '@tournament/structure/services/division.service';
 import { MatchQueries } from '@match/match.queries';
+import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TournamentService } from './tournament.service';
 import { ParticipantService } from './participant.service';
 import { PlayerService } from '@player/player.service';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TournamentManager {
     constructor(
         private readonly divisionService: DivisionService,
         private readonly matchQueries: MatchQueries,
+        private readonly tournamentQueries: TournamentQueries,
         private readonly tournamentService: TournamentService,
         private readonly participantService: ParticipantService,
         private readonly playerService: PlayerService,
-        private readonly config: ConfigService,
     ) {}
 
     private normalizeName(value: string): string {
         return value.trim().toLowerCase();
     }
 
-    private toResponseDto(tournament: Tournament): TournamentDto {
-        return {
-            id: tournament.id,
-            name: tournament.name,
-            status: tournament.status,
-            closedAt: tournament.closedAt?.toISOString() ?? null,
-            syncstartUrl: tournament.syncstartUrl,
-            availableSetupsCount: tournament.availableSetupsCount,
-            defaultScoringSystem: tournament.defaultScoringSystem,
-            staff: (tournament.participants ?? [])
-                .filter((participant) => participant.roles?.includes('staff') && participant.account)
-                .map((participant) => ({
-                    id: participant.account.id,
-                    username: participant.account.username,
-                })),
-        };
-    }
-
-    private toConfigurationDto(tournament: Tournament): TournamentConfigurationDto {
-        return {
-            id: tournament.id,
-            name: tournament.name,
-            status: tournament.status,
-            closedAt: tournament.closedAt?.toISOString() ?? null,
-            transportRetentionDays: Number(this.config.get('TOURNAMENT_TRANSPORT_RETENTION_DAYS') ?? 10),
-            syncstartUrl: tournament.syncstartUrl,
-            startggApiKey: tournament.startggApiKey,
-            availableSetupsCount: tournament.availableSetupsCount,
-            defaultScoringSystem: tournament.defaultScoringSystem,
-        };
+    /**
+     * A write answers with the projection its `GET` returns, so every one of
+     * them ends here rather than mapping the entity it happens to hold.
+     */
+    private async project(tournamentId: number): Promise<TournamentDto> {
+        const tournament = await this.tournamentQueries.byId(tournamentId);
+        if (!tournament) throw new NotFoundException(`Tournament with id ${tournamentId} not found`);
+        return tournament;
     }
 
     async create(dto: CreateTournamentDto, ownerId?: string): Promise<TournamentDto> {
@@ -73,41 +50,25 @@ export class TournamentManager {
         if (ownerId) {
             await this.participantService.ensureOwner(tournament.id, ownerId);
         }
-        const reloaded = await this.tournamentService.findOne(tournament.id);
-        return this.toResponseDto(reloaded ?? tournament);
-    }
-
-    async findOne(tournamentId: number): Promise<TournamentDto | null> {
-        const tournament = await this.tournamentService.findOne(tournamentId);
-        return tournament ? this.toResponseDto(tournament) : null;
-    }
-
-    async findConfiguration(tournamentId: number): Promise<TournamentConfigurationDto> {
-        const tournament = await this.tournamentService.findOne(tournamentId);
-        if (!tournament) throw new NotFoundException(`Tournament with id ${tournamentId} not found`);
-        return this.toConfigurationDto(tournament);
-    }
-
-    async hasStartggApiKey(tournamentId: number): Promise<{ hasStartggApiKey: boolean }> {
-        const tournament = await this.tournamentService.findOne(tournamentId);
-        if (!tournament) throw new NotFoundException(`Tournament with id ${tournamentId} not found`);
-        return { hasStartggApiKey: Boolean(tournament.startggApiKey?.trim()) };
+        return this.project(tournament.id);
     }
 
     async update(tournamentId: number, dto: UpdateTournamentDto): Promise<{ tournament: TournamentDto; previousSyncstartUrl: string | undefined }> {
         const result = await this.tournamentService.update(tournamentId, dto);
         return {
-            tournament: this.toResponseDto(result.tournament),
+            tournament: await this.project(result.tournament.id),
             previousSyncstartUrl: result.previousSyncstartUrl,
         };
     }
 
     async close(tournamentId: number): Promise<TournamentDto> {
-        return this.toResponseDto(await this.tournamentService.close(tournamentId));
+        const tournament = await this.tournamentService.close(tournamentId);
+        return this.project(tournament.id);
     }
 
     async reopen(tournamentId: number): Promise<TournamentDto> {
-        return this.toResponseDto(await this.tournamentService.reopen(tournamentId));
+        const tournament = await this.tournamentService.reopen(tournamentId);
+        return this.project(tournament.id);
     }
 
     async listParticipants(tournamentId: number): Promise<ParticipantDto[]> {

@@ -1,15 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
-import { Tournament } from '@tournament-manager/persistence';
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 import {
     MyTournamentRolesDto,
     TournamentConfigurationDto,
     TournamentDto,
     TournamentOverviewDto,
+    TournamentRefDto,
 } from '@tournament-manager/contracts';
 import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
 import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
 import { AuthService } from '@auth/services/auth.service';
-import { TournamentService } from '@tournament/services/tournament.service';
+import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TournamentManager } from '@tournament/services/tournament.manager';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -19,7 +19,7 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 export class TournamentsController {
     constructor(
         private readonly authService: AuthService,
-        private readonly tournamentService: TournamentService,
+        private readonly tournamentQueries: TournamentQueries,
         private readonly tournamentManager: TournamentManager,
         private readonly syncStart: TournamentSyncStartService,
     ) {}
@@ -35,14 +35,14 @@ export class TournamentsController {
     }
 
     @Get('public')
-    findAllPublic(): Promise<Tournament[]> {
-        return this.tournamentService.findAllPublic();
+    findAllPublic(): Promise<TournamentRefDto[]> {
+        return this.tournamentQueries.publicList();
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('my-roles')
     async getMyRoles(@Request() req): Promise<MyTournamentRolesDto> {
-        const roles = await this.tournamentService.getMyRoles(req.user.id);
+        const roles = await this.tournamentQueries.rolesFor(req.user.id);
         const permissions = await this.authService.getPermissions(req.user.id);
         return {
             ...roles,
@@ -58,19 +58,23 @@ export class TournamentsController {
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Get(':id/configuration')
-    findConfiguration(@Param('id') id: number): Promise<TournamentConfigurationDto> {
-        return this.tournamentManager.findConfiguration(Number(id));
+    async findConfiguration(@Param('id') id: number): Promise<TournamentConfigurationDto> {
+        const configuration = await this.tournamentQueries.configuration(Number(id));
+        if (!configuration) throw new NotFoundException(`Tournament with id ${id} not found`);
+        return configuration;
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Get(':id/startgg/api-key-status')
-    getStartggApiKeyStatus(@Param('id') id: number): Promise<{ hasStartggApiKey: boolean }> {
-        return this.tournamentManager.hasStartggApiKey(Number(id));
+    async getStartggApiKeyStatus(@Param('id') id: number): Promise<{ hasStartggApiKey: boolean }> {
+        const hasStartggApiKey = await this.tournamentQueries.hasStartggApiKey(Number(id));
+        if (hasStartggApiKey === null) throw new NotFoundException(`Tournament with id ${id} not found`);
+        return { hasStartggApiKey };
     }
 
     @Get(':id')
     findOne(@Param('id') id: number): Promise<TournamentDto | null> {
-        return this.tournamentManager.findOne(Number(id));
+        return this.tournamentQueries.byId(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)

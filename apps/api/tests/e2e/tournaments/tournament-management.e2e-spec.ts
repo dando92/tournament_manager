@@ -201,6 +201,86 @@ describe('Tournament management (e2e)', () => {
       });
   });
 
+  it('reads a tournament record, its configuration, its key status and the roles of the account that owns it', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/tournaments')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Read Model Tournament' })
+      .expect(201);
+    const tournamentId = createResponse.body.id;
+
+    /* The record carries no staff list. Every response declared one, it was
+       always empty because the load never reached the participants, and no
+       client read it. */
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual({
+          id: tournamentId,
+          name: 'Read Model Tournament',
+          status: 'open',
+          closedAt: null,
+          syncstartUrl: 'ws://syncservice.groovestats.com:1337',
+          availableSetupsCount: 2,
+          defaultScoringSystem: 'EurocupScoreCalculator',
+        });
+      });
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/configuration`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          id: tournamentId,
+          name: 'Read Model Tournament',
+          status: 'open',
+          closedAt: null,
+          startggApiKey: null,
+        });
+        expect(typeof body.transportRetentionDays).toBe('number');
+      });
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/startgg/api-key-status`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body).toEqual({ hasStartggApiKey: false }));
+
+    await request(app.getHttpServer())
+      .patch(`/tournaments/${tournamentId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ startggApiKey: 'a-key' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/tournaments/${tournamentId}/startgg/api-key-status`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body).toEqual({ hasStartggApiKey: true }));
+
+    /* Creating a tournament makes the creator its owner, and the participant
+       that records it carries the account. A role is an element of the stored
+       list, not a substring of it, so `owner` does not make the account staff. */
+    await request(app.getHttpServer())
+      .get('/tournaments/my-roles')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.ownedTournamentIds).toContain(tournamentId);
+        expect(body.staffTournamentIds).not.toContain(tournamentId);
+        expect(body).toMatchObject({ isAdmin: false, canCreateTournament: true });
+      });
+
+    /* An unknown tournament is refused rather than reported missing: the access
+       guard runs before the handler and finds no participation to authorize. */
+    await request(app.getHttpServer())
+      .get('/tournaments/999999/configuration')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(403);
+  });
+
   it('makes a closed tournament read-only until an authorized user reopens it', async () => {
     const tournamentResponse = await request(app.getHttpServer())
       .post('/tournaments')

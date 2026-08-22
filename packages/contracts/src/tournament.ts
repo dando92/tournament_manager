@@ -2,9 +2,10 @@ import type { ScoringSystemType } from '@tournament-manager/scoring';
 import type { DivisionSummaryDto } from './structure';
 import type { TournamentStatus } from './vocabulary';
 
-export type TournamentStaffDto = {
-    id: string;
-    username: string;
+/** A tournament as a list, a card or a menu names it. */
+export type TournamentRefDto = {
+    id: number;
+    name: string;
 };
 
 /** A tournament as every route outside the configuration page returns it. */
@@ -14,10 +15,9 @@ export type TournamentDto = {
     status: TournamentStatus;
     /** ISO-8601, or null while the tournament is open. */
     closedAt: string | null;
-    syncstartUrl?: string;
+    syncstartUrl: string;
     availableSetupsCount: number;
     defaultScoringSystem: ScoringSystemType;
-    staff: TournamentStaffDto[];
 };
 
 /** What the configuration page edits, secrets included. Only its staff may read it. */

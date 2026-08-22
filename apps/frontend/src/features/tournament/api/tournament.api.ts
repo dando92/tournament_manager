@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   Tournament,
   TournamentConfiguration,
+  TournamentRef,
 } from "@/features/tournament/model/types";
 import { TournamentOverview } from "@/features/tournament/model/types";
 
@@ -23,8 +24,9 @@ export type UpdateTournamentRequest = {
   defaultScoringSystem: string;
 };
 
-export async function listPublicTournaments(): Promise<Tournament[]> {
-  const response = await axios.get<Tournament[]>("tournaments/public");
+/** The public list names tournaments and nothing more; a card and the search dialog need no field beyond that. */
+export async function listPublicTournaments(): Promise<TournamentRef[]> {
+  const response = await axios.get<TournamentRef[]>("tournaments/public");
   return response.data;
 }
 

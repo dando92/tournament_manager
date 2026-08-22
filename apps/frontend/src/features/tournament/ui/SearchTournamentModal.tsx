@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import BaseModal from "@/shared/components/ui/BaseModal";
-import { Tournament } from "@/features/tournament/model/types";
+import { TournamentRef } from "@/features/tournament/model/types";
 import { rememberTournament } from "@/shared/lib/recentTournaments";
 import { usePublicTournamentsQuery } from "@/features/tournament/model/usePublicTournamentsQuery";
 import { getBannerGradient } from "@/features/tournament/model/tournamentBanner";
@@ -33,7 +33,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
       )
     : tournaments;
 
-  function handleSelect(t: Tournament) {
+  function handleSelect(t: TournamentRef) {
     rememberTournament({ id: t.id, name: t.name });
     navigate(`/tournament/${t.id}`);
     onClose();
