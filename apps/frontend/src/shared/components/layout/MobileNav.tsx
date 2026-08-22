@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faListUl, faMagnifyingGlass, faRightToBracket, faUser } from "@fortawesome/free-solid-svg-icons";
-import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
+import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
 
 /**

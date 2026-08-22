@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faPen, faCamera, faSun, faMoon, faDesktop } from "@fortawesome/free-solid-svg-icons";
 import { useThemePreference } from "@/shared/hooks/useThemePreference";
-import { THEME_PREFERENCES, type ThemePreference } from "@/shared/services/themePreference";
+import { THEME_PREFERENCES, type ThemePreference } from "@/shared/lib/themePreference";
 
 const NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "Andorran", "Angolan", "Antiguan", "Argentine", "Armenian",

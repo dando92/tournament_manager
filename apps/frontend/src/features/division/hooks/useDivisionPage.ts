@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Division } from "@/features/division/types/Division";
+import { divisionKeys } from "@/features/division/services/divisions.keys";
 
 type UseDivisionPageResult = {
   division: Division | null;
@@ -10,7 +11,7 @@ type UseDivisionPageResult = {
 
 export function useDivisionPage(_tournamentId: number, divisionId: number): UseDivisionPageResult {
   const queryClient = useQueryClient();
-  const queryKey = useMemo(() => ["division-summary", divisionId] as const, [divisionId]);
+  const queryKey = useMemo(() => divisionKeys.summary(divisionId), [divisionId]);
   const query = useQuery({
     queryKey,
     queryFn: async () => {

@@ -1,18 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
-import { Tournament } from "@/features/tournament/types/Tournament";
-import { rememberTournament } from "@/features/tournament/services/recentTournaments";
-import TournamentCard from "@/features/tournament/components/TournamentCard";
-import CreateTournamentModal from "@/features/tournament/modals/CreateTournamentModal";
-import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
+import { Tournament } from "@/features/tournament/model/types";
+import { rememberTournament } from "@/shared/lib/recentTournaments";
+import { usePublicTournamentsQuery } from "@/features/tournament/model/usePublicTournamentsQuery";
+import TournamentCard from "@/features/tournament/ui/TournamentCard";
+import CreateTournamentModal from "@/features/tournament/ui/CreateTournamentModal";
+import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export default function HomePage() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: tournaments = [], isPending: isLoading } = usePublicTournamentsQuery();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -26,14 +25,6 @@ export default function HomePage() {
       navigate("/", { replace: true });
     }
   }, [searchParams, canCreate]);
-
-  useEffect(() => {
-    axios
-      .get<Tournament[]>("tournaments/public")
-      .then((r) => setTournaments(r.data))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
 
   function handleSelect(t: Tournament) {
     rememberTournament({ id: t.id, name: t.name });

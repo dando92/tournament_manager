@@ -4,9 +4,10 @@ import { Entrant } from "@/features/entrant/types/Entrant";
 import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest } from "@/features/match/types/match-requests";
 import { MatchPhaseOption } from "@/features/match/types/MatchPhaseOption";
-import { TournamentDivisionOption } from "@/features/tournament/types/TournamentDivisionOption";
-import { Tournament } from "@/features/tournament/types/Tournament";
+import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { listDivisionEntrants } from "@/features/division/services/divisions.api";
+import { getTournament } from "@/features/tournament/api/tournament.api";
+import { listScoringSystems } from "@/features/match/services/matches.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -145,14 +146,11 @@ export function useCreateMatchModal({
 
   useEffect(() => {
     if (!open) return;
-    const scoringSystemsRequest = axios.get<string[]>("matches/scoring-systems");
-    const tournamentRequest = tournamentId
-      ? axios.get<Tournament>(`tournaments/${tournamentId}`)
-      : Promise.resolve(null);
+    const scoringSystemsRequest = listScoringSystems();
+    const tournamentRequest = tournamentId ? getTournament(tournamentId) : Promise.resolve(null);
 
-    Promise.all([scoringSystemsRequest, tournamentRequest]).then(([scoringSystemsResponse, tournamentResponse]) => {
-      const systems = scoringSystemsResponse.data;
-      const defaultScoringSystem = tournamentResponse?.data.defaultScoringSystem;
+    Promise.all([scoringSystemsRequest, tournamentRequest]).then(([systems, tournament]) => {
+      const defaultScoringSystem = tournament?.defaultScoringSystem;
       setScoringSystems(systems);
       setScoringSystem(defaultScoringSystem && systems.includes(defaultScoringSystem) ? defaultScoringSystem : systems[0] ?? "");
     });

@@ -13,9 +13,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Logo from "@/assets/icon.png";
 import { useAuthContext } from "@/features/auth/context/AuthContext";
-import SearchTournamentModal from "@/features/tournament/modals/SearchTournamentModal";
-import TournamentTree from "@/features/tournament/components/tree/TournamentTree";
-import { useTournamentTree } from "@/features/tournament/context/TournamentTreeContext";
+import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
+import TournamentTree from "@/features/tournament/ui/tree/TournamentTree";
+import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
 
 /**

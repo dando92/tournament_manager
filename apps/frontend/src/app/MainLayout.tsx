@@ -4,10 +4,10 @@ import { ToastContainer } from "react-toastify";
 import Sidebar from "@/shared/components/layout/Sidebar";
 import ResizableSidebar from "@/shared/components/layout/ResizableSidebar";
 import { MobileBottomNav } from "@/shared/components/layout/MobileNav";
-import { TournamentUpdatesProvider } from "@/features/tournament/context/TournamentUpdatesContext";
-import { TournamentTreeProvider } from "@/features/tournament/context/TournamentTreeContext";
-import { getSelectedTournament, getSidebarTournaments } from "@/features/tournament/services/recentTournaments";
-import { parseTreeSelection } from "@/features/tournament/utils/treeSelection";
+import { TournamentUpdatesProvider } from "@/features/tournament/model/TournamentUpdatesContext";
+import { TournamentTreeProvider } from "@/features/tournament/model/TournamentTreeContext";
+import { getSelectedTournament, getSidebarTournaments } from "@/shared/lib/recentTournaments";
+import { parseTreeSelection } from "@/features/tournament/model/treeSelection";
 import { usePermissions } from "@/shared/services/permissions/PermissionContext";
 import "react-toastify/dist/ReactToastify.css";
 

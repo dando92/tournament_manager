@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseTreeSelection } from '../../src/features/tournament/utils/treeSelection.ts';
+import { parseTreeSelection } from '../../src/features/tournament/model/treeSelection.ts';
 import { apiUrl, realtimeUrl } from '../../src/shared/runtime-config.ts';
 
 test('reads a tournament destination from the path', () => {

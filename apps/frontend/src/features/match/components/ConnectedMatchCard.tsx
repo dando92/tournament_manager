@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import MatchCard from "@/features/match/components/MatchCard";
 import * as MatchesApi from "@/features/match/services/matches.api";
+import { matchKeys } from "@/features/match/services/matches.keys";
 import { useMatches } from "@/features/match/services/useMatches";
 import { Division } from "@/features/division/types/Division";
 import { Match, MatchHighlight } from "@/features/match/types/Match";
@@ -48,7 +49,7 @@ export default function ConnectedMatchCard({
       enablePathRowHighlight
       loadAdvancementTargets={() =>
         queryClient.fetchQuery({
-          queryKey: ["matches", "division", division.id],
+          queryKey: matchKeys.byDivision(division.id),
           queryFn: () => MatchesApi.listByDivision(division.id),
         })
       }

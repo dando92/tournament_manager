@@ -4,7 +4,7 @@ import {
   readThemePreference,
   writeThemePreference,
   type ThemePreference,
-} from "@/shared/services/themePreference";
+} from "@/shared/lib/themePreference";
 
 /**
  * Reads and writes the device theme preference, applying it as it changes.
