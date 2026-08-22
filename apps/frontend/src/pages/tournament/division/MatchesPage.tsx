@@ -9,7 +9,7 @@ import CreateMatchModal from "@/features/match/ui/CreateMatchModal";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import CreateCard from "@/shared/components/ui/CreateCard";
 import { poolStatus } from "@/features/tournament/model/treeStatus";
-import LiveNowPanel from "@/features/live/components/LiveNowPanel";
+import LiveNowPanel from "@/features/live/ui/LiveNowPanel";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 /**

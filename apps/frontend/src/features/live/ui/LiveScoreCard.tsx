@@ -1,4 +1,4 @@
-import { LiveMatchPlayerDto } from "@/features/live/services/syncstartGatewayDtos";
+import { LiveMatchPlayerDto } from "@/features/live/model/types";
 
 type LiveScoreCardProps = {
   player: LiveMatchPlayerDto;

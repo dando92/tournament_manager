@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   LiveMatchStateDto,
-} from "@/features/live/services/syncstartGatewayDtos";
+} from "@/features/live/model/types";
 import { realtimeWebSocketUrl, SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type LiveMatchGatewayMessage =

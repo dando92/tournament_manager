@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
-import { useLiveMatchGateway } from "@/features/live/services/useLiveMatchGateway";
+import { LiveMatchStateDto } from "@/features/live/model/types";
+import { useLiveMatchGateway } from "@/features/live/model/useLiveMatchGateway";
 
 export function useLivePhase(tournamentId: number) {
   const [liveMatchStates, setLiveMatchStates] = useState<ReadonlyMap<string, LiveMatchStateDto>>(new Map());

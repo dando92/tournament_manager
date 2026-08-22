@@ -7,7 +7,7 @@ import {
   LobbyPlayerReadyDto,
   LobbySongSelectedDto,
   SyncStartConnectionStatusDto,
-} from "@/features/live/services/syncstartGatewayDtos";
+} from "@/features/live/model/types";
 import { useLobbyGateway } from "@/features/tournament/model/useLobbyGateway";
 import {
   connectLobbyServer,

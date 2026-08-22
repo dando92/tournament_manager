@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   LiveMatchStateDto,
-} from "@/features/live/services/syncstartGatewayDtos";
-import { useLiveMatchGateway } from "@/features/live/services/useLiveMatchGateway";
+} from "@/features/live/model/types";
+import { useLiveMatchGateway } from "@/features/live/model/useLiveMatchGateway";
 
 export function useOBSPage(lobbyId?: string, tournamentId?: number) {
   const [liveMatchState, setLiveMatchState] = useState<LiveMatchStateDto | null>(null);

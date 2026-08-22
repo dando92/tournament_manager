@@ -1,5 +1,5 @@
-import LobbyLiveBlock from "@/features/live/components/LobbyLiveBlock";
-import { useLivePhase } from "@/features/live/hooks/useLivePhase";
+import LobbyLiveBlock from "@/features/live/ui/LobbyLiveBlock";
+import { useLivePhase } from "@/features/live/model/useLivePhase";
 
 type Props = {
   tournamentId: number;

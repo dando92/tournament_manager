@@ -1,6 +1,6 @@
-import { LiveMatchStateDto } from "@/features/live/services/syncstartGatewayDtos";
-import LiveScoreCard from "@/features/live/components/LiveScoreCard";
-import { useLiveScores } from "@/features/live/hooks/useLiveScores";
+import { LiveMatchStateDto } from "@/features/live/model/types";
+import LiveScoreCard from "@/features/live/ui/LiveScoreCard";
+import { useLiveScores } from "@/features/live/model/useLiveScores";
 
 type Props = {
   lobbyState: LiveMatchStateDto;
