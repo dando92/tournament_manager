@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faMinus, faPlus, faPencil } from "@fortawesome/free-solid-svg-icons";
 import { Match, Round } from "@/features/match/model/types";
-import { Player } from "@/features/player/types/Player";
+import { Player } from "@/features/participant/model/types";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { btnCreateIcon } from "@/styles/buttonStyles";
 import MobileScoreActionsMenu, {

@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faFileImport, faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
-import CreateSongModal from "@/features/song/modals/CreateSongModal";
-import { useTournamentHeaderSongsManageMenu } from "@/features/song/hooks/useTournamentHeaderSongsManageMenu";
+import CreateSongModal from "@/features/song/ui/CreateSongModal";
+import { useTournamentHeaderSongsManageMenu } from "@/features/song/model/useTournamentHeaderSongsManageMenu";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {

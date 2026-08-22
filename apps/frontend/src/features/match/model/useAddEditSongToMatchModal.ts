@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Song } from "@/features/song/types/Song";
+import { Song } from "@/features/song/model/types";
 import { listSongs } from "@/features/song/api/song.api";
 
 type UseAddEditSongToMatchModalOptions = {

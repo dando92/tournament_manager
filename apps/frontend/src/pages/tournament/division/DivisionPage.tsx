@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Navigate, Outlet, useParams } from "react-router-dom";
-import { usePermissions } from "@/shared/services/permissions/PermissionContext";
+import { usePermissions } from "@/features/auth/model/PermissionContext";
 import { DivisionPageContextValue } from "@/features/division/model/DivisionPageContext";
 import { useDivisionPage } from "@/features/division/model/useDivisionPage";
 

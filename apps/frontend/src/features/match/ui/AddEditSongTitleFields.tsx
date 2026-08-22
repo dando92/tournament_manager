@@ -1,4 +1,4 @@
-import { Song } from "@/features/song/types/Song";
+import { Song } from "@/features/song/model/types";
 import Select from "react-select";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";

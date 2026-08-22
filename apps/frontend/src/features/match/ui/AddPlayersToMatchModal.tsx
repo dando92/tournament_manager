@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Entrant } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";

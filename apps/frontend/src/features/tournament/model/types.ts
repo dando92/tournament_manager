@@ -1,4 +1,4 @@
-import { Entrant } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
 import { PhaseGroup } from "@/features/division/model/types";
 
 /**

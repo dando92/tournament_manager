@@ -4,7 +4,7 @@ import {
   LobbyPlayerReadyDto,
   LobbySongSelectedDto,
   SyncStartConnectionStatusDto,
-} from "@/features/live/services/syncstartGatewayDtos";
+} from "@/features/live/model/types";
 import { realtimeWebSocketUrl, SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type LobbyGatewayMessage =

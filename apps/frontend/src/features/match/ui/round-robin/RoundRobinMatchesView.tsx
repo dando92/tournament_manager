@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { PhaseGroup } from "@/features/division/model/types";
-import { entrantPlayer } from "@/features/entrant/types/Entrant";
+import { entrantPlayer } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
-import { Player } from "@/features/player/types/Player";
+import { Player } from "@/features/participant/model/types";
 import { commitBadgeClass, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 

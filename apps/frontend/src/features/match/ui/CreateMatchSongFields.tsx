@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinusCircle, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import Select from "react-select";
-import { Song } from "@/features/song/types/Song";
+import { Song } from "@/features/song/model/types";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import { btnCreateIcon } from "@/styles/buttonStyles";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";

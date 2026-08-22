@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { PhaseGroup } from "@/features/division/model/types";
-import { Entrant, entrantPlayer } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
+import { entrantPlayer } from "@/features/participant/model/entrant";
 import { AdvancementRule, Match } from "@/features/match/model/types";
 import { toOrdinal } from "@/shared/utils";
 import { commitBadgeClass, getActiveLabel, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";

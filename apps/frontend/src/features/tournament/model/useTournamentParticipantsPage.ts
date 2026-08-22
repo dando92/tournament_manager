@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Participant } from "@/features/entrant/types/Entrant";
-import { Player } from "@/features/player/types/Player";
-import { getAllPlayers } from "@/features/player/services/player.api";
+import { Participant, Player } from "@/features/participant/model/types";
+import { getAllPlayers } from "@/features/participant/api/player.api";
 import {
   ParticipantsManageModal,
   useTournamentPageContext,
@@ -15,7 +14,7 @@ import {
   removeParticipant,
   removeParticipantStaff,
   type ParticipantImportPreviewEntry,
-} from "@/features/participant/services/participant.api";
+} from "@/features/participant/api/participant.api";
 
 /**
  * The participant roster and the three ways of adding to it: one name, a

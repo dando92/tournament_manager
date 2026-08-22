@@ -4,13 +4,24 @@
 
 - Last updated: 2026-08-22.
 - Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 in progress; its `tournament`, `match` and `division` slices are complete.
+- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 4 complete: every feature is `api/`, `model/`, `ui/`, every page mirrors the router, and `axios` appears only in `features/*/api/*.api.ts` and `app/providers.tsx`.
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: the `song` slice of phase 4, on branch `refactor/4-song-feature`. It inherits `api/song.api.ts`, which the match slice created for `listSongs`; its two hooks still hold three more copies of the same request plus the song writes. `live`, `auth` (absorbing `admin` and `PermissionContext`) and `participant` (absorbing `player`) follow, one branch each.
-- Awaiting the user's manual UI check: branches `refactor/4-match-feature` and `refactor/4-division-feature`, neither merged into `main` yet. The division branch is built on the match branch, so they merge in that order.
+- Next action: phase 5, the remaining read models. The HTTP contract changes there, so it is the first phase whose end-to-end tests move with it. `GET /divisions?tournamentId=` becomes `GET /tournaments/:id/standings`, and the statistics page stops downloading the tournament graph.
+- Awaiting the user's manual UI check: branches `refactor/4-match-feature`, `refactor/4-division-feature` and `refactor/4-song-feature`, none merged into `main` yet. Each is built on the one before, so they merge in that order; the last carries the `song`, `live`, `auth` and `participant` slices.
 
 ## Completed Checkpoints
+
+### Structure refactoring phase 4, closing slices: song, live, auth, participant
+
+- Completed the song slice. `createSong` and `deleteSong` joined `listSongs` in `api/song.api.ts`; the songs list had been requested with a hand-written `axios.get` in four places, each spelling the `tournamentId` query string itself. The bulk import and the pack delete keep their loops, because there is no batch route and per-row results are what lets the import report how many succeeded.
+- Completed the live slice as `model/` and `ui/` with no `api/`. The feature reads a websocket and never makes an HTTP request; declaring an empty directory for the rule's sake would have said something untrue about it.
+- Completed the auth slice, absorbing `features/admin` and `PermissionContext`. Three `.tsx` files reached the server directly — the account page patched its own profile, the roles page listed accounts and flipped their flags, and the permission context asked for the signed-in account's roles — and are now `useAccountInfoPage`, `useManageRolesPage` and three request modules. `shared/services/` no longer exists: the permission context answers what the signed-in account may do, which is the auth feature's own question. `Account.ts` came out of `features/player/types/`, where it had nothing to do with a player.
+- Completed the participant slice, absorbing `player`, `entrant` and `advancement`. None of the three was an area of the application; each was a noun that happened to have a file. `advancement` went to `match` rather than to `participant`: its request and its editor are both about where a match sends its finishers.
+- Created `app/providers.tsx`. `main.tsx` configured the axios base URL, the bearer interceptor and the query client inline, which was the last `axios` import in a `.tsx`. The target layout names the file and no phase claimed it.
+- Recorded for phase 8: `features/live/model/types.ts` redeclares what the realtime gateway sends, and `apps/realtime` declares the same flattened shape a second time as `LiveMatchState` with `players: unknown[]`. They are not the syncstart contracts — the gateway flattens `song` into `songTitle` and `songPath` — so moving them into the contracts package would have made a phase 4 slice span three workspaces.
+- Phase 4 is complete. Seven features, each `api/`, `model/`, `ui/`; every page under `src/pages/` mirroring the router; `axios` only in `features/*/api/*.api.ts` and `app/providers.tsx`; no `.tsx` with a fetching effect; no query key written by hand outside a `*.keys.ts`.
+- Verification passed: `npx tsc --noEmit` in the frontend, `npm run build` across every workspace, `npx eslint src` (six pre-existing warnings, none in the changed files), 9 frontend unit tests, `npm run check:architecture`, and the grep rules across the whole tree. No HTTP contract changed. The manual UI check is the user's.
 
 ### Structure refactoring phase 4, division slice: frontend api, model, ui
 

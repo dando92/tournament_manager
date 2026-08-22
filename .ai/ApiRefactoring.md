@@ -787,11 +787,59 @@ One departure from the plan as written:
   key. Converting it is a change of update path, which is phase 6, and doing it
   here would have put that change inside a layout slice.
 
-#### Remaining slices
+#### Song, live, auth and participant (done)
 
-`song`, `live`, `auth` (absorbing `admin` and `PermissionContext`) and
-`participant` (absorbing `player`). `advancement` and `entrant` are vestigial
-and are absorbed rather than given three directories.
+The four remaining slices, on one branch each in that order.
+
+**Song.** `api/song.api.ts` already existed — the match slice created it for
+`listSongs` — and gained `createSong` and `deleteSong`, which were written
+inline in whichever hook needed them. The songs list had been requested with a
+hand-written `axios.get` in four places, each spelling the `tournamentId` query
+string itself. The bulk import and the pack delete keep their loops: there is no
+batch route, and per-row results are what lets the import report how many
+succeeded. `types/Song.ts` became `model/types.ts` and gained
+`CreateSongRequest`.
+
+**Live.** `model/` holds the gateway, the message types and the three hooks;
+`ui/` holds the panels. There is no `api/`: the feature reads a websocket and
+never makes an HTTP request, so an empty directory for the rule's sake would say
+something untrue about it.
+
+**Auth**, absorbing `admin` and `PermissionContext`. `api/` holds
+`auth.api.ts`, `account.api.ts` and `roles.api.ts`; `model/` holds the two
+contexts, the reducer, the hooks and the types; `ui/` holds the one component
+`features/admin` contained. Three `.tsx` files reached the server directly — the
+account page patched its own profile, the roles page listed accounts and flipped
+their flags, and the permission context asked for the account's roles — and are
+now `useAccountInfoPage`, `useManageRolesPage` and a request module.
+`PermissionContext` came out of `shared/services/`, which no longer exists: it
+reads the signed-in account and answers what that account may do, which is the
+auth feature's own question rather than a shared utility. `Account.ts` came out
+of `features/player/types/`, where it had nothing to do with a player. The two
+pages moved to `src/pages/account/` and `src/pages/admin/`.
+
+**Participant**, absorbing `player`, `entrant` and `advancement`. None of the
+three was an area of the application; each was a noun that happened to have a
+file. `participant/api/` takes the player and participant requests and
+`participant/model/` the entrant types, with `entrantPlayer` and `entrantPlayers`
+in `model/entrant.ts` rather than in a module named `types`. `advancement` went
+to `match` instead: its request and its editor are both about where a match
+sends its finishers, and the rule types were already declared there.
+
+Two departures from the plan as written:
+
+- `app/providers.tsx` was created in this slice. `main.tsx` configured the axios
+  base URL, the bearer interceptor and the query client inline, which was the
+  last `axios` import in a `.tsx`. The target layout names the file and no phase
+  claimed it, so finishing the tree here was cheaper than carrying the last rule
+  violation to phase 8.
+- `features/live/model/types.ts` still redeclares what the realtime gateway
+  sends. Those shapes are not the syncstart contracts — the gateway flattens
+  `song` into `songTitle` and `songPath` — and `apps/realtime` declares the
+  flattened form a second time, as `LiveMatchState` with `players: unknown[]`.
+  Putting them in `@tournament-manager/contracts` would make a phase 4 slice
+  span three workspaces, which is the rule phase 6 is the stated exception to.
+  It is recorded here for phase 8.
 
 ### Phase 5 — Remaining read models
 
@@ -844,6 +892,10 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
 - Move `song.service.ts`, `song.roller.ts` and the songs and scores controllers
   into `catalog/`.
 - Mirror `tests/unit` onto the final source tree.
+- Move the realtime gateway's message shapes into
+  `@tournament-manager/contracts`. `features/live/model/types.ts` and
+  `apps/realtime/.../realtime-event.mapper.ts` declare the same flattened
+  projection twice, the second time as `players: unknown[]`.
 - Verification: build, lint, and every suite. No behaviour change anywhere in
   the phase.
 

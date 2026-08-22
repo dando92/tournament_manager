@@ -1,4 +1,4 @@
-import { LobbyCardStateDto } from "@/features/live/services/syncstartGatewayDtos";
+import { LobbyCardStateDto } from "@/features/live/model/types";
 import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 
 type Props = {

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Entrant } from "@/features/entrant/types/Entrant";
+import { Entrant } from "@/features/participant/model/types";
 import { Division, DivisionStandingRow, GenerateBracketRequest, GenerateBracketResultDto } from "@/features/division/model/types";
 
 /** The division as every page under it reads it: the roster and the structure. */
