@@ -1,5 +1,5 @@
-import { useDivisionPageContext } from "@/features/division/context/DivisionPageContext";
-import { useDivisionStandings } from "@/features/division/hooks/useDivisionStandings";
+import { useDivisionPageContext } from "@/features/division/model/DivisionPageContext";
+import { useDivisionStandings } from "@/features/division/model/useDivisionStandings";
 
 export default function DivisionStandingsPage() {
   const { divisionId } = useDivisionPageContext();

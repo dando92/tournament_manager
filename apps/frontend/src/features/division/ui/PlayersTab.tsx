@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowDownAZ } from "@fortawesome/free-solid-svg-icons";
-import PlayersByNameList from "@/features/division/components/PlayersByNameList";
-import PlayersSearchBar from "@/features/division/components/PlayersSearchBar";
-import PlayersWarning from "@/features/division/components/PlayersWarning";
-import { usePlayersTab } from "@/features/division/hooks/usePlayersTab";
-import { Division } from "@/features/division/types/Division";
+import PlayersByNameList from "@/features/division/ui/PlayersByNameList";
+import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
+import PlayersWarning from "@/features/division/ui/PlayersWarning";
+import { usePlayersTab } from "@/features/division/model/usePlayersTab";
+import { Division } from "@/features/division/model/types";
 
 type Props = {
   division: Division;

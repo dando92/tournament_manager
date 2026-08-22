@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/model/types";
 import { Entrant, entrantPlayer } from "@/features/entrant/types/Entrant";
 import { AdvancementRule, Match } from "@/features/match/model/types";
 import { toOrdinal } from "@/shared/utils";

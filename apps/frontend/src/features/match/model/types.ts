@@ -1,5 +1,5 @@
 import type { AdvancementRuleDto } from "@tournament-manager/contracts";
-import type { PhaseGroup } from "@/features/division/types/Phase";
+import type { PhaseGroup } from "@/features/division/model/types";
 
 /**
  * What the match views read, under the names they read it by.

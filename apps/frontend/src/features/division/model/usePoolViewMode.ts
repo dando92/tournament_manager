@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { PoolViewMode, readPoolViewMode, writePoolViewMode } from "@/features/division/services/poolViewMode";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PoolViewMode, readPoolViewMode, writePoolViewMode } from "@/shared/lib/poolViewMode";
+import { PhaseGroup } from "@/features/division/model/types";
 
 /**
  * Device-local layout preference for one pool. Callers mount this per selected pool,

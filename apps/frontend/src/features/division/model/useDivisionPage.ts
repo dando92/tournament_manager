@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Division } from "@/features/division/types/Division";
-import { getDivisionSummary } from "@/features/division/services/divisions.api";
-import { divisionKeys } from "@/features/division/services/divisions.keys";
+import { Division } from "@/features/division/model/types";
+import { getDivisionSummary } from "@/features/division/api/division.api";
+import { divisionKeys } from "@/features/division/api/division.keys";
 
 type UseDivisionPageResult = {
   division: Division | null;

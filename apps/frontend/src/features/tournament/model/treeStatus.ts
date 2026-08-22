@@ -1,5 +1,5 @@
 import type { Status } from "@/shared/components/ui/status";
-import type { PhaseGroup, PhaseGroupState } from "@/features/division/types/Phase";
+import type { PhaseGroup, PhaseGroupState } from "@/features/division/model/types";
 import type { TournamentDivisionOption, TournamentDivisionOptionPhase } from "@/features/tournament/model/types";
 
 /**

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { useDivisionPageContext } from "@/features/division/context/DivisionPageContext";
-import { PhaseGroup } from "@/features/division/types/Phase";
-import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
+import { useDivisionPageContext } from "@/features/division/model/DivisionPageContext";
+import { PhaseGroup } from "@/features/division/model/types";
+import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import { useCreateMatchAction } from "@/features/match/model/useCreateMatchAction";
 import { useMatches } from "@/features/match/model/useMatches";
 import { Match, MatchHighlight } from "@/features/match/model/types";

@@ -1,5 +1,5 @@
 import { useOutletContext } from "react-router-dom";
-import { Division } from "@/features/division/types/Division";
+import { Division } from "@/features/division/model/types";
 
 export type DivisionPageContextValue = {
   division: Division;

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/model/types";
 import { entrantPlayer } from "@/features/entrant/types/Entrant";
 import { Match } from "@/features/match/model/types";
 import { Player } from "@/features/player/types/Player";

@@ -1,4 +1,4 @@
-import { PoolViewMode } from "@/features/division/services/poolViewMode";
+import { PoolViewMode } from "@/shared/lib/poolViewMode";
 
 type PhaseGroupViewSelectProps = {
   mode: PoolViewMode;

@@ -1,5 +1,5 @@
 import { Participant } from "@/features/entrant/types/Entrant";
-import EntrantMembershipRow from "@/features/division/components/EntrantMembershipRow";
+import EntrantMembershipRow from "@/features/division/ui/EntrantMembershipRow";
 
 type PlayersByNameListProps = {
   players: Participant[];

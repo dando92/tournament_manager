@@ -1,5 +1,5 @@
-import PlayersTab from "@/features/division/components/PlayersTab";
-import { useDivisionPageContext } from "@/features/division/context/DivisionPageContext";
+import PlayersTab from "@/features/division/ui/PlayersTab";
+import { useDivisionPageContext } from "@/features/division/model/DivisionPageContext";
 
 export default function DivisionPlayersPage() {
   const { division, controls, refreshDivision } = useDivisionPageContext();

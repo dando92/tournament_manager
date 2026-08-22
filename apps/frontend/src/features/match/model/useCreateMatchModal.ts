@@ -3,7 +3,7 @@ import { Entrant } from "@/features/entrant/types/Entrant";
 import { Song } from "@/features/song/types/Song";
 import { CreateMatchRequest, MatchPhaseOption } from "@/features/match/model/types";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
-import { listDivisionEntrants } from "@/features/division/services/divisions.api";
+import { listDivisionEntrants } from "@/features/division/api/division.api";
 import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/api/match.api";
 import { listSongs } from "@/features/song/api/song.api";

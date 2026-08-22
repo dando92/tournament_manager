@@ -6,9 +6,9 @@ import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { useTournamentUpdates } from "@/features/tournament/model/TournamentUpdatesContext";
 import { useTournamentOverviewQuery } from "@/features/tournament/model/useTournamentOverviewQuery";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
-import { createDivision, deleteDivision, renameDivision } from "@/features/division/services/divisions.api";
-import { createPhase, deletePhase, updatePhase } from "@/features/division/services/phases.api";
-import { createPhaseGroup, deletePhaseGroup, updatePhaseGroup } from "@/features/division/services/phase-groups.api";
+import { createDivision, deleteDivision, renameDivision } from "@/features/division/api/division.api";
+import { createPhase, deletePhase, updatePhase } from "@/features/division/api/phase.api";
+import { createPhaseGroup, deletePhaseGroup, updatePhaseGroup } from "@/features/division/api/phase-group.api";
 import { getExpandedNodes, setExpandedNodes, treeNodeKey } from "@/shared/lib/treeState";
 import TournamentStructureModals from "@/features/tournament/ui/tree/TournamentStructureModals";
 

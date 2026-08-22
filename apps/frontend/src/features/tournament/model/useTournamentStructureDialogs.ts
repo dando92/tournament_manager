@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GenerateBracketRequest } from "@/features/division/types/GenerateBracket";
-import { generateBracket, listBracketTypes } from "@/features/division/services/divisions.api";
+import { GenerateBracketRequest } from "@/features/division/model/types";
+import { generateBracket, listBracketTypes } from "@/features/division/api/division.api";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { treeNodeKey } from "@/shared/lib/treeState";
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTournamentUpdates } from "@/features/tournament/model/TournamentUpdatesContext";
-import { listDivisionStandings } from "@/features/division/services/divisions.api";
-import { DivisionStandingRow } from "@/features/division/types/DivisionStandingRow";
+import { listDivisionStandings } from "@/features/division/api/division.api";
+import { DivisionStandingRow } from "@/features/division/model/types";
 
 export function useDivisionStandings(divisionId: number) {
   const { divisionDetailVersions, matchListVersions } = useTournamentUpdates();

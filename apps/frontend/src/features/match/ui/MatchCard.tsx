@@ -1,5 +1,5 @@
 import { Match, MatchAdvancementRuleInput, MatchHighlight, RoundSourceRequest } from "@/features/match/model/types";
-import { Division } from "@/features/division/types/Division";
+import { Division } from "@/features/division/model/types";
 import AddEditSongToMatchModal from "@/features/match/ui/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/ui/AddPlayersToMatchModal";
 import { useRef, useState } from "react";

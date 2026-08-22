@@ -1,8 +1,8 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { useDivisionMatchesPage } from "@/features/division/hooks/useDivisionMatchesPage";
-import PoolAdvancementEditor from "@/features/division/components/PoolAdvancementEditor";
-import { phaseGroupLabel } from "@/features/division/utils/phaseGroupLabel";
+import { useDivisionMatchesPage } from "@/features/division/model/useDivisionMatchesPage";
+import PoolAdvancementEditor from "@/features/division/ui/PoolAdvancementEditor";
+import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import MatchListRow from "@/features/match/ui/MatchListRow";
 import CreateMatchModal from "@/features/match/ui/CreateMatchModal";

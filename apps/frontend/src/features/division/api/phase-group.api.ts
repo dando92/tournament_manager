@@ -1,5 +1,5 @@
 import axios from "axios";
-import { PhaseGroup } from "@/features/division/types/Phase";
+import { PhaseGroup } from "@/features/division/model/types";
 
 type CreatePhaseGroupRequest = {
   name?: string;

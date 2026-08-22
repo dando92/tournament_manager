@@ -1,7 +1,7 @@
 import MatchCard from "@/features/match/ui/MatchCard";
 import { useAdvancementTargets } from "@/features/match/model/useAdvancementTargets";
 import { useMatches } from "@/features/match/model/useMatches";
-import { Division } from "@/features/division/types/Division";
+import { Division } from "@/features/division/model/types";
 import { Match, MatchHighlight } from "@/features/match/model/types";
 
 /**
