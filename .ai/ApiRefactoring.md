@@ -755,11 +755,43 @@ round-robin table — are still unreferenced. They were left in place deliberate
 when the list row took over match state, and moving them keeps that decision
 where it was rather than settling it inside a layout slice.
 
+#### Division (done)
+
+`features/division/` had ten directories and now has three. `api/` holds
+`division.api.ts`, `division.keys.ts`, `phase.api.ts` and `phase-group.api.ts`;
+`model/` holds the hooks, the page context, the pure functions and the view
+types; `ui/` holds everything that renders. The four pages moved to
+`src/pages/tournament/division/` and lost the prefix the directory now carries,
+and `DivisionLayout` folded into `DivisionPage`, which is the layout route.
+
+- The four modules under `features/division/types/` became one `model/types.ts`.
+  Two exports nothing imported went with them: `GenerateBracketResult` and
+  `PhaseGroupEntrant`.
+- `useDivisionPage` and `useDivisionStandings` addressed the API with their own
+  `axios.get` while `divisions.api.ts` sat beside them. `getDivisionSummary` and
+  `listDivisionStandings` are declared with the other division requests.
+- `useDivisionMatchesPage` took the match list page from 297 lines to 186 of
+  JSX. What it holds is state about the page rather than about a match: the
+  scope the tree opened, the pool grouping, the open match and the pool
+  advancement editor.
+- `createDivision` and `renameDivision` answer `void`. They declared a
+  `DivisionSummary` type for a body neither caller reads, and the name collided
+  with `DivisionSummaryDto`, which is a different shape entirely.
+- `poolViewMode.ts` moved to `shared/lib/`, beside `treeState` and
+  `themePreference`.
+
+One departure from the plan as written:
+
+- `useDivisionStandings` still keeps its rows in `useState` and refetches on the
+  realtime version counters rather than reading the query cache under a declared
+  key. Converting it is a change of update path, which is phase 6, and doing it
+  here would have put that change inside a layout slice.
+
 #### Remaining slices
 
-`division`, `song`, `live`, `auth` (absorbing `admin` and `PermissionContext`)
-and `participant` (absorbing `player`). `advancement` and `entrant` are
-vestigial and are absorbed rather than given three directories.
+`song`, `live`, `auth` (absorbing `admin` and `PermissionContext`) and
+`participant` (absorbing `player`). `advancement` and `entrant` are vestigial
+and are absorbed rather than given three directories.
 
 ### Phase 5 — Remaining read models
 
