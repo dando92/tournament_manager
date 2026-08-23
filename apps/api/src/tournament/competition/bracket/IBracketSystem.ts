@@ -4,7 +4,7 @@ import { Entrant, Phase, PhaseGroup } from "@tournament-manager/persistence";
 import { MatchCommands } from "@match/match.commands";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
-import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";
+import { PhaseGroupService } from "@tournament/structure/phase-group/phase-group.service";
 
 export class IBracketSystem {
     constructor(

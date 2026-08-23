@@ -35,7 +35,7 @@ import { PlayerService } from '@player/player.service';
 import { TournamentService } from '@tournament/services/tournament.service';
 import { CreatePhaseDto } from '@tournament/dtos';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 import {
     StartggClient,
     StartggEntrantNode,

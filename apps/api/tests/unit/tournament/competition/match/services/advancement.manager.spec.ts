@@ -1,7 +1,7 @@
 import { AdvancementRule, Entrant, Match, MatchResult, Player } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { MatchAggregate } from '@match/match.aggregate';

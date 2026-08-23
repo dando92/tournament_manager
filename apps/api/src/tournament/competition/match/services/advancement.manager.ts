@@ -6,7 +6,7 @@ import { MatchAggregate } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 /**
  * Where the entrants of a finished match go next.

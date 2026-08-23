@@ -11,7 +11,7 @@ import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;

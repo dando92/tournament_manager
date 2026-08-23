@@ -1,6 +1,6 @@
 import { PhaseGroup } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 describe('PhaseGroupService.createForPhase', () => {
   const phaseGroupRepository = {

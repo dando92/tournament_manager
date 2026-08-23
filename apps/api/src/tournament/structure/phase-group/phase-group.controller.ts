@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { CreatedResourceDto, PhaseGroupEntrantDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
-import { PhaseGroupManager } from '@tournament/structure/services/phase-group.manager';
+import { PhaseGroupManager } from '@tournament/structure/phase-group/phase-group.manager';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)

@@ -5,7 +5,7 @@ import { BracketSystemProvider } from '@bracket/BracketSystemProvider';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { DivisionAggregate, DivisionDetails } from '@tournament/structure/division/division.aggregate';
 import { DivisionStore } from '@tournament/structure/division/division.store';
-import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 import { PhaseService } from '@tournament/structure/services/phase.service';
 
 export type CreateDivisionInput = DivisionDetails & {

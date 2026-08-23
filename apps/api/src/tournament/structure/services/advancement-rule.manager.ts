@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { AdvancementCompetitionKind } from '@tournament-manager/persistence';
 import { AdvancementRuleInputDto } from '@tournament/dtos';
 import { MatchQueries } from '@match/match.queries';
-import { PhaseGroupService } from './phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 import { AdvancementRuleService } from './advancement-rule.service';
 
 @Injectable()

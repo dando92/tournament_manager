@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Division, Phase } from '@tournament-manager/persistence';
 import { CreatePhaseDto, UpdatePhaseDto } from '@tournament/dtos';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { PhaseGroupService } from './phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 @Injectable()
 export class PhaseService {

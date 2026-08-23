@@ -4,7 +4,7 @@ import { PhaseGroupDto, PhaseGroupEntrantDto } from '@tournament-manager/contrac
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/dtos';
 import { toEntrantDto } from '@tournament/shared/projections';
 import { TreeQueries } from '@tournament/structure/tree.queries';
-import { PhaseGroupService } from './phase-group.service';
+import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 @Injectable()
 export class PhaseGroupManager {
