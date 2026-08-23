@@ -353,13 +353,13 @@ src/tournament/
     standings.queries.ts
     score.queries.ts
 
-  catalog/                          Song and its pool
+  catalog/                          Song and its pool, and the player catalogue
     song.{controller,commands,store,queries}.ts
     song-roller.ts
     pad-roller.ts
+    player.{controller,commands,queries}.ts
 
   syncstart/                        already coherent; unchanged
-  player/                           already coherent; gains the role suffixes
 
   shared/
     tournament-open.guard.ts
@@ -369,7 +369,15 @@ src/tournament/
 
 Decisions inside this tree:
 
-- No `dtos/`, `services/` or `controllers/` directories.
+- No `dtos/`, `services/` or `controllers/` directories. The classes that keep
+  the `*.service.ts` name are the ones that are not aggregates: the integration
+  adapters under `integrations/` and `syncstart/`, which own an outbound
+  protocol rather than a piece of the domain.
+- `player/` is dissolved into `catalog/`. A player belongs to the application
+  rather than to a tournament, which makes it a catalogue like Song and not an
+  aggregate: it is created and renamed, and everything that happens to a person
+  inside a tournament happens to the participant or the entrant that stands for
+  them.
 - `ui-update-context.service.ts` is deleted.
 - `completed-song.service.ts` splits: the ingestion endpoint stays in
   `syncstart/`, and its effect becomes `match.commands.applyCompletedSong()`.
@@ -1188,6 +1196,65 @@ generated bracket seats people in seeded order, and that a command loads the poo
 once — and the migration-runner e2e test. Frontend `tsc --noEmit`, `eslint`,
 `vite build` and `node --test` (15/15) pass.
 
+#### Tournament (done)
+
+`management/` holds `tournament.{controller,commands,aggregate,store,queries,requests}.ts`
+and `registration/` holds `participants.{controller,commands,queries,requests}.ts`.
+`TournamentService`, `TournamentManager`, `ParticipantService`, `PlayerManager`
+and `PhaseService` are gone, and with them `src/tournament/services/` and
+`src/tournament/dtos/`.
+
+**The participants are part of the tournament.** A participant is one person in
+one tournament and has no life outside it, so the roster is loaded and saved
+with the tournament, and `TournamentAggregate.register` is the rule that
+`ensureForPlayer` spelled as a query and a save per person: registering somebody
+already registered merges their roles instead of creating a second row. Every
+surface that registers people ends there — a name, a chosen player, a pasted
+list, and the start.gg import, which registers a whole event in one load and one
+save instead of a query and a save each.
+
+`ParticipantsCommands` is a second commands class over that aggregate rather
+than a second aggregate. It is the shape the layout above already draws, and it
+is the same relationship `rounds.controller.ts` has with the match: one
+aggregate, two surfaces. The two classes are siblings — neither calls the other,
+and both go through `TournamentStore`.
+
+**A tournament announced nothing at all.** Renaming one, changing its scoring
+system or closing it moved for whoever did it and for nobody else. All three
+publish `ui.tournament-changed` now; closing one that was already closed
+publishes nothing, because a status that did not move is nothing to redraw.
+
+Two things left the controller, because they are consequences of the write
+rather than decisions the caller makes: registering the creator of a tournament
+as its owner, and telling SyncStart where the lobbies live. The controller used
+to compare the previous SyncStart URL with the new one, which is why the write
+had to answer with the value it replaced.
+
+**`Phase` is not an aggregate** — the open question phase 7 was to settle. It is
+a name and a position inside the division that holds it: nothing about it is
+decided without the division, and what it publishes is the division event it
+always published. Its three commands are `DivisionCommands.addPhase`,
+`renamePhase` and `removePhase`, and `phase.controller.ts` sits in
+`structure/division/` as a second surface on that aggregate. The bracket systems
+lose the `PhaseService` none of them called.
+
+Two things the slice does not do. The tournament configuration and participants
+pages still hold their state in `useState` and re-read by hand after a write, so
+the new event stales the tree rather than them; putting those two pages on the
+query cache is the frontend work phase 4 left behind. And `PlayerService`
+remains: a player belongs to the application rather than to a tournament, so it
+is a catalogue like Song and is refactored with it.
+
+Verification: `npm run verify` passes — architecture boundaries, every workspace
+build, lint (three pre-existing warnings, none in the changed files), contracts,
+118 unit tests including the new `tournament.aggregate.spec.ts` and the phase
+rules added to `division.aggregate.spec.ts`, 73 API e2e tests against PostgreSQL
+— twelve of them new, in `tournament-writes.e2e-spec.ts`, covering what each
+write announces, that registering the same person twice leaves one participant,
+that unregistering somebody withdraws their entrants through the division first,
+that SyncStart is told only when the URL moved, and that an imported list costs
+one load of the tournament — and the migration-runner e2e test.
+
 ### Phase 8 — File tree and naming
 
 What the aggregate phases cannot carry, because it belongs to no aggregate.
@@ -1198,6 +1265,13 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
 - Delete the barrels: `tournament/dtos.ts`, `account/dtos.ts`, `auth/guards.ts`
   and `auth/strategies.ts`. Phase 3 empties the first of its response types;
   what remains are request DTOs, which move beside their controller.
+- Move the advancement rules into `structure/advancement/` as
+  `advancement-rule.{controller,commands,store}.ts`, and rename
+  `AdvancementManager` to `AdvancementRunner` — `advancement.runner.ts`, beside
+  them. The rules are the data; the runner is what walks them when a competition
+  is decided, which is a role of its own and not a commands class: it writes
+  through the match and pool stores, and a commands class calling it would be a
+  commands class calling another.
 - Create `shared/` and move `tournament-open.guard.ts`,
   `ui-update.publisher.ts` and the common projections into it. The publisher
   currently lives under `competition/match/services/`, where six files outside
