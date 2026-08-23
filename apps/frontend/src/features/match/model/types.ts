@@ -1,5 +1,4 @@
 import type { AdvancementRuleDto } from "@tournament-manager/contracts";
-import type { PhaseGroup } from "@/features/division/model/types";
 
 /**
  * What the match views read, under the names they read it by.
@@ -35,13 +34,6 @@ export type MatchHighlight = {
   matchId: number | null;
   phaseGroupId: number | null;
 };
-
-/** A phase as the create-match modal offers it: a name and the pools under it. */
-export interface MatchPhaseOption {
-  id: number;
-  name: string;
-  phaseGroups?: PhaseGroup[];
-}
 
 export interface CreateMatchRequest {
   phaseGroupId: number;

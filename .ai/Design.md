@@ -169,6 +169,23 @@ An empty slot is marked by a **dashed outline**, never by a colour. The dash is 
 shape signal, so it survives greyscale and colour blindness. `btnCreate` and
 `btnCreateIcon` are neutral throughout.
 
+## A hierarchical destination is a path
+
+Division, phase and pool are one address, so they are drawn as one: a breadcrumb
+the user can write, read left to right, with the same `/` the sidebar breadcrumb
+uses. Three dependent dropdowns stacked as form fields say nothing about the
+order they depend on each other in.
+
+A filled segment is a raised surface; an empty one is the **dashed slot**
+creation already uses, which is what says the path is unfinished without adding
+a hue. A level nobody can use yet keeps its place and its dash and stops
+responding, because removing it would move everything beside it.
+
+On a narrow screen the path scrolls sideways rather than becoming a different
+control. Its ends fade while there is more to see — the content is masked rather
+than covered by a gradient, so the affordance is right on any background — and a
+segment keeps a touch target larger than its label.
+
 ## Domain scales
 
 These rank or identify a value and never report application state, so they sit
