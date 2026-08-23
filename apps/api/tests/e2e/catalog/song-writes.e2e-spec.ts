@@ -50,7 +50,7 @@ describe('Song writes (e2e)', () => {
   async function createMatch(): Promise<number> {
     const match = await request(app.getHttpServer())
       .post('/matches')
-      .send({ name: 'Set', phaseGroupId: poolId, scoringSystem: 'EurocupScoreCalculator', entrantIds: [entrantId] })
+      .send({ name: 'Set', phaseGroupId: poolId, scoringSystem: 'PlacementPointsWithFailZero', entrantIds: [entrantId] })
       .expect(201);
 
     return match.body.id;

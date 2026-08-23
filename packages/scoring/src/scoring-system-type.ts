@@ -1,6 +1,7 @@
 export const SCORING_SYSTEM_TYPES = [
-  'EurocupFinalsScoringSystem',
-  'EurocupScoreCalculator',
+  'PlacementPointsWithFailZero',
+  'PlacementPointsIncludingFails',
+  'RoundWinner',
 ] as const;
 
 export type ScoringSystemType = (typeof SCORING_SYSTEM_TYPES)[number];

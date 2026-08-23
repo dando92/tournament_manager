@@ -171,6 +171,28 @@ Each phase leaves the build, the lint and the tests green.
 - **Drafts held in browsers are discarded.** Removing `manualScoring.ts` drops
   any points typed but not committed. They are per-device and pre-production.
 
+## Scoring strategies and match editing
+
+As of 2026-08-23, a match's scoring strategy can be changed while the match is
+editable. Saving the change recalculates every complete played round in the
+same aggregate save. Incomplete played rounds remain at zero, hand-scored
+rounds remain untouched, and a completed match must be reopened before its
+strategy can change.
+
+The strategy identifiers describe their behaviour instead of their historical
+implementation:
+
+- `PlacementPointsWithFailZero` awards descending placement points while failed
+  scores receive zero. Failed scores still leave their positions unused in the
+  points scale.
+- `PlacementPointsIncludingFails` uses the same placement scale and awards
+  points to failed scores as well.
+- `RoundWinner` awards one point to the highest percentage in a round.
+
+The match actions menu exposes **Edit scoring system**. Its dialog warns when
+saved song scores will be recalculated and writes the selected identifier
+through `PATCH /matches/:id`.
+
 ## Future handling: mixed rounds
 
 The model allows what the decision above forbids. A match can hold one

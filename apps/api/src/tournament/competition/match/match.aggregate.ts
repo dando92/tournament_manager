@@ -187,7 +187,20 @@ export class MatchAggregate {
         if (details.name !== undefined) this.match.name = details.name;
         if (details.subtitle !== undefined) this.match.subtitle = details.subtitle;
         if (details.notes !== undefined) this.match.notes = details.notes;
-        if (details.scoringSystem !== undefined) this.match.scoringSystem = details.scoringSystem;
+    }
+
+    /**
+     * Changes how played rounds award points and immediately makes every round
+     * agree with the new strategy. Hand-scored points are stated by a person,
+     * so changing a calculator never touches them.
+     */
+    changeScoringSystem(scoringSystem: ScoringSystemType, scoringSystems: ScoringSystemProvider): void {
+        if (scoringSystem === this.match.scoringSystem) {
+            return;
+        }
+
+        this.match.scoringSystem = scoringSystem;
+        this.resettle(scoringSystems);
     }
 
     moveTo(phaseGroup: PhaseGroup): void {

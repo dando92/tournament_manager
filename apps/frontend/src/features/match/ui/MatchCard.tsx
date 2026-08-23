@@ -6,6 +6,7 @@ import AddPlayersToMatchModal from "@/features/match/ui/AddPlayersToMatchModal";
 import { useRef, useState } from "react";
 import StandingModal from "@/features/match/ui/StandingModal";
 import EditMatchNotesModal from "@/features/match/ui/EditMatchNotesModal";
+import EditScoringSystemModal from "@/features/match/ui/EditScoringSystemModal";
 import MatchHeader from "@/features/match/ui/MatchHeader";
 import MatchEmptySlots from "@/features/match/ui/MatchEmptySlots";
 import MatchTable from "@/features/match/ui/MatchTable";
@@ -43,6 +44,7 @@ type MatchCardProps = {
     scoreId?: number,
   ) => void;
   onEditMatchNotes: (matchId: number, notes: string) => void;
+  onUpdateMatchScoringSystem: (matchId: number, scoringSystem: string) => Promise<void>;
   onRenameMatch?: (matchId: number, name: string) => void;
   onEditStanding: (
     playerId: number,
@@ -103,6 +105,7 @@ export default function MatchCard({
   onChangePoints,
   onAddStandingToMatch,
   onEditMatchNotes,
+  onUpdateMatchScoringSystem,
   onRenameMatch,
   onDeleteStanding,
   onEditStanding,
@@ -115,6 +118,7 @@ export default function MatchCard({
   const [editRoundId, setEditRoundId] = useState<number | null>(null);
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
+  const [editScoringSystemModalOpen, setEditScoringSystemModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
@@ -258,6 +262,12 @@ export default function MatchCard({
         onClose={() => setEditMatchNotesModalOpen(false)}
         onSave={onEditMatchNotes}
       />
+      <EditScoringSystemModal
+        match={match}
+        open={editScoringSystemModalOpen}
+        onClose={() => setEditScoringSystemModalOpen(false)}
+        onSave={onUpdateMatchScoringSystem}
+      />
 
       <MatchHeader
         match={match}
@@ -269,6 +279,7 @@ export default function MatchCard({
         canToggleHandScoring={handScoredRound !== null || match.rounds.length === 0}
         onToggleHandScoring={toggleHandScoring}
         onOpenEditNotes={() => setEditMatchNotesModalOpen(true)}
+        onOpenEditScoringSystem={() => setEditScoringSystemModalOpen(true)}
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}

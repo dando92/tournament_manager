@@ -47,14 +47,19 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 ### Formatting Discipline
 
-- Use the repository-root Prettier configuration as the single formatting
-  standard for every workspace and every supported source or documentation
-  file.
-- Standard formatting is two-space indentation, an 80-column print width,
-  double quotes where Prettier controls quoting, semicolons, and trailing commas.
-- When modifying a legacy file that does not follow the standard, format the
-  whole file with the root configuration as part of the same change. Do not
-  reformat unrelated legacy files that are outside the task scope.
+- Preserve the existing formatting of every existing file. Make only the
+  smallest formatting changes required around edited lines; never reformat a
+  whole existing file as part of an unrelated functional change.
+- New files and newly introduced blocks use four-space indentation, double
+  quotes where Prettier controls quoting, semicolons, and trailing commas.
+- Keep imports, function declarations, function calls, and their parameters on
+  one line whenever reasonably possible. When a line must wrap, keep related
+  parameters grouped instead of placing every parameter on its own line.
+- Always put an `if` body on the following line and enclose it in braces. Do not
+  use single-line `if` statements.
+- The repository-root Prettier configuration defines defaults for new files.
+  Do not run Prettier over an existing file when doing so would rewrite its
+  established formatting.
 
 ### graphify (Claude Code)
 

@@ -95,7 +95,7 @@ describe('Tournament management (e2e)', () => {
           id: tournamentId,
           name: fixture.createTournament.name,
           availableSetupsCount: 2,
-          defaultScoringSystem: 'EurocupScoreCalculator',
+          defaultScoringSystem: 'PlacementPointsWithFailZero',
         });
         expect(body.syncstartUrl).toBe('ws://syncservice.groovestats.com:1337');
       });
@@ -174,7 +174,7 @@ describe('Tournament management (e2e)', () => {
       .send({
         name: 'Qualifier 1',
         phaseGroupId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds: [entrantId],
       })
       .expect(201);
@@ -229,7 +229,7 @@ describe('Tournament management (e2e)', () => {
           closedAt: null,
           syncstartUrl: 'ws://syncservice.groovestats.com:1337',
           availableSetupsCount: 2,
-          defaultScoringSystem: 'EurocupScoreCalculator',
+          defaultScoringSystem: 'PlacementPointsWithFailZero',
         });
       });
 

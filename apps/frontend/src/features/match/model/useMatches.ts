@@ -73,6 +73,12 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
       renameMatch: (matchId: number, name: string) =>
         run(() => MatchesApi.renameMatch(matchId, name), "Error renaming match."),
 
+      updateMatchScoringSystem: (matchId: number, scoringSystem: string) =>
+        run(async () => {
+          await MatchesApi.updateMatchScoringSystem(matchId, scoringSystem);
+          toast.success("Scoring system updated.");
+        }, "Error updating match scoring system."),
+
       deleteMatch: (matchId: number) =>
         run(() => MatchesApi.deleteMatch(matchId), "Error deleting match."),
 

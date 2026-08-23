@@ -28,7 +28,7 @@ export class LocalFixturesService {
       name,
       syncstartUrl: this.config.get('LOCAL_FIXTURE_SYNCSTART_URL'),
       availableSetupsCount: 2,
-      defaultScoringSystem: 'EurocupScoreCalculator',
+      defaultScoringSystem: 'PlacementPointsWithFailZero',
     });
     const saved = await this.tournaments.save(tournament);
     await this.configureSyncStart(saved);

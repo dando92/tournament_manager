@@ -160,7 +160,7 @@ describe('Match reads (e2e)', () => {
         subtitle: `${name} subtitle`,
         notes: `${name} notes`,
         phaseGroupId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds,
         ...(songIds.length > 0 ? { songIds } : {}),
       })
@@ -191,7 +191,7 @@ describe('Match reads (e2e)', () => {
       name: 'Qualifier 1',
       subtitle: 'Qualifier 1 subtitle',
       notes: 'Qualifier 1 notes',
-      scoringSystem: 'EurocupScoreCalculator',
+      scoringSystem: 'PlacementPointsWithFailZero',
       active: false,
       phaseGroupId: poolId,
       matchResult: null,

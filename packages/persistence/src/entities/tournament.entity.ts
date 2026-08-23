@@ -37,7 +37,7 @@ export class Tournament {
   @Column({ default: 2 })
   availableSetupsCount: number;
 
-  @Column({ default: 'EurocupScoreCalculator' })
+  @Column({ default: 'PlacementPointsWithFailZero' })
   defaultScoringSystem: ScoringSystemType;
 
   @OneToMany(() => Division, (division) => division.tournament, { cascade: true })

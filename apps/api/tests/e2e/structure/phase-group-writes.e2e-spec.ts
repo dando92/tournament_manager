@@ -60,7 +60,7 @@ describe('Phase group writes (e2e)', () => {
   async function createMatch(phaseGroupId: number, entrantIds: number[]): Promise<number> {
     const match = await request(app.getHttpServer())
       .post('/matches')
-      .send({ name: 'Set 1', phaseGroupId, scoringSystem: 'EurocupScoreCalculator', entrantIds })
+      .send({ name: 'Set 1', phaseGroupId, scoringSystem: 'PlacementPointsWithFailZero', entrantIds })
       .expect(201);
 
     return match.body.id;
@@ -226,7 +226,7 @@ describe('Phase group writes (e2e)', () => {
         .send({
           name: 'Set 2',
           phaseGroupId: defaultPoolId,
-          scoringSystem: 'EurocupScoreCalculator',
+          scoringSystem: 'PlacementPointsWithFailZero',
           entrantIds: [entrantIdByName.get('Bob')],
         })
         .expect(201),

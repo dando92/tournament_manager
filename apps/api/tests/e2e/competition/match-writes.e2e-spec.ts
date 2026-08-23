@@ -25,6 +25,7 @@ process.env.DATABASE_NAME = database;
 type MatchBody = {
   id: number;
   name: string;
+  scoringSystem: string;
   active: boolean;
   entrants: Array<{ id: number; participants: Array<{ player: { id: number } }> }>;
   rounds: Array<{
@@ -184,7 +185,7 @@ describe('Match writes (e2e)', () => {
         subtitle: `${name} subtitle`,
         notes: `${name} notes`,
         phaseGroupId: poolId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds,
         ...(songIds.length > 0 ? { songIds } : {}),
       })
@@ -284,6 +285,32 @@ describe('Match writes (e2e)', () => {
     const removed = await readMatch(match.id);
     expect(removed.rounds[0].standings).toHaveLength(1);
     expect(removed.rounds[0].standings[0].points).toBe(0);
+  });
+
+  it('persists a scoring-system change and recalculates completed rounds', async () => {
+    const match = await createMatch('Scoring Strategy Match', [firstEntrantId, secondEntrantId], [songId]);
+    const roundId = match.rounds[0].id;
+
+    await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 99, isFailed: true })
+        .expect(204);
+    await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+        .send({ percentage: 98, isFailed: false })
+        .expect(204);
+
+    const before = await readMatch(match.id);
+    expect(before.rounds[0].standings.find((standing) => standing.player.id === firstPlayerId)?.points).toBe(0);
+
+    await request(app.getHttpServer())
+        .patch(`/matches/${match.id}`)
+        .send({ scoringSystem: 'PlacementPointsIncludingFails' })
+        .expect(204);
+
+    const after = await readMatch(match.id);
+    expect(after.scoringSystem).toBe('PlacementPointsIncludingFails');
+    expect(after.rounds[0].standings.find((standing) => standing.player.id === firstPlayerId)?.points).toBe(2);
   });
 
   it('states points on a hand-scored round and refuses the other kind of evidence', async () => {

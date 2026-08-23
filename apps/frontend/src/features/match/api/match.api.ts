@@ -78,6 +78,15 @@ export async function renameMatch(matchId: number, name: string): Promise<void> 
   }
 }
 
+export async function updateMatchScoringSystem(matchId: number, scoringSystem: string): Promise<void> {
+  try {
+    await axios.patch(`matches/${matchId}`, { scoringSystem });
+  } catch (error) {
+    console.error("Error updating match scoring system:", error);
+    throw new Error("Unable to update the match scoring system.");
+  }
+}
+
 export async function updateMatchEntrants(matchId: number, entrantIds: number[]): Promise<void> {
   try {
     await axios.patch(`matches/${matchId}`, { entrantIds });

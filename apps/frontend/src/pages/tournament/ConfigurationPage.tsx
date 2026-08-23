@@ -1,5 +1,6 @@
 import { btnDanger, btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { useTournamentConfigurationPage } from "@/features/tournament/model/useTournamentConfigurationPage";
+import { scoringSystemLabel } from "@/features/match/model/scoringSystem";
 
 export default function ConfigurationPage() {
   const {
@@ -132,7 +133,7 @@ export default function ConfigurationPage() {
             >
               {scoringSystems.map((system) => (
                 <option key={system} value={system}>
-                  {system}
+                  {scoringSystemLabel(system)}
                 </option>
               ))}
             </select>

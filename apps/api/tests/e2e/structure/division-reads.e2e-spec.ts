@@ -204,7 +204,7 @@ describe('Division reads (e2e)', () => {
       .send({
         name: 'Qualifier 1',
         phaseGroupId: poolId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds: [entrantIdByName.get('Bob Player'), entrantIdByName.get('Cal Player')],
         songIds: [song.body.id],
       })
@@ -229,7 +229,7 @@ describe('Division reads (e2e)', () => {
       .send({
         name: 'Qualifier 2',
         phaseGroupId: poolId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds: [entrantIdByName.get('Cal Player')],
       })
       .expect(201);

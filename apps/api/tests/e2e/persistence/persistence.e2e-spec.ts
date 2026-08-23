@@ -138,7 +138,7 @@ describe('Score and match-result persistence (e2e)', () => {
     const stored = await matchRepository.save(
       matchRepository.create({
         name: 'Aggregate Match',
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         active: true,
         entrants: [entrant],
       }),

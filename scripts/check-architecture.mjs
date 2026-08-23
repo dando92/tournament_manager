@@ -19,8 +19,8 @@ if (!existsSync(prettierConfigPath)) {
 } else {
   const prettierConfig = JSON.parse(readFileSync(prettierConfigPath, "utf8"));
   const expectedPrettierConfig = {
-    printWidth: 80,
-    tabWidth: 2,
+    printWidth: 160,
+    tabWidth: 4,
     useTabs: false,
     semi: true,
     singleQuote: false,

@@ -20,6 +20,7 @@ type Props = {
   canToggleHandScoring: boolean;
   onToggleHandScoring: () => void;
   onOpenEditNotes: () => void;
+  onOpenEditScoringSystem: () => void;
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
   onOpenAddPlayer: () => void;
@@ -40,6 +41,7 @@ export default function MatchHeader({
   canToggleHandScoring,
   onToggleHandScoring,
   onOpenEditNotes,
+  onOpenEditScoringSystem,
   onDeleteMatch,
   onOpenAddSong,
   onOpenAddPlayer,
@@ -149,6 +151,13 @@ export default function MatchHeader({
                   icon: faTowerBroadcast,
                   disabled: !canToggleActive,
                   onSelect: onToggleActive,
+                },
+                {
+                  key: "scoring-system",
+                  label: "Edit scoring system",
+                  icon: faCalculator,
+                  hidden: isMatchEnded,
+                  onSelect: onOpenEditScoringSystem,
                 },
                 {
                   key: "hand-scoring",

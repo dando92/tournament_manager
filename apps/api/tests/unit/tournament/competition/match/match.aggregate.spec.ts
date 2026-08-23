@@ -42,7 +42,7 @@ function match(entrants: Entrant[], rounds: Round[], result: MatchResult | null 
     id: 20,
     name: 'Test Match',
     active: false,
-    scoringSystem: 'EurocupScoreCalculator',
+    scoringSystem: 'PlacementPointsWithFailZero',
     entrants,
     rounds,
     matchResult: result,
@@ -64,6 +64,36 @@ describe('MatchAggregate', () => {
 
     it('allows a match with no result to be changed', () => {
       expect(() => match([entrant(1, 101)], []).assertEditable()).not.toThrow();
+    });
+
+    it('recalculates every complete played round after changing scoring system', () => {
+        const recalc = jest.fn();
+        const first = player(101);
+        const second = player(102);
+        const completeRound = playedRound([
+            standing(200, first, score(100, first, 99), 2),
+            standing(201, second, score(101, second, 98), 1),
+        ]);
+        const incompleteRound = { id: 32, song: SONG, standings: [standing(202, first, score(102, first, 97), 2)] } as Round;
+        const statedRound = handScoredRound([standing(203, first, undefined, 7)]);
+        const edited = match([entrant(1, 101), entrant(2, 102)], [completeRound, incompleteRound, statedRound]);
+
+        edited.changeScoringSystem('PlacementPointsIncludingFails', scoringSystems(recalc));
+
+        expect(edited.entity.scoringSystem).toBe('PlacementPointsIncludingFails');
+        expect(recalc).toHaveBeenCalledTimes(1);
+        expect(recalc).toHaveBeenCalledWith(completeRound.standings);
+        expect(incompleteRound.standings[0].points).toBe(0);
+        expect(statedRound.standings[0].points).toBe(7);
+    });
+
+    it('does not recalculate when the scoring system is unchanged', () => {
+        const recalc = jest.fn();
+        const edited = match([entrant(1, 101)], [playedRound()]);
+
+        edited.changeScoringSystem('PlacementPointsWithFailZero', scoringSystems(recalc));
+
+        expect(recalc).not.toHaveBeenCalled();
     });
 
     it('does not allow a completed match to be activated', () => {

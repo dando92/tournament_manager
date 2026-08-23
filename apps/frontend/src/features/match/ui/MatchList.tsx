@@ -77,6 +77,7 @@ export default function MatchList({
       onMatchUpdated={refreshMatches}
       onEditMatchNotes={actions.editMatchNotes}
       onRenameMatch={actions.renameMatch}
+      onUpdateMatchScoringSystem={actions.updateMatchScoringSystem}
       onDeleteMatch={actions.deleteMatch}
       onAddPlayersToMatch={(entrantIds) =>
         actions.updateMatchEntrants(match.id, entrantIds)

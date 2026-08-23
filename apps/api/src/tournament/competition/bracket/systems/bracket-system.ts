@@ -87,7 +87,7 @@ export class BracketSystem {
             name,
             notes: desc,
             phaseGroupId,
-            scoringSystem: "EurocupScoreCalculator",
+            scoringSystem: "PlacementPointsWithFailZero",
         });
     }
 

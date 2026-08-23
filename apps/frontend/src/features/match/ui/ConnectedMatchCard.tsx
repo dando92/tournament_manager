@@ -53,6 +53,7 @@ export default function ConnectedMatchCard({
       onMatchUpdated={actions.list}
       onEditMatchNotes={actions.editMatchNotes}
       onRenameMatch={actions.renameMatch}
+      onUpdateMatchScoringSystem={actions.updateMatchScoringSystem}
       onDeleteMatch={actions.deleteMatch}
       onAddPlayersToMatch={(entrantIds) => actions.updateMatchEntrants(match.id, entrantIds)}
       onAddRounds={(sources) => sources.forEach((source) => actions.addRound(match.id, source))}

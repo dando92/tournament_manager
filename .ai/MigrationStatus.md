@@ -585,6 +585,26 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Next action: apply the root standard whenever a legacy file next enters the
   scope of a functional change.
 
+### Match scoring strategy editing and formatting policy correction
+
+- Added editable match scoring strategies. Changing a strategy persists it and
+  recalculates every complete played round while leaving incomplete and
+  hand-scored rounds consistent with their existing rules.
+- Added `PlacementPointsIncludingFails`, renamed the existing strategies by
+  behaviour, and added a migration for persisted strategy identifiers.
+- Added **Edit scoring system** to the match actions menu with a focused editor
+  and recalculation warning.
+- Replaced the unified-reformat policy with preservation of each existing
+  file's established format. New files and blocks use four-space indentation,
+  compact imports and parameter lists, and multiline braced `if` bodies. The
+  root Prettier defaults now use four spaces and a 160-column print width.
+- Verification: architecture checks pass; all workspace builds pass; scoring
+  tests pass (6 tests); API unit tests pass (125 tests); the match-write e2e
+  suite passes (13 tests); the migration-runner e2e test passes; all workspace
+  linters pass with the one existing API warning and five existing frontend
+  warnings.
+- Next action: run local-stack verification when a Docker checkpoint is wanted.
+
 ## Verification
 
 ```text

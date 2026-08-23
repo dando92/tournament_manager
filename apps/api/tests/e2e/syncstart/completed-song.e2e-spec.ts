@@ -75,7 +75,7 @@ describe('Completed songs (e2e)', () => {
       .send({
         name: 'Set',
         phaseGroupId: poolId,
-        scoringSystem: 'EurocupScoreCalculator',
+        scoringSystem: 'PlacementPointsWithFailZero',
         entrantIds: names.map((name) => entrantIdByName.get(name)),
         songIds: [songId],
       })

@@ -90,6 +90,9 @@ export class MatchCommands {
 
         const origin = match.address;
         match.describe(input);
+        if (input.scoringSystem !== undefined) {
+            match.changeScoringSystem(input.scoringSystem, this.scoringSystems);
+        }
 
         if (input.phaseGroupId !== undefined) {
             match.moveTo(await this.store.loadPhaseGroup(input.phaseGroupId));

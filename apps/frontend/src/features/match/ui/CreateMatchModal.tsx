@@ -6,6 +6,7 @@ import CreateMatchSongFields from "@/features/match/ui/CreateMatchSongFields";
 import { useCreateMatchModal } from "@/features/match/model/useCreateMatchModal";
 import CascadingPathPicker from "@/shared/components/ui/CascadingPathPicker";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
+import { scoringSystemLabel } from "@/features/match/model/scoringSystem";
 
 type CreateMatchModalProps = {
   open: boolean;
@@ -64,9 +65,9 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
         <div>
           <h3>Scoring system</h3>
           <Select
-            options={state.scoringSystems.map((system) => ({ value: system, label: system }))}
+            options={state.scoringSystems.map((system) => ({ value: system, label: scoringSystemLabel(system) }))}
             placeholder="Select scoring system..."
-            value={state.scoringSystem ? { value: state.scoringSystem, label: state.scoringSystem } : null}
+            value={state.scoringSystem ? { value: state.scoringSystem, label: scoringSystemLabel(state.scoringSystem) } : null}
             onChange={(selected) => state.setScoringSystem(selected?.value ?? "")}
             menuPortalTarget={document.body}
             styles={selectPortalStyles}

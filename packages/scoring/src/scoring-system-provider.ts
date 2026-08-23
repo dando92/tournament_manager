@@ -1,5 +1,6 @@
-import { EurocupScoreCalculator } from './eurocup-score-calculator';
-import { FinalsCalculator } from './finals-calculator';
+import { PlacementPointsIncludingFails } from './placement-points-including-fails';
+import { PlacementPointsWithFailZero } from './placement-points-with-fail-zero';
+import { RoundWinner } from './round-winner';
 import type { ScoringSystem } from './scoring-system';
 import {
   isScoringSystemType,
@@ -11,8 +12,9 @@ export class ScoringSystemProvider {
 
   constructor() {
     const systems: ScoringSystem[] = [
-      new EurocupScoreCalculator(),
-      new FinalsCalculator(),
+      new PlacementPointsWithFailZero(),
+      new PlacementPointsIncludingFails(),
+      new RoundWinner(),
     ];
     this.systems = new Map(systems.map((system) => [system.getName(), system]));
   }
