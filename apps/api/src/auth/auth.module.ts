@@ -1,23 +1,19 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 
-import { AuthController } from './controllers/auth.controller';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { AdminGuard } from './guards/admin.guard';
-import { AuthService } from './services/auth.service';
+import { AuthController } from '@auth/auth.controller';
+import { AccountModule } from '@account/account.module';
+import { AuthService } from '@auth/auth.service';
 import { LocalStrategy } from './strategies/local.strategy';
-
-import { PersistenceModule } from '@tournament-manager/persistence';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 
 @Module({
     imports: [
-        PersistenceModule,
+        AccountModule,
         PassportModule,
         JwtModule.registerAsync({
             inject: [ConfigService],
@@ -32,7 +28,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         AuthService,
         LocalStrategy,
         JwtStrategy,
-        AdminGuard,
     ],
     controllers: [AuthController],
     exports: [AuthService]

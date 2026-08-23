@@ -55,8 +55,6 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
         isSongsPage={page.isSongsPage}
         isParticipantsPage={page.isParticipantsPage}
         isLobbiesPage={page.isLobbiesPage}
-        songsVersion={context.songsVersion}
-        refreshSongs={context.refreshSongs}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 

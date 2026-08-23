@@ -1,14 +1,13 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
 
-import { Account } from '@tournament-manager/persistence';
-import { AuthService } from '@api/auth/services/auth.service';
+import { AccountQueries } from '@account/account.queries';
+import { AuthService } from '@auth/auth.service';
 
 describe('AuthService', () => {
-  function createService(findOneBy: jest.Mock): AuthService {
+  function createService(credentials: jest.Mock): AuthService {
     return new AuthService(
-      { findOneBy } as unknown as Repository<Account>,
+      { credentials } as unknown as AccountQueries,
       {} as JwtService,
     );
   }

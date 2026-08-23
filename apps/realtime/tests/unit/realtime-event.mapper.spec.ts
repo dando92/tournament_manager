@@ -25,6 +25,21 @@ describe('mapRealtimeEvent', () => {
     });
   });
 
+  it('maps song catalogue invalidations to their browser event', () => {
+    const songsUpdate: SequencedLiveEventEnvelope & { sequence: number } = {
+      type: 'ui.songs-changed',
+      tournamentId: 7,
+      sequence: 13,
+      payload: { tournamentId: 7 },
+    };
+
+    expect(mapRealtimeEvent(songsUpdate, '/uiupdatehub')).toEqual({
+      event: 'SongsUpdate',
+      data: songsUpdate.payload,
+      sequence: 13,
+    });
+  });
+
   it('maps SyncStart telemetry without domain calculations', () => {
     const selected: SequencedLiveEventEnvelope & { sequence: number } = {
       type: 'syncstart.song-selected',

@@ -2,6 +2,7 @@ import type { QueryKey } from "@tanstack/react-query";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { divisionKeys } from "@/features/division/api/division.keys";
 import { participantKeys } from "@/features/participant/api/participant.keys";
+import { songKeys } from "@/features/song/api/song.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 
 type TournamentUpdateMessage = {
@@ -41,6 +42,7 @@ type UiWarningMessage = {
 
 export type TournamentSocketMessage =
   | { event: "TournamentUpdate"; data: TournamentUpdateMessage }
+  | { event: "SongsUpdate"; data: TournamentUpdateMessage }
   | { event: "DivisionUpdate"; data: DivisionUpdateMessage }
   | { event: "PhaseUpdate"; data: PhaseUpdateMessage }
   | { event: "PhaseGroupUpdate"; data: PhaseGroupUpdateMessage }
@@ -68,6 +70,8 @@ export function staleAfterUpdate(message: TournamentSocketMessage): QueryKey[] {
         participantKeys.forTournament(message.data.tournamentId),
         participantKeys.players(),
       ];
+    case "SongsUpdate":
+      return [songKeys.forTournament(message.data.tournamentId)];
     case "DivisionUpdate":
       return [
         tournamentKeys.overview(message.data.tournamentId),

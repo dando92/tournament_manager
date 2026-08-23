@@ -13,6 +13,32 @@ const apps = [
 ];
 const tools = ["syncstart-simulator"];
 
+const prettierConfigPath = join(root, ".prettierrc.json");
+if (!existsSync(prettierConfigPath)) {
+  errors.push("the repository-root Prettier configuration is required");
+} else {
+  const prettierConfig = JSON.parse(readFileSync(prettierConfigPath, "utf8"));
+  const expectedPrettierConfig = {
+    printWidth: 80,
+    tabWidth: 2,
+    useTabs: false,
+    semi: true,
+    singleQuote: false,
+    trailingComma: "all",
+  };
+  if (
+    JSON.stringify(prettierConfig) !== JSON.stringify(expectedPrettierConfig)
+  ) {
+    errors.push(
+      "the repository-root Prettier configuration must keep the approved standard defaults",
+    );
+  }
+}
+
+if (existsSync(join(root, "apps", "api", ".prettierrc"))) {
+  errors.push("workspace-specific Prettier overrides are forbidden");
+}
+
 function filesBelow(directory) {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -61,7 +87,12 @@ for (const app of apps) {
 
 const forbiddenApiPaths = [
   "apps/api/src/account/dtos.ts",
+  "apps/api/src/account/controllers",
+  "apps/api/src/account/services",
+  "apps/api/src/auth/controllers",
+  "apps/api/src/auth/dtos",
   "apps/api/src/auth/guards.ts",
+  "apps/api/src/auth/services",
   "apps/api/src/auth/strategies.ts",
   "apps/api/src/tournament/dtos.ts",
   "apps/api/src/tournament/guards",
@@ -80,7 +111,9 @@ for (const path of forbiddenApiPaths) {
 for (const path of filesBelow(join(root, "apps", "api", "src"))) {
   const source = readFileSync(path, "utf8");
   if (/from\s+['"]@tournament\/dtos['"]/.test(source)) {
-    errors.push(`API request DTO barrel import is forbidden: ${relative(root, path)}`);
+    errors.push(
+      `API request DTO barrel import is forbidden: ${relative(root, path)}`,
+    );
   }
   if (/from\s+['"]@auth\/(?:guards|strategies)['"]/.test(source)) {
     errors.push(`API auth barrel import is forbidden: ${relative(root, path)}`);
@@ -89,9 +122,18 @@ for (const path of filesBelow(join(root, "apps", "api", "src"))) {
 
 for (const path of filesBelow(join(root, "apps", "frontend", "src"))) {
   const source = readFileSync(path, "utf8");
-  const normalized = relative(join(root, "apps", "frontend", "src"), path).replaceAll("\\", "/");
-  if (/from\s+['"]axios['"]/.test(source) && normalized !== "app/providers.tsx" && !/^features\/[^/]+\/api\//.test(normalized)) {
-    errors.push(`frontend axios import must live in a feature API module: ${relative(root, path)}`);
+  const normalized = relative(
+    join(root, "apps", "frontend", "src"),
+    path,
+  ).replaceAll("\\", "/");
+  if (
+    /from\s+['"]axios['"]/.test(source) &&
+    normalized !== "app/providers.tsx" &&
+    !/^features\/[^/]+\/api\//.test(normalized)
+  ) {
+    errors.push(
+      `frontend axios import must live in a feature API module: ${relative(root, path)}`,
+    );
   }
 }
 
@@ -102,15 +144,25 @@ for (const directory of [
   for (const path of filesBelow(directory)) {
     const source = readFileSync(path, "utf8");
     if (/export\s+type\s+LiveMatch(?:State|Player)Dto\b/.test(source)) {
-      errors.push(`realtime gateway DTO must be declared in contracts: ${relative(root, path)}`);
+      errors.push(
+        `realtime gateway DTO must be declared in contracts: ${relative(root, path)}`,
+      );
     }
   }
 }
 
 for (const tool of tools) {
   const sourceFiles = filesBelow(join(root, "tools", tool, "src"));
-  if (sourceFiles.some((path) => /@tournament-manager\/syncstart-protocol/.test(readFileSync(path, "utf8")))) {
-    errors.push(`tools/${tool} must remain independent from the protocol package`);
+  if (
+    sourceFiles.some((path) =>
+      /@tournament-manager\/syncstart-protocol/.test(
+        readFileSync(path, "utf8"),
+      ),
+    )
+  ) {
+    errors.push(
+      `tools/${tool} must remain independent from the protocol package`,
+    );
   }
 }
 
@@ -272,7 +324,9 @@ for (const app of apps) {
   const built = readFileSync(dockerfilePath, "utf8")
     .split(/\r?\n/)
     .filter((line) => line.includes("npm run build"))
-    .flatMap((line) => [...line.matchAll(/--workspace=(\S+)/g)].map((match) => match[1]));
+    .flatMap((line) =>
+      [...line.matchAll(/--workspace=(\S+)/g)].map((match) => match[1]),
+    );
   const position = new Map(built.map((workspace, index) => [workspace, index]));
 
   if (!position.has(name)) {
@@ -283,7 +337,9 @@ for (const app of apps) {
   const required = transitiveDependencies(name);
   for (const dependency of required) {
     if (!position.has(dependency)) {
-      errors.push(`apps/${app}/Dockerfile must build ${dependency}, which ${name} depends on`);
+      errors.push(
+        `apps/${app}/Dockerfile must build ${dependency}, which ${name} depends on`,
+      );
     }
   }
   for (const dependent of [name, ...required]) {

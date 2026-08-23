@@ -5,13 +5,11 @@ import SongListView from "./SongListView";
 type SongsListProps = {
   canEdit?: boolean;
   tournamentId?: number;
-  songsVersion?: number;
 };
 
 export default function SongsList({
   canEdit = true,
   tournamentId,
-  songsVersion = 0,
 }: SongsListProps) {
   const {
     songs,
@@ -22,7 +20,7 @@ export default function SongsList({
     setSongSearch,
     handleDeleteSong,
     handleDeletePack,
-  } = useSongsList({ tournamentId, songsVersion });
+  } = useSongsList({ tournamentId });
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-5xl mx-auto">

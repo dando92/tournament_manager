@@ -500,6 +500,78 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Verification: frontend and API builds pass; frontend unit tests pass (48 tests); architecture checks pass. The scoring package suite passes (5 tests).
 - Next action: run the full e2e and local-stack verification.
 
+### Song query-cache follow-up
+
+- Moved the tournament song catalogue and its header management menu onto one
+  named TanStack Query entry. Deleted the `songsVersion` counter and every
+  manual post-mutation refresh.
+- Added the narrow `ui.songs-changed` event. Song create, non-empty import, and
+  delete publish the tournament id; Realtime maps it to `SongsUpdate`, which
+  invalidates only that tournament's song catalogue.
+- A repeated import that writes nothing publishes nothing.
+- Verification: frontend, API, and Realtime builds pass; frontend unit tests
+  pass (49 tests); API unit tests pass (123 tests); Realtime unit tests pass (17
+  tests); the Song writes e2e suite passes (11 tests); architecture checks and
+  all three workspace linters pass with the existing warnings only.
+- Next action: refactor the account and authentication source trees around
+  explicit responsibilities without changing their HTTP or token behaviour.
+
+### Account and authentication architecture follow-up
+
+- Replaced `AccountService` with `AccountCommands`, `AccountStore`, and
+  `AccountQueries`; account HTTP responses are explicit projections and the
+  controller no longer maps persistence entities itself.
+- Flattened the account and Auth controller/service trees. Auth now reads
+  account credentials, profiles, and permissions through `AccountQueries`
+  rather than injecting the Account repository. Guards and Passport strategies
+  remain grouped by role.
+- Removed the unused Auth request DTOs, the duplicate Auth controller/service
+  registration in `AppModule`, and the unused AccountModule DataSource. Missing
+  account write targets now answer `404` instead of being dereferenced.
+- Extended the permanent architecture check to reject the removed account and
+  Auth technical-role directories.
+- Added `account-auth.e2e-spec.ts`: four HTTP tests cover normalized registration
+  without credential leakage, rejected credentials, signed-in profile and
+  permissions, self-only profile changes, and administrator list/flag changes.
+- Full verification passes: architecture checks, every workspace build,
+  contracts, all unit suites, 98 API e2e tests including the new account/Auth
+  suite, and the migration-runner e2e test. Lint has the one pre-existing API
+  warning and five pre-existing frontend warnings.
+- Aligned the stale participant-unregistration e2e expectation with its two
+  existing invalidations: Division updates entrants and Tournament updates the
+  roster.
+- Next action: run local-stack verification when a Docker checkpoint is wanted;
+  no further account/Auth structural work remains in this plan.
+
+### Formatting correction
+
+- Removed the unrelated formatting churn introduced by running the repository-
+  root formatter across the Song checkpoint. API files retain their existing
+  indentation and single quotes, frontend files retain their local two-space
+  and double-quote style, Realtime files retain their single quotes, and project
+  documentation retains its manual wrapping.
+- Added a permanent repository instruction to preserve each file's established
+  formatting and never apply one root formatting profile across workspaces.
+- Verification: API, frontend, and Realtime builds and unit suites pass;
+  architecture checks pass; the Song and account/Auth HTTP suites pass (15
+  tests); all three linters pass with the existing warnings only.
+
+### Unified Prettier standard
+
+- Replaced the temporary preserve-local-style rule with one repository-root
+  Prettier configuration for every workspace: two spaces, 80-column print
+  width, double quotes, semicolons, and trailing commas.
+- Removed the API-specific single-quote override. A legacy file is converted in
+  full when it is next modified; unrelated legacy files are not migrated
+  speculatively.
+- Added `npm run format` and an architecture check that requires the approved
+  root configuration and rejects the former workspace override.
+- Verification: Prettier reports every file touched by this checkpoint as
+  formatted; architecture checks pass. No repository-wide legacy formatting
+  migration was run.
+- Next action: apply the root standard whenever a legacy file next enters the
+  scope of a functional change.
+
 ## Verification
 
 ```text

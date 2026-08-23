@@ -45,6 +45,17 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 ## Agent Tooling
 
+### Formatting Discipline
+
+- Use the repository-root Prettier configuration as the single formatting
+  standard for every workspace and every supported source or documentation
+  file.
+- Standard formatting is two-space indentation, an 80-column print width,
+  double quotes where Prettier controls quoting, semicolons, and trailing commas.
+- When modifying a legacy file that does not follow the standard, format the
+  whole file with the root configuration as part of the same change. Do not
+  reformat unrelated legacy files that are outside the task scope.
+
 ### graphify (Claude Code)
 
 This project has a knowledge graph at `graphify-out/` with god nodes, community structure, and cross-file relationships.

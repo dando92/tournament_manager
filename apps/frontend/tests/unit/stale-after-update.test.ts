@@ -5,6 +5,7 @@ import { matchKeys } from '../../src/features/match/api/match.keys.ts';
 import { divisionKeys } from '../../src/features/division/api/division.keys.ts';
 import { tournamentKeys } from '../../src/features/tournament/api/tournament.keys.ts';
 import { participantKeys } from '../../src/features/participant/api/participant.keys.ts';
+import { songKeys } from '../../src/features/song/api/song.keys.ts';
 
 const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
 
@@ -50,4 +51,10 @@ test('a tournament event stales its tree, configuration, roster, and player cata
 
 test('a warning is a message to a person, so nothing goes stale', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'UiWarning', data: { tournamentId: 1, message: 'Careful' } }), []);
+});
+
+test('a song event stales only the tournament song catalogue', () => {
+  assert.deepEqual(staleAfterUpdate({ event: 'SongsUpdate', data: address }), [
+    songKeys.forTournament(1),
+  ]);
 });

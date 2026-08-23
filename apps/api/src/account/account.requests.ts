@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAccountPlayerDto {
@@ -32,24 +32,4 @@ export class CreateAccountPlayerDto {
     @IsString()
     @Type(() => String)
     playerName?: string;
-}
-
-export class UpdateAccountPlayerDto {
-    @ApiProperty({ example: 'johndoe', description: 'Username', required: false })
-    @IsOptional()
-    @IsString()
-    @Type(() => String)
-    username?: string;
-
-    @ApiProperty({ example: 'user@example.com', description: 'Account email', required: false })
-    @IsOptional()
-    @IsString()
-    @Type(() => String)
-    email?: string;
-
-    @ApiProperty({ example: 'abc123', description: 'GrooveStats API key', required: false })
-    @IsOptional()
-    @IsString()
-    @Type(() => String)
-    grooveStatsApi?: string;
 }

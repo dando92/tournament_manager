@@ -35,7 +35,6 @@ export type SongImportState =
 
 type Options = {
   tournamentId: number;
-  refreshSongs: () => void;
 };
 
 /** How often the dialog is allowed to redraw while a folder is being read. */
@@ -48,7 +47,7 @@ function messageOf(error: unknown, fallback: string): string {
   );
 }
 
-export function useSongImport({ tournamentId, refreshSongs }: Options) {
+export function useSongImport({ tournamentId }: Options) {
   const navigate = useNavigate();
   const [state, setState] = useState<SongImportState>({ status: "idle" });
   const [chartMode, setChartMode] = useState<ChartMode>("all");
@@ -114,7 +113,6 @@ export function useSongImport({ tournamentId, refreshSongs }: Options) {
 
     try {
       const result = await importSongs(tournamentId, rows);
-      refreshSongs();
       setState({ status: "idle" });
 
       if (warnings.length > 0) console.warn("Song import warnings:", warnings, state.scan.warnings);
@@ -125,7 +123,7 @@ export function useSongImport({ tournamentId, refreshSongs }: Options) {
     } catch (error) {
       setState({ status: "failed", message: messageOf(error, "The songs could not be saved.") });
     }
-  }, [chartMode, navigate, refreshSongs, state, tournamentId]);
+  }, [chartMode, navigate, state, tournamentId]);
 
   return { state, chartMode, setChartMode, start, confirm, close };
 }

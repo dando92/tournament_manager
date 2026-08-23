@@ -8,8 +8,6 @@ import { Entities, PersistenceModule } from '@tournament-manager/persistence';
 import { TournamentModule } from '@tournament/tournament.module';
 import { AccountModule } from '@account/account.module';
 
-import { AuthService } from '@auth/services/auth.service';
-import { AuthController } from '@auth/controllers/auth.controller';
 import { HealthModule } from './health/health.module';
 import { InternalController } from './internal.controller';
 
@@ -42,7 +40,6 @@ import { InternalController } from './internal.controller';
     TournamentModule,
     HealthModule,
   ],
-  controllers: [AuthController, InternalController],
-  providers: [AuthService],
+  controllers: [InternalController],
 })
 export class AppModule {}

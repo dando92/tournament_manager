@@ -23,8 +23,8 @@ process.env.DATABASE_NAME = database;
  * The song catalogue as it is written, and what a roll makes of it.
  *
  * A song is not an aggregate: adding one to a pool and taking it out are the
- * whole of it, and neither announces anything. What is worth a database here is
- * the read behind a roll — which division has already played what — and the
+ * whole of it. Catalogue writes announce the tournament whose cached pool is
+ * stale. What is worth a database here is the read behind a roll — which division has already played what — and the
  * scope a roll now takes from the match it is rolled for rather than from the
  * caller.
  */
@@ -140,7 +140,7 @@ describe('Song writes (e2e)', () => {
     await dropTestDatabase(database);
   });
 
-  it('adds a song to the pool of one tournament, and announces nothing', async () => {
+  it('adds a song to the pool of one tournament and announces that catalogue', async () => {
     published.length = 0;
     const songId = await addSong('Anthem', 'Pack A', 5);
 
@@ -153,7 +153,9 @@ describe('Song writes (e2e)', () => {
       chartDifficulty: null,
       group: 'Pack A',
     });
-    expect(published).toEqual([]);
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   /**
@@ -189,7 +191,9 @@ describe('Song writes (e2e)', () => {
       ['Import Pack/First', 9, 'Hard'],
       ['Import Pack/First', 13, 'Expert'],
     ]);
-    expect(published).toEqual([]);
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   it('adds nothing the second time the same folder is imported', async () => {
@@ -198,12 +202,14 @@ describe('Song writes (e2e)', () => {
     ];
 
     await request(app.getHttpServer()).post('/songs/import').send({ tournamentId, songs }).expect(200);
+    published.length = 0;
     const again = await request(app.getHttpServer())
       .post('/songs/import')
       .send({ tournamentId, songs })
       .expect(200);
 
     expect(again.body).toEqual({ imported: 0, skipped: 1 });
+    expect(published).toEqual([]);
     const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
     expect(pool.body.filter((song: { group: string }) => song.group === 'Repeat Pack')).toHaveLength(1);
   });
@@ -243,11 +249,15 @@ describe('Song writes (e2e)', () => {
 
   it('takes a song out of the pool', async () => {
     const songId = await addSong('Leaving', 'Pack A', 6);
+    published.length = 0;
 
     await request(app.getHttpServer()).delete(`/songs/${songId}`).expect(204);
 
     const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
     expect(pool.body.map((song: { id: number }) => song.id)).not.toContain(songId);
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   /**

@@ -25,6 +25,7 @@
     "dev:syncstart": "npm run start:dev --workspace=@tournament-manager/syncstart",
     "dev:realtime": "npm run start:dev --workspace=@tournament-manager/realtime",
     "dev:frontend": "npm run dev --workspace=tournament-viewer",
+    "format": "prettier --write .",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test:unit",
     "test:unit": "npm run test --workspaces --if-present",

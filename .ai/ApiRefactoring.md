@@ -1265,13 +1265,16 @@ one load of the tournament — and the migration-runner e2e test.
 `src/tournament/competition/services/` and `src/tournament/competition/dtos/`.
 
 **Song is not an aggregate**, which is the correction this slice makes to the
-model above. A song has no invariant to protect and no consequence to publish:
-it is a title, a group and a difficulty in a pool, nothing about it is decided
-elsewhere, and nothing else is decided by it. So it has a store and a commands
-class of two operations, no `song.aggregate.ts`, and no event — the one screen
-that shows the pool is the one that just wrote to it, and it still re-reads what
-it wrote because it holds its list in `useState`. When that page moves onto the
-query cache, `SongCommands` is where the event it listens for is published.
+model above. A song has no invariant to protect and no domain consequence to
+publish: it is a title, a group and a difficulty in a pool, nothing about it is
+decided elsewhere, and nothing else is decided by it. So it has a store and a
+commands class of two operations and no `song.aggregate.ts`.
+
+The song screen now reads a named query-cache entry shared with its management
+menu. Create, import and delete publish the narrow `ui.songs-changed` cache
+invalidation from `SongCommands`; they do not pretend the tournament aggregate
+changed. The page, header and realtime listener therefore share one copy and
+one update path, and the former `songsVersion` counter is gone.
 
 **The player catalogue has no commands class at all.** Nobody creates a player
 on purpose: they appear because somebody was registered, imported, pasted into a
@@ -1389,6 +1392,24 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
 - Folded the permanent rules into [Backend.md](Backend.md) and
   [Frontend.md](Frontend.md). This document remains the historical record until
   the intentionally deferred query-cache work below is complete.
+
+### Account and authentication follow-up (done)
+
+The account capability now follows the same explicit roles as the tournament
+capabilities without inventing an aggregate that has no synchronous domain
+rules. `account.{controller,commands,store,queries,requests,projections}.ts`
+replaces the technical `controllers/` and `services/` directories. Commands own
+registration and profile or flag changes, the store owns persistence needed by
+writes, and queries return the account, permissions, and administration
+projections.
+
+Authentication remains a separate capability because password verification and
+JWT issuance are its use cases. It consumes account-owned credential and profile
+queries instead of injecting the Account repository. Its controller and service
+are flat beside `auth.module.ts`; guards and Passport strategies remain grouped
+by their meaningful roles. The unused Auth request DTO barrel and the duplicate
+Auth controller/service registration in `AppModule` are gone. Architecture
+checks keep the removed technical directories out of the tree.
 
 ## What success looks like
 

@@ -7,15 +7,9 @@ import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {
   tournamentId: number;
-  songsVersion: number;
-  refreshSongs: () => void;
 };
 
-export default function TournamentHeaderSongsManageMenu({
-  tournamentId,
-  songsVersion,
-  refreshSongs,
-}: Props) {
+export default function TournamentHeaderSongsManageMenu({ tournamentId }: Props) {
   const {
     menuOpen,
     addInGroupOpen,
@@ -32,11 +26,7 @@ export default function TournamentHeaderSongsManageMenu({
     openAddInNewGroup,
     triggerImport,
     handleCreateSong,
-  } = useTournamentHeaderSongsManageMenu({
-    tournamentId,
-    songsVersion,
-    refreshSongs,
-  });
+  } = useTournamentHeaderSongsManageMenu({ tournamentId });
 
   return (
     <>

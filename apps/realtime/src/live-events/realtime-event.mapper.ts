@@ -104,6 +104,7 @@ function message(event: string, data: unknown, sequence: number): RealtimeMessag
 function uiEventName(type: string): string | undefined {
   const names: Record<string, string> = {
     'ui.tournament-changed': 'TournamentUpdate',
+    'ui.songs-changed': 'SongsUpdate',
     'ui.division-changed': 'DivisionUpdate',
     'ui.phase-changed': 'PhaseUpdate',
     'ui.phase-group-changed': 'PhaseGroupUpdate',

@@ -1,5 +1,5 @@
-import { AuthController } from '@api/auth/controllers/auth.controller';
-import { AuthService } from '@api/auth/services/auth.service';
+import { AuthController } from '@auth/auth.controller';
+import { AuthService } from '@auth/auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;

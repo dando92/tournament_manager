@@ -129,7 +129,13 @@ export class SongStore {
         });
     }
 
-    async remove(songId: number): Promise<void> {
-        await this.songs.delete(songId);
+    async remove(songId: number): Promise<number | null> {
+        const song = await this.songs.findOne({ where: { id: songId }, relations: { tournament: true } });
+        if (!song) return null;
+
+        const tournamentId = song.tournament?.id ?? null;
+        await this.songs.remove(song);
+
+        return tournamentId;
     }
 }

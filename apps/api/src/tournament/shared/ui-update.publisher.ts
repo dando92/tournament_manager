@@ -31,6 +31,11 @@ export class UiUpdatePublisher {
     return this.publish('ui.tournament-changed', tournamentId, { tournamentId });
   }
 
+  emitSongsUpdate(tournamentId: number | null | undefined): Promise<void> {
+    if (!tournamentId) return Promise.resolve();
+    return this.publish('ui.songs-changed', tournamentId, { tournamentId });
+  }
+
   emitDivisionUpdate(address: DivisionAddress): Promise<void> {
     if (!address?.tournamentId || !address?.divisionId) return Promise.resolve();
     return this.publish('ui.division-changed', address.tournamentId, address);

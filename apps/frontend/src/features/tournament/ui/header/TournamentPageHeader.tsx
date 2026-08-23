@@ -21,8 +21,6 @@ type TournamentPageHeaderProps = {
   isSongsPage: boolean;
   isParticipantsPage: boolean;
   isLobbiesPage: boolean;
-  songsVersion: number;
-  refreshSongs: () => void;
   onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
@@ -33,8 +31,6 @@ export default function TournamentPageHeader({
   isSongsPage,
   isParticipantsPage,
   isLobbiesPage,
-  songsVersion,
-  refreshSongs,
   onOpenParticipantsManageModal,
 }: TournamentPageHeaderProps) {
   return (
@@ -44,11 +40,7 @@ export default function TournamentPageHeader({
       {controls && (
         <div className="ml-auto flex items-center gap-2">
           {isSongsPage && (
-            <TournamentHeaderSongsManageMenu
-              tournamentId={tournamentId}
-              songsVersion={songsVersion}
-              refreshSongs={refreshSongs}
-            />
+            <TournamentHeaderSongsManageMenu tournamentId={tournamentId} />
           )}
           {isParticipantsPage && <TournamentHeaderParticipantsManageMenu onOpen={onOpenParticipantsManageModal} />}
           {isLobbiesPage && <TournamentHeaderLobbyManageMenu tournamentId={tournamentId} />}
