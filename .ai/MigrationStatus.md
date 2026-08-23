@@ -516,6 +516,33 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Next action: refactor the account and authentication source trees around
   explicit responsibilities without changing their HTTP or token behaviour.
 
+### Account and authentication architecture follow-up
+
+- Replaced `AccountService` with `AccountCommands`, `AccountStore`, and
+  `AccountQueries`; account HTTP responses are explicit projections and the
+  controller no longer maps persistence entities itself.
+- Flattened the account and Auth controller/service trees. Auth now reads
+  account credentials, profiles, and permissions through `AccountQueries`
+  rather than injecting the Account repository. Guards and Passport strategies
+  remain grouped by role.
+- Removed the unused Auth request DTOs, the duplicate Auth controller/service
+  registration in `AppModule`, and the unused AccountModule DataSource. Missing
+  account write targets now answer `404` instead of being dereferenced.
+- Extended the permanent architecture check to reject the removed account and
+  Auth technical-role directories.
+- Added `account-auth.e2e-spec.ts`: four HTTP tests cover normalized registration
+  without credential leakage, rejected credentials, signed-in profile and
+  permissions, self-only profile changes, and administrator list/flag changes.
+- Full verification passes: architecture checks, every workspace build,
+  contracts, all unit suites, 98 API e2e tests including the new account/Auth
+  suite, and the migration-runner e2e test. Lint has the one pre-existing API
+  warning and five pre-existing frontend warnings.
+- Aligned the stale participant-unregistration e2e expectation with its two
+  existing invalidations: Division updates entrants and Tournament updates the
+  roster.
+- Next action: run local-stack verification when a Docker checkpoint is wanted;
+  no further account/Auth structural work remains in this plan.
+
 ## Verification
 
 ```text

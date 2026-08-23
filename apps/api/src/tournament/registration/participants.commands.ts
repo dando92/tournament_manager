@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { EntrantDto } from '@tournament-manager/contracts';
 import { Participant, Player } from '@tournament-manager/persistence';
 
-import { AccountService } from '@account/services/account.service';
+import { AccountStore } from '@account/account.store';
 import { PlayerStore, normalizePlayerName } from '@tournament/catalog/player.store';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
@@ -39,7 +39,7 @@ export class ParticipantsCommands {
         private readonly tournaments: TournamentStore,
         private readonly participants: ParticipantQueries,
         private readonly players: PlayerStore,
-        private readonly accounts: AccountService,
+        private readonly accounts: AccountStore,
         private readonly divisions: DivisionCommands,
         private readonly divisionQueries: DivisionQueries,
         private readonly publisher: UiUpdatePublisher,
@@ -124,7 +124,7 @@ export class ParticipantsCommands {
     async grantStaff(tournamentId: number, participantId: number): Promise<void> {
         const tournament = await this.tournaments.loadOrFail(tournamentId);
         const participant = tournament.participant(participantId);
-        const account = participant.account ?? await this.accounts.findByPlayerId(participant.player.id);
+        const account = participant.account ?? await this.accounts.byPlayerId(participant.player.id);
         tournament.grantStaff(participantId, account);
 
         await this.tournaments.save(tournament);

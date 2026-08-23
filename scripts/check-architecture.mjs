@@ -61,7 +61,12 @@ for (const app of apps) {
 
 const forbiddenApiPaths = [
   "apps/api/src/account/dtos.ts",
+  "apps/api/src/account/controllers",
+  "apps/api/src/account/services",
+  "apps/api/src/auth/controllers",
+  "apps/api/src/auth/dtos",
   "apps/api/src/auth/guards.ts",
+  "apps/api/src/auth/services",
   "apps/api/src/auth/strategies.ts",
   "apps/api/src/tournament/dtos.ts",
   "apps/api/src/tournament/guards",

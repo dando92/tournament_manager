@@ -11,7 +11,7 @@ import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/management
 import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
 import { CreatorOrAdminGuard } from '@auth/guards/owner-or-admin.guard';
 import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
-import { AuthService } from '@auth/services/auth.service';
+import { AuthService } from '@auth/auth.service';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
 import { TournamentCommands } from '@tournament/management/tournament.commands';

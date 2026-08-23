@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { AccountService } from '@account/services/account.service';
+import { AccountCommands } from '@account/account.commands';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { TournamentAggregate, TournamentDetails } from '@tournament/management/tournament.aggregate';
 import { TournamentStore } from '@tournament/management/tournament.store';
@@ -31,7 +31,7 @@ export class TournamentCommands {
     constructor(
         private readonly store: TournamentStore,
         private readonly publisher: UiUpdatePublisher,
-        private readonly accounts: AccountService,
+        private readonly accounts: AccountCommands,
         private readonly syncStart: TournamentSyncStartService,
     ) {}
 

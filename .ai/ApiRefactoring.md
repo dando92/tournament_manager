@@ -1393,6 +1393,24 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
   [Frontend.md](Frontend.md). This document remains the historical record until
   the intentionally deferred query-cache work below is complete.
 
+### Account and authentication follow-up (done)
+
+The account capability now follows the same explicit roles as the tournament
+capabilities without inventing an aggregate that has no synchronous domain
+rules. `account.{controller,commands,store,queries,requests,projections}.ts`
+replaces the technical `controllers/` and `services/` directories. Commands own
+registration and profile or flag changes, the store owns persistence needed by
+writes, and queries return the account, permissions, and administration
+projections.
+
+Authentication remains a separate capability because password verification and
+JWT issuance are its use cases. It consumes account-owned credential and profile
+queries instead of injecting the Account repository. Its controller and service
+are flat beside `auth.module.ts`; guards and Passport strategies remain grouped
+by their meaningful roles. The unused Auth request DTO barrel and the duplicate
+Auth controller/service registration in `AppModule` are gone. Architecture
+checks keep the removed technical directories out of the tree.
+
 ## What success looks like
 
 - One loader definition per aggregate, in its store.

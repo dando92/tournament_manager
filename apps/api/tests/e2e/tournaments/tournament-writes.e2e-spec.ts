@@ -207,7 +207,7 @@ describe('Tournament writes (e2e)', () => {
   /**
    * An entrant is the division's record of somebody, so the division withdraws
    * them and announces it; only then does the participant row go. The division
-   * event is the one anybody watching sees.
+   * event updates its entrants, and the tournament event updates the roster.
    */
   it('takes somebody out of the divisions they competed in before unregistering them', async () => {
     const participantId = await register({ playerName: 'Dee' });
@@ -224,7 +224,10 @@ describe('Tournament writes (e2e)', () => {
       ).expect(204),
     );
 
-    expect(events.map((event) => event.type)).toEqual(['ui.division-changed']);
+    expect(events.map((event) => event.type)).toEqual([
+      'ui.division-changed',
+      'ui.tournament-changed',
+    ]);
     expect(await participants()).not.toContainEqual(expect.objectContaining({ id: participantId }));
 
     /* The entrant stays and is withdrawn, because the matches it played point

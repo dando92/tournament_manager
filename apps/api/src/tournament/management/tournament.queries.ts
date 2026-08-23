@@ -142,7 +142,7 @@ export class TournamentQueries {
         return Boolean(tournament.startggApiKey?.trim());
     }
 
-    /** The tournament half of `MyTournamentRolesDto`; the account half comes from `AuthService`. */
+    /** The tournament half of `MyTournamentRolesDto`; Auth adds the account permissions. */
     async rolesFor(accountId: string): Promise<Pick<MyTournamentRolesDto, 'ownedTournamentIds' | 'staffTournamentIds'>> {
         const [row]: TournamentRolesRow[] = await this.dataSource.query(TOURNAMENT_ROLES_OF_ACCOUNT, [accountId]);
 
