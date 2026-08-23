@@ -145,8 +145,93 @@ describe('Song writes (e2e)', () => {
     const songId = await addSong('Anthem', 'Pack A', 5);
 
     const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
-    expect(pool.body).toContainEqual({ id: songId, title: 'Anthem', artist: 'Someone', difficulty: 5, group: 'Pack A' });
+    expect(pool.body).toContainEqual({
+      id: songId,
+      title: 'Anthem',
+      artist: 'Someone',
+      difficulty: 5,
+      chartDifficulty: null,
+      group: 'Pack A',
+    });
     expect(published).toEqual([]);
+  });
+
+  /**
+   * The ITGmania importer reads a folder in the browser and sends what it
+   * found. What is checked here is what the API does with it: one write, the
+   * slot the simfile named kept as it is, and a second import of the same
+   * folder adding nothing.
+   */
+  it('imports a folder of charts in one write, keeping the difficulty each chart was written for', async () => {
+    published.length = 0;
+    const songs = [
+      { title: 'Import Pack/First', artist: 'Composer', group: 'Import Pack', difficulty: 9, chartDifficulty: 'Hard' },
+      { title: 'Import Pack/First', artist: 'Composer', group: 'Import Pack', difficulty: 13, chartDifficulty: 'Expert' },
+      { title: 'Import Pack/Second', artist: 'Composer', group: 'Import Pack', difficulty: 3, chartDifficulty: 'Novice' },
+    ];
+
+    const imported = await request(app.getHttpServer())
+      .post('/songs/import')
+      .send({ tournamentId, songs })
+      .expect(200);
+    expect(imported.body).toEqual({ imported: 3, skipped: 0 });
+
+    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
+    const packRows = pool.body
+      .filter((song: { group: string }) => song.group === 'Import Pack')
+      .map((song: { title: string; difficulty: number; chartDifficulty: string }) => [
+        song.title,
+        song.difficulty,
+        song.chartDifficulty,
+      ]);
+    expect(packRows).toEqual([
+      ['Import Pack/Second', 3, 'Novice'],
+      ['Import Pack/First', 9, 'Hard'],
+      ['Import Pack/First', 13, 'Expert'],
+    ]);
+    expect(published).toEqual([]);
+  });
+
+  it('adds nothing the second time the same folder is imported', async () => {
+    const songs = [
+      { title: 'Repeat Pack/Song', artist: 'Composer', group: 'Repeat Pack', difficulty: 11, chartDifficulty: 'Expert' },
+    ];
+
+    await request(app.getHttpServer()).post('/songs/import').send({ tournamentId, songs }).expect(200);
+    const again = await request(app.getHttpServer())
+      .post('/songs/import')
+      .send({ tournamentId, songs })
+      .expect(200);
+
+    expect(again.body).toEqual({ imported: 0, skipped: 1 });
+    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
+    expect(pool.body.filter((song: { group: string }) => song.group === 'Repeat Pack')).toHaveLength(1);
+  });
+
+  it('refuses the whole import when one chart names a difficulty the application does not know', async () => {
+    await request(app.getHttpServer())
+      .post('/songs/import')
+      .send({
+        tournamentId,
+        songs: [
+          { title: 'Bad Pack/Good', group: 'Bad Pack', difficulty: 9, chartDifficulty: 'Hard' },
+          { title: 'Bad Pack/Bad', group: 'Bad Pack', difficulty: 9, chartDifficulty: 'Ultra' },
+        ],
+      })
+      .expect(400);
+
+    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
+    expect(pool.body.filter((song: { group: string }) => song.group === 'Bad Pack')).toEqual([]);
+  });
+
+  it('refuses an import for a tournament that does not exist', async () => {
+    await request(app.getHttpServer())
+      .post('/songs/import')
+      .send({
+        tournamentId: 999999,
+        songs: [{ title: 'Nowhere/Song', group: 'Nowhere', difficulty: 9, chartDifficulty: 'Hard' }],
+      })
+      .expect(404);
   });
 
   it('refuses a song for a tournament that does not exist', async () => {

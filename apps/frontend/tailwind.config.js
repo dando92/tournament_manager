@@ -54,6 +54,23 @@ export default {
           5: "#7E22CE",
         },
         /**
+         * Chart difficulty slots, in the colours an ITGmania cabinet gives
+         * them: Novice blue, Easy gold, Medium red, Hard green, Expert
+         * purple, Edit grey. Like the judgment palette below, these are read
+         * off the machine rather than chosen here, so they are data: never
+         * align one to the semantic palette, and never adjust one for
+         * contrast. They are the same five hues Simply Love draws its
+         * judgments in, which is why `judgment` repeats them.
+         */
+        chart: {
+          novice: "#21CCE8",
+          easy: "#E29C18",
+          medium: "#FF3030",
+          hard: "#66C955",
+          expert: "#B45CFF",
+          edit: "#8B8B8B",
+        },
+        /**
          * Score bands. An ordinal domain scale over result quality, rendered as
          * a tinted badge (`bg-score-N/10 text-score-N`). Values live in
          * tokens.css because the band has to invert with the theme: a dark

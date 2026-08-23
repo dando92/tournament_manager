@@ -20,3 +20,14 @@ export type PhaseGroupState = 'pending' | 'active' | 'completed';
 export type PhaseGroupEntrantStatus = 'pending' | 'active' | 'advanced' | 'eliminated' | 'withdrawn' | 'dq';
 
 export type AdvancementCompetitionKind = 'match' | 'phase_group';
+
+/**
+ * The difficulty slot a chart occupies, as StepMania names it.
+ *
+ * It is not the meter. A chart carries both: `Expert` is which of the six
+ * slots the pack author put the chart in, and `13` is how hard it is. The two
+ * simfile names that differ from what a player reads on the cabinet are
+ * translated on the way in — `Beginner` is `Novice` and `Challenge` is
+ * `Expert` — so the interface never has to know both vocabularies.
+ */
+export type ChartDifficulty = 'Novice' | 'Easy' | 'Medium' | 'Hard' | 'Expert' | 'Edit';

@@ -122,6 +122,7 @@ describe('Song reads (e2e)', () => {
           title: 'Alpha',
           artist: 'Composer',
           difficulty: 12,
+          chartDifficulty: null,
           group: 'Pack A',
         });
         expect(body[0].artist).toBeNull();

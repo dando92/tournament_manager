@@ -1,5 +1,7 @@
 import axios from "axios";
+import type { SongImportResultDto } from "@tournament-manager/contracts";
 import { CreateSongRequest, Song } from "@/features/song/model/types";
+import type { ImportRow } from "@/features/song/model/songImport/types";
 
 /**
  * The songs a tournament may draw from, or the whole catalog when no
@@ -21,16 +23,24 @@ export async function listSongs(tournamentId?: number): Promise<Song[]> {
   }
 }
 
-/**
- * Adds one song to a tournament's pool.
- *
- * The bulk import calls this once per row of its file. There is no batch route,
- * so the loop is the caller's and each row succeeds or fails on its own, which
- * is what lets the import report how many of each.
- */
+/** Adds one song to a tournament's pool: what the create form does. */
 export async function createSong(tournamentId: number, request: CreateSongRequest): Promise<number> {
   const response = await axios.post<{ id: number }>("songs", { ...request, tournamentId });
   return response.data.id;
+}
+
+/**
+ * Adds a whole folder of simfiles to a tournament's pool.
+ *
+ * The import used to be `createSong` in a loop, one request per chart, and a
+ * pack could end up half added. It is one request the API writes in one
+ * transaction, and it answers with what it wrote and what the pool held
+ * already.
+ */
+export async function importSongs(tournamentId: number, songs: ImportRow[]): Promise<SongImportResultDto> {
+  const response = await axios.post<SongImportResultDto>("songs/import", { tournamentId, songs });
+
+  return response.data;
 }
 
 export async function deleteSong(songId: number): Promise<void> {

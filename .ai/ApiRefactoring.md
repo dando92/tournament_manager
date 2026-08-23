@@ -818,10 +818,11 @@ The four remaining slices, on one branch each in that order.
 `listSongs` — and gained `createSong` and `deleteSong`, which were written
 inline in whichever hook needed them. The songs list had been requested with a
 hand-written `axios.get` in four places, each spelling the `tournamentId` query
-string itself. The bulk import and the pack delete keep their loops: there is no
-batch route, and per-row results are what lets the import report how many
-succeeded. `types/Song.ts` became `model/types.ts` and gained
-`CreateSongRequest`.
+string itself. The pack delete keeps its loop. The bulk import no longer has
+one: `POST /songs/import` writes a whole folder in one transaction, and the
+JSON upload it replaced is gone — see "Importing songs from a folder" in
+[MigrationStatus.md](MigrationStatus.md). `types/Song.ts` became
+`model/types.ts` and gained `CreateSongRequest`.
 
 **Live.** `model/` holds the gateway, the message types and the three hooks;
 `ui/` holds the panels. There is no `api/`: the feature reads a websocket and

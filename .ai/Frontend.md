@@ -57,4 +57,27 @@ previous layout hard to follow.
   localStorage. Sidebar width does not: it is a momentary adjustment, not a
   setting.
 
+## Song Import
+
+The browser owns the folder a person picked, so the browser reads it. The
+importer opens a directory picker, walks the handles it is given, parses the
+simfiles it finds, and sends one payload of charts to `POST /songs/import`;
+the API validates that payload and writes it in one transaction.
+
+- Never upload a `Songs` folder to reproduce the parsing on a server.
+- Keep the parsing pure. `songImport/stepmaniaParser.ts` takes text and gives
+  values, `songImport/scan.ts` takes directory handles, and both are testable
+  without a browser.
+- The discovery rules come from `itgmania-songs-to-json.mjs` and are not to be
+  reinvented: the picked folder is one pack when any direct child holds a
+  simfile, folders starting with `.` are ignored, `.ssc` wins over `.sm`,
+  `dance-single` is the only step type imported, and `highest` is the highest
+  meter.
+- A folder is read once. Choosing between every difficulty and the highest one
+  filters the parsed result in memory; it does not go back to the disk.
+- The difficulty slot is read from the simfile, never derived from the meter.
+  A slot the application does not know is skipped and reported.
+- The `chart-*` colours are the cabinet's, like `judgment`. They are data:
+  never realign one to the semantic palette.
+
 Additional frontend architectural and coding rules remain intentionally minimal.

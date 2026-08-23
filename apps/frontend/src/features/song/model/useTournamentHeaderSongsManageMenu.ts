@@ -1,7 +1,8 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { CreateSongRequest, Song } from "@/features/song/model/types";
+import { Song } from "@/features/song/model/types";
 import { createSong, listSongs } from "@/features/song/api/song.api";
+import { useSongImport } from "@/features/song/model/useSongImport";
 
 type UseTournamentHeaderSongsManageMenuOptions = {
   tournamentId: number;
@@ -19,7 +20,7 @@ export function useTournamentHeaderSongsManageMenu({
   const [loadingSongsMeta, setLoadingSongsMeta] = useState(false);
   const [addInGroupOpen, setAddInGroupOpen] = useState(false);
   const [addInNewGroupOpen, setAddInNewGroupOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const songImport = useSongImport({ tournamentId, refreshSongs });
 
   useEffect(() => {
     setLoadingSongsMeta(true);
@@ -45,9 +46,14 @@ export function useTournamentHeaderSongsManageMenu({
     closeMenu();
     setAddInNewGroupOpen(true);
   };
+
+  /**
+   * The import is the person choosing a folder, so it starts in the click that
+   * asked for it: a directory picker only opens from a gesture.
+   */
   const triggerImport = () => {
     closeMenu();
-    fileInputRef.current?.click();
+    void songImport.start();
   };
 
   const handleCreateSong = (
@@ -66,37 +72,6 @@ export function useTournamentHeaderSongsManageMenu({
       });
   };
 
-  const handleBulkImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = "";
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) {
-        toast.error("JSON must be an array of songs.");
-        return;
-      }
-
-      const results = await Promise.allSettled(
-        data.map((dto: CreateSongRequest) => createSong(tournamentId, dto)),
-      );
-      const created = results.filter((result) => result.status === "fulfilled").length;
-      const failed = results.filter((result) => result.status === "rejected").length;
-      refreshSongs();
-
-      if (failed > 0) {
-        toast.warn(`Imported ${created} songs. ${failed} failed.`);
-        return;
-      }
-
-      toast.success(`Imported ${created} songs.`);
-    } catch {
-      toast.error("Failed to parse JSON file.");
-    }
-  };
-
   return {
     menuOpen,
     addInGroupOpen,
@@ -104,7 +79,7 @@ export function useTournamentHeaderSongsManageMenu({
     loadingSongsMeta,
     songGroups,
     selectedGroupName,
-    fileInputRef,
+    songImport,
     setAddInGroupOpen,
     setAddInNewGroupOpen,
     openMenu,
@@ -113,6 +88,5 @@ export function useTournamentHeaderSongsManageMenu({
     openAddInNewGroup,
     triggerImport,
     handleCreateSong,
-    handleBulkImport,
   };
 }
