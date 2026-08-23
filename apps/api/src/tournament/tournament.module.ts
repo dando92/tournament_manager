@@ -33,14 +33,17 @@ import { MatchStore } from './competition/match/match.store';
 import { UiUpdatePublisher } from './competition/match/services/ui-update.publisher';
 import { ScoresController } from './competition/score.controller';
 import { ScoreQueries } from './competition/score.queries';
+import { ScoreStore } from './competition/score.store';
 import { SongsController } from './catalog/song.controller';
+import { SongCommands } from './catalog/song.commands';
 import { SongQueries } from './catalog/song.queries';
-import { CompletedSongService } from './competition/services/completed-song.service';
-import { SongRoller } from './competition/services/song.roller';
-import { SongService } from './competition/services/song.service';
+import { SongStore } from './catalog/song.store';
+import { CompletedSongService } from './syncstart/completed-song.service';
+import { SongRoller } from './catalog/song-roller';
 import { RoundsController } from './competition/match/rounds.controller';
-import { PlayersController } from './player/players.controller';
-import { PlayerService } from './player/player.service';
+import { PlayersController } from './catalog/player.controller';
+import { PlayerQueries } from './catalog/player.queries';
+import { PlayerStore } from './catalog/player.store';
 import { ParticipantsCommands } from './registration/participants.commands';
 import { TournamentCommands } from './management/tournament.commands';
 import { TournamentQueries } from './management/tournament.queries';
@@ -73,14 +76,16 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         BracketSystemProvider,
         TournamentSyncStartService,
         TournamentSyncStartBootstrap,
-        PlayerService,
+        PlayerQueries,
+        PlayerStore,
         DivisionCommands,
         DivisionStore,
         ParticipantsCommands,
         PhaseGroupCommands,
         PhaseGroupQueries,
         PhaseGroupStore,
-        SongService,
+        SongCommands,
+        SongStore,
         StartggService,
         StartggMatchReporter,
         AdvancementRuleService,
@@ -89,6 +94,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         CompletedSongService,
         DivisionQueries,
         ScoreQueries,
+        ScoreStore,
         SongQueries,
         ParticipantQueries,
         StandingsQueries,

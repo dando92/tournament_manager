@@ -10,7 +10,6 @@ import { RoundSourceRequest } from "@/features/match/model/types";
  * names a round and not a song.
  */
 type AddSongToMatchModalProps = {
-  divisionId: number;
   tournamentId?: number;
   /** The round whose song is being replaced, or null when adding new rounds. */
   editingRoundId: number | null;
@@ -30,7 +29,6 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
     if (state.songAddType === "roll") {
       if (!state.selectedGroupName || !state.difficultyInput) return;
       const source: RoundSourceRequest = {
-        divisionId: props.divisionId,
         group: state.selectedGroupName,
         level: state.difficultyInput,
       };

@@ -115,10 +115,19 @@ export class MatchStore {
     }
 
     async loadPlayer(id: number): Promise<Player> {
-        const player = await this.players.findOneBy({ id });
-        if (!player) throw new NotFoundException(`Player with id ${id} not found`);
+        return (await this.loadPlayers([id])).get(id);
+    }
 
-        return player;
+    /** One query whatever the count: a lobby reports one run per player at once. */
+    async loadPlayers(ids: number[]): Promise<Map<number, Player>> {
+        if (ids.length === 0) return new Map();
+
+        const found = await this.players.find({ where: { id: In(ids) } });
+        const byId = new Map(found.map((player) => [player.id, player]));
+        const missing = ids.find((id) => !byId.has(id));
+        if (missing) throw new NotFoundException(`Player with id ${missing} not found`);
+
+        return byId;
     }
 
     async loadSongs(ids: number[]): Promise<Song[]> {
@@ -136,10 +145,18 @@ export class MatchStore {
     }
 
     async loadScore(id: number): Promise<Score> {
-        const score = await this.scores.findOne({ where: { id }, relations: { player: true, song: true } });
-        if (!score) throw new NotFoundException(`Score with id ${id} not found`);
+        return (await this.loadScores([id])).get(id);
+    }
 
-        return score;
+    async loadScores(ids: number[]): Promise<Map<number, Score>> {
+        if (ids.length === 0) return new Map();
+
+        const found = await this.scores.find({ where: { id: In(ids) }, relations: { player: true, song: true } });
+        const byId = new Map(found.map((score) => [score.id, score]));
+        const missing = ids.find((id) => !byId.has(id));
+        if (missing) throw new NotFoundException(`Score with id ${missing} not found`);
+
+        return byId;
     }
 
     async save(match: MatchAggregate): Promise<void> {

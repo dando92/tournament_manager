@@ -1,9 +1,6 @@
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './structure/division/division.requests';
 import { CreatePhaseDto, UpdatePhaseDto } from './structure/division/phase.requests';
 import { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto } from '@match/match.requests';
-import { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto } from '@player/player.dto';
-import { CreateRoundDto, UpdateRoundDto } from './competition/dtos/round.dto';
-import { CreateSongDto, UpdateSongDto } from './competition/dtos/song.dto';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 
 import { CreateTournamentDto, UpdateTournamentDto } from './management/tournament.requests';
@@ -17,9 +14,6 @@ import {
 export { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto };
 export { CreatePhaseDto, UpdatePhaseDto };
 export { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto };
-export { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto };
-export { CreateRoundDto, UpdateRoundDto };
-export { CreateSongDto, UpdateSongDto };
 export { UpsertPointsDto, UpsertScoreDto };
 
 export { CreateTournamentDto, UpdateTournamentDto };

@@ -105,7 +105,8 @@ rather than the class being long. Bracket generation creates phases, pools and
 matches, so it is a command on Division. `syncDerivedEntrants` was to be a
 command on PhaseGroup, which `MatchService` called by hand; phase 7 deleted it
 rather than moving it, because what it maintained is derived. The aggregates in
-this application are Tournament, Division, PhaseGroup, Match and Song.
+this application are Tournament, Division, PhaseGroup and Match. Song was
+expected to be the fifth and is not one: phase 7 records why.
 
 ### Who may call whom
 
@@ -352,12 +353,12 @@ src/tournament/
                                     king-of-the-hill.ts, manual.ts, bracket-system.ts
     standings.queries.ts
     score.queries.ts
+    score.store.ts                  a run belongs to a player and a song, not to a match
 
   catalog/                          Song and its pool, and the player catalogue
-    song.{controller,commands,store,queries}.ts
+    song.{controller,commands,store,queries,requests}.ts
     song-roller.ts
-    pad-roller.ts
-    player.{controller,commands,queries}.ts
+    player.{controller,store,queries,requests}.ts
 
   syncstart/                        already coherent; unchanged
 
@@ -1254,6 +1255,99 @@ write announces, that registering the same person twice leaves one participant,
 that unregistering somebody withdraws their entrants through the division first,
 that SyncStart is told only when the URL moved, and that an imported list costs
 one load of the tournament — and the migration-runner e2e test.
+
+#### Song and Player (done)
+
+`catalog/` holds `song.{controller,commands,store,queries,requests}.ts`,
+`song-roller.ts` and `player.{controller,store,queries,requests}.ts`.
+`SongService` and `PlayerService` are gone, and with them `src/tournament/player/`,
+`src/tournament/competition/services/` and `src/tournament/competition/dtos/`.
+
+**Song is not an aggregate**, which is the correction this slice makes to the
+model above. A song has no invariant to protect and no consequence to publish:
+it is a title, a group and a difficulty in a pool, nothing about it is decided
+elsewhere, and nothing else is decided by it. So it has a store and a commands
+class of two operations, no `song.aggregate.ts`, and no event — the one screen
+that shows the pool is the one that just wrote to it, and it still re-reads what
+it wrote because it holds its list in `useState`. When that page moves onto the
+query cache, `SongCommands` is where the event it listens for is published.
+
+**The player catalogue has no commands class at all.** Nobody creates a player
+on purpose: they appear because somebody was registered, imported, pasted into a
+division or brought in by a start.gg event, and each of those is a decision made
+by the write that had a reason to make it. What the catalogue owes those writes
+is rows, which is `PlayerStore`; what it owes a screen is the list, which is
+`PlayerQueries`. `GET /players` answers with the projection the frontend already
+typed it as instead of with the entity.
+
+Three loads of a whole table went with it. `PlayerStore.byNormalizedNames` asks
+for the names the caller holds, so the start.gg import no longer loads every
+player in the application — twice, once to preview and once to import — and
+creates the ones it does not find in one insert. The bulk add cost a query and
+an insert per name; it is one of each. What that add did to the names on the way
+past is recorded as FQ-022.
+
+The same slice found and fixed a defect the Tournament slice introduced:
+`importAll` and `addPlayersToDivision` read `participant.id` before the roster
+was saved, so somebody registered for the first time had none. The import
+answered with a list of nulls, which its one client discards, and the bulk add
+sent `undefined` to the division and answered `404 Participant undefined not
+found` — for every pasted name that was new. Two more of the same kind were in
+the routes addressed by player: a route parameter is a string, and
+`assignPlayerToDivision` looked the player up in a map keyed by number while
+`DivisionAggregate.withdrawPlayer` compared one with `===`, so admitting
+somebody answered `404` and withdrawing them did nothing and announced that it
+had. The ids are numbers at the controller now, and read after the save.
+
+**The roll asks one question and takes its scope from the match.** The pool of a
+tournament minus what the division has already played is one query,
+`SongQueries.rollable`, where it was the whole pool loaded as entities and a
+second query to subtract from it. Which division that is comes from
+`MatchAggregate.address` rather than from the request: the caller used to state
+`tournamentId` and `divisionId`, the one client there is sends the division and
+never the tournament, and the roller answers with nothing unless it has both —
+so **every rolled round silently added no song**. That is FQ-018, now resolved:
+both fields are gone from the request DTOs and from the frontend.
+
+**The completed song is an ingestion and a command.** `CompletedSongService`
+moved to `syncstart/`, where the protocol it ingests from lives, and it no
+longer opens a transaction, writes standings or runs the scoring system. It
+resolves, in three reads for a whole lobby whatever its size: which song of the
+pool was played, who the reported names are, and which rounds were waiting for
+them — `MatchQueries.liveTargetsForSong`, one query in place of a load of every
+active match of the tournament, with its entrants, its rounds, its standings and
+the scores behind them, **per player**. Each match those rounds belong to is
+then written once through `MatchCommands.applyCompletedSong`, which is the same
+aggregate call a person makes by choosing an existing run in the standing
+dialog.
+
+Three things about that path are worth recording:
+
+- A run is written down whether or not a round was waiting for it. A percentage
+  is evidence of something somebody played, and `ScoreStore` is where it lands;
+  the standing dialog offers those runs later. The previous code did this too,
+  in the middle of the same method.
+- One completed song is no longer one transaction. Each match it touches is its
+  own, which is what every other write in the application already is, and the
+  runs are recorded before them.
+- The third warning, `Unable to resolve score target`, is deleted. Nothing could
+  reach it: the target match was chosen from those holding a round on the song,
+  and the warning fired when that same round was then looked for again.
+
+What a lobby means by a song is recorded as FQ-021: it reports a path, the pool
+is keyed by title, and the two agreeing is a coincidence nothing enforces.
+
+`structure/services/` is left holding the advancement rules alone, which phase 8
+moves and renames.
+
+Verification: `npm run verify` passes — architecture boundaries, every workspace
+build, lint (three pre-existing warnings, none in the changed files), contracts,
+128 unit tests including the new `song-roller.spec.ts` and
+`completed-song.service.spec.ts`, 90 API e2e tests against PostgreSQL —
+seventeen of them new, in `song-writes.e2e-spec.ts`,
+`player-catalogue.e2e-spec.ts` and `completed-song.e2e-spec.ts` — and the
+migration-runner e2e test. Frontend `tsc --noEmit`, `eslint`, `vite build` and
+`node --test` pass.
 
 ### Phase 8 — File tree and naming
 

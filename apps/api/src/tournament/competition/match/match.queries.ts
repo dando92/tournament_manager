@@ -158,6 +158,48 @@ const ADVANCEMENT_RULES_FOR_MATCHES = `
     ORDER BY ar."sourceId", ar."sourcePlacement", ar."targetSlot", ar."id"
 `;
 
+/** The rows `LIVE_TARGETS_FOR_SONG` produces. */
+type LiveTargetRow = { matchId: number; roundId: number; playerId: number };
+
+/**
+ * Where a run reported by a lobby belongs: the round of a live match that is
+ * waiting for this player on this song.
+ *
+ * A match qualifies when it is active, holds a round played on the song, has
+ * the player as a singles entrant, and has no standing for them in that round
+ * yet. That is the rule the ingestion used to apply by loading every active
+ * match of the tournament with its entrants, its rounds, its standings and the
+ * scores behind them, once per player in the lobby. It is asked once for a
+ * completed song, because one completed song reports one score per player.
+ *
+ * A player waiting in two matches at once is answered with the older of them,
+ * which is the order the previous load happened to produce.
+ */
+const LIVE_TARGETS_FOR_SONG = `
+    SELECT DISTINCT ON (pa."playerId")
+            pa."playerId" AS "playerId",
+            r."matchId"   AS "matchId",
+            r."id"        AS "roundId"
+    FROM        "round" r
+    JOIN        "match" m        ON m."id"  = r."matchId" AND m."active" = TRUE
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+    JOIN        "division" d     ON d."id"  = ph."divisionId"
+    JOIN        "match_entrants_entrant" me ON me."matchId" = m."id"
+    JOIN        "entrant" e      ON e."id"  = me."entrantId" AND e."type" = 'player'
+    JOIN        "entrant_participants_participant" ep ON ep."entrantId" = e."id"
+    JOIN        "participant" pa ON pa."id" = ep."participantId"
+    WHERE       d."tournamentId" = $1
+        AND     r."songId" = $2
+        AND     pa."playerId" = ANY($3::int[])
+        AND     NOT EXISTS (
+            SELECT  1
+            FROM    "standing" s
+            WHERE   s."roundId" = r."id" AND s."playerId" = pa."playerId"
+        )
+    ORDER BY pa."playerId", m."id", r."id"
+`;
+
 /**
  * Every read of a match, in the one shape the interface consumes.
  *
@@ -183,6 +225,18 @@ export class MatchQueries {
 
     async byDivision(divisionId: number): Promise<MatchDto[]> {
         return await this.inScope('division', divisionId);
+    }
+
+    /**
+     * The rounds waiting for these players on this song, one per player.
+     *
+     * The lobby ingestion asks this once for a completed song, and then writes
+     * each match it named exactly once.
+     */
+    async liveTargetsForSong(tournamentId: number, songId: number, playerIds: number[]): Promise<LiveTargetRow[]> {
+        if (playerIds.length === 0) return [];
+
+        return await this.dataSource.query(LIVE_TARGETS_FOR_SONG, [tournamentId, songId, playerIds]);
     }
 
     /** Whether a match exists, for the callers that only need to refuse when it does not. */

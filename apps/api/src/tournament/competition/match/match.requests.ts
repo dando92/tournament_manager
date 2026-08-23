@@ -105,14 +105,6 @@ export class CreateMatchWithSongsDto {
   scoringSystem: ScoringSystemType;
 
   @IsOptional()
-  @IsNumber()
-  tournamentId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  divisionId?: number;
-
-  @IsOptional()
   @IsString()
   group?: string;
 
@@ -137,21 +129,17 @@ export class CreateMatchWithSongsDto {
 }
 
 /**
- * Where a round's song comes from: a chosen song, a roll over a division's
- * pool, or nothing at all — which is the hand-scored round.
+ * Where a round's song comes from: a chosen song, a roll over the pool of the
+ * division the match is played in, or nothing at all — which is the
+ * hand-scored round.
+ *
+ * A roll names the group and the level it wants. Which division it draws from
+ * is the match's own, read from the match rather than restated here.
  */
 export class RoundSourceDto {
   @IsOptional()
   @IsNumber()
   songId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  tournamentId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  divisionId?: number;
 
   @IsOptional()
   @IsString()

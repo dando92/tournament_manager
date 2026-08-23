@@ -170,7 +170,6 @@ export function useCreateMatchModal({
 
     const baseRequest = {
       phaseGroupId: resolvedPhaseGroupId,
-      divisionId: resolvedDivisionId,
       name,
       subtitle,
       group: selectedGroupName,

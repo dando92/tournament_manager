@@ -70,6 +70,29 @@ const IMPORT_PREVIEW_OF_NAMES = `
     ORDER BY r."ordinality"
 `;
 
+/** The rows `PLAYERS_OF_TOURNAMENT_BY_NAME` produce. */
+type NamedPlayerRow = { normalizedName: string; playerId: number };
+
+/**
+ * Who a lobby is naming: the players of this tournament's roster whose names
+ * match the ones a completed song reported.
+ *
+ * A lobby knows people by the name shown on the cabinet, so the join is on the
+ * normalized name, and it is asked once for a whole lobby rather than once per
+ * score. Somebody who is not registered in this tournament is not matched, which
+ * is what makes the run a warning rather than a score against a stranger.
+ */
+const PLAYERS_OF_TOURNAMENT_BY_NAME = `
+    SELECT DISTINCT ON (LOWER(TRIM(pl."playerName")))
+            LOWER(TRIM(pl."playerName")) AS "normalizedName",
+            pl."id"                      AS "playerId"
+    FROM     "participant" pa
+    JOIN     "player" pl ON pl."id" = pa."playerId"
+    WHERE    pa."tournamentId" = $1
+        AND  LOWER(TRIM(pl."playerName")) = ANY($2::text[])
+    ORDER BY LOWER(TRIM(pl."playerName")), pl."id"
+`;
+
 /** The rows `DIVISIONS_OF_PARTICIPANT` produces. */
 type DivisionRow = { divisionId: number };
 
@@ -115,6 +138,19 @@ export class ParticipantQueries {
         const rows: DivisionRow[] = await this.dataSource.query(DIVISIONS_OF_PARTICIPANT, [tournamentId, participantId]);
 
         return rows.map((row) => row.divisionId);
+    }
+
+    /**
+     * The players of the roster these names stand for, keyed by the normalized
+     * name the caller asked with.
+     */
+    async playerIdsByNames(tournamentId: number, playerNames: string[]): Promise<Map<string, number>> {
+        const normalized = [...new Set(playerNames.map((name) => name.trim().toLowerCase()).filter(Boolean))];
+        if (normalized.length === 0) return new Map();
+
+        const rows: NamedPlayerRow[] = await this.dataSource.query(PLAYERS_OF_TOURNAMENT_BY_NAME, [tournamentId, normalized]);
+
+        return new Map(rows.map((row) => [row.normalizedName, row.playerId]));
     }
 
     /**

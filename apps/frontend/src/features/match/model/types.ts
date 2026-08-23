@@ -45,7 +45,6 @@ export interface MatchPhaseOption {
 
 export interface CreateMatchRequest {
   phaseGroupId: number;
-  divisionId?: number; // only needed for song rolling
   name: string;
   subtitle: string;
   scoringSystem: string;
@@ -59,10 +58,12 @@ export interface CreateMatchRequest {
 /**
  * Where a round's song comes from. Empty means no song at all, which is the
  * hand-scored round.
+ *
+ * A roll says which group and level it wants; the division whose pool it draws
+ * from is the match's own, which the server reads rather than being told.
  */
 export interface RoundSourceRequest {
   songId?: number;
-  divisionId?: number;
   group?: string;
   level?: string;
 }

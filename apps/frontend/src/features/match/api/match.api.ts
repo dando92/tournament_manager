@@ -39,7 +39,6 @@ export async function create(request: CreateMatchRequest): Promise<number> {
       entrantIds: request.entrantIds,
       scoringSystem: request.scoringSystem,
       phaseGroupId: request.phaseGroupId,
-      divisionId: request.divisionId,
       group: request.group,
       levels: request.levels,
       songIds: request.songIds,

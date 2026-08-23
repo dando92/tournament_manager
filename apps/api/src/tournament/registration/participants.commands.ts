@@ -3,7 +3,7 @@ import { EntrantDto } from '@tournament-manager/contracts';
 import { Participant, Player } from '@tournament-manager/persistence';
 
 import { AccountService } from '@account/services/account.service';
-import { PlayerService } from '@player/player.service';
+import { PlayerStore, normalizePlayerName } from '@tournament/catalog/player.store';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
@@ -37,7 +37,7 @@ export class ParticipantsCommands {
     constructor(
         private readonly tournaments: TournamentStore,
         private readonly participants: ParticipantQueries,
-        private readonly players: PlayerService,
+        private readonly players: PlayerStore,
         private readonly accounts: AccountService,
         private readonly divisions: DivisionCommands,
         private readonly divisionQueries: DivisionQueries,
@@ -59,22 +59,22 @@ export class ParticipantsCommands {
      * because the preview the caller ran already decided which is which.
      */
     async importAll(tournamentId: number, entries: Array<{ name: string; playerId?: number }>): Promise<number[]> {
+        const named = entries.filter((entry) => entry.name?.trim());
+        const chosen = await this.playersOrFail(named.map((entry) => entry.playerId).filter(Boolean));
+        const created = await this.players.createAll(
+            named.filter((entry) => !entry.playerId).map((entry) => entry.name.trim()),
+        );
+
         const tournament = await this.tournaments.loadOrFail(tournamentId);
-        const registered: number[] = [];
-
-        for (const entry of entries) {
-            const name = entry.name?.trim();
-            if (!name) continue;
-
-            const player = entry.playerId
-                ? await this.playerOrFail(entry.playerId)
-                : await this.players.create(name);
-            registered.push(tournament.register(player).id);
-        }
+        const registered = named.map((entry) =>
+            tournament.register(entry.playerId ? chosen.get(entry.playerId) : created.shift()),
+        );
 
         await this.tournaments.save(tournament);
 
-        return registered;
+        /* The ids are read after the save: somebody registered for the first
+           time is a row that does not exist until then. */
+        return registered.map((participant) => participant.id);
     }
 
     /**
@@ -134,8 +134,9 @@ export class ParticipantsCommands {
     /** A player competes in a division: they are registered in its tournament first. */
     async assignPlayerToDivision(playerId: number, divisionId: number): Promise<void> {
         const tournamentId = await this.tournamentOf(divisionId);
+        const players = await this.playersOrFail([playerId]);
         const tournament = await this.tournaments.loadOrFail(tournamentId);
-        const participant = tournament.register(await this.playerOrFail(playerId));
+        const participant = tournament.register(players.get(playerId));
 
         await this.tournaments.save(tournament);
         await this.divisions.addParticipants(divisionId, [participant.id]);
@@ -154,22 +155,23 @@ export class ParticipantsCommands {
         playerNames: string[],
         divisionId: number,
     ): Promise<{ entrants: EntrantDto[]; warnings: string[] }> {
-        const names = [...new Set(playerNames.map((name) => name.trim().toLowerCase()).filter((name) => name.length > 0))];
+        const names = this.distinctNames(playerNames);
         const tournamentId = await this.tournamentOf(divisionId);
+
+        const known = await this.players.byNormalizedNames(names);
+        const warnings = names.filter((name) => known.has(normalizePlayerName(name)));
+        const created = await this.players.createAll(names.filter((name) => !known.has(normalizePlayerName(name))));
+        created.forEach((player) => known.set(normalizePlayerName(player.playerName), player));
+
         const tournament = await this.tournaments.loadOrFail(tournamentId);
-
-        const warnings: string[] = [];
-        const participantIds: number[] = [];
-        for (const name of names) {
-            const known = await this.players.findByName(name);
-            if (known) warnings.push(name);
-
-            participantIds.push(tournament.register(known ?? await this.players.create(name)).id);
-        }
+        const registered = names.map((name) => tournament.register(known.get(normalizePlayerName(name))));
 
         await this.tournaments.save(tournament);
 
-        const admitted = new Set(await this.divisions.addParticipants(divisionId, participantIds));
+        /* The ids are read after the save, for the same reason `importAll`
+           reads them there: a participant registered for the first time has
+           none until the roster is written. */
+        const admitted = new Set(await this.divisions.addParticipants(divisionId, registered.map((participant) => participant.id)));
         const entrants = (await this.divisionQueries.entrants(divisionId)).filter((entrant) => admitted.has(entrant.id));
 
         return { entrants, warnings };
@@ -180,19 +182,38 @@ export class ParticipantsCommands {
      * catalogue registers that player rather than creating a namesake.
      */
     private async playerFor(input: RegistrationInput): Promise<Player> {
-        if (input.playerId) return this.playerOrFail(input.playerId);
+        if (input.playerId) return (await this.playersOrFail([input.playerId])).get(input.playerId);
 
         const name = input.playerName?.trim();
         if (!name) throw new BadRequestException('playerId or playerName is required');
 
-        return await this.players.findByNameNormalized(name) ?? await this.players.create(name);
+        const known = await this.players.byNormalizedNames([name]);
+
+        return known.get(normalizePlayerName(name)) ?? (await this.players.createAll([name]))[0];
     }
 
-    private async playerOrFail(playerId: number): Promise<Player> {
-        const player = await this.players.findById(playerId);
-        if (!player) throw new NotFoundException(`Player ${playerId} not found`);
+    /** The players a request named, or the first id that names nobody. */
+    private async playersOrFail(playerIds: number[]): Promise<Map<number, Player>> {
+        const players = await this.players.byIds(playerIds);
+        const missing = playerIds.find((playerId) => !players.has(playerId));
+        if (missing) throw new NotFoundException(`Player ${missing} not found`);
 
-        return player;
+        return players;
+    }
+
+    /**
+     * The names a bulk add is for: trimmed, and distinct however they were
+     * capitalized.
+     *
+     * They used to be lowercased instead, which is how they were then matched
+     * against the catalogue and how anybody new was created. See FQ-022.
+     */
+    private distinctNames(playerNames: string[]): string[] {
+        const seen = new Set<string>();
+
+        return playerNames
+            .map((name) => name.trim())
+            .filter((name) => name.length > 0 && !seen.has(normalizePlayerName(name)) && seen.add(normalizePlayerName(name)));
     }
 
     private async tournamentOf(divisionId: number): Promise<number> {

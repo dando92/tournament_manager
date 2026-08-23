@@ -9,15 +9,13 @@ import { AdvancementManager } from '@match/services/advancement.manager';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
-import { SongRoller } from '@tournament/competition/services/song.roller';
+import { SongRoller } from '@tournament/catalog/song-roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
     entrantIds?: number[];
     songIds?: number[];
-    tournamentId?: number;
-    divisionId?: number;
     group?: string;
     levels?: string;
 };
@@ -31,6 +29,13 @@ export type ScoreInput = {
     percentage: number;
     isFailed: boolean;
     scoreId?: number;
+};
+
+/** A run a lobby reported, and the round of this match that was waiting for it. */
+export type CompletedRun = {
+    roundId: number;
+    playerId: number;
+    scoreId: number;
 };
 
 /**
@@ -68,7 +73,7 @@ export class MatchCommands {
         const entrants = await this.store.loadEntrants(input.entrantIds ?? []);
         const match = MatchAggregate.create(input, phaseGroup, entrants);
 
-        const songs = await this.rolledSongs(input);
+        const songs = await this.rolledSongs(match, input);
         songs.forEach((song) => match.addRound(song));
 
         await this.store.save(match);
@@ -248,6 +253,36 @@ export class MatchCommands {
         await this.announce(match, before);
     }
 
+    /**
+     * The runs a lobby reported, written into the rounds that were waiting for
+     * them.
+     *
+     * This is the same change as somebody choosing a run they already have in
+     * the standing dialog — the score exists, and the round it settles is told
+     * about it — so it is the same aggregate call, once per player of the lobby
+     * rather than once per request. One completed song is one load, one save
+     * and one announcement per match it touched; it used to be one load of
+     * every active match of the tournament, with its entrants and every score
+     * in it, per player.
+     *
+     * The match is not asserted editable. A completed match is not active and
+     * so is never named by `MatchQueries.liveTargetsForSong`, and refusing a run
+     * the cabinet has already played would throw it away.
+     */
+    async applyCompletedSong(matchId: number, runs: CompletedRun[]): Promise<void> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        const players = await this.store.loadPlayers(runs.map((run) => run.playerId));
+        const scores = await this.store.loadScores(runs.map((run) => run.scoreId));
+
+        for (const run of runs) {
+            match.upsertScore(run.roundId, players.get(run.playerId), scores.get(run.scoreId), this.scoringSystems);
+        }
+
+        await this.store.save(match);
+        await this.announce(match, before);
+    }
+
     private async saveAndAnnounceMembership(match: MatchAggregate): Promise<void> {
         await this.store.save(match);
         await this.publisher.emitMatchUpdate(match.address);
@@ -287,19 +322,23 @@ export class MatchCommands {
             return;
         }
 
-        const songs = await this.rolledSongs(source);
+        const songs = await this.rolledSongs(match, source);
         songs.forEach((song) => match.addRound(song));
     }
 
     /**
-     * The songs a round source names: a chosen one, or a roll over the
-     * division's pool.
+     * The songs a round source names: a chosen one, or a roll over the pool of
+     * the division this match is played in.
+     *
+     * Which division that is, and which tournament's songs it draws from, is
+     * read from the match rather than sent with the request. The caller used to
+     * state both, and the one client there is sent the division and never the
+     * tournament, which since the roller stopped guessing meant a roll produced
+     * no song at all. See FQ-018.
      */
-    private async rolledSongs(source: {
+    private async rolledSongs(match: MatchAggregate, source: {
         songId?: number;
         songIds?: number[];
-        tournamentId?: number;
-        divisionId?: number;
         group?: string;
         level?: string;
         levels?: string;
@@ -310,7 +349,8 @@ export class MatchCommands {
         const levels = source.levels ?? source.level;
         if (!levels) return [];
 
-        const rolled = await this.songRoller.RollSongs(source.tournamentId, source.divisionId, source.group, levels);
+        const { tournamentId, divisionId } = match.address;
+        const rolled = await this.songRoller.roll(tournamentId, divisionId, source.group ?? null, levels);
 
         return await this.store.loadSongs(rolled);
     }

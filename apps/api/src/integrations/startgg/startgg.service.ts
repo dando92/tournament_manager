@@ -31,7 +31,7 @@ import { DivisionCommands } from '@tournament/structure/division/division.comman
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
-import { PlayerService } from '@player/player.service';
+import { PlayerStore } from '@tournament/catalog/player.store';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
@@ -76,7 +76,7 @@ export class StartggService {
 
         private readonly participants: ParticipantsCommands,
         private readonly participantQueries: ParticipantQueries,
-        private readonly playerService: PlayerService,
+        private readonly players: PlayerStore,
         private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
         private readonly phaseGroupCommands: PhaseGroupCommands,
@@ -123,7 +123,7 @@ export class StartggService {
         const context = dto.targetTournamentId
             ? await this.timeOperation(
                 `previewImport.buildLocalContext tournamentId=${dto.targetTournamentId}`,
-                () => this.buildLocalContext(dto.targetTournamentId!),
+                () => this.buildLocalContext(dto.targetTournamentId!, this.gamerTagsOf(snapshot)),
             )
             : null;
 
@@ -308,15 +308,12 @@ export class StartggService {
         const [mappingCache, playersByNormalizedName] = await this.timeOperation(
             'importEvent.loadCaches',
             async () => {
-                const [mappings, allPlayers] = await Promise.all([
+                const [mappings, knownPlayers] = await Promise.all([
                     this.externalMappingRepository.find({ where: { provider: 'startgg' } }),
-                    this.playerService.findAll(),
+                    this.players.byNormalizedNames(this.gamerTagsOf(snapshot)),
                 ]);
 
-                return [
-                    this.createMappingCache(mappings),
-                    new Map<string, Player>(allPlayers.map((player) => [this.normalizeName(player.playerName), player])),
-                ] as const;
+                return [this.createMappingCache(mappings), knownPlayers] as const;
             },
         );
 
@@ -539,8 +536,16 @@ export class StartggService {
         return snapshot;
     }
 
-    private async buildLocalContext(tournamentId: number) {
-        const [tournament, divisions, allPlayers, mappings] = await this.timeOperation(
+    /**
+     * What the local tournament already holds, for a preview to compare an
+     * event against.
+     *
+     * The names the event carries are passed in rather than the catalogue being
+     * loaded whole: an import of eight people used to load every player in the
+     * application to find which of them were already known.
+     */
+    private async buildLocalContext(tournamentId: number, gamerTags: string[]) {
+        const [tournament, divisions, knownPlayers, mappings] = await this.timeOperation(
             `buildLocalContext.loadBaseEntities tournamentId=${tournamentId}`,
             () => Promise.all([
                 this.tournamentRepository.findOne({
@@ -563,7 +568,7 @@ export class StartggService {
                         phases: true,
                     },
                 }),
-                this.playerService.findAll(),
+                this.players.byNormalizedNames(gamerTags),
                 this.externalMappingRepository.find({ where: { provider: 'startgg' } }),
             ]),
         );
@@ -587,7 +592,7 @@ export class StartggService {
             participantsById,
             entrantsById: new Map<number, Entrant>(entrants.map((entrant) => [entrant.id, entrant])),
             matchesById: new Map<number, Match>(matches.map((match) => [match.id, match])),
-            playersByNormalizedName: new Map<string, Player>(allPlayers.map((player) => [this.normalizeName(player.playerName), player])),
+            playersByNormalizedName: knownPlayers,
             mappings,
         };
     }
@@ -674,13 +679,19 @@ export class StartggService {
             else unregistered.push(participant);
         }
 
-        const players: Player[] = [];
-        for (const participant of unregistered) {
-            const known = playersByNormalizedName.get(this.normalizeName(participant.gamerTag)) ?? null;
-            const player = known ?? await this.playerService.create(participant.gamerTag);
-            playersByNormalizedName.set(this.normalizeName(player.playerName), player);
-            players.push(player);
-        }
+        /* Everybody the catalogue does not know yet is created in one insert,
+           and a gamer tag that repeats within the event names one person. */
+        const missing = [...new Set(
+            unregistered
+                .map((participant) => participant.gamerTag)
+                .filter((gamerTag) => !playersByNormalizedName.has(this.normalizeName(gamerTag)))
+                .map((gamerTag) => this.normalizeName(gamerTag)),
+        )].map((normalized) => unregistered.find((participant) => this.normalizeName(participant.gamerTag) === normalized).gamerTag);
+
+        const created = await this.players.createAll(missing);
+        created.forEach((player) => playersByNormalizedName.set(this.normalizeName(player.playerName), player));
+
+        const players = unregistered.map((participant) => playersByNormalizedName.get(this.normalizeName(participant.gamerTag)));
 
         const registered = await this.participants.registerAll(tournamentId, players);
         unregistered.forEach((participant, index) => byExternalId.set(participant.id, registered[index]));
@@ -1333,6 +1344,11 @@ export class StartggService {
         const result = operation();
         this.logger.log(`[timing] complete ${label} durationMs=${Date.now() - startedAt}`);
         return result;
+    }
+
+    /** Every name an event's entrants compete under, which is what the catalogue is asked for. */
+    private gamerTagsOf(snapshot: StartggEventSnapshot): string[] {
+        return snapshot.entrants.flatMap((entrant) => entrant.participants.map((participant) => participant.gamerTag));
     }
 
     private normalizeName(value: string): string {
