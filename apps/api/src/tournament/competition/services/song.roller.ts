@@ -1,22 +1,36 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Division, Song } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/structure/services/division.service';
+import { Song } from '@tournament-manager/persistence';
+import { SongQueries } from '@tournament/catalog/song.queries';
 import { SongService } from '@tournament/competition/services/song.service';
 
+/**
+ * Picking the songs a generated round is played on.
+ *
+ * A song already played somewhere in the division is out, whatever pool or
+ * match it was played in. That set used to be collected by loading the whole
+ * division — its phases, its pools, every match, every round and every song of
+ * every round — once per level rolled; it is one query now.
+ */
 @Injectable()
 export class SongRoller {
     constructor(
         @Inject()
-        private readonly divisionService: DivisionService,
+        private readonly songQueries: SongQueries,
         @Inject()
         private readonly songService: SongService) { }
 
     async RollSongs(tournamentId: number, divisionId: number, group: string, levels: string): Promise<number[]> {
-        const songs: number[] = [];
-        const intLevels = levels.split(",").map(s => parseInt(s, 10));
+        if (!tournamentId || !divisionId) return [];
 
+        const intLevels = levels.split(",").map(s => parseInt(s, 10));
+        const pool = await this.songService.findByTournament(tournamentId);
+        if (pool.length === 0) return [];
+
+        const played = new Set(await this.songQueries.playedInDivision(divisionId));
+
+        const songs: number[] = [];
         for (const level of intLevels) {
-            const songId = await this.RollASong(tournamentId, divisionId, group, level);
+            const songId = this.RollSong(pool, played, group, level);
 
             if (songId != 0) {
                 songs.push(songId);
@@ -26,24 +40,8 @@ export class SongRoller {
         return songs;
     }
 
-    async RollASong(tournamentId: number, divisionId: number, group: string, level: number): Promise<number> {
-        const division = await this.divisionService.findOneForBracketGeneration(divisionId).catch(() => null);
-
-        if (!division) {
-            return 0;
-        }
-
-        const songs = await this.songService.findByTournament(tournamentId);
-
-        if (songs.length === 0) {
-            return 0;
-        }
-
-        return this.RollSong(songs, division, group, level);
-    }
-
-    private RollSong(songs: Song[], division: Division, group: string | null, level: number): number {
-        const availableSongs = this.GetAvailableSong(songs, division, level, group);
+    private RollSong(songs: Song[], played: Set<number>, group: string | null, level: number): number {
+        const availableSongs = this.GetAvailableSong(songs, played, level, group);
 
         if (availableSongs.length == 0)
             return 0;
@@ -51,16 +49,11 @@ export class SongRoller {
         return this.GetRandomElement(availableSongs);
     }
 
-    private GetAvailableSong(songs: Song[], division: Division, level: number, group: string | null): number[] {
-        const allSongs: number[] = songs.filter(s => (group === null || (group !== null && s.group === group)) && s.difficulty === level).map(s => s.id);
-        const bannedSongs: number[] = this.GetBannedSongs(division);
-
-        return allSongs.filter(songId => !bannedSongs.includes(songId));
-    }
-
-    private GetBannedSongs(division: Division): number[] {
-        return division.phases.flatMap(p => p.phaseGroups ?? []).flatMap(g => g.matches ?? []).flatMap(
-            match => match.rounds.flatMap(round => (round.song ? [round.song.id] : [])));
+    private GetAvailableSong(songs: Song[], played: Set<number>, level: number, group: string | null): number[] {
+        return songs
+            .filter(s => (group === null || (group !== null && s.group === group)) && s.difficulty === level)
+            .map(s => s.id)
+            .filter(songId => !played.has(songId));
     }
 
     private GetRandomElement<T>(array: T[]): T {

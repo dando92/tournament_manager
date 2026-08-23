@@ -1,5 +1,4 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
-import { BracketManager } from '@bracket/bracket.manager';
 import {
     CreatedResourceDto,
     DivisionStandingRowDto,
@@ -9,11 +8,10 @@ import {
     ParticipantDto,
 } from '@tournament-manager/contracts';
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
-import { DivisionService } from '../services/division.service';
+import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
 import { StandingsQueries } from '@tournament/competition/standings.queries';
-import { EntrantService } from '@tournament/services/entrant.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
@@ -23,9 +21,7 @@ export class DivisionsController {
         private readonly divisionQueries: DivisionQueries,
         private readonly treeQueries: TreeQueries,
         private readonly standingsQueries: StandingsQueries,
-        private readonly divisionService: DivisionService,
-        private readonly entrantService: EntrantService,
-        private readonly bracketManager: BracketManager,
+        private readonly divisionCommands: DivisionCommands,
     ) {}
 
     /** The three read routes below answer `404` for a division that does not exist, which an empty collection cannot say. */
@@ -36,9 +32,7 @@ export class DivisionsController {
     @Post()
     @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
     async create(@Body(new ValidationPipe()) dto: CreateDivisionDto): Promise<CreatedResourceDto> {
-        const division = await this.divisionService.create(dto);
-
-        return { id: division.id };
+        return { id: await this.divisionCommands.create(dto) };
     }
 
     @Get(':id/summary')
@@ -60,21 +54,21 @@ export class DivisionsController {
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: GenerateDivisionBracketDto,
     ): Promise<GenerateBracketResultDto> {
-        return this.bracketManager.generateForDivision(Number(id), dto);
+        return this.divisionCommands.generateBracket(Number(id), dto);
     }
 
     @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateDivisionDto): Promise<void> {
-        await this.divisionService.update(id, dto);
+        await this.divisionCommands.update(Number(id), dto);
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
     async remove(@Param('id') id: number): Promise<void> {
-        return this.divisionService.delete(id);
+        return this.divisionCommands.delete(Number(id));
     }
 
     @Get(':id/entrants')
@@ -90,7 +84,7 @@ export class DivisionsController {
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: UpdateDivisionSeedingDto,
     ): Promise<void> {
-        return this.divisionService.updateSeeding(Number(id), dto.entrantIds);
+        return this.divisionCommands.updateSeeding(Number(id), dto.entrantIds);
     }
 
     @Get(':id/available-participants')
@@ -105,9 +99,9 @@ export class DivisionsController {
         @Param('id') id: number,
         @Param('participantId') participantId: number,
     ): Promise<CreatedResourceDto> {
-        const entrant = await this.entrantService.addSinglesEntrant(Number(id), Number(participantId));
+        const [entrantId] = await this.divisionCommands.addParticipants(Number(id), [Number(participantId)]);
 
-        return { id: entrant.id };
+        return { id: entrantId };
     }
 
     @Delete(':id/participants/:participantId')
@@ -117,8 +111,7 @@ export class DivisionsController {
         @Param('id') id: number,
         @Param('participantId') participantId: number,
     ): Promise<void> {
-        return this.entrantService.removeSinglesEntrantByParticipant(Number(id), Number(participantId));
+        return this.divisionCommands.removeParticipant(Number(id), Number(participantId));
     }
 
 }
-

@@ -17,12 +17,12 @@ import { PhaseGroupsController } from './structure/controllers/phase-groups.cont
 import { PhasesController } from './structure/controllers/phases.controller';
 import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
 import { AdvancementRuleService } from './structure/services/advancement-rule.service';
-import { DivisionService } from './structure/services/division.service';
+import { DivisionCommands } from './structure/division/division.commands';
+import { DivisionStore } from './structure/division/division.store';
 import { PhaseGroupManager } from './structure/services/phase-group.manager';
 import { PhaseGroupService } from './structure/services/phase-group.service';
 import { PhaseService } from './structure/services/phase.service';
 import { BracketController } from './competition/bracket/bracket.controller';
-import { BracketManager } from './competition/bracket/bracket.manager';
 import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
 import { MatchesController } from './competition/match/match.controller';
 import { AdvancementManager } from './competition/match/services/advancement.manager';
@@ -42,7 +42,6 @@ import { RoundsController } from './competition/match/rounds.controller';
 import { PlayersController } from './player/players.controller';
 import { PlayerManager } from './player/player.manager';
 import { PlayerService } from './player/player.service';
-import { EntrantService } from './services/entrant.service';
 import { ParticipantService } from './services/participant.service';
 import { TournamentManager } from './services/tournament.manager';
 import { TournamentQueries } from './management/tournament.queries';
@@ -73,14 +72,13 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         SongRoller,
         ScoringSystemProvider,
         BracketSystemProvider,
-        BracketManager,
         TournamentSyncStartService,
         TournamentSyncStartBootstrap,
         PlayerService,
         PlayerManager,
-        DivisionService,
+        DivisionCommands,
+        DivisionStore,
         ParticipantService,
-        EntrantService,
         PhaseService,
         PhaseGroupService,
         PhaseGroupManager,

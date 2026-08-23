@@ -326,8 +326,8 @@ src/tournament/
     participants.requests.ts
 
   structure/
-    division/                       division.{controller,commands,store,queries,requests}.ts
-    phase-group/                    phase-group.{controller,commands,store,queries,requests}.ts
+    division/                       division.{controller,commands,aggregate,store,queries,requests}.ts
+    phase-group/                    phase-group.{controller,commands,aggregate,store,queries,requests}.ts
     advancement/                    advancement-rule.{controller,commands,store}.ts
     tree.queries.ts                 the read that spans division, phase and pool
 
@@ -1059,6 +1059,56 @@ resumes at a sequence it has not seen invalidates everything on screen.
 - Perform the directory moves for each aggregate immediately before refactoring
   it, so a reviewer sees the move in one commit and the change of roles in the
   next.
+
+#### Division (done)
+
+`structure/division/` holds `division.{controller,commands,aggregate,store,queries,requests}.ts`.
+`DivisionService` and `EntrantService` are gone, and with them the four loaders
+that differed only in their `relations` tree. One graph loads a division for
+writing: its tournament, its phases and its roster with the players behind it.
+
+Three things the roster did not do:
+
+- Admitting and withdrawing somebody published nothing, which is the gap phase 6
+  recorded. Both announce `ui.division-changed` now, addressed from the graph the
+  store loaded — `UiUpdatePublisher.emitDivisionUpdate` takes the address the way
+  the match writes do, instead of looking up where the division sits.
+- Seeding saved one row per entrant inside a loop. It is one save.
+- The entrants a bracket was built from arrived in whatever order the database
+  produced, so the seeding page decided nothing. `DivisionAggregate.activeEntrants`
+  returns them in the order the division seeded them, unseeded last and then by
+  name, which is the order `DivisionQueries.entrants` already returned to the
+  reader.
+
+Bracket generation is a command on Division. `BracketManager` is gone: the
+controller keeps the list of systems, and `generateBracket` loads the division
+once, creates the phase and the pool, and hands the systems the entrants. The
+systems lose the `division` argument none of them read and the `DivisionService`
+none of them called; an unknown bracket type answers `400` rather than failing on
+an undefined system.
+
+The song roller no longer loads a division — five levels of relations, once per
+level rolled — to find out which songs it has already played;
+`SongQueries.playedInDivision` is one query. What a wrong `divisionId` means is
+recorded as FQ-018.
+
+`MatchCommands` resolves `StartggService` lazily. That class is both the
+provider importer and the report client, and the importer registers divisions,
+which reach the bracket systems and so reach the match commands again. Splitting
+the two halves removes the cycle and belongs with the integration, not here.
+
+On the frontend, the three by-hand refreshes that followed a roster or seeding
+write are gone; `refreshDivision` remains for the advancement rules alone, which
+are not an aggregate and still announce nothing.
+
+Verification: `npm run verify` passes — architecture boundaries, every workspace
+build, lint (eight pre-existing warnings, none in the changed files), contracts,
+unit tests including the new `division.aggregate.spec.ts`, 49 API e2e tests
+against PostgreSQL — eleven of them new, in `division-writes.e2e-spec.ts`,
+covering what each write announces, that a re-admitted participant keeps the
+entrant and the seed they had, that a command loads the division once, and that a
+generated bracket seats the entrants in seeded order — and the migration-runner
+e2e test.
 
 ### Phase 8 — File tree and naming
 

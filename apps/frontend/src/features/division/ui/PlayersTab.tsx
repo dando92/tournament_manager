@@ -12,12 +12,11 @@ type Props = {
   division: Division;
   entrants: Entrant[];
   canEdit: boolean;
-  onPlayersChanged: () => void;
 };
 
-export default function PlayersTab({ division, entrants, canEdit, onPlayersChanged }: Props) {
+export default function PlayersTab({ division, entrants, canEdit }: Props) {
   const [orderByName, setOrderByName] = useState(false);
-  const state = usePlayersTab({ division, entrants, orderByName, onPlayersChanged });
+  const state = usePlayersTab({ division, entrants, orderByName });
 
   return (
     <div className="flex flex-col gap-4 w-full">

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participant, ParticipantRole, Player, Tournament } from '@tournament-manager/persistence';
-import { EntrantService } from './entrant.service';
+import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { AccountService } from '@account/services/account.service';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class ParticipantService {
         private readonly tournamentRepository: Repository<Tournament>,
         @InjectRepository(Player)
         private readonly playerRepository: Repository<Player>,
-        private readonly entrantService: EntrantService,
+        private readonly divisionCommands: DivisionCommands,
         private readonly accountService: AccountService,
     ) {}
 
@@ -73,8 +73,10 @@ export class ParticipantService {
 
         if (!participant) return;
 
-        for (const entrant of participant.entrants ?? []) {
-            await this.entrantService.removeSinglesEntrantByParticipant(entrant.division.id, participant.id);
+        /* One call per division the participant competes in, not per entrant of
+           a collection: somebody belongs to a division once. */
+        for (const divisionId of new Set((participant.entrants ?? []).map((entrant) => entrant.division.id))) {
+            await this.divisionCommands.removeParticipant(divisionId, participant.id);
         }
 
         await this.participantRepository.remove(participant);

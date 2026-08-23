@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Player, Score, Song } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
@@ -60,6 +60,11 @@ export class MatchCommands {
         private readonly phaseGroups: PhaseGroupService,
         private readonly advancementRules: AdvancementRuleService,
         private readonly songRoller: SongRoller,
+        /* The start.gg service is both the importer and the report client, and
+           the importer registers divisions, which reach the bracket systems and
+           so reach this class again. Splitting the two halves removes the cycle;
+           until then the report client is resolved lazily. */
+        @Inject(forwardRef(() => StartggService))
         private readonly startgg: StartggService,
     ) {}
 

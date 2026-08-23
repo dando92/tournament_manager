@@ -9,6 +9,7 @@ export type DivisionPageContextValue = {
   tournamentId: number;
   divisionId: number;
   controls: boolean;
+  /** For the advancement rules alone: every other write to a division announces itself. */
   refreshDivision: () => Promise<void>;
 };
 

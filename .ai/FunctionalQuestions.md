@@ -74,7 +74,8 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Observed behavior: `BracketManager.generateForDivision` creates a phase, a pool, and a bracket in one call, reading the seeded entrants of the pool through `PhaseGroupService.getEntrantsForBracket`. `SingleElimination` builds every round from a player count and then fills the first wave. The user reports the produced brackets are not what they expect, without a single reproducible defect yet.
 - Question: What should generation produce for a given entrant count, seeding, players per match, and bye distribution, and should the structure be generated before the entrants are known so that advancement rules fill its slots?
 - Related consequence: the division now owns the seeding order (`Entrant.seedNum`), while generation still reads the per-pool `PhaseGroupEntrant.seedNum`. The pool seeding is derived from the division order when a match introduces an entrant, so the two agree for pools built by hand, but a regenerated bracket does not re-read the division order.
-- Evidence: `apps/api/src/tournament/competition/bracket/bracket.manager.ts`, `apps/api/src/tournament/competition/bracket/SingleElimination.ts`, and `apps/api/src/tournament/structure/services/phase-group.service.ts`.
+- Evidence: `apps/api/src/tournament/structure/division/division.commands.ts` (`generateBracket`, which replaced `BracketManager.generateForDivision` on 2026-08-23), `apps/api/src/tournament/competition/bracket/SingleElimination.ts`, and `apps/api/src/tournament/structure/services/phase-group.service.ts`.
+- Update, 2026-08-23: the related consequence above is half resolved. Generation now takes the entrants in the division's seeded order, so the pool seeding a generated bracket writes agrees with the division order rather than with the order the database happened to return. What each generator then does with that order is still the open question.
 - Rule: collect concrete failing cases with the user before changing the generators.
 
 ### FQ-009 — Pool bracket type as a display choice
@@ -148,3 +149,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should a tournament response name its staff? Nothing on screen shows them today; the participants page lists roles per participant and reads `GET /tournaments/:id/participants`, which is a separate call with its own permission. If a header or a card should credit the staff, the field returns as a deliberate projection with a load behind it.
 - Evidence: the removal commit on branch `refactor/5-tournament-reads`; `packages/contracts/src/tournament.ts`; `apps/frontend/src/pages/tournament/ParticipantsPage.tsx`.
 - Rule: do not restore the field speculatively. A reader has to exist first.
+
+### FQ-018 — A rolled song trusts the division id the client sent
+
+- Status: Open. Behavior narrowed rather than decided on 2026-08-23.
+- Observed behavior: `POST /matches` accepts `tournamentId`, `divisionId`, `group` and `levels` as roll instructions, and none of them is checked against the pool the match is created in. The roller used to load the division named by `divisionId` and answer with no song at all when that division did not exist, which made a wrong id look like an empty song pool. It now asks `SongQueries.playedInDivision` for the songs to exclude, so an id that names nothing excludes nothing and the match is given songs the division may already have played. A missing `divisionId` or `tournamentId` still rolls nothing, which is the case the guard covers.
+- Question: Should the roll instructions be derived from the pool the match belongs to instead of being sent by the client? The match already knows its pool, its phase and its division, so `divisionId` and `tournamentId` are the caller restating what the server can read.
+- Evidence: `apps/api/src/tournament/competition/services/song.roller.ts`, `apps/api/src/tournament/competition/match/match.commands.ts` (`rolledSongs`), `apps/api/src/tournament/catalog/song.queries.ts`.
+- Rule: do not change the request contract during the aggregate phases. The answer belongs with the Song aggregate, which is where the roller ends up.

@@ -12,10 +12,9 @@ type SeedingTabProps = {
   division: Division;
   entrants: Entrant[];
   canEdit: boolean;
-  onSeedingChanged: () => void;
 };
 
-export default function SeedingTab({ division, entrants: roster, canEdit, onSeedingChanged }: SeedingTabProps) {
+export default function SeedingTab({ division, entrants: roster, canEdit }: SeedingTabProps) {
   /* The roster arrives in the order it was seeded in, unseeded entrants last
      and alphabetical among themselves, so the tab opens on the order the last
      save wrote. It used to read a projection that carried no seed and sort by
@@ -63,7 +62,6 @@ export default function SeedingTab({ division, entrants: roster, canEdit, onSeed
     setSaving(true);
     try {
       await updateDivisionSeeding(division.id, draftEntrantIds);
-      onSeedingChanged();
       toast.success("Division seeding updated.");
     } catch {
       toast.error("Error updating division seeding.");
