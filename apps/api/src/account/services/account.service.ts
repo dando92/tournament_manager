@@ -4,7 +4,7 @@ import { genSalt, hash } from 'bcrypt';
 import { Repository } from "typeorm";
 
 import { Player, Account } from '@tournament-manager/persistence';
-import { CreateAccountPlayerDto } from '../dtos';
+import { CreateAccountPlayerDto } from '../controllers/account.requests';
 
 @Injectable()
 export class AccountService {

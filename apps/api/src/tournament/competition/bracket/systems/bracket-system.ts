@@ -2,15 +2,15 @@ import { Inject } from "@nestjs/common";
 
 import { Entrant, Phase } from "@tournament-manager/persistence";
 import { MatchCommands } from "@match/match.commands";
-import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
+import { AdvancementRuleStore } from "@tournament/structure/advancement/advancement-rule.store";
 import { PhaseGroupCommands } from "@tournament/structure/phase-group/phase-group.commands";
 
-export class IBracketSystem {
+export class BracketSystem {
     constructor(
         @Inject()
         protected readonly matchCommands: MatchCommands,
         @Inject()
-        protected readonly advancementRuleService: AdvancementRuleService,
+        protected readonly advancementRules: AdvancementRuleStore,
         @Inject()
         protected readonly phaseGroupCommands: PhaseGroupCommands,
     ) {
@@ -74,7 +74,7 @@ export class IBracketSystem {
         targetMatchId: number,
         targetSlotIndex: number,
     ): Promise<void> {
-        await this.advancementRuleService.createMatchToMatchRule(
+        await this.advancementRules.createMatchToMatchRule(
             sourceMatchId,
             sourcePlacementIndex + 1,
             targetMatchId,

@@ -1350,7 +1350,7 @@ seventeen of them new, in `song-writes.e2e-spec.ts`,
 migration-runner e2e test. Frontend `tsc --noEmit`, `eslint`, `vite build` and
 `node --test` pass.
 
-### Phase 8 — File tree and naming
+### Phase 8 — File tree and naming (done)
 
 What the aggregate phases cannot carry, because it belongs to no aggregate.
 
@@ -1371,22 +1371,24 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
   `ui-update.publisher.ts` and the common projections into it. The publisher
   currently lives under `competition/match/services/`, where six files outside
   the match aggregate import it from.
-- Move `song.service.ts`, `song.roller.ts` and the songs and scores controllers
-  into `catalog/`.
+- Song, roller, and score-controller moves were completed in phases 5 and 7,
+  before this structural phase began.
 - Mirror `tests/unit` onto the final source tree.
 - Move the realtime gateway's message shapes into
   `@tournament-manager/contracts`. `features/live/model/types.ts` and
   `apps/realtime/.../realtime-event.mapper.ts` declare the same flattened
   projection twice, the second time as `players: unknown[]`.
-- Verification: build, lint, and every suite. No behaviour change anywhere in
-  the phase.
+- Verification: all four affected workspaces build; the architecture check also
+  guards the final tree, request-barrel removal, frontend axios locations, and
+  the single declaration of the Realtime gateway DTO. No behaviour changed.
 
-### Phase 9 — Freeze
+### Phase 9 — Freeze (partial)
 
-- Add the grep checks to CI.
-- Fold the rules from this document into [Backend.md](Backend.md) and
-  [Frontend.md](Frontend.md), and reduce this document to its record of
-  decisions.
+- Added the tree, barrel, frontend axios, and realtime-DTO checks to the
+  architecture check already run by CI.
+- Folded the permanent rules into [Backend.md](Backend.md) and
+  [Frontend.md](Frontend.md). This document remains the historical record until
+  the intentionally deferred query-cache work below is complete.
 
 ## What success looks like
 

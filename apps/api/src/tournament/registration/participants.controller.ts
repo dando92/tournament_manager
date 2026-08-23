@@ -1,12 +1,13 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { CreatedResourceDto, ParticipantDto, ParticipantImportPreviewRowDto } from '@tournament-manager/contracts';
-import { JwtAuthGuard, TournamentAccessGuard } from '@auth/guards';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
 import {
     CreateParticipantDto,
     ImportParticipantsDto,
     ImportParticipantsPreviewDto,
 } from '@tournament/registration/participants.requests';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 

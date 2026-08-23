@@ -2,9 +2,11 @@ import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Request,
 
 import { AccountProfileDto, AdminAccountDto } from '@tournament-manager/contracts';
 import { AccountService } from '../services/account.service';
-import { CreateAccountPlayerDto } from '../dtos';
+import { CreateAccountPlayerDto } from './account.requests';
 
-import { JwtAuthGuard, AdminGuard, CreatorOrAdminGuard } from '@auth/guards';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { AdminGuard } from '@auth/guards/admin.guard';
+import { CreatorOrAdminGuard } from '@auth/guards/owner-or-admin.guard';
 import { Account } from '@tournament-manager/persistence';
 
 @Controller('user')

@@ -3,7 +3,7 @@ import { CompletedSongRequest, LobbyCompletedScoreDto } from '@tournament-manage
 
 import { CompletedRun, MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { SongQueries } from '@tournament/catalog/song.queries';
 import { RunInput, ScoreStore } from '@tournament/competition/score.store';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';

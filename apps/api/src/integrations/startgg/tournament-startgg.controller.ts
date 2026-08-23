@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Post, Request, UseGuards, ValidationPipe } from '@nestjs/common';
-import { JwtAuthGuard, TournamentAccessGuard } from '@auth/guards';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 import { StartggImportPreviewDto } from './startgg.dto';
 import { StartggService } from './startgg.service';
 

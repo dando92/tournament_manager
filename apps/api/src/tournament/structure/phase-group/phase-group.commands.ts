@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Entrant } from '@tournament-manager/persistence';
 
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupAggregate, PhaseGroupDetails } from '@tournament/structure/phase-group/phase-group.aggregate';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
 

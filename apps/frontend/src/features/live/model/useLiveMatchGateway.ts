@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
-import {
-  LiveMatchStateDto,
-} from "@/features/live/model/types";
+import { LiveMatchStateDto } from "@tournament-manager/contracts";
 import { realtimeWebSocketUrl, SequencedRealtimeMessage, useRealtimeSocket } from "@/shared/realtime/useRealtimeSocket";
 
 type LiveMatchGatewayMessage =

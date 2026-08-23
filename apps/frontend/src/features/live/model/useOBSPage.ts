@@ -1,7 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  LiveMatchStateDto,
-} from "@/features/live/model/types";
+import { LiveMatchStateDto } from "@tournament-manager/contracts";
 import { useLiveMatchGateway } from "@/features/live/model/useLiveMatchGateway";
 
 export function useOBSPage(lobbyId?: string, tournamentId?: number) {

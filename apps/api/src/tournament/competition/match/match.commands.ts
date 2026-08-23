@@ -5,12 +5,12 @@ import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { StartggMatchReporter } from '@api/integrations/startgg/startgg-match.reporter';
 import { MatchAggregate, MatchDetails, MatchPoolState } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
-import { AdvancementManager } from '@match/services/advancement.manager';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { AdvancementRunner } from '@tournament/structure/advancement/advancement.runner';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/catalog/song-roller';
-import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
@@ -61,8 +61,8 @@ export class MatchCommands {
         private readonly store: MatchStore,
         private readonly publisher: UiUpdatePublisher,
         private readonly scoringSystems: ScoringSystemProvider,
-        private readonly advancement: AdvancementManager,
-        private readonly advancementRules: AdvancementRuleService,
+        private readonly advancement: AdvancementRunner,
+        private readonly advancementRules: AdvancementRuleStore,
         private readonly songRoller: SongRoller,
         private readonly startgg: StartggMatchReporter,
     ) {}

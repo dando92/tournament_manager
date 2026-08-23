@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { EntrantDto, PlayerRefDto } from '@tournament-manager/contracts';
-import { JwtAuthGuard } from '@auth/guards';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
 import { PlayerQueries } from '@tournament/catalog/player.queries';
 import { BulkAddPlayersToDivisionDto } from '@tournament/catalog/player.requests';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 /**
  * The player catalogue, and the three routes addressed by player rather than by

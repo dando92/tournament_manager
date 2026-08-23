@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard, TournamentAccessGuard } from '@auth/guards';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 import { TournamentSyncStartService } from './tournament-syncstart.service';
 
 @UseGuards(TournamentOpenGuard)

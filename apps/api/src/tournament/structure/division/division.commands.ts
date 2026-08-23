@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { GenerateBracketResultDto } from '@tournament-manager/contracts';
 
-import { BracketSystemProvider } from '@bracket/BracketSystemProvider';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { BracketCommands } from '@bracket/bracket.commands';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { DivisionAggregate, DivisionDetails } from '@tournament/structure/division/division.aggregate';
 import { DivisionStore } from '@tournament/structure/division/division.store';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
@@ -42,7 +42,7 @@ export class DivisionCommands {
         private readonly store: DivisionStore,
         private readonly publisher: UiUpdatePublisher,
         private readonly phaseGroups: PhaseGroupCommands,
-        private readonly bracketSystems: BracketSystemProvider,
+        private readonly bracketSystems: BracketCommands,
     ) {}
 
     /** Answers with the new division id: the caller navigates into what it made. */

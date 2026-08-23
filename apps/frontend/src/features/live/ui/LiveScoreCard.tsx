@@ -1,4 +1,4 @@
-import { LiveMatchPlayerDto } from "@/features/live/model/types";
+import { LiveMatchPlayerDto } from "@tournament-manager/contracts";
 
 type LiveScoreCardProps = {
   player: LiveMatchPlayerDto;

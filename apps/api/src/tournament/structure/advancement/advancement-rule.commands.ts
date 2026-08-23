@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AdvancementCompetitionKind } from '@tournament-manager/persistence';
-import { AdvancementRuleInputDto } from '@tournament/dtos';
+import { AdvancementRuleInputDto } from './advancement-rule.requests';
 import { MatchQueries } from '@match/match.queries';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
-import { AdvancementRuleService } from './advancement-rule.service';
+import { AdvancementRuleStore } from './advancement-rule.store';
 
 /**
  * The rules that say where the entrants of a competition go next.
@@ -17,9 +17,9 @@ import { AdvancementRuleService } from './advancement-rule.service';
  * re-read the division and the match list by hand.
  */
 @Injectable()
-export class AdvancementRuleManager {
+export class AdvancementRuleCommands {
   constructor(
-    private readonly advancementRuleService: AdvancementRuleService,
+    private readonly advancementRules: AdvancementRuleStore,
     private readonly matchQueries: MatchQueries,
     private readonly phaseGroupQueries: PhaseGroupQueries,
     private readonly publisher: UiUpdatePublisher,
@@ -31,8 +31,8 @@ export class AdvancementRuleManager {
     rules: AdvancementRuleInputDto[],
   ): Promise<void> {
     await this.assertSourceExists(sourceKind, sourceId);
-    await this.advancementRuleService.deleteBySource(sourceKind, sourceId);
-    await this.advancementRuleService.createAll(
+    await this.advancementRules.deleteBySource(sourceKind, sourceId);
+    await this.advancementRules.createAll(
       (rules ?? []).map((rule) => ({
         sourceKind,
         sourceId,

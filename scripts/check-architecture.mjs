@@ -59,6 +59,54 @@ for (const app of apps) {
   }
 }
 
+const forbiddenApiPaths = [
+  "apps/api/src/account/dtos.ts",
+  "apps/api/src/auth/guards.ts",
+  "apps/api/src/auth/strategies.ts",
+  "apps/api/src/tournament/dtos.ts",
+  "apps/api/src/tournament/guards",
+  "apps/api/src/tournament/competition/match/services",
+  "apps/api/src/tournament/structure/controllers",
+  "apps/api/src/tournament/structure/dtos",
+  "apps/api/src/tournament/structure/services",
+];
+
+for (const path of forbiddenApiPaths) {
+  if (existsSync(join(root, path))) {
+    errors.push(`obsolete API refactoring path must be absent: ${path}`);
+  }
+}
+
+for (const path of filesBelow(join(root, "apps", "api", "src"))) {
+  const source = readFileSync(path, "utf8");
+  if (/from\s+['"]@tournament\/dtos['"]/.test(source)) {
+    errors.push(`API request DTO barrel import is forbidden: ${relative(root, path)}`);
+  }
+  if (/from\s+['"]@auth\/(?:guards|strategies)['"]/.test(source)) {
+    errors.push(`API auth barrel import is forbidden: ${relative(root, path)}`);
+  }
+}
+
+for (const path of filesBelow(join(root, "apps", "frontend", "src"))) {
+  const source = readFileSync(path, "utf8");
+  const normalized = relative(join(root, "apps", "frontend", "src"), path).replaceAll("\\", "/");
+  if (/from\s+['"]axios['"]/.test(source) && normalized !== "app/providers.tsx" && !/^features\/[^/]+\/api\//.test(normalized)) {
+    errors.push(`frontend axios import must live in a feature API module: ${relative(root, path)}`);
+  }
+}
+
+for (const directory of [
+  join(root, "apps", "frontend", "src"),
+  join(root, "apps", "realtime", "src"),
+]) {
+  for (const path of filesBelow(directory)) {
+    const source = readFileSync(path, "utf8");
+    if (/export\s+type\s+LiveMatch(?:State|Player)Dto\b/.test(source)) {
+      errors.push(`realtime gateway DTO must be declared in contracts: ${relative(root, path)}`);
+    }
+  }
+}
+
 for (const tool of tools) {
   const sourceFiles = filesBelow(join(root, "tools", tool, "src"));
   if (sourceFiles.some((path) => /@tournament-manager\/syncstart-protocol/.test(readFileSync(path, "utf8")))) {

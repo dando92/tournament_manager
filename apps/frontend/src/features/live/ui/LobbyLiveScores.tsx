@@ -1,4 +1,4 @@
-import { LiveMatchStateDto } from "@/features/live/model/types";
+import { LiveMatchStateDto } from "@tournament-manager/contracts";
 import LiveScoreCard from "@/features/live/ui/LiveScoreCard";
 import { useLiveScores } from "@/features/live/model/useLiveScores";
 

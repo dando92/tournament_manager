@@ -1,4 +1,4 @@
-import { IBracketSystem } from "@bracket/IBracketSystem";
+import { BracketSystem } from "@bracket/systems/bracket-system";
 import { Entrant, Phase } from "@tournament-manager/persistence";
 
 type PlayerInfo = {
@@ -6,7 +6,7 @@ type PlayerInfo = {
     playerIndexInMatch: number;
 };
 
-export class SingleElimination extends IBracketSystem {
+export class SingleElimination extends BracketSystem {
     getName(): string {
         return "SingleElimination";
     }

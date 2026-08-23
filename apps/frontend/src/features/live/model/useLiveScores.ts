@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LiveMatchStateDto } from "@/features/live/model/types";
+import { LiveMatchStateDto } from "@tournament-manager/contracts";
 
 export function useLiveScores(lobbyState: LiveMatchStateDto) {
   const sortedPlayers = useMemo(() => {

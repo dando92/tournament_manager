@@ -2,7 +2,7 @@ import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Put, UseGuards, 
 import { MatchCommands } from '@match/match.commands';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 import { RoundSourceDto } from '@match/match.requests';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 /**
  * A round is the unit a match is scored in, and here it is a resource.

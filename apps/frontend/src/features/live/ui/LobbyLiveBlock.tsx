@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTv } from "@fortawesome/free-solid-svg-icons";
 import LobbyLiveScores from "@/features/live/ui/LobbyLiveScores";
-import { LiveMatchStateDto } from "@/features/live/model/types";
+import { LiveMatchStateDto } from "@tournament-manager/contracts";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {
