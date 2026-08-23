@@ -108,13 +108,14 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
       deleteStanding: (playerId: number, roundId: number) =>
         run(() => MatchesApi.deleteStanding(roundId, playerId), "Error deleting the standing."),
 
-      /* Advancement rules are not part of the match aggregate, so writing them
-         publishes nothing. This is the one action that re-reads by hand. */
+      /* An advancement rule is not part of the match aggregate, but writing one
+         now announces the pool its source sits in, so it moves like every other
+         write and nothing here re-reads. */
       updateMatchAdvancementRules: (matchId: number, rules: MatchAdvancementRuleInput[]) =>
-        run(async () => {
-          await updateAdvancementRulesForSource("match", matchId, rules);
-          await list();
-        }, "Error updating match advancement rules."),
+        run(
+          () => updateAdvancementRulesForSource("match", matchId, rules),
+          "Error updating match advancement rules.",
+        ),
 
       updateMatchActive: (matchId: number, active: boolean) =>
         run(async () => {

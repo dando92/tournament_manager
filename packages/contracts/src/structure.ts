@@ -18,9 +18,15 @@ import type { PhaseGroupEntrantStatus, PhaseGroupState } from './vocabulary';
  * is read through `GET /divisions/:id/entrants` by the two pages that show it.
  */
 
-/** An entrant's seat in a pool. `slot` is the bracket position, `seedNum` the order it was seeded in. */
+/**
+ * Somebody competing in a pool.
+ *
+ * `slot` is the bracket position and `seedNum` the order they were seeded in;
+ * both are null for somebody who is here because a match of this pool holds
+ * them rather than because the pool seated them. The seat has no id of its own,
+ * because the entrant is what identifies it to anybody reading this.
+ */
 export type PhaseGroupEntrantDto = {
-    id: number;
     seedNum: number | null;
     slot: number | null;
     status: PhaseGroupEntrantStatus;

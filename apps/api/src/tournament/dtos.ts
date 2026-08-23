@@ -12,7 +12,7 @@ import { AdvancementRuleInputDto, CreateAdvancementRuleDto, UpdateAdvancementRul
 import {
     CreatePhaseGroupDto,
     UpdatePhaseGroupDto,
-} from './structure/dtos/phase-group.dto';
+} from './structure/phase-group/phase-group.requests';
 
 export { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto };
 export { CreatePhaseDto, UpdatePhaseDto };

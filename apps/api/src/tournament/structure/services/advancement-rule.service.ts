@@ -16,6 +16,13 @@ export class AdvancementRuleService {
     return await this.advancementRuleRepository.save(rule);
   }
 
+  /** The rules leaving one competition are written together, not one by one. */
+  async createAll(dtos: CreateAdvancementRuleDto[]): Promise<AdvancementRule[]> {
+    if (dtos.length === 0) return [];
+
+    return await this.advancementRuleRepository.save(this.advancementRuleRepository.create(dtos));
+  }
+
   async createMatchToMatchRule(
     sourceId: number,
     sourcePlacement: number,
