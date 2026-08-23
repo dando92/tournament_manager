@@ -556,6 +556,22 @@ Requested by the user on 2026-08-23, outside the phase sequence.
   architecture checks pass; the Song and account/Auth HTTP suites pass (15
   tests); all three linters pass with the existing warnings only.
 
+### Unified Prettier standard
+
+- Replaced the temporary preserve-local-style rule with one repository-root
+  Prettier configuration for every workspace: two spaces, 80-column print
+  width, double quotes, semicolons, and trailing commas.
+- Removed the API-specific single-quote override. A legacy file is converted in
+  full when it is next modified; unrelated legacy files are not migrated
+  speculatively.
+- Added `npm run format` and an architecture check that requires the approved
+  root configuration and rejects the former workspace override.
+- Verification: Prettier reports every file touched by this checkpoint as
+  formatted; architecture checks pass. No repository-wide legacy formatting
+  migration was run.
+- Next action: apply the root standard whenever a legacy file next enters the
+  scope of a functional change.
+
 ## Verification
 
 ```text
