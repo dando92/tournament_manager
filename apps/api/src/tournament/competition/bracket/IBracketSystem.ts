@@ -2,7 +2,6 @@ import { Inject } from "@nestjs/common";
 
 import { Entrant, Phase } from "@tournament-manager/persistence";
 import { MatchCommands } from "@match/match.commands";
-import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
 import { PhaseGroupCommands } from "@tournament/structure/phase-group/phase-group.commands";
 
@@ -10,8 +9,6 @@ export class IBracketSystem {
     constructor(
         @Inject()
         protected readonly matchCommands: MatchCommands,
-        @Inject()
-        protected readonly phaseService: PhaseService,
         @Inject()
         protected readonly advancementRuleService: AdvancementRuleService,
         @Inject()

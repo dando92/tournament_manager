@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Division, Entrant, Participant, Tournament } from '@tournament-manager/persistence';
+import { Division, Entrant, Participant, Phase, Tournament } from '@tournament-manager/persistence';
 
 /** Where a division sits, and therefore where the events it produces are routed. */
 export type DivisionAddress = {
@@ -23,6 +23,8 @@ export type DivisionDetails = {
  * one.
  */
 export class DivisionAggregate {
+    private readonly removedPhaseIds: number[] = [];
+
     private constructor(private readonly division: Division) {}
 
     /** Wraps a division the store has loaded. */
@@ -59,6 +61,54 @@ export class DivisionAggregate {
     /** The number a generated phase takes in its name, when nobody supplied one. */
     get nextPhaseNumber(): number {
         return (this.division.phases?.length ?? 0) + 1;
+    }
+
+    /**
+     * The phases of this division.
+     *
+     * A phase is a name and a position inside the division rather than an
+     * aggregate of its own: nothing about it is decided without the division it
+     * belongs to, and every change to one is a change to the division's
+     * structure, which is what its event says.
+     */
+    addPhase(name: string): Phase {
+        const phase = new Phase();
+        phase.name = name;
+        phase.division = this.division;
+        phase.phaseGroups = [];
+        this.division.phases = [...(this.division.phases ?? []), phase];
+
+        return phase;
+    }
+
+    renamePhase(phaseId: number, name: string): void {
+        const phase = this.phase(phaseId);
+        const trimmed = name?.trim();
+        if (trimmed) phase.name = trimmed;
+    }
+
+    /** The phase leaves the division; its pools and matches go with the row. */
+    removePhase(phaseId: number): void {
+        const phase = this.phase(phaseId);
+        this.division.phases = (this.division.phases ?? []).filter((candidate) => candidate !== phase);
+        this.removedPhaseIds.push(phase.id);
+    }
+
+    phase(phaseId: number): Phase {
+        const phase = (this.division.phases ?? []).find((candidate) => candidate.id === phaseId);
+        if (!phase) throw new NotFoundException(`Phase with ID ${phaseId} not found`);
+
+        return phase;
+    }
+
+    /** The phases the store has to delete: a save only writes what is still here. */
+    get removals(): number[] {
+        return [...this.removedPhaseIds];
+    }
+
+    /** Called once the store has written what the commands above decided. */
+    settle(): void {
+        this.removedPhaseIds.length = 0;
     }
 
     /**

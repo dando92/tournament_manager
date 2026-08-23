@@ -5,17 +5,17 @@ import {
     CreateParticipantDto,
     ImportParticipantsDto,
     ImportParticipantsPreviewDto,
-} from '@tournament/dtos';
+} from '@tournament/registration/participants.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
-import { TournamentManager } from '@tournament/services/tournament.manager';
+import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('tournaments')
 export class TournamentParticipantsController {
     constructor(
         private readonly participantQueries: ParticipantQueries,
-        private readonly tournamentManager: TournamentManager,
+        private readonly commands: ParticipantsCommands,
     ) {}
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -31,9 +31,7 @@ export class TournamentParticipantsController {
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: CreateParticipantDto,
     ): Promise<CreatedResourceDto> {
-        const participant = await this.tournamentManager.createParticipant(Number(id), dto);
-
-        return { id: participant.id };
+        return { id: await this.commands.register(Number(id), dto) };
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -44,7 +42,7 @@ export class TournamentParticipantsController {
         @Param('id') id: number,
         @Param('participantId') participantId: number,
     ): Promise<void> {
-        return this.tournamentManager.removeParticipant(Number(id), Number(participantId));
+        return this.commands.remove(Number(id), Number(participantId));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -63,9 +61,9 @@ export class TournamentParticipantsController {
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: ImportParticipantsDto,
     ): Promise<CreatedResourceDto[]> {
-        const participants = await this.tournamentManager.importParticipants(Number(id), dto.entries);
+        const registered = await this.commands.importAll(Number(id), dto.entries);
 
-        return participants.map((participant) => ({ id: participant.id }));
+        return registered.map((participantId) => ({ id: participantId }));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -76,7 +74,7 @@ export class TournamentParticipantsController {
         @Param('id') id: number,
         @Param('participantId') participantId: number,
     ): Promise<void> {
-        await this.tournamentManager.addParticipantStaffRole(Number(id), Number(participantId));
+        await this.commands.grantStaff(Number(id), Number(participantId));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
@@ -87,6 +85,6 @@ export class TournamentParticipantsController {
         @Param('id') id: number,
         @Param('participantId') participantId: number,
     ): Promise<void> {
-        await this.tournamentManager.removeParticipantStaffRole(Number(id), Number(participantId));
+        await this.commands.revokeStaff(Number(id), Number(participantId));
     }
 }

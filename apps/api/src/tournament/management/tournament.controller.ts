@@ -7,13 +7,12 @@ import {
     TournamentOverviewDto,
     TournamentRefDto,
 } from '@tournament-manager/contracts';
-import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/dtos';
+import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/management/tournament.requests';
 import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
 import { AuthService } from '@auth/services/auth.service';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
-import { TournamentManager } from '@tournament/services/tournament.manager';
-import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
+import { TournamentCommands } from '@tournament/management/tournament.commands';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
@@ -23,19 +22,13 @@ export class TournamentsController {
         private readonly authService: AuthService,
         private readonly tournamentQueries: TournamentQueries,
         private readonly treeQueries: TreeQueries,
-        private readonly tournamentManager: TournamentManager,
-        private readonly syncStart: TournamentSyncStartService,
+        private readonly commands: TournamentCommands,
     ) {}
 
     @UseGuards(JwtAuthGuard, CreatorOrAdminGuard)
     @Post()
     async create(@Body(new ValidationPipe()) dto: CreateTournamentDto, @Request() req): Promise<CreatedResourceDto> {
-        const tournament = await this.tournamentManager.create(dto, req.user?.id);
-        if (tournament.syncstartUrl) {
-            await this.syncStart.configureTournament(tournament.id, tournament.syncstartUrl);
-        }
-
-        return { id: tournament.id };
+        return { id: await this.commands.create({ ...dto, ownerAccountId: req.user?.id }) };
     }
 
     @Get('public')
@@ -86,25 +79,20 @@ export class TournamentsController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     async update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateTournamentDto): Promise<void> {
-        const { previousSyncstartUrl } = await this.tournamentManager.update(Number(id), dto);
-        if (dto.syncstartUrl !== undefined && dto.syncstartUrl !== previousSyncstartUrl) {
-            await this.syncStart.configureTournament(Number(id), dto.syncstartUrl);
-        }
+        await this.commands.update(Number(id), dto);
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/close')
     @HttpCode(HttpStatus.NO_CONTENT)
     async close(@Param('id') id: number): Promise<void> {
-        await this.tournamentManager.close(Number(id));
-        await this.syncStart.closeTournament(Number(id));
+        await this.commands.close(Number(id));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/reopen')
     @HttpCode(HttpStatus.NO_CONTENT)
     async reopen(@Param('id') id: number): Promise<void> {
-        const tournament = await this.tournamentManager.reopen(Number(id));
-        await this.syncStart.configureTournament(Number(id), tournament.syncstartUrl ?? '');
+        await this.commands.reopen(Number(id));
     }
 }

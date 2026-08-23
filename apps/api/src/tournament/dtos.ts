@@ -1,13 +1,13 @@
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './structure/division/division.requests';
-import { CreatePhaseDto, UpdatePhaseDto } from './structure/dtos/phase.dto';
+import { CreatePhaseDto, UpdatePhaseDto } from './structure/division/phase.requests';
 import { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto } from '@match/match.requests';
 import { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto } from '@player/player.dto';
 import { CreateRoundDto, UpdateRoundDto } from './competition/dtos/round.dto';
 import { CreateSongDto, UpdateSongDto } from './competition/dtos/song.dto';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 
-import { CreateTournamentDto, UpdateTournamentDto } from './dtos/tournament.dto';
-import { CreateParticipantDto, ImportParticipantEntryDto, ImportParticipantsDto, ImportParticipantsPreviewDto } from './dtos/participant-management.dto';
+import { CreateTournamentDto, UpdateTournamentDto } from './management/tournament.requests';
+import { CreateParticipantDto, ImportParticipantEntryDto, ImportParticipantsDto, ImportParticipantsPreviewDto } from './registration/participants.requests';
 import { AdvancementRuleInputDto, CreateAdvancementRuleDto, UpdateAdvancementRuleDto, UpdateAdvancementRulesDto } from './structure/dtos/advancement-rule.dto';
 import {
     CreatePhaseGroupDto,

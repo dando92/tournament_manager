@@ -15,7 +15,7 @@ import { DivisionQueries } from './structure/division/division.queries';
 import { TreeQueries } from './structure/tree.queries';
 import { StandingsQueries } from './competition/standings.queries';
 import { PhaseGroupsController } from './structure/phase-group/phase-group.controller';
-import { PhasesController } from './structure/controllers/phases.controller';
+import { PhasesController } from './structure/division/phase.controller';
 import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
 import { AdvancementRuleService } from './structure/services/advancement-rule.service';
 import { DivisionCommands } from './structure/division/division.commands';
@@ -23,7 +23,6 @@ import { DivisionStore } from './structure/division/division.store';
 import { PhaseGroupCommands } from './structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from './structure/phase-group/phase-group.queries';
 import { PhaseGroupStore } from './structure/phase-group/phase-group.store';
-import { PhaseService } from './structure/services/phase.service';
 import { BracketController } from './competition/bracket/bracket.controller';
 import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
 import { MatchesController } from './competition/match/match.controller';
@@ -41,14 +40,13 @@ import { SongRoller } from './competition/services/song.roller';
 import { SongService } from './competition/services/song.service';
 import { RoundsController } from './competition/match/rounds.controller';
 import { PlayersController } from './player/players.controller';
-import { PlayerManager } from './player/player.manager';
 import { PlayerService } from './player/player.service';
-import { ParticipantService } from './services/participant.service';
-import { TournamentManager } from './services/tournament.manager';
+import { ParticipantsCommands } from './registration/participants.commands';
+import { TournamentCommands } from './management/tournament.commands';
 import { TournamentQueries } from './management/tournament.queries';
-import { TournamentService } from './services/tournament.service';
+import { TournamentStore } from './management/tournament.store';
 import { TournamentOpenGuard } from './guards/tournament-open.guard';
-import { TournamentsController } from './management/tournaments.controller';
+import { TournamentsController } from './management/tournament.controller';
 import { ParticipantQueries } from './registration/participants.queries';
 import { TournamentParticipantsController } from './registration/participants.controller';
 import { TournamentLobbiesController } from './syncstart/tournament-lobbies.controller';
@@ -76,11 +74,9 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         TournamentSyncStartService,
         TournamentSyncStartBootstrap,
         PlayerService,
-        PlayerManager,
         DivisionCommands,
         DivisionStore,
-        ParticipantService,
-        PhaseService,
+        ParticipantsCommands,
         PhaseGroupCommands,
         PhaseGroupQueries,
         PhaseGroupStore,
@@ -98,8 +94,8 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         StandingsQueries,
         TreeQueries,
         TournamentQueries,
-        TournamentService,
-        TournamentManager,
+        TournamentCommands,
+        TournamentStore,
         TournamentAccessGuard,
         TournamentOpenGuard,
         AdminGuard,

@@ -3,7 +3,7 @@ import { Player } from '@tournament-manager/persistence';
 import { EntrantDto } from '@tournament-manager/contracts';
 import { JwtAuthGuard } from '@auth/guards';
 import { PlayerService } from '@player/player.service';
-import { PlayerManager } from '@player/player.manager';
+import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 import { BulkAddPlayersToDivisionDto } from '@player/player.dto';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
@@ -12,7 +12,7 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
 export class PlayersController {
     constructor(
         private readonly playerService: PlayerService,
-        private readonly playerManager: PlayerManager,
+        private readonly registration: ParticipantsCommands,
     ) {}
 
     @Get()
@@ -28,7 +28,7 @@ export class PlayersController {
         @Param('playerId') playerId: number,
         @Param('divisionId') divisionId: number,
     ): Promise<void> {
-        return this.playerManager.assignPlayerToDivision(playerId, divisionId);
+        return this.registration.assignPlayerToDivision(playerId, divisionId);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -39,7 +39,7 @@ export class PlayersController {
         @Param('playerId') playerId: number,
         @Param('divisionId') divisionId: number,
     ): Promise<void> {
-        return this.playerManager.removePlayerFromDivision(playerId, divisionId);
+        return this.registration.removePlayerFromDivision(playerId, divisionId);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -49,6 +49,6 @@ export class PlayersController {
         @Param('divisionId') divisionId: number,
         @Body(new ValidationPipe()) dto: BulkAddPlayersToDivisionDto,
     ): Promise<{ entrants: EntrantDto[]; warnings: string[] }> {
-        return this.playerManager.addPlayersToDivision(dto.playerNames, divisionId);
+        return this.registration.addPlayersToDivision(dto.playerNames, divisionId);
     }
 }

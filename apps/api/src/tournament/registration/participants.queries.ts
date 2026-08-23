@@ -70,6 +70,27 @@ const IMPORT_PREVIEW_OF_NAMES = `
     ORDER BY r."ordinality"
 `;
 
+/** The rows `DIVISIONS_OF_PARTICIPANT` produces. */
+type DivisionRow = { divisionId: number };
+
+/**
+ * Which divisions somebody competes in, for the write that takes them out of a
+ * tournament: an entrant belongs to the division that admitted it, so each of
+ * them has to withdraw the person before the participant row can go.
+ *
+ * One row per division rather than per entrant — somebody belongs to a division
+ * once, and asking for the distinct set here is what keeps the caller from
+ * looping over entrants.
+ */
+const DIVISIONS_OF_PARTICIPANT = `
+    SELECT DISTINCT d."id" AS "divisionId"
+    FROM    "entrant_participants_participant" ep
+    JOIN    "entrant" e ON e."id" = ep."entrantId"
+    JOIN    "division" d ON d."id" = e."divisionId"
+    WHERE   ep."participantId" = $2 AND d."tournamentId" = $1
+    ORDER BY d."id"
+`;
+
 /**
  * Every read of who takes part in a tournament.
  *
@@ -88,6 +109,30 @@ export class ParticipantQueries {
         const rows: ParticipantRow[] = await this.dataSource.query(PARTICIPANTS_OF_TOURNAMENT, [tournamentId]);
 
         return rows;
+    }
+
+    async divisionsOf(tournamentId: number, participantId: number): Promise<number[]> {
+        const rows: DivisionRow[] = await this.dataSource.query(DIVISIONS_OF_PARTICIPANT, [tournamentId, participantId]);
+
+        return rows.map((row) => row.divisionId);
+    }
+
+    /**
+     * Whether an account may edit a tournament. Owning it or staffing it is the
+     * same permission; the guards ask the same question of the same rows.
+     */
+    async canEdit(tournamentId: number, accountId: string): Promise<boolean> {
+        const rows: Array<{ id: number }> = await this.dataSource.query(
+            `SELECT pa."id" AS "id"
+             FROM   "participant" pa
+             WHERE  pa."tournamentId" = $1
+                AND pa."accountId" = $2
+                AND (string_to_array(pa."roles", ',') && ARRAY['owner', 'staff'])
+             LIMIT  1`,
+            [tournamentId, accountId],
+        );
+
+        return rows.length > 0;
     }
 
     /**

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsRelations, In, Repository } from 'typeorm';
-import { Division, Participant, Tournament } from '@tournament-manager/persistence';
+import { Division, Participant, Phase, Tournament } from '@tournament-manager/persistence';
 
 import { DivisionAggregate } from '@tournament/structure/division/division.aggregate';
 
@@ -39,6 +39,8 @@ export class DivisionStore {
         private readonly tournaments: Repository<Tournament>,
         @InjectRepository(Participant)
         private readonly participants: Repository<Participant>,
+        @InjectRepository(Phase)
+        private readonly phases: Repository<Phase>,
     ) {}
 
     async load(id: number): Promise<DivisionAggregate | null> {
@@ -79,10 +81,23 @@ export class DivisionStore {
         });
     }
 
+    /** Which division a phase belongs to: the phase routes are addressed by phase. */
+    async locatePhase(phaseId: number): Promise<number> {
+        const phase = await this.phases.findOne({ where: { id: phaseId }, relations: { division: true } });
+        if (!phase?.division) throw new NotFoundException(`Phase with ID ${phaseId} not found`);
+
+        return phase.division.id;
+    }
+
     async save(division: DivisionAggregate): Promise<void> {
+        const removals = division.removals;
+
         await this.dataSource.transaction(async (manager) => {
             await manager.save(Division, division.entity);
+            if (removals.length > 0) await manager.delete(Phase, removals);
         });
+
+        division.settle();
     }
 
     async remove(division: DivisionAggregate): Promise<void> {

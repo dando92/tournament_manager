@@ -29,11 +29,9 @@ import {
 } from '@tournament-manager/persistence';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { ParticipantService } from '@tournament/services/participant.service';
-import { PhaseService } from '@tournament/structure/services/phase.service';
+import { ParticipantsCommands } from '@tournament/registration/participants.commands';
+import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { PlayerService } from '@player/player.service';
-import { TournamentService } from '@tournament/services/tournament.service';
-import { CreatePhaseDto } from '@tournament/dtos';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
@@ -74,10 +72,10 @@ export class StartggService {
 
     constructor(
         private readonly startggClient: StartggClient,
-        private readonly tournamentService: TournamentService,
         private readonly divisionCommands: DivisionCommands,
-        private readonly phaseService: PhaseService,
-        private readonly participantService: ParticipantService,
+
+        private readonly participants: ParticipantsCommands,
+        private readonly participantQueries: ParticipantQueries,
         private readonly playerService: PlayerService,
         private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
@@ -347,15 +345,13 @@ export class StartggService {
             () => this.uniqueBy(snapshot.entrants.flatMap((entrant) => entrant.participants), (node) => node.id),
         );
         await this.timeOperation(`importEvent.ensureParticipants count=${uniqueParticipants.length}`, async () => {
-            for (const participant of uniqueParticipants) {
-                const localParticipant = await this.ensureParticipant(
-                    dto.targetTournamentId,
-                    participant,
-                    mappingCache,
-                    playersByNormalizedName,
-                );
-                participantByExternalId.set(participant.id, localParticipant);
-            }
+            const registered = await this.ensureParticipants(
+                dto.targetTournamentId,
+                uniqueParticipants,
+                mappingCache,
+                playersByNormalizedName,
+            );
+            registered.forEach((participant, externalId) => participantByExternalId.set(externalId, participant));
         });
 
         const entrantByExternalId = new Map<string, Entrant>();
@@ -648,42 +644,62 @@ export class StartggService {
         return division;
     }
 
-    private async ensureParticipant(
+    /**
+     * The local participant behind every imported one.
+     *
+     * Whoever the mapping already names is looked up; the rest are registered
+     * together, in one load and one save of the tournament, because registering
+     * somebody is a change to a roster the aggregate holds whole. It used to be
+     * a query and a save per person.
+     */
+    private async ensureParticipants(
         tournamentId: number,
-        participant: StartggParticipantNode,
+        participants: StartggParticipantNode[],
         mappingCache: StartggMappingCache,
         playersByNormalizedName: Map<string, Player>,
-    ): Promise<Participant> {
-        const existingMapping = this.findMappingInCache(mappingCache, 'participant', 'participant', participant.id);
+    ): Promise<Map<string, Participant>> {
+        const byExternalId = new Map<string, Participant>();
+        const unregistered: StartggParticipantNode[] = [];
 
-        let localParticipant = existingMapping
-            ? await this.participantRepository.findOne({
-                where: { id: Number(existingMapping.localId), tournament: { id: tournamentId } },
-                relations: { player: true, tournament: true, account: true },
-            })
-            : null;
+        for (const participant of participants) {
+            const existingMapping = this.findMappingInCache(mappingCache, 'participant', 'participant', participant.id);
+            const mapped = existingMapping
+                ? await this.participantRepository.findOne({
+                    where: { id: Number(existingMapping.localId), tournament: { id: tournamentId } },
+                    relations: { player: true, tournament: true, account: true },
+                })
+                : null;
 
-        if (!localParticipant) {
-            const normalizedName = this.normalizeName(participant.gamerTag);
-            const existingPlayer = playersByNormalizedName.get(normalizedName) ?? null;
-            const player = existingPlayer ?? await this.playerService.create(participant.gamerTag);
-            playersByNormalizedName.set(this.normalizeName(player.playerName), player);
-            localParticipant = await this.participantService.ensureForPlayer(tournamentId, player.id, ['competitor']);
+            if (mapped) byExternalId.set(participant.id, mapped);
+            else unregistered.push(participant);
         }
 
-        this.cacheMapping(mappingCache, {
-            provider: 'startgg',
-            localType: 'participant',
-            localId: String(localParticipant.id),
-            externalType: 'participant',
-            externalId: participant.id,
-            metadata: {
-                gamerTag: participant.gamerTag,
-                tournamentId,
-            },
-        });
+        const players: Player[] = [];
+        for (const participant of unregistered) {
+            const known = playersByNormalizedName.get(this.normalizeName(participant.gamerTag)) ?? null;
+            const player = known ?? await this.playerService.create(participant.gamerTag);
+            playersByNormalizedName.set(this.normalizeName(player.playerName), player);
+            players.push(player);
+        }
 
-        return localParticipant;
+        const registered = await this.participants.registerAll(tournamentId, players);
+        unregistered.forEach((participant, index) => byExternalId.set(participant.id, registered[index]));
+
+        for (const participant of participants) {
+            this.cacheMapping(mappingCache, {
+                provider: 'startgg',
+                localType: 'participant',
+                localId: String(byExternalId.get(participant.id).id),
+                externalType: 'participant',
+                externalId: participant.id,
+                metadata: {
+                    gamerTag: participant.gamerTag,
+                    tournamentId,
+                },
+            });
+        }
+
+        return byExternalId;
     }
 
     private async ensureEntrant(
@@ -768,10 +784,10 @@ export class StartggService {
             : null;
 
         if (!localPhase) {
-            const dto = new CreatePhaseDto();
-            dto.name = phase.name;
-            dto.divisionId = divisionId;
-            localPhase = await this.phaseService.create(dto);
+            /* The importer brings its own pools, so the phase is created without
+               the default one a phase gets when a person adds it by hand. */
+            const phaseId = await this.divisionCommands.addPhase(divisionId, phase.name, false);
+            localPhase = await this.phaseRepository.findOne({ where: { id: phaseId }, relations: { division: true } });
         }
 
         this.cacheMapping(mappingCache, {
@@ -1329,7 +1345,7 @@ export class StartggService {
         }
         if (user.isAdmin) return;
 
-        const canEdit = await this.participantService.canEdit(tournamentId, user.id);
+        const canEdit = await this.participantQueries.canEdit(tournamentId, user.id);
         if (!canEdit) {
             throw new ForbiddenException(`Account ${user.id} cannot edit tournament ${tournamentId}`);
         }
