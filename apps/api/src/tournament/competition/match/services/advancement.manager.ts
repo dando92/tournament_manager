@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AdvancementRule, Entrant, Match } from '@tournament-manager/persistence';
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
 import { MatchAggregate } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
@@ -26,6 +27,8 @@ export class AdvancementManager {
         private readonly phaseGroups: PhaseGroupService,
         @Inject()
         private readonly publisher: UiUpdatePublisher,
+        @Inject()
+        private readonly scoringSystems: ScoringSystemProvider,
     ) {}
 
     async advanceFromMatch(match: MatchAggregate): Promise<void> {
@@ -74,8 +77,8 @@ export class AdvancementManager {
         const target = await this.matches.load(rule.targetId);
         if (!target) return;
 
-        if (direction === 'place') target.placeEntrant(entrant, rule.targetSlot);
-        else if (!target.removeEntrant(entrant.id)) return;
+        if (direction === 'place') target.placeEntrant(entrant, rule.targetSlot, this.scoringSystems);
+        else if (!target.removeEntrant(entrant.id, this.scoringSystems)) return;
 
         await this.matches.save(target);
         await this.phaseGroups.syncDerivedEntrants(target.phaseGroupId);

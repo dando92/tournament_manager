@@ -5,6 +5,7 @@ import { PhaseGroupService } from '@tournament/structure/services/phase-group.se
 
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { MatchAggregate } from '@match/match.aggregate';
+import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { MatchStore } from '@match/match.store';
 
 function entrant(id: number, playerId: number): Entrant {
@@ -64,6 +65,7 @@ describe('AdvancementManager', () => {
     advancementRuleService as unknown as AdvancementRuleService,
     phaseGroupService as unknown as PhaseGroupService,
     publisher as unknown as UiUpdatePublisher,
+    { getScoringSystem: () => ({ recalc: jest.fn() }) } as unknown as ScoringSystemProvider,
   );
 
   /** What the store handed back, which is what the save was called with. */

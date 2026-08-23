@@ -214,15 +214,6 @@ export default function MatchTable({
               </tr>
             )}
 
-            {match.rounds.length === 0 && sortedPlayers.map((player) => (
-              <tr key={player.id} className="border-t border-ui-border odd:bg-ui-surface even:bg-ui-raised">
-                <td className="w-8 px-2 py-2 text-center" />
-                <td className="px-3 py-2">
-                  <span className="font-medium text-ui-text">{player.playerName}</span>
-                </td>
-              </tr>
-            ))}
-
             {sourceKeys.flatMap((sourceKey) => {
               const [sourceKind, rawSourceId] = sourceKey.split(":");
               const typedSourceKind = sourceKind as AdvancementCompetitionKind;
@@ -260,7 +251,7 @@ export default function MatchTable({
               ));
             })}
 
-            {match.rounds.length > 0 && sortedPlayers.map((player) => (
+            {sortedPlayers.map((player) => (
               (() => {
                 const routeTargetMatchId = routeByPlayerId.get(player.id) ?? null;
                 const routeTargetMatch = routeTargetMatchId ? allMatches.find((candidate) => candidate.id === routeTargetMatchId) : null;

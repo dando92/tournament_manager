@@ -403,6 +403,72 @@ describe('Match writes (e2e)', () => {
   });
 
   /**
+   * The points of a round rank the people who played it, so they stop meaning
+   * anything the moment the field changes. Both directions settle the rounds
+   * again: neither did before, and a match whose field had moved kept points
+   * that had ranked somebody else's.
+   */
+  describe('when the field of a scored match changes', () => {
+    it('takes the standings of the player who left, and leaves none behind', async () => {
+      const match = await createMatch('Field Removal', [firstEntrantId, secondEntrantId], [songId]);
+      const roundId = match.rounds[0].id;
+
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 95, isFailed: false })
+        .expect(204);
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+        .send({ percentage: 94, isFailed: false })
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .patch(`/matches/${match.id}`)
+        .send({ entrantIds: [firstEntrantId] })
+        .expect(204);
+
+      const after = await readMatch(match.id);
+      expect(after.entrants.map((entrant) => entrant.id)).toEqual([firstEntrantId]);
+      expect(after.rounds[0].standings.map((standing) => standing.player.id)).toEqual([firstPlayerId]);
+
+      /* Nothing is left in the database either: a standing with no entrant to
+         belong to is not evidence of anything. */
+      await expect(
+        dataSource.query(
+          'SELECT COUNT(*)::int AS "count" FROM "standing" WHERE "roundId" = $1',
+          [roundId],
+        ),
+      ).resolves.toEqual([{ count: 1 }]);
+    });
+
+    it('sets the points back to zero when somebody joins a round that was complete', async () => {
+      const match = await createMatch('Field Addition', [firstEntrantId, secondEntrantId], [songId]);
+      const roundId = match.rounds[0].id;
+
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 95, isFailed: false })
+        .expect(204);
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+        .send({ percentage: 94, isFailed: false })
+        .expect(204);
+
+      const settled = await readMatch(match.id);
+      expect(settled.rounds[0].standings.some((standing) => standing.points > 0)).toBe(true);
+
+      const thirdEntrantId = await addEntrant('Third Player');
+      await request(app.getHttpServer())
+        .patch(`/matches/${match.id}`)
+        .send({ entrantIds: [firstEntrantId, secondEntrantId, thirdEntrantId] })
+        .expect(204);
+
+      const after = await readMatch(match.id);
+      expect(after.rounds[0].standings.every((standing) => standing.points === 0)).toBe(true);
+    });
+  });
+
+  /**
    * What a write announces decides what every open page re-reads, so the events
    * are part of the contract rather than a detail of the transport.
    *

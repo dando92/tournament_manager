@@ -93,7 +93,7 @@ export class MatchCommands {
             affectedPhaseGroupIds.add(input.phaseGroupId);
         }
         if (input.entrantIds !== undefined) {
-            match.replaceEntrants(await this.store.loadEntrants(input.entrantIds));
+            match.replaceEntrants(await this.store.loadEntrants(input.entrantIds), this.scoringSystems);
         }
 
         await this.store.save(match);
@@ -139,7 +139,7 @@ export class MatchCommands {
         match.assertEditable();
 
         const [entrant] = await this.store.loadEntrants([entrantId]);
-        if (!match.addEntrant(entrant)) return;
+        if (!match.addEntrant(entrant, this.scoringSystems)) return;
 
         await this.saveAndAnnounceMembership(match);
     }
@@ -148,7 +148,7 @@ export class MatchCommands {
         const match = await this.store.load(matchId);
         if (!match) return;
         match.assertEditable();
-        if (!match.removeEntrant(entrantId)) return;
+        if (!match.removeEntrant(entrantId, this.scoringSystems)) return;
 
         await this.saveAndAnnounceMembership(match);
     }

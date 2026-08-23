@@ -194,28 +194,39 @@ export class MatchAggregate {
         this.match.phaseGroup = phaseGroup;
     }
 
-    replaceEntrants(entrants: Entrant[]): void {
+    /**
+     * Who is in the match.
+     *
+     * Every one of these four settles the rounds afterwards, because the points
+     * of a round rank the people who played it: they are not a property of one
+     * person's run, and they stop meaning anything the moment the field
+     * changes.
+     */
+    replaceEntrants(entrants: Entrant[], scoringSystems: ScoringSystemProvider): void {
         this.match.entrants = entrants;
+        this.resettle(scoringSystems);
     }
 
     /** Answers whether the match changed, so a caller can skip a pointless save. */
-    addEntrant(entrant: Entrant): boolean {
+    addEntrant(entrant: Entrant, scoringSystems: ScoringSystemProvider): boolean {
         if (this.entrants.some((candidate) => candidate.id === entrant.id)) return false;
         this.match.entrants = [...this.entrants, entrant];
+        this.resettle(scoringSystems);
 
         return true;
     }
 
-    removeEntrant(entrantId: number): boolean {
+    removeEntrant(entrantId: number, scoringSystems: ScoringSystemProvider): boolean {
         const remaining = this.entrants.filter((candidate) => candidate.id !== entrantId);
         if (remaining.length === this.entrants.length) return false;
         this.match.entrants = remaining;
+        this.resettle(scoringSystems);
 
         return true;
     }
 
     /** Puts an entrant in a slot, moving it when it is already in the match. */
-    placeEntrant(entrant: Entrant, slot: number): void {
+    placeEntrant(entrant: Entrant, slot: number, scoringSystems: ScoringSystemProvider): void {
         const others = this.entrants.filter((candidate) => candidate.id !== entrant.id);
         const index = Math.max(slot - 1, 0);
 
@@ -223,6 +234,7 @@ export class MatchAggregate {
         else others.splice(index, 0, entrant);
 
         this.match.entrants = others;
+        this.resettle(scoringSystems);
     }
 
     activate(active: boolean): void {
@@ -430,12 +442,45 @@ export class MatchAggregate {
         if (!existing) round.standings = [...(round.standings ?? []), standing];
     }
 
-    private rankIfComplete(round: Round, scoringSystems: ScoringSystemProvider): void {
+    /**
+     * Puts the rounds back in agreement with who is in the match.
+     *
+     * Whoever left takes their standings with them: a score is evidence of a run
+     * by somebody in this match, and there is nobody left for it to belong to.
+     * What remains is ranked again where the round is complete and set back to
+     * zero where it is not, which is the rule `removeStanding` already applies
+     * when a single score is taken away.
+     *
+     * A hand-scored round keeps its points. They were stated by a person rather
+     * than computed from a field, so the only thing the change of field does to
+     * them is remove the ones nobody owns.
+     */
+    private resettle(scoringSystems: ScoringSystemProvider): void {
+        const playerIds = new Set(this.singlesPlayerIds());
+
+        this.rounds.forEach((round) => {
+            round.standings = (round.standings ?? []).filter((standing) => {
+                if (playerIds.has(standing.player?.id)) return true;
+                if (standing.id) this.removedStandingIds.add(standing.id);
+
+                return false;
+            });
+
+            if (!round.song) return;
+            if (this.isRoundComplete(round)) this.rankIfComplete(round, scoringSystems);
+            else round.standings.forEach((standing) => (standing.points = 0));
+        });
+    }
+
+    private isRoundComplete(round: Round): boolean {
         const playerIds = this.singlesPlayerIds();
-        const isComplete = playerIds.every((playerId) =>
-            round.standings.some((standing) => standing.player.id === playerId),
-        );
-        if (playerIds.length === 0 || !isComplete) return;
+        if (playerIds.length === 0) return false;
+
+        return playerIds.every((playerId) => (round.standings ?? []).some((standing) => standing.player.id === playerId));
+    }
+
+    private rankIfComplete(round: Round, scoringSystems: ScoringSystemProvider): void {
+        if (!this.isRoundComplete(round)) return;
 
         const scoringSystem = scoringSystems.getScoringSystem(this.match.scoringSystem);
         if (!scoringSystem) throw new Error(`Unknown scoring system ${this.match.scoringSystem}`);
