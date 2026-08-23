@@ -208,7 +208,10 @@ export default function MatchRow({
         return (
           <td
             key={round.id}
-            className={`px-1 sm:px-3 py-2 text-center ${scoreData.isFailed ? "bg-state-failed/10" : ""}`}
+            /* A failed run is said by the percentage and the F beside it. The
+               cell itself stays the colour of every other cell: a whole tinted
+               column reads as a state of the round rather than of one run. */
+            className="px-1 sm:px-3 py-2 text-center"
           >
             <div
               className={`relative inline-flex flex-col items-center gap-0.5 ${
