@@ -26,7 +26,7 @@ export default function DivisionPage() {
 
 function DivisionPageContainer({ tournamentId, divisionId }: { tournamentId: number; divisionId: number }) {
   const { canEditTournament } = usePermissions();
-  const { division, entrants, refreshDivision } = useDivisionPage(tournamentId, divisionId);
+  const { division, entrants } = useDivisionPage(tournamentId, divisionId);
 
   if (!division) return null;
 
@@ -36,7 +36,6 @@ function DivisionPageContainer({ tournamentId, divisionId }: { tournamentId: num
     tournamentId,
     divisionId,
     controls: canEditTournament(tournamentId),
-    refreshDivision,
   };
 
   return (

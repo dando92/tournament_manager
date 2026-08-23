@@ -26,7 +26,7 @@ export type PoolGroup = {
  * the card.
  */
 export function useDivisionMatchesPage() {
-  const { division, entrants, tournamentId, controls, refreshDivision } = useDivisionPageContext();
+  const { division, entrants, tournamentId, controls } = useDivisionPageContext();
   const { phaseId: phaseIdParam, poolId: poolIdParam } = useParams<{ phaseId?: string; poolId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -129,10 +129,6 @@ export function useDivisionMatchesPage() {
       const next = new URLSearchParams(searchParams);
       next.delete("edit");
       setSearchParams(next, { replace: true });
-    },
-    reloadAfterAdvancement: async () => {
-      await actions.list();
-      await refreshDivision();
     },
   };
 }

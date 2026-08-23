@@ -34,7 +34,6 @@ export default function DivisionMatchesPage() {
         phaseGroup={page.advancementEditorPool}
         allMatches={page.matches}
         onClose={page.closeAdvancement}
-        onSaved={page.reloadAfterAdvancement}
       />
     );
   }

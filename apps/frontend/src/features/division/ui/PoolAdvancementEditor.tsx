@@ -19,7 +19,6 @@ type PoolAdvancementEditorProps = {
   phaseGroup: PhaseGroup;
   allMatches: Match[];
   onClose: () => void;
-  onSaved: () => Promise<void>;
 };
 
 export default function PoolAdvancementEditor({
@@ -27,7 +26,6 @@ export default function PoolAdvancementEditor({
   phaseGroup,
   allMatches,
   onClose,
-  onSaved,
 }: PoolAdvancementEditorProps) {
   const [rules, setRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
   const [saving, setSaving] = useState(false);
@@ -49,7 +47,6 @@ export default function PoolAdvancementEditor({
     setSaving(true);
     try {
       await updateAdvancementRulesForSource("phase_group", phaseGroup.id, rules);
-      await onSaved();
       toast.success("Pool advancement rules updated.");
       onClose();
     } catch {
