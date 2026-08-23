@@ -1,6 +1,6 @@
 import { Entrant } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { DivisionService } from '@tournament/structure/services/division.service';
+import { DivisionService } from '@tournament/structure/division/division.service';
 
 describe('DivisionService seeding', () => {
   const divisionRepository = {

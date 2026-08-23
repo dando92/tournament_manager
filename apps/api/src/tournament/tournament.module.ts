@@ -17,7 +17,7 @@ import { PhaseGroupsController } from './structure/controllers/phase-groups.cont
 import { PhasesController } from './structure/controllers/phases.controller';
 import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
 import { AdvancementRuleService } from './structure/services/advancement-rule.service';
-import { DivisionService } from './structure/services/division.service';
+import { DivisionService } from './structure/division/division.service';
 import { PhaseGroupManager } from './structure/services/phase-group.manager';
 import { PhaseGroupService } from './structure/services/phase-group.service';
 import { PhaseService } from './structure/services/phase.service';

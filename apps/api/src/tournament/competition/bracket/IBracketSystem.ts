@@ -1,7 +1,7 @@
 import { Inject } from "@nestjs/common";
 
 import { Entrant, Division, Phase, PhaseGroup } from "@tournament-manager/persistence";
-import { DivisionService } from "@tournament/structure/services/division.service";
+import { DivisionService } from "@tournament/structure/division/division.service";
 import { MatchCommands } from "@match/match.commands";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";

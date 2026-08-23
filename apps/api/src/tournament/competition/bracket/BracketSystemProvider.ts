@@ -5,7 +5,7 @@ import { SingleElimination } from "@bracket/SingleElimination";
 import { IBracketSystem } from "@bracket/IBracketSystem";
 import { KingOfTheHill } from "@bracket/KingOfTheHill";
 import { MatchCommands } from "@match/match.commands";
-import { DivisionService } from "@tournament/structure/services/division.service";
+import { DivisionService } from "@tournament/structure/division/division.service";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
 import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";

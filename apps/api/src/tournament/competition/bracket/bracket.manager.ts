@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { GenerateBracketResultDto } from '@tournament-manager/contracts';
 import { BracketSystemProvider } from "@bracket/BracketSystemProvider";
 import { GenerateDivisionBracketDto } from "@tournament/dtos";
-import { DivisionService } from "@tournament/structure/services/division.service";
+import { DivisionService } from "@tournament/structure/division/division.service";
 import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 

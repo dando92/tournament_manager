@@ -9,7 +9,7 @@ import {
     ParticipantDto,
 } from '@tournament-manager/contracts';
 import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
-import { DivisionService } from '../services/division.service';
+import { DivisionService } from '@tournament/structure/division/division.service';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
 import { StandingsQueries } from '@tournament/competition/standings.queries';

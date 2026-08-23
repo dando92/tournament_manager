@@ -28,7 +28,7 @@ import {
     Player,
     Tournament,
 } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/structure/services/division.service';
+import { DivisionService } from '@tournament/structure/division/division.service';
 import { EntrantService } from '@tournament/services/entrant.service';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantService } from '@tournament/services/participant.service';

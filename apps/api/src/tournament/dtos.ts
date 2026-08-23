@@ -1,4 +1,4 @@
-import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './structure/dtos/division.dto';
+import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './structure/division/division.requests';
 import { CreatePhaseDto, UpdatePhaseDto } from './structure/dtos/phase.dto';
 import { CreateMatchDto, UpdateMatchDto, CreateMatchWithSongsDto, RoundSourceDto } from '@match/match.requests';
 import { CreatePlayerDto, UpdatePlayerDto, BulkAddPlayersToDivisionDto } from '@player/player.dto';

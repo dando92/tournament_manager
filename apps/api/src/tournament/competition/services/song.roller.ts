@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Division, Song } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/structure/services/division.service';
+import { DivisionService } from '@tournament/structure/division/division.service';
 import { SongService } from '@tournament/competition/services/song.service';
 
 @Injectable()
