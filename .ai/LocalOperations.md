@@ -51,6 +51,22 @@ Replaceable live events use the `tournament-manager.live` Redis Pub/Sub channel.
 
 The bundled SyncStart simulator is optional and starts through the `simulator` Compose profile; a host or remote WebSocket URL may be supplied through `LOCAL_FIXTURE_SYNCSTART_URL`.
 
+## Legacy ITGmania Cabinets
+
+Older ITGmania builds broadcast UDP on port `53000` instead of speaking the SyncStart WebSocket protocol. Start the complete stack together with the compatibility bridge that translates between the two:
+
+```text
+npm run local_sync:up
+```
+
+This is `npm run local:up` plus the `legacy-syncstart-bridge` container from `docker-compose.legacy-bridge.yml`. It publishes `53000/udp` for the cabinets and `1337/tcp` for the application, and creates a virtual lobby whose code is `LEGACY_BRIDGE_LOBBY_CODE`, `BRDG` by default. The stack is stopped by `npm run local:down` as usual, which removes the bridge with it.
+
+The local fixture is not repointed: configure the tournament's SyncStart URL to `ws://legacy-syncstart-bridge:1337`, connect the server from the tournament header, and the bridge lobby appears in the lobby list.
+
+ITGmania broadcasts to the local link, so the bridge must run on the cabinets' network segment and the container must actually receive broadcast. The published UDP port is the checked-in default because it is the only mode that keeps the bridge on the Compose network; whether a Docker host forwards broadcast to a published UDP port depends on that host, and on Docker Desktop for Windows it depends on the WSL networking mode. Two fallbacks are documented in [Legacy ITGmania SyncStart bridge](LegacySyncStartBridge.md): `network_mode: host` on a Linux Docker host, and running the bridge outside Docker with `npm run local_sync:bridge`, where the tournament points at `ws://host.docker.internal:1337`.
+
+Check that broadcast reaches the container by playing a song on a cabinet and following `docker compose logs legacy-syncstart-bridge`: a received song reports `Song session started` and a finished one reports `Song completed`. Nothing in the log after a played song means the datagrams are not arriving, which is a host networking question and not a bridge one.
+
 The local stack runs two realtime replicas deliberately. They are not local capacity: they verify that Pub/Sub fan-out converges across replicas without client affinity, which is the property `npm run verify:local` checks and `npm run check:architecture` enforces. A hosted deployment may run a single instance without changing this local contract.
 
 The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
@@ -80,7 +96,7 @@ Follow logs for the complete stack:
 npm run local:logs
 ```
 
-Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `local-fixtures`, `syncstart`, `syncstart-simulator`, `realtime-a`, `realtime-b`, `api`, or `frontend`.
+Use `Ctrl+C` to stop following logs; this does not stop the stack. To inspect one service directly, use `docker compose logs <service>`, where the service is `postgres`, `redis`, `migrations`, `local-fixtures`, `syncstart`, `syncstart-simulator`, `legacy-syncstart-bridge`, `realtime-a`, `realtime-b`, `api`, or `frontend`.
 
 ## Shutdown and Restart
 

@@ -205,3 +205,19 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: should the destination be allowed to leave the division whose page the modal was opened from? The match is created wherever the path points, and the list the person is looking at will not show it. The alternative is to keep the division level visible but fixed, which reads the same and costs the ability to correct a mistake without navigating.
 - Evidence: `apps/frontend/src/features/match/model/matchPath.ts`, `apps/frontend/src/features/match/model/useCreateMatchModal.ts`, `apps/frontend/src/shared/components/ui/cascadingPath.ts`.
 - Rule: do not restore a silent default for the pool. Creating a match in the wrong pool is invisible until somebody looks for it.
+
+### FQ-025 — A legacy cabinet has no EX score to report
+
+- Status: Open. Raised on 2026-08-23 by the legacy ITGmania bridge.
+- Observed behavior: `CompletedSongService` records `percentage: score.exScore`, and a score without `exScore` is refused with `No EX score found`. The legacy UDP protocol carries one score only — the dance-point percentage ITGmania formats for the screen — so the bridge publishes that as `exScore` and leaves `score` unset, as the user decided. A run played on a legacy cabinet is therefore stored under the same column as an EX score from a modern one, and the live card shows `0.00%` where it would otherwise show the display score.
+- Question: is the percentage a legacy cabinet reports the same quantity a tournament means by `exScore`, and should a standing say which of the two it came from? An EX score could be recomputed from the judgment counters instead, but the weights would be a decision this repository makes rather than one the cabinet confirms.
+- Evidence: `tools/legacy-syncstart-bridge/src/domain/score-normalizer.ts`, `apps/api/src/tournament/syncstart/completed-song.service.ts`, `apps/frontend/src/features/live/ui/LiveScoreCard.tsx`.
+- Rule: do not invent an EX formula in the bridge. What a cabinet displayed is what it reports.
+
+### FQ-026 — Holds and rolls are one number on the legacy wire
+
+- Status: Open. Raised on 2026-08-23 by the legacy ITGmania bridge.
+- Observed behavior: `SyncStartManager::writeScoreMessage` sends the four hold-note scores and one total of `possibleHolds + possibleRolls`. The judgment model separates `holdsHeld`, `totalHolds`, `rollsHeld` and `totalRolls`, so the bridge publishes the combined total as `totalHolds` and leaves the roll fields at zero. On a chart with rolls, a legacy player appears to have more total holds than the chart has. It costs nothing today because `LobbyJudgmentsDto` carries neither roll field, so nothing this application draws reads them.
+- Question: should the judgment model keep roll fields it never receives from a legacy cabinet and never displays, or should the legacy payload be extended to send the two counts apart? Extending the cabinet is the only lossless answer and requires a game build.
+- Evidence: `tools/legacy-syncstart-bridge/src/domain/judgment-mapper.ts`, `packages/contracts/src/syncstart.ts` (`LobbyJudgmentsDto`).
+- Rule: do not present the combined total as a hold-only count anywhere it could be read as exact.

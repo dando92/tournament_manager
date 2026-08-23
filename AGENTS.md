@@ -79,6 +79,7 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
 - [SyncStart protocol refactoring decisions](.ai/SyncStartRefactoring.md)
+- [Legacy ITGmania SyncStart bridge](.ai/LegacySyncStartBridge.md)
 - [Scoring model refactoring plan and decisions](.ai/ScoringRefactoring.md)
 - [API and frontend structure refactoring plan and decisions](.ai/ApiRefactoring.md)
 
@@ -96,6 +97,8 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - `packages/syncstart-protocol`: SyncStart WebSocket protocol client, lobby connection primitives, normalized protocol events, and deterministic simulator.
 - `packages/persistence`: Shared PostgreSQL entity metadata and NestJS repository registration.
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
+- `tools/syncstart-simulator`: Deterministic SyncStart protocol simulator for local runs and tests.
+- `tools/legacy-syncstart-bridge`: Compatibility adapter that presents a legacy UDP-broadcast ITGmania cabinet as a SyncStart lobby.
 - `.ai`: Project architecture, coding, and design decisions.
 
 The implemented structure and service boundaries are defined in `.ai/Architecture.md`.

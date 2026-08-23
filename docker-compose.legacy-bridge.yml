@@ -1,0 +1,40 @@
+# The legacy ITGmania compatibility bridge, added to the local stack by
+# `npm run local_sync:up`. It is deliberately a separate file: the application
+# stack does not depend on it, and `npm run local:up` must keep starting without
+# binding the legacy broadcast port.
+#
+# ITGmania sends to INADDR_BROADCAST on UDP 53000. The published port below is
+# what reaches the container on a Docker host whose forwarder receives the
+# broadcast; on a Linux host that runs the cabinets' own network, replace the
+# `ports` section with `network_mode: host` instead of publishing, and point the
+# tournament at the host address rather than at the service name.
+services:
+  legacy-syncstart-bridge:
+    build:
+      context: .
+      dockerfile: tools/legacy-syncstart-bridge/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${LEGACY_BRIDGE_UDP_PORT:-53000}:53000/udp"
+      - "${LEGACY_BRIDGE_WS_PORT:-1337}:1337"
+    environment:
+      SYNCSTART_UDP_PORT: 53000
+      WS_PORT: 1337
+      LOBBY_CODE: ${LEGACY_BRIDGE_LOBBY_CODE:-BRDG}
+      LOBBY_PASSWORD: ${LEGACY_BRIDGE_LOBBY_PASSWORD:-}
+      UDP_ALLOWED_SOURCES: ${LEGACY_BRIDGE_UDP_ALLOWED_SOURCES:-}
+      FINAL_GRACE_MS: ${LEGACY_BRIDGE_FINAL_GRACE_MS:-1500}
+      FINAL_TIMEOUT_MS: ${LEGACY_BRIDGE_FINAL_TIMEOUT_MS:-20000}
+      LOG_LEVEL: ${LEGACY_BRIDGE_LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('net').connect(1337,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s

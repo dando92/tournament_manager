@@ -11,7 +11,7 @@ const apps = [
   "realtime",
   "frontend",
 ];
-const tools = ["syncstart-simulator"];
+const tools = ["syncstart-simulator", "legacy-syncstart-bridge"];
 
 const prettierConfigPath = join(root, ".prettierrc.json");
 if (!existsSync(prettierConfigPath)) {
