@@ -15,7 +15,6 @@
     "^@auth/(.*)$": "<rootDir>/../src/auth/$1",
     "^@bracket/(.*)$": "<rootDir>/../src/tournament/competition/bracket/$1",
     "^@match/(.*)$": "<rootDir>/../src/tournament/competition/match/$1",
-    "^@player/(.*)$": "<rootDir>/../src/tournament/player/$1",
     "^@tournament/(.*)$": "<rootDir>/../src/tournament/$1",
     "^@account/(.*)$": "<rootDir>/../src/account/$1"
   }

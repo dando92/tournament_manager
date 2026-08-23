@@ -1,319 +1,125 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { ScoringSystemProvider } from '@tournament-manager/scoring';
-import {
-  CompletedSongRequest,
-  SyncStartSongCompletedPayload,
-} from '@tournament-manager/contracts';
-import {
-  EventEnvelope,
-  IdentifiedEventEnvelope,
-  LIVE_EVENT_PUBLISHER,
-  LiveEventPublisher,
-} from '@tournament-manager/live-messaging';
-import { DataSource, EntityManager, In } from 'typeorm';
-import {
-  Match,
-  Participant,
-  Round,
-  Score,
-  Song,
-  Standing,
-} from '@tournament-manager/persistence';
+import { Injectable } from '@nestjs/common';
+import { CompletedSongRequest, LobbyCompletedScoreDto } from '@tournament-manager/contracts';
 
-export interface LobbySongCompletedEffect {
-  matchUpdates: Array<{
-    tournamentId: number;
-    divisionId: number;
-    phaseId: number;
-    phaseGroupId: number;
-    matchId: number;
-  }>;
-  warnings: string[];
-}
+import { CompletedRun, MatchCommands } from '@match/match.commands';
+import { MatchQueries } from '@match/match.queries';
+import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { SongQueries } from '@tournament/catalog/song.queries';
+import { RunInput, ScoreStore } from '@tournament/competition/score.store';
+import { ParticipantQueries } from '@tournament/registration/participants.queries';
 
-type CompletedScore = SyncStartSongCompletedPayload['scores'][number];
-type SyncStartSongCompletedEvent = IdentifiedEventEnvelope<SyncStartSongCompletedPayload> & {
-  type: 'syncstart.song-completed';
-};
+/** A reported score, once it is known who and what it is about. */
+type ResolvedRun = RunInput;
 
+/** The same run once it is written down, which is what a round is handed. */
+type RecordedRun = RunInput & { scoreId: number };
+
+/**
+ * What a lobby reports when everybody in it has finished a song.
+ *
+ * This is the ingestion half of an integration: it takes the shape SyncStart
+ * sends, works out who and what each score is about, and hands the change to
+ * the aggregate that owns it. It used to be the whole path — it opened its own
+ * transaction, wrote standings, ran the scoring system and published events
+ * from outside the match — with one load of every active match of the
+ * tournament, its entrants and every score in it, per player in the lobby.
+ *
+ * Three reads resolve a whole lobby now, whatever its size: who the names are,
+ * which song of the pool was played, and which rounds were waiting for it. Each
+ * match those rounds belong to is then written once through
+ * `MatchCommands.applyCompletedSong`, which is the same aggregate call a person
+ * makes by choosing an existing run in the standing dialog.
+ *
+ * A run is recorded whether or not a round was waiting for it. A percentage is
+ * evidence of something somebody played, and a lobby played outside a tracked
+ * match still leaves the run that the dialog offers later.
+ */
 @Injectable()
 export class CompletedSongService {
+  /* SyncStart retries a completion it did not hear back about, and the same
+     completion must not be scored twice. This is volatile and per instance,
+     which is what it was before: the durable form of it is the inbox the
+     architecture defers until there is a second writer. */
   private readonly completions = new Set<string>();
 
   constructor(
-    private readonly dataSource: DataSource,
-    private readonly scoringSystems: ScoringSystemProvider,
-    private readonly config: ConfigService,
-    @Inject(LIVE_EVENT_PUBLISHER)
-    private readonly liveTransport: LiveEventPublisher,
+    private readonly songs: SongQueries,
+    private readonly participants: ParticipantQueries,
+    private readonly matches: MatchQueries,
+    private readonly matchCommands: MatchCommands,
+    private readonly scores: ScoreStore,
+    private readonly publisher: UiUpdatePublisher,
   ) {}
 
   async submit(request: CompletedSongRequest): Promise<void> {
     if (this.completions.has(request.completionId)) return;
-    const event: SyncStartSongCompletedEvent = {
-      id: request.completionId,
-      type: 'syncstart.song-completed',
-      tournamentId: request.tournamentId,
-      payload: request,
-    };
-    const effect = await this.dataSource.transaction((manager) => this.handle(manager, event));
-    await this.afterCommit(event, effect);
+
+    const { runs, warnings } = await this.resolve(request);
+    for (const warning of warnings) await this.publisher.emitWarning(request.tournamentId, warning);
+
+    const recorded = await this.scores.record(runs);
+    const written = runs.map((run, index) => ({ ...run, scoreId: recorded[index].id }));
+
+    for (const [matchId, played] of await this.targets(request.tournamentId, written)) {
+      await this.matchCommands.applyCompletedSong(matchId, played);
+    }
+
     this.completions.add(request.completionId);
   }
 
-  async handle(
-    manager: EntityManager,
-    event: SyncStartSongCompletedEvent,
-  ): Promise<LobbySongCompletedEffect> {
-    const matchIds = new Set<number>();
-    const warnings: string[] = [];
+  /**
+   * The scores that name somebody this tournament knows, on a song its pool
+   * holds. Everything else is a warning that says the run was not saved.
+   */
+  private async resolve(request: CompletedSongRequest): Promise<{ runs: ResolvedRun[]; warnings: string[] }> {
+    const played = request.scores.filter((score) => score.exScore != null);
+    const warnings = request.scores
+      .filter((score) => score.exScore == null)
+      .map((score) => this.missingExScoreWarning(request, score));
 
-    for (const completedScore of event.payload.scores) {
-      if (completedScore.exScore == null) {
-        warnings.push(this.missingExScoreWarning(event, completedScore));
+    const songId = await this.songs.idByTitle(request.tournamentId, request.song.songPath);
+    const playerIds = songId
+      ? await this.participants.playerIdsByNames(request.tournamentId, played.map((score) => score.playerName))
+      : new Map<string, number>();
+
+    const runs: ResolvedRun[] = [];
+    for (const score of played) {
+      const playerId = playerIds.get(score.playerName.trim().toLowerCase());
+      if (!songId || !playerId) {
+        warnings.push(this.missingPlayerSongWarning(request, score));
         continue;
       }
 
-      const result = await this.persistScore(
-        manager,
-        event.payload,
-        completedScore,
-      );
-      if (result.warning) warnings.push(result.warning);
-      if (result.matchId) matchIds.add(result.matchId);
+      runs.push({ playerId, songId, percentage: score.exScore, isFailed: score.isFailed });
     }
 
-    const matches = await manager.getRepository(Match).find({
-      where: { id: In([...matchIds]) },
-      relations: { phaseGroup: { phase: { division: { tournament: true } } } },
-    });
-    return {
-      matchUpdates: matches.map((match) => ({
-        tournamentId: event.payload.tournamentId,
-        divisionId: match.phaseGroup.phase.division.id,
-        phaseId: match.phaseGroup.phase.id,
-        phaseGroupId: match.phaseGroup.id,
-        matchId: match.id,
-      })),
-      warnings,
-    };
+    return { runs, warnings };
   }
 
-  async afterCommit(
-    event: SyncStartSongCompletedEvent,
-    result: LobbySongCompletedEffect,
-  ): Promise<void> {
-    for (const warning of result.warnings) {
-      await this.publish(event.payload.tournamentId, 'ui.warning', {
-        message: warning,
-      });
-    }
-    for (const matchUpdate of result.matchUpdates) {
-      await this.publish(event.payload.tournamentId, 'ui.match-changed', {
-        ...matchUpdate,
-      });
-    }
-  }
+  /**
+   * The runs each match is owed, from the one query that asks which rounds were
+   * waiting. A run nothing was waiting for stays recorded and names no match.
+   */
+  private async targets(tournamentId: number, runs: RecordedRun[]): Promise<Map<number, CompletedRun[]>> {
+    if (runs.length === 0) return new Map();
 
-  private async persistScore(
-    manager: EntityManager,
-    payload: SyncStartSongCompletedPayload,
-    completedScore: CompletedScore,
-  ): Promise<{ matchId?: number; warning?: string }> {
-    const participant = await this.getParticipant(
-      manager,
-      payload.tournamentId,
-      completedScore.playerName,
-    );
-    const song = await this.getSong(manager, payload);
-    if (!participant?.player || !song) {
-      return { warning: this.missingPlayerSongWarning(payload, completedScore) };
+    const scoreIdByPlayer = new Map(runs.map((run) => [run.playerId, run.scoreId]));
+    const rounds = await this.matches.liveTargetsForSong(tournamentId, runs[0].songId, [...scoreIdByPlayer.keys()]);
+    const byMatch = new Map<number, CompletedRun[]>();
+
+    for (const round of rounds) {
+      const run = { roundId: round.roundId, playerId: round.playerId, scoreId: scoreIdByPlayer.get(round.playerId) };
+      byMatch.set(round.matchId, [...(byMatch.get(round.matchId) ?? []), run]);
     }
 
-    const activeMatches = await this.findActiveMatches(
-      manager,
-      payload.tournamentId,
-    );
-    const targetMatch = this.findTargetMatch(
-      activeMatches,
-      song.id,
-      participant.player.id,
-    );
-    const score = await this.saveScore(
-      manager,
-      participant,
-      song,
-      completedScore,
-    );
-    if (!targetMatch) return {};
-
-    const targetRound = this.getTargetRound(targetMatch, song.id);
-    if (!targetRound) {
-      return { warning: this.unresolvedTargetWarning(payload, completedScore) };
-    }
-
-    await this.addStanding(manager, targetRound, score);
-    await this.recalculateCompletedRound(manager, targetMatch, targetRound);
-    return { matchId: targetMatch.id };
+    return byMatch;
   }
 
-  private getParticipant(
-    manager: EntityManager,
-    tournamentId: number,
-    playerName: string,
-  ): Promise<Participant | null> {
-    return manager
-      .getRepository(Participant)
-      .createQueryBuilder('participant')
-      .leftJoinAndSelect('participant.player', 'player')
-      .where('participant.tournamentId = :tournamentId', { tournamentId })
-      .andWhere('LOWER(TRIM(player.playerName)) = :normalizedName', {
-        normalizedName: playerName.trim().toLowerCase(),
-      })
-      .getOne();
+  private missingExScoreWarning(request: CompletedSongRequest, score: LobbyCompletedScoreDto): string {
+    return `No EX score found for ${score.playerName} on "${request.song.songPath}". Score was not saved.`;
   }
 
-  private getSong(
-    manager: EntityManager,
-    payload: SyncStartSongCompletedPayload,
-  ): Promise<Song | null> {
-    return manager.getRepository(Song).findOne({
-      where: {
-        title: payload.song.songPath,
-        tournament: { id: payload.tournamentId },
-      },
-    });
-  }
-
-  private findActiveMatches(
-    manager: EntityManager,
-    tournamentId: number,
-  ): Promise<Match[]> {
-    return manager.getRepository(Match).find({
-      where: {
-        active: true,
-        phaseGroup: {
-          phase: { division: { tournament: { id: tournamentId } } },
-        },
-      },
-      relations: {
-        entrants: { participants: { player: true } },
-        rounds: {
-          song: true,
-          standings: { player: true, score: { player: true, song: true } },
-        },
-      },
-    });
-  }
-
-  private findTargetMatch(
-    matches: Match[],
-    songId: number,
-    playerId: number,
-  ): Match | undefined {
-    return matches
-      .filter(
-        (match) =>
-          match.rounds?.some((round) => round.song?.id === songId) &&
-          this.getSinglesPlayerIds(match).includes(playerId),
-      )
-      .find((match) => {
-        const round = this.getTargetRound(match, songId);
-        return !round?.standings?.some((standing) => standing.player.id === playerId);
-      });
-  }
-
-  private saveScore(
-    manager: EntityManager,
-    participant: Participant,
-    song: Song,
-    completedScore: CompletedScore,
-  ): Promise<Score> {
-    const score = manager.getRepository(Score).create({
-      player: participant.player,
-      song,
-      percentage: completedScore.exScore,
-      isFailed: completedScore.isFailed,
-    });
-    return manager.getRepository(Score).save(score);
-  }
-
-  private getTargetRound(match: Match, songId: number): Round | undefined {
-    return match.rounds.find((round) => round.song?.id === songId);
-  }
-
-  private async addStanding(
-    manager: EntityManager,
-    round: Round,
-    score: Score,
-  ): Promise<void> {
-    const standing = manager.getRepository(Standing).create({
-      round,
-      player: score.player,
-      score,
-      points: 0,
-    });
-    await manager.getRepository(Standing).save(standing);
-    round.standings.push(standing);
-  }
-
-  private async recalculateCompletedRound(
-    manager: EntityManager,
-    match: Match,
-    round: Round,
-  ): Promise<void> {
-    const playerIds = this.getSinglesPlayerIds(match);
-    const isComplete = playerIds.every((playerId) =>
-      round.standings.some((standing) => standing.player.id === playerId),
-    );
-    if (!isComplete) return;
-
-    const scoringSystem = this.scoringSystems.getScoringSystem(
-      match.scoringSystem,
-    );
-    if (!scoringSystem) {
-      throw new Error(`Unknown scoring system ${match.scoringSystem}`);
-    }
-    scoringSystem.recalc(round.standings.filter((standing) => Boolean(standing.score)) as Array<Standing & { score: Score }>);
-    await manager.getRepository(Standing).save(round.standings);
-  }
-
-  private getSinglesPlayerIds(match: Match): number[] {
-    return (match.entrants ?? [])
-      .filter((entrant) => entrant.type === 'player')
-      .map((entrant) => entrant.participants?.[0]?.player?.id)
-      .filter((id): id is number => Number.isFinite(id));
-  }
-
-  private missingExScoreWarning(
-    event: SyncStartSongCompletedEvent,
-    score: CompletedScore,
-  ): string {
-    return `No EX score found for ${score.playerName} on "${event.payload.song.songPath}". Score was not saved.`;
-  }
-
-  private missingPlayerSongWarning(
-    payload: SyncStartSongCompletedPayload,
-    score: CompletedScore,
-  ): string {
-    return `No database player-song found for ${score.playerName} on "${payload.song.songPath}". Score was not saved.`;
-  }
-
-  private unresolvedTargetWarning(
-    payload: SyncStartSongCompletedPayload,
-    score: CompletedScore,
-  ): string {
-    return `Unable to resolve score target for ${score.playerName} on "${payload.song.songPath}". Score was not saved.`;
-  }
-
-  private publish(
-    tournamentId: number,
-    type: string,
-    payload: unknown,
-  ): Promise<void> {
-    const event: EventEnvelope = { type, tournamentId, payload };
-    return this.liveTransport.publish(event);
+  private missingPlayerSongWarning(request: CompletedSongRequest, score: LobbyCompletedScoreDto): string {
+    return `No database player-song found for ${score.playerName} on "${request.song.songPath}". Score was not saved.`;
   }
 }
-

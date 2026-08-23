@@ -1,7 +1,9 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { Song } from '@tournament-manager/persistence';
+import { Injectable } from '@nestjs/common';
+
 import { SongQueries } from '@tournament/catalog/song.queries';
-import { SongService } from '@tournament/catalog/song.service';
+
+/** One candidate for a roll: what the pick is made on, and nothing else. */
+type Rollable = { id: number; difficulty: number };
 
 /**
  * Picking the songs a generated round is played on.
@@ -9,55 +11,47 @@ import { SongService } from '@tournament/catalog/song.service';
  * A song already played somewhere in the division is out, whatever pool or
  * match it was played in. That set used to be collected by loading the whole
  * division — its phases, its pools, every match, every round and every song of
- * every round — once per level rolled; it is one query now.
+ * every round — once per level rolled, and then by loading the tournament's
+ * songs as entities to subtract it from. It is one query, and it is asked once
+ * however many levels are rolled.
+ *
+ * The roller is neither a commands class nor a query: it answers *which song*,
+ * the way the match store answers which match a round belongs to. It decides
+ * nothing about the round it is rolled for, and writes nothing.
  */
 @Injectable()
 export class SongRoller {
-    constructor(
-        @Inject()
-        private readonly songQueries: SongQueries,
-        @Inject()
-        private readonly songService: SongService) { }
+    constructor(private readonly songs: SongQueries) {}
 
-    async RollSongs(tournamentId: number, divisionId: number, group: string, levels: string): Promise<number[]> {
-        if (!tournamentId || !divisionId) return [];
+    /**
+     * One song per level asked for, from the pool of the tournament the
+     * division belongs to.
+     *
+     * A level nothing is available for rolls no song rather than an arbitrary
+     * one, which is what leaves the round out. A song picked for one level is
+     * not offered again for the next: asking for `5,5` used to be able to name
+     * the same song twice, which the database then refused as a repeated song
+     * in one match.
+     */
+    async roll(tournamentId: number, divisionId: number, group: string | null, levels: string): Promise<number[]> {
+        const wanted = levels.split(',').map((level) => parseInt(level, 10)).filter((level) => Number.isFinite(level));
+        if (wanted.length === 0) return [];
 
-        const intLevels = levels.split(",").map(s => parseInt(s, 10));
-        const pool = await this.songService.findByTournament(tournamentId);
-        if (pool.length === 0) return [];
+        const available = await this.songs.rollable(tournamentId, divisionId, group ?? null);
+        const picked: number[] = [];
 
-        const played = new Set(await this.songQueries.playedInDivision(divisionId));
-
-        const songs: number[] = [];
-        for (const level of intLevels) {
-            const songId = this.RollSong(pool, played, group, level);
-
-            if (songId != 0) {
-                songs.push(songId);
-            }
+        for (const level of wanted) {
+            const candidates = available.filter((song) => song.difficulty === level && !picked.includes(song.id));
+            const song = this.anyOf(candidates);
+            if (song) picked.push(song.id);
         }
 
-        return songs;
+        return picked;
     }
 
-    private RollSong(songs: Song[], played: Set<number>, group: string | null, level: number): number {
-        const availableSongs = this.GetAvailableSong(songs, played, level, group);
+    private anyOf(candidates: Rollable[]): Rollable | null {
+        if (candidates.length === 0) return null;
 
-        if (availableSongs.length == 0)
-            return 0;
-
-        return this.GetRandomElement(availableSongs);
-    }
-
-    private GetAvailableSong(songs: Song[], played: Set<number>, level: number, group: string | null): number[] {
-        return songs
-            .filter(s => (group === null || (group !== null && s.group === group)) && s.difficulty === level)
-            .map(s => s.id)
-            .filter(songId => !played.has(songId));
-    }
-
-    private GetRandomElement<T>(array: T[]): T {
-        const randomIndex = Math.floor(Math.random() * array.length);
-        return array[randomIndex];
+        return candidates[Math.floor(Math.random() * candidates.length)];
     }
 }
