@@ -17,7 +17,6 @@
       "@auth/*" : ["./src/auth/*"],
       "@bracket/*" : ["./src/tournament/competition/bracket/*"],
       "@match/*" : ["./src/tournament/competition/match/*"],
-      "@player/*" : ["./src/tournament/player/*"],
       "@tournament/*" : ["./src/tournament/*"],
       "@account/*" : ["./src/account/*"]
     },

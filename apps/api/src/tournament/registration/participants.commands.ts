@@ -3,7 +3,7 @@ import { EntrantDto } from '@tournament-manager/contracts';
 import { Participant, Player } from '@tournament-manager/persistence';
 
 import { AccountService } from '@account/services/account.service';
-import { PlayerService } from '@player/player.service';
+import { PlayerService } from '@tournament/catalog/player.service';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';

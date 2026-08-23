@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query
 import { CreatedResourceDto, SongDto } from '@tournament-manager/contracts';
 import { CreateSongDto } from '@tournament/dtos';
 import { SongQueries } from '@tournament/catalog/song.queries';
-import { SongService } from '@tournament/competition/services/song.service';
+import { SongService } from '@tournament/catalog/song.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)

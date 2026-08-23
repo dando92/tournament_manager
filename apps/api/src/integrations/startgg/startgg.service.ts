@@ -31,7 +31,7 @@ import { DivisionCommands } from '@tournament/structure/division/division.comman
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
-import { PlayerService } from '@player/player.service';
+import { PlayerService } from '@tournament/catalog/player.service';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';

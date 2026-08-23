@@ -9,7 +9,7 @@ import { AdvancementManager } from '@match/services/advancement.manager';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
-import { SongRoller } from '@tournament/competition/services/song.roller';
+import { SongRoller } from '@tournament/catalog/song-roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 
 export type CreateMatchInput = MatchDetails & {

@@ -2,9 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGu
 import { Player } from '@tournament-manager/persistence';
 import { EntrantDto } from '@tournament-manager/contracts';
 import { JwtAuthGuard } from '@auth/guards';
-import { PlayerService } from '@player/player.service';
+import { PlayerService } from '@tournament/catalog/player.service';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
-import { BulkAddPlayersToDivisionDto } from '@player/player.dto';
+import { BulkAddPlayersToDivisionDto } from '@tournament/catalog/player.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)

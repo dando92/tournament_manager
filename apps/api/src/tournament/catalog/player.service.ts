@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Player } from '@tournament-manager/persistence';
-import { UpdatePlayerDto } from '@player/player.dto';
+import { UpdatePlayerDto } from '@tournament/catalog/player.requests';
 
 @Injectable()
 export class PlayerService {

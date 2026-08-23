@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Song } from '@tournament-manager/persistence';
 import { SongQueries } from '@tournament/catalog/song.queries';
-import { SongService } from '@tournament/competition/services/song.service';
+import { SongService } from '@tournament/catalog/song.service';
 
 /**
  * Picking the songs a generated round is played on.
