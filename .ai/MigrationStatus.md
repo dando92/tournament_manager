@@ -489,6 +489,10 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Verification: builds pass for contracts, API, Realtime, and frontend; API unit tests pass (128 tests); API lint passes with the three pre-existing warnings; contracts tests and `npm run check:architecture` pass. Full e2e and local-stack verification remain the next checkpoint.
 - Next action: run the full e2e and local-stack verification. The remaining refactoring follow-up is the deliberately deferred frontend query-cache conversion for tournament configuration and participants, so their new realtime invalidations update the pages directly rather than only the tree.
 
+### Test ownership follow-up
+
+- Moved the scoring-system unit tests from the API tree into `packages/scoring/tests/unit/`. The scoring workspace now owns and runs its five calculator tests with `node --test`, so the API suite no longer tests code outside the API source tree.
+
 ## Verification
 
 ```text

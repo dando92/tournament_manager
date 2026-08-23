@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "tsc -p tsconfig.json --noEmit"
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/unit/scoring-systems.test.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
