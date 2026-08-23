@@ -10,7 +10,7 @@ import {
 import { toParticipantDto } from '@tournament/shared/projections';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TournamentService } from './tournament.service';
-import { ParticipantService } from './participant.service';
+import { ParticipantService } from '@tournament/registration/participant.service';
 import { PlayerService } from '@player/player.service';
 
 @Injectable()

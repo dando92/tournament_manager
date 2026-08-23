@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EntrantDto } from '@tournament-manager/contracts';
 import { PlayerService } from '@player/player.service';
-import { ParticipantService } from '@tournament/services/participant.service';
+import { ParticipantService } from '@tournament/registration/participant.service';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 

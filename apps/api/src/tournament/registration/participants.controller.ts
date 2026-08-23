@@ -8,7 +8,7 @@ import {
 } from '@tournament/dtos';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
-import { TournamentManager } from '@tournament/services/tournament.manager';
+import { TournamentManager } from '@tournament/management/tournament.manager';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('tournaments')

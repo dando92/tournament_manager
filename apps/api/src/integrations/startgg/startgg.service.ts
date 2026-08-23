@@ -29,10 +29,10 @@ import {
 } from '@tournament-manager/persistence';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { ParticipantService } from '@tournament/services/participant.service';
+import { ParticipantService } from '@tournament/registration/participant.service';
 import { PhaseService } from '@tournament/structure/services/phase.service';
 import { PlayerService } from '@player/player.service';
-import { TournamentService } from '@tournament/services/tournament.service';
+import { TournamentService } from '@tournament/management/tournament.service';
 import { CreatePhaseDto } from '@tournament/dtos';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';

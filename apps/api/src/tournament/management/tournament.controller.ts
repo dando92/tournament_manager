@@ -12,7 +12,7 @@ import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/
 import { AuthService } from '@auth/services/auth.service';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
-import { TournamentManager } from '@tournament/services/tournament.manager';
+import { TournamentManager } from '@tournament/management/tournament.manager';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
