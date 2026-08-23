@@ -1092,10 +1092,14 @@ level rolled — to find out which songs it has already played;
 `SongQueries.playedInDivision` is one query. What a wrong `divisionId` means is
 recorded as FQ-018.
 
-`MatchCommands` resolves `StartggService` lazily. That class is both the
-provider importer and the report client, and the importer registers divisions,
-which reach the bracket systems and so reach the match commands again. Splitting
-the two halves removes the cycle and belongs with the integration, not here.
+The start.gg integration was split in two. That one class was both the provider
+importer and the report client, and once the importer registered divisions it
+reached the bracket systems and so the match commands again — a cycle, held open
+at first by a `forwardRef`. The report is the half with no dependency on the
+application: it reads the mappings the importer wrote and calls the client, so it
+is `StartggMatchReporter`, `MatchCommands` depends on that alone, and no
+`forwardRef` remains in the repository. Its entrant mappings are one query rather
+than one per entrant, and the path gained the unit tests it never had.
 
 On the frontend, the three by-hand refreshes that followed a roster or seeding
 write are gone; `refreshDivision` remains for the advancement rules alone, which

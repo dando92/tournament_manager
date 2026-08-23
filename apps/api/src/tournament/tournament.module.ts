@@ -6,6 +6,7 @@ import { PersistenceModule } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { LiveMessagingModule } from '../live-messaging/live-messaging.module';
 import { StartggModule } from '../integrations/startgg/startgg.module';
+import { StartggMatchReporter } from '../integrations/startgg/startgg-match.reporter';
 import { StartggService } from '../integrations/startgg/startgg.service';
 import { TournamentStartggController } from '../integrations/startgg/tournament-startgg.controller';
 import { AdvancementRulesController } from './structure/controllers/advancement-rules.controller';
@@ -85,6 +86,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         SongService,
         UiUpdateContextService,
         StartggService,
+        StartggMatchReporter,
         AdvancementRuleService,
         AdvancementRuleManager,
         UiUpdatePublisher,
