@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { TournamentConfiguration } from "@/features/tournament/model/types";
 import { rememberTournament } from "@/shared/lib/recentTournaments";
@@ -9,6 +10,8 @@ import {
   updateTournament,
 } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/api/match.api";
+import { matchKeys } from "@/features/match/api/match.keys";
+import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 
 /**
@@ -35,6 +38,7 @@ const emptyForm: TournamentConfigurationForm = {
   availableSetupsCount: "2",
   defaultScoringSystem: "",
 };
+const noScoringSystems: string[] = [];
 
 function toForm(configuration: TournamentConfiguration): TournamentConfigurationForm {
   return {
@@ -56,40 +60,50 @@ export function useTournamentConfigurationPage() {
   } = useTournamentPageContext();
   const [initial, setInitial] = useState<TournamentConfigurationForm>(emptyForm);
   const [form, setForm] = useState<TournamentConfigurationForm>(emptyForm);
-  const [scoringSystems, setScoringSystems] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [configuration, setConfiguration] = useState<TournamentConfiguration | null>(null);
-  const [changingStatus, setChangingStatus] = useState(false);
+  const configurationQuery = useQuery({
+    queryKey: tournamentKeys.configuration(tournamentId),
+    queryFn: () => getTournamentConfiguration(tournamentId),
+  });
+  const scoringSystemsQuery = useQuery({
+    queryKey: matchKeys.scoringSystems(),
+    queryFn: listScoringSystems,
+  });
+  const saveMutation = useMutation({
+    mutationFn: (details: TournamentConfigurationForm) => updateTournament(tournamentId, {
+      name: details.name.trim(),
+      syncstartUrl: details.syncstartUrl.trim(),
+      startggApiKey: details.startggApiKey.trim() || null,
+      availableSetupsCount: Number(details.availableSetupsCount),
+      defaultScoringSystem: details.defaultScoringSystem,
+    }),
+  });
+  const closeMutation = useMutation({ mutationFn: () => closeTournament(tournamentId) });
+  const reopenMutation = useMutation({ mutationFn: () => reopenTournament(tournamentId) });
+  const configuration = configurationQuery.data;
+  const scoringSystems = scoringSystemsQuery.data ?? noScoringSystems;
+  const loading = configurationQuery.isLoading || scoringSystemsQuery.isLoading;
+  const saving = saveMutation.isPending;
+  const changingStatus = closeMutation.isPending || reopenMutation.isPending;
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+    if (!configuration) return;
 
-    Promise.all([getTournamentConfiguration(tournamentId), listScoringSystems()])
-      .then(([loadedConfiguration, systems]) => {
-        if (cancelled) return;
-        const nextForm = toForm(loadedConfiguration);
-        setConfiguration(loadedConfiguration);
-        setTournamentStatus(loadedConfiguration.status);
-        setScoringSystems(systems);
-        if (!nextForm.defaultScoringSystem) {
-          nextForm.defaultScoringSystem = systems[0] ?? "";
-        }
-        setInitial(nextForm);
-        setForm(nextForm);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Failed to load tournament configuration.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [setTournamentStatus, tournamentId]);
+    const nextForm = toForm(configuration);
+    if (!nextForm.defaultScoringSystem) nextForm.defaultScoringSystem = scoringSystems[0] ?? "";
+    setInitial(nextForm);
+    setForm(nextForm);
+    setTournamentName(nextForm.name);
+    setSyncstartUrl(nextForm.syncstartUrl);
+    setHasStartggApiKey(Boolean(nextForm.startggApiKey));
+    setTournamentStatus(configuration.status);
+  }, [
+    configuration,
+    scoringSystems,
+    setHasStartggApiKey,
+    setSyncstartUrl,
+    setTournamentName,
+    setTournamentStatus,
+  ]);
 
   const isDirty = useMemo(
     () =>
@@ -115,33 +129,12 @@ export function useTournamentConfigurationPage() {
   async function handleSave() {
     if (!canSave) return;
 
-    setSaving(true);
     try {
-      await updateTournament(tournamentId, {
-        name: form.name.trim(),
-        syncstartUrl: form.syncstartUrl.trim(),
-        startggApiKey: form.startggApiKey.trim() || null,
-        availableSetupsCount: parsedAvailableSetupsCount,
-        defaultScoringSystem: form.defaultScoringSystem,
-      });
-      const saved = {
-        ...form,
-        name: form.name.trim(),
-        syncstartUrl: form.syncstartUrl.trim(),
-        startggApiKey: form.startggApiKey.trim(),
-        availableSetupsCount: String(parsedAvailableSetupsCount),
-      };
-      setInitial(saved);
-      setForm(saved);
-      setTournamentName(saved.name);
-      rememberTournament({ id: tournamentId, name: saved.name });
-      setSyncstartUrl(saved.syncstartUrl);
-      setHasStartggApiKey(Boolean(saved.startggApiKey));
+      await saveMutation.mutateAsync(form);
+      rememberTournament({ id: tournamentId, name: form.name.trim() });
       toast.success("Configuration saved.");
     } catch {
       toast.error("Failed to save tournament configuration.");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -151,33 +144,21 @@ export function useTournamentConfigurationPage() {
       `Close this tournament? It will become read-only, active lobbies will be disconnected, and all transport data will be permanently deleted after ${configuration.transportRetentionDays} days.`,
     );
     if (!confirmed) return;
-    setChangingStatus(true);
     try {
-      await closeTournament(tournamentId);
-      const closed = await getTournamentConfiguration(tournamentId);
-      setConfiguration(closed);
-      setTournamentStatus("closed");
+      await closeMutation.mutateAsync();
       toast.success("Tournament closed. It is now read-only.");
     } catch {
       toast.error("Failed to close tournament.");
-    } finally {
-      setChangingStatus(false);
     }
   }
 
   async function handleReopen() {
     if (!configuration || changingStatus) return;
-    setChangingStatus(true);
     try {
-      await reopenTournament(tournamentId);
-      const reopened = await getTournamentConfiguration(tournamentId);
-      setConfiguration(reopened);
-      setTournamentStatus("open");
+      await reopenMutation.mutateAsync();
       toast.success("Tournament reopened.");
     } catch {
       toast.error("Failed to reopen tournament.");
-    } finally {
-      setChangingStatus(false);
     }
   }
 
