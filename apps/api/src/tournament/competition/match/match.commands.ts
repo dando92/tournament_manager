@@ -11,7 +11,6 @@ import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/competition/services/song.roller';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
@@ -40,9 +39,10 @@ export type ScoreInput = {
  * Each command is the same four steps: load the aggregate once, apply the
  * change in memory, save once, publish once. The rules live in the aggregate
  * and the projection in the queries, so what is left here is the order of those
- * steps and the collaborators a match reaches outside itself — the pool whose
- * derived entrants follow its membership, the advancement a result sets off,
- * and the start.gg report that follows a completion.
+ * steps and the collaborators a match reaches outside itself: the advancement a
+ * result sets off, and the start.gg report that follows a completion. The pool
+ * is no longer one of them — its membership is derived from the matches when it
+ * is read, so a match write announces the pool rather than writing into it.
  *
  * No command answers with a projection. The change reaches the interface
  * through the events each one publishes, so a client reads the match once
@@ -57,7 +57,6 @@ export class MatchCommands {
         private readonly publisher: UiUpdatePublisher,
         private readonly scoringSystems: ScoringSystemProvider,
         private readonly advancement: AdvancementManager,
-        private readonly phaseGroups: PhaseGroupService,
         private readonly advancementRules: AdvancementRuleService,
         private readonly songRoller: SongRoller,
         private readonly startgg: StartggMatchReporter,
@@ -73,7 +72,6 @@ export class MatchCommands {
         songs.forEach((song) => match.addRound(song));
 
         await this.store.save(match);
-        await this.phaseGroups.syncDerivedEntrants(phaseGroup.id);
         await this.publisher.emitPhaseGroupUpdate(match.address);
 
         return match.id;
@@ -85,31 +83,24 @@ export class MatchCommands {
         const membershipChanged = input.entrantIds !== undefined || input.phaseGroupId !== undefined;
         if (membershipChanged || input.scoringSystem !== undefined) match.assertEditable();
 
-        const affectedPhaseGroupIds = new Set<number>([match.phaseGroupId]);
+        const origin = match.address;
         match.describe(input);
 
         if (input.phaseGroupId !== undefined) {
             match.moveTo(await this.store.loadPhaseGroup(input.phaseGroupId));
-            affectedPhaseGroupIds.add(input.phaseGroupId);
         }
         if (input.entrantIds !== undefined) {
             match.replaceEntrants(await this.store.loadEntrants(input.entrantIds), this.scoringSystems);
         }
 
         await this.store.save(match);
-        if (membershipChanged) {
-            for (const phaseGroupId of affectedPhaseGroupIds) {
-                await this.phaseGroups.syncDerivedEntrants(phaseGroupId);
-            }
-        }
-
         await this.announce(match, before);
         /* A match that changed hands or changed pools moves the counts of every
-           pool it touched, whichever way its own standings went. */
+           pool it touched, whichever way its own standings went. The pool it
+           left is named by the address the match had before it moved. */
         if (membershipChanged) {
-            for (const phaseGroupId of affectedPhaseGroupIds) {
-                await this.publisher.emitPhaseGroupUpdateByPhaseGroupId(phaseGroupId);
-            }
+            await this.publisher.emitPhaseGroupUpdate(match.address);
+            if (origin.phaseGroupId !== match.address.phaseGroupId) await this.publisher.emitPhaseGroupUpdate(origin);
         }
     }
 
@@ -120,7 +111,6 @@ export class MatchCommands {
         const address = match.address;
         await this.advancementRules.deleteInvolvingMatch(matchId);
         await this.store.remove(match);
-        await this.phaseGroups.syncDerivedEntrants(address.phaseGroupId);
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 
@@ -260,7 +250,6 @@ export class MatchCommands {
 
     private async saveAndAnnounceMembership(match: MatchAggregate): Promise<void> {
         await this.store.save(match);
-        await this.phaseGroups.syncDerivedEntrants(match.phaseGroupId);
         await this.publisher.emitMatchUpdate(match.address);
         await this.publisher.emitPhaseGroupUpdate(match.address);
     }

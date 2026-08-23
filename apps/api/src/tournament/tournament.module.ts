@@ -20,8 +20,9 @@ import { AdvancementRuleManager } from './structure/services/advancement-rule.ma
 import { AdvancementRuleService } from './structure/services/advancement-rule.service';
 import { DivisionCommands } from './structure/division/division.commands';
 import { DivisionStore } from './structure/division/division.store';
-import { PhaseGroupManager } from './structure/phase-group/phase-group.manager';
-import { PhaseGroupService } from './structure/phase-group/phase-group.service';
+import { PhaseGroupCommands } from './structure/phase-group/phase-group.commands';
+import { PhaseGroupQueries } from './structure/phase-group/phase-group.queries';
+import { PhaseGroupStore } from './structure/phase-group/phase-group.store';
 import { PhaseService } from './structure/services/phase.service';
 import { BracketController } from './competition/bracket/bracket.controller';
 import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
@@ -30,7 +31,6 @@ import { AdvancementManager } from './competition/match/services/advancement.man
 import { MatchCommands } from './competition/match/match.commands';
 import { MatchQueries } from './competition/match/match.queries';
 import { MatchStore } from './competition/match/match.store';
-import { UiUpdateContextService } from './competition/match/services/ui-update-context.service';
 import { UiUpdatePublisher } from './competition/match/services/ui-update.publisher';
 import { ScoresController } from './competition/score.controller';
 import { ScoreQueries } from './competition/score.queries';
@@ -81,10 +81,10 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         DivisionStore,
         ParticipantService,
         PhaseService,
-        PhaseGroupService,
-        PhaseGroupManager,
+        PhaseGroupCommands,
+        PhaseGroupQueries,
+        PhaseGroupStore,
         SongService,
-        UiUpdateContextService,
         StartggService,
         StartggMatchReporter,
         AdvancementRuleService,

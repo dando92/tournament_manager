@@ -1,7 +1,8 @@
-import { AdvancementRule, Entrant, Match, MatchResult, Player } from '@tournament-manager/persistence';
+import { AdvancementRule, Entrant, Match, MatchResult, Phase, PhaseGroup, PhaseGroupEntrant, Player } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
+import { PhaseGroupAggregate } from '@tournament/structure/phase-group/phase-group.aggregate';
+import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
 
 import { AdvancementManager } from '@match/services/advancement.manager';
 import { MatchAggregate } from '@match/match.aggregate';
@@ -26,6 +27,21 @@ function completedMatch(id: number, entrants: Entrant[], playerPoints: Array<{ p
   } as Match;
 }
 
+/** A pool as its store hands one over: loaded with its matches and its seats. */
+function pool(id: number, matches: Match[] = [], seats: PhaseGroupEntrant[] = []): PhaseGroupAggregate {
+  return PhaseGroupAggregate.of({
+    id,
+    state: 'active',
+    matches,
+    entrants: seats,
+    phase: { id: 5, division: { id: 4, tournament: { id: 3 } } } as Phase,
+  } as PhaseGroup);
+}
+
+function seat(entrantId: number, slot: number): PhaseGroupEntrant {
+  return { id: entrantId + 900, entrant: { id: entrantId }, slot, seedNum: slot, status: 'active' } as PhaseGroupEntrant;
+}
+
 function rule(overrides: Partial<AdvancementRule>): AdvancementRule {
   return {
     id: 1,
@@ -47,13 +63,9 @@ describe('AdvancementManager', () => {
   const advancementRuleService = {
     findBySource: jest.fn(),
   };
-  const phaseGroupService = {
-    addEntrant: jest.fn(),
-    removeEntrant: jest.fn(),
-    findOne: jest.fn(),
-    markEntrantsAdvanced: jest.fn(),
-    syncDerivedEntrants: jest.fn(),
-    update: jest.fn(),
+  const phaseGroupStore = {
+    load: jest.fn(),
+    save: jest.fn(),
   };
   const publisher = {
     emitMatchUpdate: jest.fn(),
@@ -63,7 +75,7 @@ describe('AdvancementManager', () => {
   const manager = new AdvancementManager(
     matchStore as unknown as MatchStore,
     advancementRuleService as unknown as AdvancementRuleService,
-    phaseGroupService as unknown as PhaseGroupService,
+    phaseGroupStore as unknown as PhaseGroupStore,
     publisher as unknown as UiUpdatePublisher,
     { getScoringSystem: () => ({ recalc: jest.fn() }) } as unknown as ScoringSystemProvider,
   );
@@ -75,10 +87,26 @@ describe('AdvancementManager', () => {
     return saved.entrants.map((each) => each.id);
   }
 
+  /** The pool the manager saved, by the id it was loaded under. */
+  function savedPool(id: number): PhaseGroup {
+    const saved = phaseGroupStore.save.mock.calls
+      .map(([aggregate]) => aggregate as PhaseGroupAggregate)
+      .find((aggregate) => aggregate.id === id);
+    expect(saved).toBeDefined();
+
+    return saved.entity;
+  }
+
+  /** The pools this test has, answered by id the way the store answers. */
+  function poolsAre(...aggregates: PhaseGroupAggregate[]): void {
+    const byId = new Map(aggregates.map((aggregate) => [aggregate.id, aggregate]));
+    phaseGroupStore.load.mockImplementation(async (id: number) => byId.get(id) ?? null);
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     advancementRuleService.findBySource.mockResolvedValue([]);
-    phaseGroupService.findOne.mockResolvedValue(null);
+    phaseGroupStore.load.mockResolvedValue(null);
   });
 
   it('places result entrants into the slots their rules name', async () => {
@@ -140,27 +168,33 @@ describe('AdvancementManager', () => {
         ? [rule({ id: 50, sourceKind: 'phase_group', sourceId: 30, targetKind: 'phase_group', targetId: 40 })]
         : []),
     );
-    phaseGroupService.findOne.mockResolvedValue({ id: 30, matches: [firstMatch, secondMatch] });
+    poolsAre(pool(30, [firstMatch, secondMatch], [seat(firstEntrant.id, 1)]), pool(40));
 
     await manager.advanceFromMatch(MatchAggregate.of(firstMatch));
 
-    expect(phaseGroupService.addEntrant).toHaveBeenCalledWith(40, firstEntrant.id, 1, 50);
-    expect(phaseGroupService.markEntrantsAdvanced).toHaveBeenCalledWith(30, [firstEntrant.id]);
-    expect(phaseGroupService.update).toHaveBeenCalledWith(30, { state: 'completed' });
+    /* The rule seats the entrant it advanced in the slot it names, and records
+       which rule put them there so nothing mistakes the seat for a derived one. */
+    expect(savedPool(40).entrants).toEqual([
+      expect.objectContaining({
+        entrant: firstEntrant,
+        slot: 1,
+        seedNum: 1,
+        status: 'active',
+        sourceAdvancementRule: { id: 50 },
+      }),
+    ]);
+    expect(savedPool(30).state).toBe('completed');
+    expect(savedPool(30).entrants[0].status).toBe('advanced');
   });
 
   it('leaves a phase group active while any match result is missing', async () => {
     const only = entrant(1, 101);
     const source = completedMatch(10, [only], [{ playerId: 101, points: 1 }]);
-    phaseGroupService.findOne.mockResolvedValue({
-      id: 30,
-      matches: [source, { id: 11, matchResult: null }],
-    });
+    poolsAre(pool(30, [source, { id: 11, matchResult: null } as Match]));
 
     await manager.advanceFromMatch(MatchAggregate.of(source));
 
-    expect(phaseGroupService.markEntrantsAdvanced).not.toHaveBeenCalled();
-    expect(phaseGroupService.update).not.toHaveBeenCalled();
+    expect(phaseGroupStore.save).not.toHaveBeenCalled();
   });
 
   it('removes previously advanced entrants and reopens their phase group', async () => {
@@ -180,14 +214,39 @@ describe('AdvancementManager', () => {
     matchStore.load.mockResolvedValue(
       MatchAggregate.of({ id: 20, entrants: [winner], phaseGroup: { id: 31 } } as Match),
     );
-    phaseGroupService.findOne.mockResolvedValue({ id: 30, matches: [source] });
+    poolsAre(pool(30, [source], [seat(winner.id, 1)]), pool(40, [], [seat(winner.id, 1)]));
 
     await manager.revertFromMatch(MatchAggregate.of(source));
 
     expect(savedEntrantIds(0)).toEqual([]);
-    expect(phaseGroupService.removeEntrant).toHaveBeenCalledWith(40, winner.id);
-    expect(phaseGroupService.markEntrantsAdvanced).toHaveBeenCalledWith(30, []);
-    expect(phaseGroupService.update).toHaveBeenCalledWith(30, { state: 'active' });
+    expect(savedPool(40).entrants).toEqual([]);
+    expect(savedPool(30).state).toBe('active');
+    expect(savedPool(30).entrants[0].status).toBe('active');
+  });
+
+  it('loads a target pool once however many rules point at it', async () => {
+    const winner = entrant(1, 101);
+    const runnerUp = entrant(2, 102);
+    const source = completedMatch(10, [winner, runnerUp], [
+      { playerId: 101, points: 3 },
+      { playerId: 102, points: 1 },
+    ]);
+    advancementRuleService.findBySource.mockImplementation((sourceKind: string) =>
+      Promise.resolve(sourceKind === 'match'
+        ? [
+          rule({ id: 61, sourcePlacement: 1, targetKind: 'phase_group', targetId: 40, targetSlot: 1 }),
+          rule({ id: 62, sourcePlacement: 2, targetKind: 'phase_group', targetId: 40, targetSlot: 2 }),
+        ]
+        : []),
+    );
+    poolsAre(pool(40));
+
+    await manager.advanceFromMatch(MatchAggregate.of(source));
+
+    const loadsOfTargetPool = phaseGroupStore.load.mock.calls.filter(([id]) => id === 40);
+    expect(loadsOfTargetPool).toHaveLength(1);
+    expect(savedPool(40).entrants.map((each) => each.entrant.id)).toEqual([winner.id, runnerUp.id]);
+    expect(publisher.emitPhaseGroupUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a target match alone when the entrant to remove is not in it', async () => {

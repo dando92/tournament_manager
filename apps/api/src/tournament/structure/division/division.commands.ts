@@ -5,7 +5,7 @@ import { BracketSystemProvider } from '@bracket/BracketSystemProvider';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { DivisionAggregate, DivisionDetails } from '@tournament/structure/division/division.aggregate';
 import { DivisionStore } from '@tournament/structure/division/division.store';
-import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
+import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
 import { PhaseService } from '@tournament/structure/services/phase.service';
 
 export type CreateDivisionInput = DivisionDetails & {
@@ -43,7 +43,7 @@ export class DivisionCommands {
         private readonly store: DivisionStore,
         private readonly publisher: UiUpdatePublisher,
         private readonly phases: PhaseService,
-        private readonly phaseGroups: PhaseGroupService,
+        private readonly phaseGroups: PhaseGroupCommands,
         private readonly bracketSystems: BracketSystemProvider,
     ) {}
 
@@ -135,14 +135,14 @@ export class DivisionCommands {
             divisionId,
             name: input.phaseName?.trim() || `Bracket ${division.nextPhaseNumber}`,
         });
-        const phaseGroup = await this.phaseGroups.createForPhase(phase.id, { bracketType: input.bracketType });
+        const phaseGroupId = await this.phaseGroups.create(phase.id, { bracketType: input.bracketType });
         await system.generateForExistingPhaseGroup(
             phase,
-            phaseGroup,
+            phaseGroupId,
             division.activeEntrants,
             input.playerPerMatch ?? 2,
         );
 
-        return { phaseId: phase.id, phaseGroupId: phaseGroup.id };
+        return { phaseId: phase.id, phaseGroupId };
     }
 }

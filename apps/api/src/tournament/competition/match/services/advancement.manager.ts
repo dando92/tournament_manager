@@ -1,12 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AdvancementRule, Entrant, Match } from '@tournament-manager/persistence';
+import { AdvancementRule, Entrant } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
 import { MatchAggregate } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
-import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group.service';
+import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
+
+/** The entrants one rule moves into one pool. */
+type PoolPlacement = {
+    rule: AdvancementRule;
+    entrant: Entrant;
+};
 
 /**
  * Where the entrants of a finished match go next.
@@ -15,6 +21,12 @@ import { PhaseGroupService } from '@tournament/structure/phase-group/phase-group
  * pool whose last match is in does the same thing one level up. Both directions
  * read the same rules and walk them the same way, which is why they differ only
  * in what they do to the target.
+ *
+ * This is the one place a write to one aggregate changes another, because that
+ * is what an advancement rule is: an edge between two competitions. It works
+ * through the two stores and the aggregates they load rather than through
+ * either commands class, so a target is loaded once however many rules point at
+ * it, and announced once.
  */
 @Injectable()
 export class AdvancementManager {
@@ -24,7 +36,7 @@ export class AdvancementManager {
         @Inject()
         private readonly advancementRules: AdvancementRuleService,
         @Inject()
-        private readonly phaseGroups: PhaseGroupService,
+        private readonly phaseGroups: PhaseGroupStore,
         @Inject()
         private readonly publisher: UiUpdatePublisher,
         @Inject()
@@ -45,7 +57,9 @@ export class AdvancementManager {
      * One walk over the rules that leave a competition, in both directions.
      *
      * The entrants arrive already ordered by the placement they earned, so a
-     * rule is a lookup by index into that order and nothing more.
+     * rule is a lookup by index into that order and nothing more. The rules that
+     * end in a pool are collected first and written per pool, because four
+     * entrants moving into one pool are one change to it.
      */
     private async applyRules(
         sourceKind: 'match' | 'phase_group',
@@ -55,6 +69,7 @@ export class AdvancementManager {
     ): Promise<Entrant[]> {
         const rules = await this.advancementRules.findBySource(sourceKind, sourceId);
         const moved: Entrant[] = [];
+        const byPool = new Map<number, PoolPlacement[]>();
 
         for (const rule of rules) {
             const entrant = placements[rule.sourcePlacement - 1];
@@ -65,9 +80,12 @@ export class AdvancementManager {
                 await this.writeTargetMatch(rule, entrant, direction);
             }
             if (rule.targetKind === 'phase_group') {
-                if (direction === 'place') await this.phaseGroups.addEntrant(rule.targetId, entrant.id, rule.targetSlot, rule.id);
-                else await this.phaseGroups.removeEntrant(rule.targetId, entrant.id);
+                byPool.set(rule.targetId, [...(byPool.get(rule.targetId) ?? []), { rule, entrant }]);
             }
+        }
+
+        for (const [phaseGroupId, placementsInPool] of byPool) {
+            await this.writeTargetPool(phaseGroupId, placementsInPool, direction);
         }
 
         return moved;
@@ -81,60 +99,58 @@ export class AdvancementManager {
         else if (!target.removeEntrant(entrant.id, this.scoringSystems)) return;
 
         await this.matches.save(target);
-        await this.phaseGroups.syncDerivedEntrants(target.phaseGroupId);
         await this.publisher.emitMatchUpdate(target.address);
         /* Who is in a match decides whether it is waiting on anyone, so placing
            an entrant moves the counts of the pool it landed in. */
         await this.publisher.emitPhaseGroupUpdate(target.address);
     }
 
+    private async writeTargetPool(phaseGroupId: number, placements: PoolPlacement[], direction: 'place' | 'remove'): Promise<void> {
+        const phaseGroup = await this.phaseGroups.load(phaseGroupId);
+        if (!phaseGroup) return;
+
+        for (const { rule, entrant } of placements) {
+            if (direction === 'place') phaseGroup.place({ entrant, slot: rule.targetSlot, sourceAdvancementRuleId: rule.id });
+            else phaseGroup.release(entrant.id);
+        }
+
+        await this.phaseGroups.save(phaseGroup);
+        await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
+    }
+
     /**
      * A pool is finished when every match in it is, and a finished pool places
      * its own entrants through the rules that leave it.
+     *
+     * Marking who advanced and closing the pool are two changes to the same
+     * aggregate, so they are one save and one event; they used to be a save per
+     * seat, then a second load of the pool to write its state.
      */
     private async updatePhaseGroupCompletion(phaseGroupId: number): Promise<void> {
         if (!phaseGroupId) return;
 
-        const phaseGroup = await this.phaseGroups.findOne(phaseGroupId);
-        if (!phaseGroup || (phaseGroup.matches?.length ?? 0) === 0) return;
-        if (!(phaseGroup.matches ?? []).every((candidate) => Boolean(candidate.matchResult))) return;
+        const phaseGroup = await this.phaseGroups.load(phaseGroupId);
+        if (!phaseGroup?.isDecided) return;
 
-        const placements = this.phaseGroupPlacements(phaseGroup.matches);
-        const advanced = await this.applyRules('phase_group', phaseGroupId, placements, 'place');
+        const advanced = await this.applyRules('phase_group', phaseGroupId, phaseGroup.placements, 'place');
+        phaseGroup.markAdvanced(advanced.map((entrant) => entrant.id));
+        phaseGroup.complete();
 
-        await this.phaseGroups.markEntrantsAdvanced(phaseGroupId, advanced.map((entrant) => entrant.id));
-        await this.phaseGroups.update(phaseGroupId, { state: 'completed' });
+        await this.phaseGroups.save(phaseGroup);
+        await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
     }
 
     private async revertPhaseGroupCompletion(phaseGroupId: number): Promise<void> {
         if (!phaseGroupId) return;
 
-        const phaseGroup = await this.phaseGroups.findOne(phaseGroupId);
+        const phaseGroup = await this.phaseGroups.load(phaseGroupId);
         if (!phaseGroup) return;
 
-        const placements = this.phaseGroupPlacements(phaseGroup.matches ?? []);
-        await this.applyRules('phase_group', phaseGroupId, placements, 'remove');
+        await this.applyRules('phase_group', phaseGroupId, phaseGroup.placements, 'remove');
+        phaseGroup.markAdvanced([]);
+        phaseGroup.reopen();
 
-        await this.phaseGroups.markEntrantsAdvanced(phaseGroupId, []);
-        await this.phaseGroups.update(phaseGroupId, { state: 'active' });
-    }
-
-    /** The standings of a pool: every entrant by the points its matches gave it. */
-    private phaseGroupPlacements(matches: Match[]): Entrant[] {
-        const pointsByEntrantId = new Map<number, number>();
-        const entrantsById = new Map<number, Entrant>();
-
-        for (const match of matches) {
-            const pointsByPlayerId = new Map((match.matchResult?.playerPoints ?? []).map((entry) => [entry.playerId, entry.points]));
-            for (const entrant of match.entrants ?? []) {
-                const playerId = entrant.participants?.[0]?.player?.id;
-                entrantsById.set(entrant.id, entrant);
-                pointsByEntrantId.set(entrant.id, (pointsByEntrantId.get(entrant.id) ?? 0) + (pointsByPlayerId.get(playerId) ?? 0));
-            }
-        }
-
-        return Array.from(entrantsById.values()).sort((left, right) =>
-            (pointsByEntrantId.get(right.id) ?? 0) - (pointsByEntrantId.get(left.id) ?? 0) || left.id - right.id,
-        );
+        await this.phaseGroups.save(phaseGroup);
+        await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
     }
 }

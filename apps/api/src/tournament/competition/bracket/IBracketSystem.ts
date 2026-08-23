@@ -1,10 +1,10 @@
 import { Inject } from "@nestjs/common";
 
-import { Entrant, Phase, PhaseGroup } from "@tournament-manager/persistence";
+import { Entrant, Phase } from "@tournament-manager/persistence";
 import { MatchCommands } from "@match/match.commands";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
-import { PhaseGroupService } from "@tournament/structure/phase-group/phase-group.service";
+import { PhaseGroupCommands } from "@tournament/structure/phase-group/phase-group.commands";
 
 export class IBracketSystem {
     constructor(
@@ -15,7 +15,7 @@ export class IBracketSystem {
         @Inject()
         protected readonly advancementRuleService: AdvancementRuleService,
         @Inject()
-        protected readonly phaseGroupService: PhaseGroupService,
+        protected readonly phaseGroupCommands: PhaseGroupCommands,
     ) {
     }
 
@@ -30,12 +30,12 @@ export class IBracketSystem {
     /** The entrants take their slots in the order the division seeded them. */
     async generateForExistingPhaseGroup(
         phase: Phase,
-        phaseGroup: PhaseGroup,
+        phaseGroupId: number,
         entrants: Entrant[],
         playerPerMatch: number = 2,
     ): Promise<void> {
-        await this.phaseGroupService.replaceEntrants(phaseGroup.id, entrants);
-        await this.createBracket(entrants, playerPerMatch, phase, phaseGroup.id);
+        await this.phaseGroupCommands.seatEntrants(phaseGroupId, entrants);
+        await this.createBracket(entrants, playerPerMatch, phase, phaseGroupId);
     }
 
     protected async createBracket(

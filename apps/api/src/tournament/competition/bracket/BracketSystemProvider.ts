@@ -7,7 +7,7 @@ import { KingOfTheHill } from "@bracket/KingOfTheHill";
 import { MatchCommands } from "@match/match.commands";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
-import { PhaseGroupService } from "@tournament/structure/phase-group/phase-group.service";
+import { PhaseGroupCommands } from "@tournament/structure/phase-group/phase-group.commands";
 
 @Injectable()
 export class BracketSystemProvider {
@@ -20,10 +20,10 @@ export class BracketSystemProvider {
         @Inject()
         private readonly advancementRuleService: AdvancementRuleService,
         @Inject()
-        private readonly phaseGroupService: PhaseGroupService,
+        private readonly phaseGroupCommands: PhaseGroupCommands,
     ) {
-        const args: [MatchCommands, PhaseService, AdvancementRuleService, PhaseGroupService] =
-            [matchCommands, phaseService, advancementRuleService, phaseGroupService];
+        const args: [MatchCommands, PhaseService, AdvancementRuleService, PhaseGroupCommands] =
+            [matchCommands, phaseService, advancementRuleService, phaseGroupCommands];
 
         const all: IBracketSystem[] = [
             new DoubleElimination(...args),
