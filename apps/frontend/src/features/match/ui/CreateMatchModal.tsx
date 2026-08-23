@@ -1,22 +1,20 @@
 import OkModal from "@/shared/components/ui/OkModal";
 import Select from "react-select";
 import { selectPortalStyles } from "@/styles/selectStyles";
-import { CreateMatchRequest, MatchPhaseOption } from "@/features/match/model/types";
-import CreateMatchScopeFields from "@/features/match/ui/CreateMatchScopeFields";
+import { CreateMatchRequest } from "@/features/match/model/types";
 import CreateMatchSongFields from "@/features/match/ui/CreateMatchSongFields";
 import { useCreateMatchModal } from "@/features/match/model/useCreateMatchModal";
-import { TournamentDivisionOption } from "@/features/tournament/model/types";
+import CascadingPathPicker from "@/shared/components/ui/CascadingPathPicker";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 
 type CreateMatchModalProps = {
   open: boolean;
   onClose: () => void;
   onCreate: (request: CreateMatchRequest) => void;
+  /** Where the modal was opened from. The picker starts there and can be moved. */
+  divisionId?: number;
   phaseId?: number;
   phaseGroupId?: number;
-  phases?: MatchPhaseOption[];
-  divisionId?: number;
-  divisions?: TournamentDivisionOption[];
   tournamentId?: number;
 };
 
@@ -26,27 +24,22 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
   return (
     <OkModal
       okText="Create match"
+      okDisabled={!state.canCreate}
       title="Create Match"
       open={props.open}
       onClose={props.onClose}
       onOk={state.handleSubmit}
     >
       <div className="flex flex-col w-full gap-3">
-        <CreateMatchScopeFields
-          divisionId={props.divisionId}
-          phaseId={props.phaseId}
-          phaseGroupId={props.phaseGroupId}
-          divisions={props.divisions}
-          phases={props.phases}
-          availablePhases={state.availablePhases}
-          availablePhaseGroups={state.availablePhaseGroups}
-          selectedDivisionId={state.selectedDivisionId}
-          selectedPhaseId={state.selectedPhaseId}
-          selectedPhaseGroupId={state.selectedPhaseGroupId}
-          onDivisionChange={state.setSelectedDivisionId}
-          onPhaseChange={state.setSelectedPhaseId}
-          onPhaseGroupChange={state.setSelectedPhaseGroupId}
-        />
+        <div className="w-full">
+          <h3>Destination</h3>
+          <CascadingPathPicker
+            levels={state.pathLevels}
+            value={state.pathValue}
+            onValueChange={state.setPathValue}
+            ariaLabel="Match destination"
+          />
+        </div>
 
         <div className="w-full">
           <h3>Name</h3>

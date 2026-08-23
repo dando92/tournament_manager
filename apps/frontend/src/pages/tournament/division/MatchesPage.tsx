@@ -151,7 +151,6 @@ export default function DivisionMatchesPage() {
         divisionId={division.id}
         phaseId={page.createTargetPhase}
         phaseGroupId={page.scopePoolId ?? undefined}
-        phases={division.phases ?? []}
         tournamentId={tournamentId}
       />
     </div>

@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MatchPath } from "@/features/match/model/matchPath";
 import { Entrant } from "@/features/participant/model/types";
 import { Song } from "@/features/song/model/types";
-import { CreateMatchRequest, MatchPhaseOption } from "@/features/match/model/types";
-import { TournamentDivisionOption } from "@/features/tournament/model/types";
+import { CreateMatchRequest } from "@/features/match/model/types";
+import {
+  isCompleteMatchPath,
+  matchPathFromValue,
+  matchPathLevels,
+  matchPathValue,
+} from "@/features/match/model/matchPath";
+import type { PathValue } from "@/shared/components/ui/cascadingPath";
+import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { listDivisionEntrants } from "@/features/division/api/division.api";
 import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/api/match.api";
@@ -12,30 +20,39 @@ type UseCreateMatchModalOptions = {
   open: boolean;
   onClose: () => void;
   onCreate: (request: CreateMatchRequest) => void;
+  /** Where the modal was opened from, which is where the path starts. */
+  divisionId?: number;
   phaseId?: number;
   phaseGroupId?: number;
-  phases?: MatchPhaseOption[];
-  divisionId?: number;
-  divisions?: TournamentDivisionOption[];
   tournamentId?: number;
 };
 
+/**
+ * What the create-match modal holds: one destination and the match to put there.
+ *
+ * The destination is a single path rather than a division, a phase and a pool
+ * kept in step by effects. The picker settles it — it drops what an upstream
+ * change invalidated and fills a level that offers only one option — so nothing
+ * here has to watch one selection to correct another.
+ *
+ * The structure comes from the tournament tree rather than from props: it is
+ * loaded once, above every page, and the modal opens on top of one of them.
+ */
 export function useCreateMatchModal({
   open,
   onClose,
   onCreate,
+  divisionId,
   phaseId,
   phaseGroupId,
-  phases,
-  divisionId,
-  divisions,
   tournamentId,
 }: UseCreateMatchModalOptions) {
-  const [selectedDivisionId, setSelectedDivisionId] = useState<number | null>(
-    divisionId ?? divisions?.[0]?.id ?? null,
-  );
-  const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
-  const [selectedPhaseGroupId, setSelectedPhaseGroupId] = useState<number | null>(null);
+  const { divisions } = useTournamentTree();
+  const [path, setPath] = useState<MatchPath>({
+    divisionId: divisionId ?? null,
+    phaseId: phaseId ?? null,
+    phaseGroupId: phaseGroupId ?? null,
+  });
   const [entrants, setEntrants] = useState<Entrant[]>([]);
   const [scoringSystems, setScoringSystems] = useState<string[]>([]);
   const [scoringSystem, setScoringSystem] = useState("");
@@ -50,66 +67,39 @@ export function useCreateMatchModal({
   const [selectedGroupName, setSelectedGroupName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<Song[]>([]);
 
-  const availablePhases = useMemo<MatchPhaseOption[]>(
-    () =>
-      divisionId
-        ? phases ?? []
-        : divisions?.find((division) => division.id === selectedDivisionId)?.phases ?? [],
-    [divisionId, divisions, phases, selectedDivisionId],
-  );
+  const pathLevels = useMemo(() => matchPathLevels(divisions), [divisions]);
+  const pathValue = useMemo(() => matchPathValue(path), [path]);
+  const setPathValue = useCallback((value: PathValue<number>) => setPath(matchPathFromValue(value)), []);
+  const canCreate = isCompleteMatchPath(path);
 
-  const resolvedPhaseId = phaseId ?? selectedPhaseId;
-  const resolvedDivisionId = divisionId ?? selectedDivisionId;
-  const availablePhaseGroups = useMemo(
-    () => availablePhases.find((phase) => phase.id === resolvedPhaseId)?.phaseGroups ?? [],
-    [availablePhases, resolvedPhaseId],
-  );
-  const resolvedPhaseGroupId = phaseGroupId ?? selectedPhaseGroupId ?? availablePhaseGroups[0]?.id ?? null;
-
+  /* Opening the modal is what resets it: the scope it was opened from is the
+     path it starts on, and the picker completes whatever that leaves open.
+     It waits for the structure, because a path whose levels have nothing to
+     offer yet holds identifiers the picker cannot recognise, and would settle
+     on nothing at all. */
   useEffect(() => {
-    if (!open) return;
+    if (!open || divisions.length === 0) return;
 
-    const initialDivisionId = divisionId ?? divisions?.[0]?.id ?? null;
-    const initialPhases = divisionId
-      ? phases ?? []
-      : divisions?.find((division) => division.id === initialDivisionId)?.phases ?? [];
-
-    setSelectedDivisionId(initialDivisionId);
-    const nextPhaseId = phaseId ?? initialPhases[0]?.id ?? null;
-    setSelectedPhaseId(nextPhaseId);
-    setSelectedPhaseGroupId(phaseGroupId ?? initialPhases.find((phase) => phase.id === nextPhaseId)?.phaseGroups?.[0]?.id ?? null);
+    setPath({
+      divisionId: divisionId ?? null,
+      phaseId: phaseId ?? null,
+      phaseGroupId: phaseGroupId ?? null,
+    });
     setSelectedEntrants([]);
     setSelectedSongs([]);
     setSelectedSongDifficulties([]);
     setDifficultyInput("");
     setSongAddType("title");
-  }, [divisionId, divisions, open, phaseGroupId, phaseId, phases]);
+  }, [divisions.length, divisionId, open, phaseGroupId, phaseId]);
 
   useEffect(() => {
-    if (!open || divisionId || phaseId) return;
-    const nextPhases = divisions?.find((division) => division.id === selectedDivisionId)?.phases ?? [];
-    setSelectedPhaseId(nextPhases[0]?.id ?? null);
-    setSelectedPhaseGroupId(phaseGroupId ?? nextPhases[0]?.phaseGroups?.[0]?.id ?? null);
-  }, [divisionId, divisions, open, phaseGroupId, phaseId, selectedDivisionId]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (phaseGroupId) {
-      setSelectedPhaseGroupId(phaseGroupId);
-      return;
-    }
-    if (selectedPhaseGroupId && availablePhaseGroups.some((group) => group.id === selectedPhaseGroupId)) return;
-    setSelectedPhaseGroupId(availablePhaseGroups[0]?.id ?? null);
-  }, [availablePhaseGroups, open, phaseGroupId, selectedPhaseGroupId]);
-
-  useEffect(() => {
-    if (!open || !resolvedDivisionId) {
+    if (!open || !path.divisionId) {
       setEntrants([]);
       return;
     }
 
     let cancelled = false;
-    listDivisionEntrants(resolvedDivisionId)
+    listDivisionEntrants(path.divisionId)
       .then((divisionEntrants) => {
         if (cancelled) return;
         setEntrants(
@@ -125,7 +115,7 @@ export function useCreateMatchModal({
     return () => {
       cancelled = true;
     };
-  }, [open, resolvedDivisionId]);
+  }, [open, path.divisionId]);
 
   useEffect(() => {
     const entrantIds = new Set(entrants.map((entrant) => entrant.id));
@@ -166,10 +156,10 @@ export function useCreateMatchModal({
   };
 
   const handleSubmit = () => {
-    if (!resolvedPhaseGroupId || !resolvedDivisionId) return;
+    if (!isCompleteMatchPath(path)) return;
 
     const baseRequest = {
-      phaseGroupId: resolvedPhaseGroupId,
+      phaseGroupId: path.phaseGroupId,
       name,
       subtitle,
       group: selectedGroupName,
@@ -197,9 +187,6 @@ export function useCreateMatchModal({
     songs,
     songGroups,
     scoringSystems,
-    selectedDivisionId,
-    selectedPhaseId,
-    selectedPhaseGroupId,
     selectedEntrants,
     selectedSongs,
     selectedSongDifficulties,
@@ -209,11 +196,10 @@ export function useCreateMatchModal({
     name,
     subtitle,
     songAddType,
-    availablePhases,
-    availablePhaseGroups,
-    setSelectedDivisionId,
-    setSelectedPhaseId,
-    setSelectedPhaseGroupId,
+    pathLevels,
+    pathValue,
+    canCreate,
+    setPathValue,
     setSelectedEntrants,
     setSelectedSongs,
     setSelectedGroupName,

@@ -8,9 +8,19 @@
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
-- Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, and the new song import dialog.
+- Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints
+
+### Choosing where a match is created
+
+Requested by the user on 2026-08-23, outside the phase sequence.
+
+- Replaced the three dependent dropdowns of the create-match modal with one destination, drawn as the path it is: `Division / Phase / Pool`. The rules live in `apps/frontend/src/shared/components/ui/cascadingPath.ts` and are pure — a level offers what its ancestors allow, choosing a level clears what is below it, a value no longer among its options is dropped, and a level with exactly one option settles itself and lets the next one settle in turn.
+- The modal no longer keeps a division, a phase and a pool in step with three effects, and no longer defaults to the first pool it finds. It holds the path, derives completeness from it with `isCompleteMatchPath`, and holds the Create button closed until the path reaches a pool. The structure comes from `TournamentTreeProvider` rather than from props, so `CreateMatchScopeFields` and `MatchPhaseOption` are gone.
+- The picker is generic and depth-agnostic, so a second hierarchical selector does not need a second implementation. It scrolls sideways with faded ends on a narrow screen, and its options panel is positioned inside the picker rather than portalled, because it has to escape the horizontal scroller and not the dialog.
+- Verification passed: `npm run build` and `npm run lint` for the frontend (pre-existing warnings only), and 48 frontend unit tests including 11 new ones over the path rules.
+- Not yet confirmed by hand: the modal itself. Recorded as [FQ-024](FunctionalQuestions.md).
 
 ### Importing songs from a folder
 

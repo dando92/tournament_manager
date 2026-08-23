@@ -5,6 +5,8 @@ import { btnPrimary } from "@/styles/buttonStyles";
 type OkModalProps = {
   title: string;
   okText?: string;
+  /** Held closed while the form is incomplete, rather than failing on submit. */
+  okDisabled?: boolean;
   onClose: () => void;
   onOk: () => void;
   open: boolean;
@@ -13,6 +15,7 @@ type OkModalProps = {
 export default function OkModal({
   title,
   okText = "OK",
+  okDisabled = false,
   onClose,
   onOk,
   open,
@@ -25,7 +28,7 @@ export default function OkModal({
       title={title || undefined}
       footer={
         <div className="flex flex-row-reverse">
-          <button type="button" className={btnPrimary} onClick={onOk}>
+          <button type="button" className={btnPrimary} disabled={okDisabled} onClick={onOk}>
             {okText}
           </button>
         </div>

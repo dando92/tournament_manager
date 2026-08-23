@@ -9,20 +9,24 @@
  * The focus ring is the one place the brand colour appears on an action.
  */
 
-const FOCUS =
+/**
+ * The focus ring, exported because it is not only buttons that take focus: any
+ * control the keyboard can reach uses this one so the ring never varies.
+ */
+export const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-running focus-visible:ring-offset-2 focus-visible:ring-offset-ui-canvas";
 
 /** Primary — main CTA */
-export const btnPrimary = `rounded border border-ui-border-strong bg-ui-raised px-3 py-2 font-semibold text-ui-text transition-colors hover:bg-ui-selected disabled:opacity-50 ${FOCUS}`;
+export const btnPrimary = `rounded border border-ui-border-strong bg-ui-raised px-3 py-2 font-semibold text-ui-text transition-colors hover:bg-ui-selected disabled:opacity-50 ${focusRing}`;
 
 /** Secondary — secondary actions */
-export const btnSecondary = `rounded border border-ui-border bg-ui-surface px-3 py-2 text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:opacity-50 ${FOCUS}`;
+export const btnSecondary = `rounded border border-ui-border bg-ui-surface px-3 py-2 text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:opacity-50 ${focusRing}`;
 
 /** Danger — destructive with border (no solid fill) */
-export const btnDanger = `rounded border border-state-failed/40 px-3 py-2 text-state-failed transition-colors hover:bg-state-failed/10 disabled:opacity-50 ${FOCUS}`;
+export const btnDanger = `rounded border border-state-failed/40 px-3 py-2 text-state-failed transition-colors hover:bg-state-failed/10 disabled:opacity-50 ${focusRing}`;
 
 /** Ghost — low-emphasis tertiary */
-export const btnGhost = `rounded px-3 py-2 text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:opacity-50 ${FOCUS}`;
+export const btnGhost = `rounded px-3 py-2 text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:opacity-50 ${focusRing}`;
 
 /** Trash — icon-only delete */
 export const btnTrash =
@@ -35,7 +39,7 @@ export const btnTrash =
  * colour blindness, so creation needs neither a hue nor an emphasis of its own.
  * Callers add their own border width and radius.
  */
-export const btnCreate = `border-dashed border-ui-border-strong text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS}`;
+export const btnCreate = `border-dashed border-ui-border-strong text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
 
 /** Create icon — icon-only "+" affordance inside dense rows and toolbars. */
 export const btnCreateIcon =

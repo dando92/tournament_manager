@@ -197,3 +197,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - A second, smaller half of it: a song added by hand states a meter and no slot, and nothing asks the person for one. If the slot becomes part of a chart's identity, the create form has to state it too.
 - Evidence: `apps/api/src/tournament/catalog/song.store.ts` (`identity`, `import`), `apps/frontend/src/features/song/model/songImport/stepmaniaParser.ts` (`buildImportRows`), `apps/api/tests/e2e/catalog/song-writes.e2e-spec.ts`.
 - Rule: do not widen the key without deciding what a repeated import means. The current key is the one the pool was filled by before this feature, and it is preserved deliberately.
+
+### FQ-024 — Creating a match no longer picks a pool for you, and can leave the division
+
+- Status: Open. Behavior changed on 2026-08-23 by the cascading path picker, and recorded here rather than decided.
+- Observed behavior: the create-match modal used to fill its own scope. Opening it on a division selected the first phase and the first pool under it, so pressing Create with an untouched form created the match in whichever pool happened to be first. It now holds one destination — division, phase, pool — and Create stays disabled until all three are chosen. A level offering a single option still settles itself, so a division with one phase and one pool is complete the moment it opens; a division with four pools now asks which one. The picker also reads the whole tournament structure rather than the open division alone, so the destination can be moved to another division of the same tournament without leaving the page.
+- Question: should the destination be allowed to leave the division whose page the modal was opened from? The match is created wherever the path points, and the list the person is looking at will not show it. The alternative is to keep the division level visible but fixed, which reads the same and costs the ability to correct a mistake without navigating.
+- Evidence: `apps/frontend/src/features/match/model/matchPath.ts`, `apps/frontend/src/features/match/model/useCreateMatchModal.ts`, `apps/frontend/src/shared/components/ui/cascadingPath.ts`.
+- Rule: do not restore a silent default for the pool. Creating a match in the wrong pool is invisible until somebody looks for it.
