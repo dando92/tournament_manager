@@ -328,7 +328,7 @@ describe('MatchAggregate', () => {
       const second = entrant(2, 102);
       const filled = match([first, second], []);
 
-      filled.placeEntrant(entrant(3, 103), 2);
+      filled.placeEntrant(entrant(3, 103), 2, scoringSystems(jest.fn()));
 
       expect(filled.entrants.map((each) => each.id)).toEqual([1, 3, 2]);
     });
@@ -338,19 +338,92 @@ describe('MatchAggregate', () => {
       const second = entrant(2, 102);
       const filled = match([first, second], []);
 
-      filled.placeEntrant(second, 1);
+      filled.placeEntrant(second, 1, scoringSystems(jest.fn()));
 
       expect(filled.entrants.map((each) => each.id)).toEqual([2, 1]);
+    });
+
+    /* The points of a round rank the people who played it, so they belong to
+       the field rather than to one person's run. Every change of field settles
+       them again, which is the same rule `removeStanding` applies when a single
+       score is taken away. */
+    describe('when the field changes', () => {
+      it('takes the standings of whoever left, and records them as removed', () => {
+        const staying = entrant(1, 101);
+        const leaving = entrant(2, 102);
+        const round = playedRound([
+          standing(1, player(101), score(1, player(101), 99), 2),
+          standing(2, player(102), score(2, player(102), 98), 1),
+        ]);
+        const scored = match([staying, leaving], [round]);
+
+        scored.removeEntrant(leaving.id, scoringSystems(jest.fn()));
+
+        expect(round.standings.map((each) => each.id)).toEqual([1]);
+        expect(scored.removals.standingIds).toEqual([2]);
+      });
+
+      it('ranks a round again once it is complete without the entrant that left', () => {
+        const recalc = jest.fn();
+        const round = playedRound([
+          standing(1, player(101), score(1, player(101), 99), 2),
+          standing(2, player(102), score(2, player(102), 98), 1),
+        ]);
+        const scored = match([entrant(1, 101), entrant(2, 102), entrant(3, 103)], [round]);
+
+        scored.removeEntrant(3, scoringSystems(recalc));
+
+        expect(recalc).toHaveBeenCalledTimes(1);
+        expect(recalc.mock.calls[0][0].map((each: Standing) => each.id)).toEqual([1, 2]);
+      });
+
+      /* The case that started this: somebody joins a match whose points are
+         already written, and those points ranked a field they were not in. */
+      it('sets the points back to zero when somebody joins a round that was complete', () => {
+        const round = playedRound([
+          standing(1, player(101), score(1, player(101), 99), 2),
+          standing(2, player(102), score(2, player(102), 98), 1),
+        ]);
+        const scored = match([entrant(1, 101), entrant(2, 102)], [round]);
+
+        scored.addEntrant(entrant(3, 103), scoringSystems(jest.fn()));
+
+        expect(round.standings.map((each) => each.points)).toEqual([0, 0]);
+      });
+
+      it('leaves the stated points of a hand-scored round alone', () => {
+        const round = handScoredRound([
+          standing(1, player(101), undefined, 3),
+          standing(2, player(102), undefined, 1),
+        ]);
+        const stated = match([entrant(1, 101), entrant(2, 102)], [round]);
+
+        stated.addEntrant(entrant(3, 103), scoringSystems(jest.fn()));
+
+        expect(round.standings.map((each) => each.points)).toEqual([3, 1]);
+      });
+
+      it('still takes the standing of somebody who leaves a hand-scored round', () => {
+        const round = handScoredRound([
+          standing(1, player(101), undefined, 3),
+          standing(2, player(102), undefined, 1),
+        ]);
+        const stated = match([entrant(1, 101), entrant(2, 102)], [round]);
+
+        stated.removeEntrant(2, scoringSystems(jest.fn()));
+
+        expect(round.standings.map((each) => each.id)).toEqual([1]);
+      });
     });
 
     it('answers whether adding or removing an entrant changed anything', () => {
       const first = entrant(1, 101);
       const filled = match([first], []);
 
-      expect(filled.addEntrant(first)).toBe(false);
-      expect(filled.addEntrant(entrant(2, 102))).toBe(true);
-      expect(filled.removeEntrant(1)).toBe(true);
-      expect(filled.removeEntrant(1)).toBe(false);
+      expect(filled.addEntrant(first, scoringSystems(jest.fn()))).toBe(false);
+      expect(filled.addEntrant(entrant(2, 102), scoringSystems(jest.fn()))).toBe(true);
+      expect(filled.removeEntrant(1, scoringSystems(jest.fn()))).toBe(true);
+      expect(filled.removeEntrant(1, scoringSystems(jest.fn()))).toBe(false);
     });
   });
 });

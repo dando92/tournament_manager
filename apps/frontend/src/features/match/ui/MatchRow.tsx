@@ -283,9 +283,12 @@ export default function MatchRow({
         );
       })}
 
-      <td className="px-1 sm:px-3 py-2 text-center border-l border-ui-border">
-        <span className="font-bold text-ui-text-soft">{totalPoints}</span>
-      </td>
+      {/* A match with no rounds has nothing to total, and its header says so. */}
+      {match.rounds.length > 0 && (
+        <td className="px-1 sm:px-3 py-2 text-center border-l border-ui-border">
+          <span className="font-bold text-ui-text-soft">{totalPoints}</span>
+        </td>
+      )}
       {mobileScoreMenu && (
         <MobileScoreActionsMenu
           menu={mobileScoreMenu}

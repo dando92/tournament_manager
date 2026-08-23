@@ -157,3 +157,11 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Should the roll instructions be derived from the pool the match belongs to instead of being sent by the client? The match already knows its pool, its phase and its division, so `divisionId` and `tournamentId` are the caller restating what the server can read.
 - Evidence: `apps/api/src/tournament/competition/services/song.roller.ts`, `apps/api/src/tournament/competition/match/match.commands.ts` (`rolledSongs`), `apps/api/src/tournament/catalog/song.queries.ts`.
 - Rule: do not change the request contract during the aggregate phases. The answer belongs with the Song aggregate, which is where the roller ends up.
+
+### FQ-019 — Removing the hand-scored round is a rule only the interface applies
+
+- Status: Open. Found on 2026-08-23 while auditing what stops a player or a song from being removed.
+- Observed behavior: `MatchAggregate.removeRound` refuses a round that still holds standings **only when the round has a song** — `Round ${id} still holds scores for "${title}"`. A hand-scored round is deliberately exempt, because deleting it is how the interface turns hand scoring off. The interface then applies a stricter rule of its own: `MatchTable` hides the delete control for a hand-scored round as soon as any standing carries more than zero points. So the points a person stated are protected by the frontend alone; `DELETE /rounds/:id` removes them without a word.
+- Question: Should the aggregate refuse to remove a hand-scored round that carries points, and if it should, how does the interface then turn hand scoring off — by removing the standings first, or by an explicit command that says so?
+- Evidence: `apps/api/src/tournament/competition/match/match.aggregate.ts` (`removeRound`), `apps/frontend/src/features/match/ui/MatchTable.tsx` (`roundHasStandings`).
+- Rule: do not move the rule into the aggregate before deciding what replaces it in the interface. Turning hand scoring off is a real action and it must stay reachable.
