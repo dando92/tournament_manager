@@ -121,7 +121,7 @@ describe('Match reads (e2e)', () => {
     await request(app.getHttpServer())
       .put(`/advancement-rules/sources/match/${playedMatchId}`)
       .send({ rules: [{ sourcePlacement: 1, targetKind: 'match', targetId: advancingMatchId, targetSlot: 1 }] })
-      .expect(200);
+      .expect(204);
   });
 
   afterAll(async () => {
@@ -182,7 +182,7 @@ describe('Match reads (e2e)', () => {
     await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
       .send({ percentage: 92.5, isFailed: false })
-      .expect(200);
+      .expect(204);
 
     const match = await readMatch(playedMatchId);
 
@@ -271,20 +271,23 @@ describe('Match reads (e2e)', () => {
   });
 
   it('projects a hand-scored round, which has points and no song', async () => {
-    const roundResponse = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post(`/matches/${otherPoolMatchId}/rounds`)
       .send({})
-      .expect(201);
+      .expect(204);
 
-    const roundId = roundResponse.body.rounds[0].id;
-    const playerId = roundResponse.body.entrants[0].participants[0].player.id;
+    const withRound = await readMatch(otherPoolMatchId);
+    const roundId = withRound.rounds[0].id;
+    const playerId = withRound.entrants[0].participants[0].player.id;
 
-    const match = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}/points/${playerId}`)
       .send({ points: 3 })
-      .expect(200);
+      .expect(204);
 
-    expect(match.body.rounds).toEqual([
+    const match = await readMatch(otherPoolMatchId);
+
+    expect(match.rounds).toEqual([
       {
         id: roundId,
         song: null,

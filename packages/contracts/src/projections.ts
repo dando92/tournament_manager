@@ -13,6 +13,19 @@ import type {
  * mapping code. They are one shape here, and the API maps them in one place.
  */
 
+/**
+ * Where a newly created resource can be found.
+ *
+ * A mutation answers `204`, because the change reaches the interface through
+ * the event it publishes. A creation is the one thing an event cannot say in
+ * time: the caller has to be told the address of what it just made, and this is
+ * that address and nothing else. It is not a projection, so it cannot become a
+ * second update path.
+ */
+export type CreatedResourceDto = {
+    id: number;
+};
+
 /** A player as somebody a row belongs to: enough to name them, nothing more. */
 export type PlayerRefDto = {
     id: number;

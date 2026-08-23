@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Tournament } from "@/features/tournament/model/types";
+import { TournamentRef } from "@/features/tournament/model/types";
 import { createTournament } from "@/features/tournament/api/tournament.api";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
@@ -7,7 +7,7 @@ import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 type Props = {
   open: boolean;
   onClose: () => void;
-  onCreated: (tournament: Tournament) => void;
+  onCreated: (tournament: TournamentRef) => void;
 };
 
 export default function CreateTournamentModal({ open, onClose, onCreated }: Props) {
@@ -28,9 +28,11 @@ export default function CreateTournamentModal({ open, onClose, onCreated }: Prop
     setApiError(null);
     setLoading(true);
     try {
-      const created = await createTournament(trimmed);
+      /* The creation answers with an id and nothing else, and the name is the
+         one this form just sent, so the two together are the whole reference. */
+      const id = await createTournament(trimmed);
       setName("");
-      onCreated(created);
+      onCreated({ id, name: trimmed });
     } catch {
       setApiError("Failed to create tournament.");
     } finally {

@@ -32,6 +32,15 @@ export type MatchRemovals = {
     matchResultId: number | null;
 };
 
+/**
+ * The part of a match the pool's projection shows. A change to it is a change
+ * to the tree, and a change to nothing else in it is not.
+ */
+export type MatchPoolState = {
+    completed: boolean;
+    awaitingCommit: boolean;
+};
+
 /** The fields of a match a person edits directly. */
 export type MatchDetails = {
     name?: string;
@@ -98,6 +107,24 @@ export class MatchAggregate {
 
     get isCompleted(): boolean {
         return Boolean(this.match.matchResult);
+    }
+
+    /**
+     * What the tree draws about the pool this match sits in: how many of its
+     * matches are waiting on a person, and how many are done.
+     *
+     * `TreeQueries.pendingMatchesInScope` counts a match as waiting under
+     * exactly the rule `resultEntries` applies, so the two are the same
+     * predicate written twice and must change together. A command compares this
+     * before and after its change to know whether the pool's projection moved,
+     * which is what decides whether an event addressed to the pool follows the
+     * one addressed to the match.
+     */
+    get poolState(): MatchPoolState {
+        return {
+            completed: this.isCompleted,
+            awaitingCommit: !this.isCompleted && this.resultEntries() !== null,
+        };
     }
 
     get entrants(): Entrant[] {

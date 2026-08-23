@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
-import { ParticipantDto, ParticipantImportPreviewRowDto } from '@tournament-manager/contracts';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { CreatedResourceDto, ParticipantDto, ParticipantImportPreviewRowDto } from '@tournament-manager/contracts';
 import { JwtAuthGuard, TournamentAccessGuard } from '@auth/guards';
 import {
     CreateParticipantDto,
@@ -27,15 +27,18 @@ export class TournamentParticipantsController {
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants')
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    createParticipant(
+    async createParticipant(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: CreateParticipantDto,
-    ) {
-        return this.tournamentManager.createParticipant(Number(id), dto);
+    ): Promise<CreatedResourceDto> {
+        const participant = await this.tournamentManager.createParticipant(Number(id), dto);
+
+        return { id: participant.id };
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/participants/:participantId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
     removeParticipant(
         @Param('id') id: number,
@@ -56,30 +59,34 @@ export class TournamentParticipantsController {
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants/import')
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    importParticipants(
+    async importParticipants(
         @Param('id') id: number,
         @Body(new ValidationPipe()) dto: ImportParticipantsDto,
-    ) {
-        return this.tournamentManager.importParticipants(Number(id), dto.entries);
+    ): Promise<CreatedResourceDto[]> {
+        const participants = await this.tournamentManager.importParticipants(Number(id), dto.entries);
+
+        return participants.map((participant) => ({ id: participant.id }));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Post(':id/participants/:participantId/staff')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    addParticipantStaffRole(
+    async addParticipantStaffRole(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
-    ) {
-        return this.tournamentManager.addParticipantStaffRole(Number(id), Number(participantId));
+    ): Promise<void> {
+        await this.tournamentManager.addParticipantStaffRole(Number(id), Number(participantId));
     }
 
     @UseGuards(JwtAuthGuard, TournamentAccessGuard)
     @Delete(':id/participants/:participantId/staff')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'tournament', location: 'params', field: 'id' })
-    removeParticipantStaffRole(
+    async removeParticipantStaffRole(
         @Param('id') id: number,
         @Param('participantId') participantId: number,
-    ) {
-        return this.tournamentManager.removeParticipantStaffRole(Number(id), Number(participantId));
+    ): Promise<void> {
+        await this.tournamentManager.removeParticipantStaffRole(Number(id), Number(participantId));
     }
 }

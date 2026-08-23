@@ -34,9 +34,9 @@ export default function MatchList({
   onHighlight,
   onCreateMatch,
 }: MatchListProps) {
-  const { state, actions } = useMatches(division.id, phaseGroupId);
+  const { matches, actions } = useMatches(division.id, phaseGroupId);
   const loadAdvancementTargets = useAdvancementTargets(division.id);
-  const allMatches = state.matches;
+  const allMatches = matches;
 
   const phaseGroups = useMemo(
     () => (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []),
@@ -44,14 +44,14 @@ export default function MatchList({
   );
   const hasBracketEdges = useMemo(
     () => {
-      const matchIds = new Set(state.matches.map((match) => match.id));
-      return state.matches.some((match) =>
+      const matchIds = new Set(matches.map((match) => match.id));
+      return matches.some((match) =>
         (match.advancementRules ?? []).some(
           (rule) => rule.sourceKind === "match" && rule.targetKind === "match" && matchIds.has(rule.targetId),
         ),
       );
     },
-    [state.matches],
+    [matches],
   );
   const usesBracketTree = viewMode === "bracket" && hasBracketEdges;
   const bracketTreeUnavailable = viewMode === "bracket" && !hasBracketEdges;
@@ -101,7 +101,7 @@ export default function MatchList({
 
   return (
     <div className="mt-4">
-      {state.matches.length === 0 ? (
+      {matches.length === 0 ? (
         onCreateMatch ? (
           <CreateCard label="Create match" onClick={onCreateMatch} />
         ) : (
@@ -110,7 +110,7 @@ export default function MatchList({
       ) : usesRoundRobinTable ? (
         <>
           <RoundRobinMatchesView
-            matches={state.matches}
+            matches={matches}
             renderMatchCard={(match) => renderMatchCard(match, true)}
           />
           {onCreateMatch && <CreateCard label="Create match" onClick={onCreateMatch} className="mt-4" />}
@@ -118,7 +118,7 @@ export default function MatchList({
       ) : usesBracketTree ? (
         <>
           <EliminationMatchesView
-            matches={state.matches}
+            matches={matches}
             phaseGroups={phaseGroups}
             renderMatchCard={renderMatchCard}
           />
@@ -133,7 +133,7 @@ export default function MatchList({
             </p>
           )}
           <RawMatchCardsView
-            matches={state.matches}
+            matches={matches}
             renderMatchCard={(match) => renderMatchCard(match, true)}
             onCreateMatch={onCreateMatch}
           />

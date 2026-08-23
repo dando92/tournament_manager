@@ -12,23 +12,21 @@ export async function listParticipants(tournamentId: number): Promise<Participan
 export async function createParticipant(
   tournamentId: number,
   payload: { playerId?: number; playerName?: string },
-): Promise<Participant> {
-  const response = await axios.post<Participant>(`tournaments/${tournamentId}/participants`, payload);
-  return response.data;
+): Promise<number> {
+  const response = await axios.post<{ id: number }>(`tournaments/${tournamentId}/participants`, payload);
+  return response.data.id;
 }
 
 export async function removeParticipant(tournamentId: number, participantId: number): Promise<void> {
   await axios.delete(`tournaments/${tournamentId}/participants/${participantId}`);
 }
 
-export async function makeParticipantStaff(tournamentId: number, participantId: number): Promise<Participant> {
-  const response = await axios.post<Participant>(`tournaments/${tournamentId}/participants/${participantId}/staff`);
-  return response.data;
+export async function makeParticipantStaff(tournamentId: number, participantId: number): Promise<void> {
+  await axios.post(`tournaments/${tournamentId}/participants/${participantId}/staff`);
 }
 
-export async function removeParticipantStaff(tournamentId: number, participantId: number): Promise<Participant> {
-  const response = await axios.delete<Participant>(`tournaments/${tournamentId}/participants/${participantId}/staff`);
-  return response.data;
+export async function removeParticipantStaff(tournamentId: number, participantId: number): Promise<void> {
+  await axios.delete(`tournaments/${tournamentId}/participants/${participantId}/staff`);
 }
 
 export async function previewParticipantImport(
@@ -45,9 +43,12 @@ export async function previewParticipantImport(
 export async function importParticipants(
   tournamentId: number,
   entries: Array<{ name: string; playerId?: number }>,
-): Promise<Participant[]> {
-  const response = await axios.post<Participant[]>(`tournaments/${tournamentId}/participants/import`, { entries });
-  return response.data;
+): Promise<number[]> {
+  const response = await axios.post<Array<{ id: number }>>(
+    `tournaments/${tournamentId}/participants/import`,
+    { entries },
+  );
+  return response.data.map((participant) => participant.id);
 }
 
 export async function listAvailableParticipantsForDivision(divisionId: number): Promise<Participant[]> {

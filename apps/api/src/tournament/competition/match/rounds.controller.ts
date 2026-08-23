@@ -1,6 +1,5 @@
-import { Body, Controller, Delete, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchCommands } from '@match/match.commands';
-import { MatchDto } from '@tournament-manager/contracts';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 import { RoundSourceDto } from '@match/match.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
@@ -13,10 +12,9 @@ import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/t
  * routes carry the two kinds of evidence and each refuses the other; both end
  * in the same row.
  *
- * Every route answers with the whole match in the shape every other match
- * endpoint uses, so a client can apply one response the same way wherever it
- * came from. A round is part of the match aggregate, so its writes are commands
- * on the match.
+ * Every route answers `204`. A round is part of the match aggregate, so its
+ * writes are commands on the match, and the changed match reaches the interface
+ * through the event the command publishes rather than through this response.
  */
 @UseGuards(TournamentOpenGuard)
 @Controller('rounds')
@@ -24,46 +22,51 @@ export class RoundsController {
     constructor(private readonly matchCommands: MatchCommands) {}
 
     @Put(':roundId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async replaceSong(
+    replaceSong(
         @Param('roundId') roundId: number,
         @Body(new ValidationPipe()) dto: RoundSourceDto,
-    ): Promise<MatchDto | null> {
-        return await this.matchCommands.replaceRoundSong(Number(roundId), dto);
+    ): Promise<void> {
+        return this.matchCommands.replaceRoundSong(Number(roundId), dto);
     }
 
     @Delete(':roundId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async removeRound(@Param('roundId') roundId: number): Promise<MatchDto | null> {
-        return await this.matchCommands.removeRound(Number(roundId));
+    removeRound(@Param('roundId') roundId: number): Promise<void> {
+        return this.matchCommands.removeRound(Number(roundId));
     }
 
     @Put(':roundId/scores/:playerId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async upsertScore(
+    upsertScore(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertScoreDto,
-    ): Promise<MatchDto | null> {
-        return await this.matchCommands.upsertScore(Number(roundId), Number(playerId), dto);
+    ): Promise<void> {
+        return this.matchCommands.upsertScore(Number(roundId), Number(playerId), dto);
     }
 
     @Put(':roundId/points/:playerId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async upsertPoints(
+    upsertPoints(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertPointsDto,
-    ): Promise<MatchDto | null> {
-        return await this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points);
+    ): Promise<void> {
+        return this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points);
     }
 
     @Delete(':roundId/standings/:playerId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    async removeStanding(
+    removeStanding(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
-    ): Promise<MatchDto | null> {
-        return await this.matchCommands.removeStanding(Number(roundId), Number(playerId));
+    ): Promise<void> {
+        return this.matchCommands.removeStanding(Number(roundId), Number(playerId));
     }
 }

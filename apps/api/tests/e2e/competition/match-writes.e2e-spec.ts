@@ -6,6 +6,8 @@ import { DataSource, Repository } from 'typeorm';
 
 import { AppModule } from '../../../src/app.module';
 import { Account } from '@tournament-manager/persistence';
+import { LIVE_EVENT_PUBLISHER } from '@tournament-manager/live-messaging';
+import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { TournamentSyncStartService } from '../../../src/tournament/syncstart/tournament-syncstart.service';
 import {
   dropTestDatabase,
@@ -41,6 +43,10 @@ type MatchBody = {
  * way it left — a round created and deleted, a standing replaced rather than
  * duplicated, a result row that goes away when the match is reopened — and that
  * a write costs one load of the match rather than one per step.
+ *
+ * A write answers `204`, so every assertion below reads the match back through
+ * the route that projects it. That is the point of the contract: there is one
+ * projection of a match and one way to get it.
  */
 describe('Match writes (e2e)', () => {
   let app: INestApplication;
@@ -56,6 +62,15 @@ describe('Match writes (e2e)', () => {
   let secondEntrantId: number;
   let firstPlayerId: number;
   let secondPlayerId: number;
+  const published: EventEnvelope[] = [];
+
+  /** The event types one request published, in order. */
+  async function announcedBy(send: () => request.Test): Promise<string[]> {
+    published.length = 0;
+    await send();
+
+    return published.map((event) => event.type);
+  }
 
   beforeAll(async () => {
     const migrations = await resetMigratedTestDatabase(database);
@@ -64,6 +79,14 @@ describe('Match writes (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(LIVE_EVENT_PUBLISHER)
+      .useValue({
+        publish: (event: EventEnvelope) => {
+          published.push(event);
+
+          return Promise.resolve();
+        },
+      })
       .overrideProvider(TournamentSyncStartService)
       .useValue({
         configureTournament: jest.fn().mockResolvedValue(undefined),
@@ -154,7 +177,7 @@ describe('Match writes (e2e)', () => {
   }
 
   async function createMatch(name: string, entrantIds: number[], songIds: number[] = []): Promise<MatchBody> {
-    const match = await request(app.getHttpServer())
+    const created = await request(app.getHttpServer())
       .post('/matches')
       .send({
         name,
@@ -167,7 +190,7 @@ describe('Match writes (e2e)', () => {
       })
       .expect(201);
 
-    return match.body;
+    return await readMatch(created.body.id);
   }
 
   async function readMatch(id: number): Promise<MatchBody> {
@@ -180,7 +203,7 @@ describe('Match writes (e2e)', () => {
     return [match.entrants[0].participants[0].player.id, match.entrants[1].participants[0].player.id];
   }
 
-  it('answers a creation with the projection its GET returns', async () => {
+  it('answers a creation with the address of the match it made', async () => {
     const created = await createMatch('Created Match', [firstEntrantId, secondEntrantId], [songId]);
 
     expect(created).toMatchObject({
@@ -195,30 +218,29 @@ describe('Match writes (e2e)', () => {
     expect(created.rounds).toHaveLength(1);
     expect(created.rounds[0].song).toMatchObject({ id: songId, title: 'First Song' });
     expect(created.entrants.map((entrant) => entrant.id)).toEqual([firstEntrantId, secondEntrantId]);
-    expect(await readMatch(created.id)).toEqual(created);
 
     [firstPlayerId, secondPlayerId] = await playerIdsOf(created);
   });
 
-  it('renames a match and replaces its entrants in one projection', async () => {
+  it('renames a match and replaces its entrants', async () => {
     const created = await createMatch('Editable Match', [firstEntrantId, secondEntrantId]);
 
-    const renamed = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .patch(`/matches/${created.id}`)
       .send({ name: 'Renamed Match' })
-      .expect(200);
-    expect(renamed.body).toMatchObject({ name: 'Renamed Match' });
+      .expect(204);
+    expect(await readMatch(created.id)).toMatchObject({ name: 'Renamed Match' });
 
-    const narrowed = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .patch(`/matches/${created.id}`)
       .send({ entrantIds: [secondEntrantId] })
-      .expect(200);
-    expect(narrowed.body.entrants.map((entrant: { id: number }) => entrant.id)).toEqual([secondEntrantId]);
+      .expect(204);
+    expect((await readMatch(created.id)).entrants.map((entrant) => entrant.id)).toEqual([secondEntrantId]);
   });
 
   it('refuses to mix songs and hand scoring in the same match', async () => {
     const handScored = await createMatch('Hand Scored Match', [firstEntrantId]);
-    await request(app.getHttpServer()).post(`/matches/${handScored.id}/rounds`).send({}).expect(201);
+    await request(app.getHttpServer()).post(`/matches/${handScored.id}/rounds`).send({}).expect(204);
 
     await request(app.getHttpServer())
       .post(`/matches/${handScored.id}/rounds`)
@@ -233,45 +255,47 @@ describe('Match writes (e2e)', () => {
     const match = await createMatch('Scored Match', [firstEntrantId, secondEntrantId], [songId]);
     const roundId = match.rounds[0].id;
 
-    const first = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
       .send({ percentage: 99, isFailed: false })
-      .expect(200);
-    expect(first.body.rounds[0].standings).toHaveLength(1);
-    expect(first.body.rounds[0].standings[0].points).toBe(0);
+      .expect(204);
+    const first = await readMatch(match.id);
+    expect(first.rounds[0].standings).toHaveLength(1);
+    expect(first.rounds[0].standings[0].points).toBe(0);
 
-    const complete = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
       .send({ percentage: 98, isFailed: false })
-      .expect(200);
-    const points = complete.body.rounds[0].standings.map((standing: { points: number }) => standing.points);
-    expect(points.filter((value: number) => value > 0)).not.toHaveLength(0);
+      .expect(204);
+    const points = (await readMatch(match.id)).rounds[0].standings.map((standing) => standing.points);
+    expect(points.filter((value) => value > 0)).not.toHaveLength(0);
 
     /* The same player scoring again replaces the row rather than adding one,
        which is what the unique index on (round, player) enforces. */
-    const replaced = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
       .send({ percentage: 50, isFailed: true })
-      .expect(200);
-    expect(replaced.body.rounds[0].standings).toHaveLength(2);
+      .expect(204);
+    expect((await readMatch(match.id)).rounds[0].standings).toHaveLength(2);
 
-    const removed = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .delete(`/rounds/${roundId}/standings/${firstPlayerId}`)
-      .expect(200);
-    expect(removed.body.rounds[0].standings).toHaveLength(1);
-    expect(removed.body.rounds[0].standings[0].points).toBe(0);
+      .expect(204);
+    const removed = await readMatch(match.id);
+    expect(removed.rounds[0].standings).toHaveLength(1);
+    expect(removed.rounds[0].standings[0].points).toBe(0);
   });
 
   it('states points on a hand-scored round and refuses the other kind of evidence', async () => {
     const match = await createMatch('Stated Match', [firstEntrantId, secondEntrantId]);
-    const created = await request(app.getHttpServer()).post(`/matches/${match.id}/rounds`).send({}).expect(201);
-    const roundId = created.body.rounds[0].id;
+    await request(app.getHttpServer()).post(`/matches/${match.id}/rounds`).send({}).expect(204);
+    const roundId = (await readMatch(match.id)).rounds[0].id;
 
-    const stated = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}/points/${firstPlayerId}`)
       .send({ points: 3 })
-      .expect(200);
-    expect(stated.body.rounds[0].standings[0]).toMatchObject({ points: 3, score: null });
+      .expect(204);
+    expect((await readMatch(match.id)).rounds[0].standings[0]).toMatchObject({ points: 3, score: null });
 
     await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
@@ -289,22 +313,23 @@ describe('Match writes (e2e)', () => {
     const match = await createMatch('Song Swap Match', [firstEntrantId], [songId]);
     const roundId = match.rounds[0].id;
 
-    const swapped = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/rounds/${roundId}`)
       .send({ songId: otherSongId })
-      .expect(200);
-    expect(swapped.body.rounds).toHaveLength(1);
-    expect(swapped.body.rounds[0].song).toMatchObject({ id: otherSongId });
-    expect(swapped.body.rounds[0].id).not.toBe(roundId);
+      .expect(204);
+    const swapped = await readMatch(match.id);
+    expect(swapped.rounds).toHaveLength(1);
+    expect(swapped.rounds[0].song).toMatchObject({ id: otherSongId });
+    expect(swapped.rounds[0].id).not.toBe(roundId);
 
     /* Once the round holds a score, neither dropping it nor swapping its song
        is offered: the standings under it were earned on the song that would be
        leaving, and they are not thrown away on the way past. */
-    const scoredRoundId = swapped.body.rounds[0].id;
+    const scoredRoundId = swapped.rounds[0].id;
     await request(app.getHttpServer())
       .put(`/rounds/${scoredRoundId}/scores/${firstPlayerId}`)
       .send({ percentage: 90, isFailed: false })
-      .expect(200);
+      .expect(204);
 
     await request(app.getHttpServer()).delete(`/rounds/${scoredRoundId}`).expect(400);
     await request(app.getHttpServer()).put(`/rounds/${scoredRoundId}`).send({ songId }).expect(400);
@@ -317,25 +342,27 @@ describe('Match writes (e2e)', () => {
     await request(app.getHttpServer())
       .put(`/advancement-rules/sources/match/${source.id}`)
       .send({ rules: [{ sourcePlacement: 1, targetKind: 'match', targetId: target.id, targetSlot: 1 }] })
-      .expect(200);
+      .expect(204);
 
-    const withRound = await request(app.getHttpServer()).post(`/matches/${source.id}/rounds`).send({}).expect(201);
-    const roundId = withRound.body.rounds[0].id;
+    await request(app.getHttpServer()).post(`/matches/${source.id}/rounds`).send({}).expect(204);
+    const roundId = (await readMatch(source.id)).rounds[0].id;
 
     await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(400);
 
     await request(app.getHttpServer())
       .put(`/rounds/${roundId}/points/${firstPlayerId}`)
       .send({ points: 3 })
-      .expect(200);
+      .expect(204);
     await request(app.getHttpServer())
       .put(`/rounds/${roundId}/points/${secondPlayerId}`)
       .send({ points: 1 })
-      .expect(200);
+      .expect(204);
 
+    /* The one write that answers with a body, and the body says nothing about
+       the match: only what start.gg made of the result. */
     const committed = await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(200);
-    expect(committed.body.startggReport).toBe('skipped');
-    expect(committed.body.match.matchResult.playerPoints).toEqual([
+    expect(committed.body).toEqual({ startggReport: 'skipped' });
+    expect((await readMatch(source.id)).matchResult.playerPoints).toEqual([
       { playerId: firstPlayerId, points: 3 },
       { playerId: secondPlayerId, points: 1 },
     ]);
@@ -350,8 +377,8 @@ describe('Match writes (e2e)', () => {
       .send({ points: 5 })
       .expect(400);
 
-    const reopened = await request(app.getHttpServer()).delete(`/matches/${source.id}/result`).expect(200);
-    expect(reopened.body.matchResult).toBeNull();
+    await request(app.getHttpServer()).delete(`/matches/${source.id}/result`).expect(204);
+    expect((await readMatch(source.id)).matchResult).toBeNull();
     expect((await readMatch(target.id)).entrants).toHaveLength(0);
     await expect(dataSource.query('SELECT COUNT(*)::int AS "count" FROM "match_result"')).resolves.toEqual([{ count: 0 }]);
   });
@@ -359,13 +386,13 @@ describe('Match writes (e2e)', () => {
   it('activates a match and deletes it with the rounds it held', async () => {
     const match = await createMatch('Disposable Match', [firstEntrantId], [songId]);
 
-    const activated = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .put(`/matches/${match.id}/active`)
       .send({ active: true })
-      .expect(200);
-    expect(activated.body.active).toBe(true);
+      .expect(204);
+    expect((await readMatch(match.id)).active).toBe(true);
 
-    await request(app.getHttpServer()).delete(`/matches/${match.id}`).expect(200);
+    await request(app.getHttpServer()).delete(`/matches/${match.id}`).expect(204);
 
     await request(app.getHttpServer()).get(`/matches/${match.id}`).expect(200).expect(({ body }) => {
       expect(body).toEqual({});
@@ -373,6 +400,49 @@ describe('Match writes (e2e)', () => {
     await expect(
       dataSource.query('SELECT COUNT(*)::int AS "count" FROM "round" WHERE "matchId" = $1', [match.id]),
     ).resolves.toEqual([{ count: 0 }]);
+  });
+
+  /**
+   * What a write announces decides what every open page re-reads, so the events
+   * are part of the contract rather than a detail of the transport.
+   *
+   * A score that leaves a match still waiting on somebody changes that match and
+   * nothing the tree draws. The score that settles it changes the pool's pending
+   * count too, and says so. Without the second event the tree would go stale;
+   * without the first rule, typing a percentage would re-read the tournament.
+   */
+  it('announces the pool only when the pool it draws has moved', async () => {
+    const match = await createMatch('Announcing Match', [firstEntrantId, secondEntrantId], [songId]);
+    const roundId = match.rounds[0].id;
+
+    const partial = () =>
+      request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 91, isFailed: false })
+        .expect(204);
+
+    expect(await announcedBy(partial)).toEqual(['ui.match-changed']);
+
+    expect(
+      await announcedBy(() =>
+        request(app.getHttpServer())
+          .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+          .send({ percentage: 90, isFailed: false })
+          .expect(204),
+      ),
+    ).toEqual(['ui.match-changed', 'ui.phase-group-changed']);
+
+    /* Re-scoring a player of a settled match leaves it settled, so the pool is
+       where it was and hears nothing. */
+    expect(await announcedBy(partial)).toEqual(['ui.match-changed']);
+
+    expect(
+      await announcedBy(() =>
+        request(app.getHttpServer())
+          .delete(`/rounds/${roundId}/standings/${firstPlayerId}`)
+          .expect(204),
+      ),
+    ).toEqual(['ui.match-changed', 'ui.phase-group-changed']);
   });
 
   /**
@@ -410,14 +480,14 @@ describe('Match writes (e2e)', () => {
         request(app.getHttpServer())
           .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
           .send({ percentage: 95, isFailed: false })
-          .expect(200),
+          .expect(204),
       ),
     ).toBe(1);
 
     await request(app.getHttpServer())
       .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
       .send({ percentage: 94, isFailed: false })
-      .expect(200);
+      .expect(204);
 
     expect(
       await countGraphLoadsOf(() => request(app.getHttpServer()).put(`/matches/${match.id}/result`).expect(200)),

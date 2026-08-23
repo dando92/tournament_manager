@@ -95,7 +95,12 @@ export class DivisionService {
             delete dto.tournamentId;
         }
         this.divisionRepository.merge(division, dto);
-        return this.divisionRepository.save(division);
+        const saved = await this.divisionRepository.save(division);
+        /* A renamed division is a changed tree. Nothing was published here, so
+           the name only moved for whoever pressed the button. */
+        await this.uiUpdateGateway.emitDivisionUpdateByDivisionId(id);
+
+        return saved;
     }
 
     async delete(id: number): Promise<void> {

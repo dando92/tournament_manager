@@ -66,8 +66,14 @@ export type MatchDto = {
 /** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */
 export type StartggReportStatus = 'reported' | 'skipped' | 'failed';
 
-/** A commit answers with the match it committed, and with what start.gg made of it. */
+/**
+ * What a commit answers.
+ *
+ * It carries no projection of the match: the committed match reaches the
+ * interface through the events the command publishes, like every other write.
+ * What is left is the outcome of an external side effect, which nobody else can
+ * tell the caller about.
+ */
 export type CommitMatchResultResponseDto = {
-    match: MatchDto;
     startggReport: StartggReportStatus;
 };

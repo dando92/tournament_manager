@@ -286,8 +286,17 @@ The alternative — answering with the full aggregate and suppressing the echo o
 the client's own change — is workable but was not chosen. What is not acceptable
 is the current state, where both paths run at once.
 
-Wherever a mutation does return a projection, it calls the same `*.queries`
-method the corresponding `GET` uses. A match is projected in one place.
+Two things an event cannot say keep a body, and neither is a projection:
+
+- A creation answers `201` with `CreatedResourceDto`, the id of what it made.
+  The caller has to be told the address of a resource that did not exist when it
+  sent the request, and an event cannot arrive in time to be that answer.
+- `PUT /matches/:id/result` answers `200` with the start.gg report status. It is
+  the outcome of an external side effect rather than a state of the match, and
+  it concerns the person who pressed the button rather than everyone watching.
+
+`POST /divisions/:id/generate-bracket` answers the phase and pool it built for
+the same reason as a creation: the caller navigates into them.
 
 ## Directory layout: API
 
@@ -986,17 +995,61 @@ Phase 5 is complete: eight `*.queries.ts` classes cover every read endpoint, no
 controller reaches a service for a `GET`, and no route answers with an entity
 except the phase and division write paths phase 7 turns into commands.
 
-### Phase 6 — One update path
+### Phase 6 — One update path (done)
 
-- Mutations answer `204`.
-- The frontend drops the reducer in `useMatches` and relies on the query cache.
-- Narrow the realtime invalidation to what an event actually touches, using the
-  address already carried in the envelope.
-- Verification: one score entry produces one refetch instead of four; a
-  disconnected client still converges after reconnection.
+Every mutation under `src/tournament` answers `204`, except the two kinds of
+answer an event cannot give: a creation answers `201 { id }` and a commit
+answers `200 { startggReport }`, both stated under "Responses and contracts".
+Ten match commands lost the `queries.byId` that followed their save, and
+`MatchCommands` no longer holds `MatchQueries` at all.
 
-This phase and the frontend change are the same change seen from two sides and
-must ship together.
+`useMatches` is the query cache. The reducer beside it is gone, and so are
+`matchesReducer.ts` and `matchesActions.ts`: every action wrote both copies and
+then received the same change a third time over the socket. Its patches were
+only ever right for the match an action addressed — committing a result moves
+entrants into a match further along, and nothing local could know that.
+
+The realtime listener invalidates what an event names and nothing else, in
+`staleAfterUpdate`. A match event stales the two match lists that can hold that
+match; the tree and the division summary move under `ui.phase-group-changed`,
+which a match write publishes only when the pool's own projection changed.
+`MatchAggregate.poolState` decides that, in the terms
+`TreeQueries.pendingMatchesInScope` counts — the same predicate written twice,
+and the comment on each says so.
+
+The version maps `TournamentUpdatesProvider` published are gone with the
+indirection they fed, and with them the context: `TournamentUpdatesContext.tsx`
+declared no context once its only consumer read the query cache instead, and is
+`TournamentUpdates.tsx`. `TournamentTreeProvider`'s structural mutators no
+longer re-read the tree by hand either, which is what the phase means by one
+path: the person who renamed a pool and the person watching it see it the same
+way. `refreshTree` remains for bracket generation alone, which navigates into
+the phase and pool it built and cannot arrive before the tree holds them.
+
+Two writes were left without any path at all and now have one.
+`DivisionService.update` published nothing, so a renamed division only moved for
+whoever renamed it. Advancement rules and division entrants are not aggregates
+and still publish nothing, so their callers re-read by hand — `updateMatchAdvancementRules`
+and `refreshDivision`. Phase 7 gives those writes commands and events.
+
+What a write announces is now part of the contract, and two suites pin it. The
+API e2e records the envelopes one request publishes: a score that leaves a match
+waiting announces the match alone, the score that settles it announces the pool
+as well, and re-scoring a settled match announces the match alone again. The
+frontend suite pins the other end. `node --test` runs the source rather than a
+build, so a `@/` import of anything but a type did not resolve and only files
+importing types alone could be covered; `tests/unit/alias-resolver.mjs` gives
+the suites the alias TypeScript and Vite already have.
+
+Verification: `npm run verify` passes — architecture boundaries, every workspace
+build, lint (nine pre-existing warnings, none in the changed files), contracts,
+131 unit tests, 38 API e2e tests against PostgreSQL and the migration-runner e2e
+test. `npm run local:up` rebuilds every image and the stack comes up healthy;
+`scripts/verify-local.mjs` passes all eleven checks. Entering one score costs one
+refetch where it cost four, which the two suites above state directly. The
+reconnection path is unchanged and still covered by the realtime e2e: a client
+that was away receives what it missed in the ready frame, and a socket that
+resumes at a sequence it has not seen invalidates everything on screen.
 
 ### Phase 7 — Remaining aggregates
 

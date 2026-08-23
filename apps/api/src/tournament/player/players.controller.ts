@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Entrant, Player } from '@tournament-manager/persistence';
 import { JwtAuthGuard } from '@auth/guards';
 import { PlayerService } from '@player/player.service';
@@ -21,6 +21,7 @@ export class PlayersController {
 
     @UseGuards(JwtAuthGuard)
     @Post(':playerId/divisions/:divisionId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'divisionId' })
     async assignToDivision(
         @Param('playerId') playerId: number,
@@ -31,6 +32,7 @@ export class PlayersController {
 
     @UseGuards(JwtAuthGuard)
     @Delete(':playerId/divisions/:divisionId')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'divisionId' })
     async removeFromDivision(
         @Param('playerId') playerId: number,
