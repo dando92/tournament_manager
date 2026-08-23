@@ -22,7 +22,9 @@ export default function TournamentPage() {
 
   if (selectedTournamentId === null) {
     const last = getSelectedTournament();
-    return <Navigate to={last ? `/tournament/${last.id}/overview` : "/"} replace />;
+    return (
+      <Navigate to={last ? `/tournament/${last.id}/overview` : "/"} replace />
+    );
   }
 
   return <TournamentShell tournamentId={selectedTournamentId} />;
@@ -38,7 +40,8 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
   const { tournamentId } = context;
 
   const page = useMemo(() => {
-    const at = (key: string) => location.pathname === `/tournament/${tournamentId}/${key}`;
+    const at = (key: string) =>
+      location.pathname === `/tournament/${tournamentId}/${key}`;
     return {
       isSongsPage: at("songs"),
       isParticipantsPage: at("participants"),
@@ -55,8 +58,6 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
         isSongsPage={page.isSongsPage}
         isParticipantsPage={page.isParticipantsPage}
         isLobbiesPage={page.isLobbiesPage}
-        songsVersion={context.songsVersion}
-        refreshSongs={context.refreshSongs}
         onOpenParticipantsManageModal={context.setParticipantsManageModal}
       />
 
@@ -69,7 +70,9 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
   return (
     <div className="flex flex-col gap-4">
       {page.isLobbiesPage ? (
-        <TournamentLobbiesProvider tournamentId={tournamentId}>{content}</TournamentLobbiesProvider>
+        <TournamentLobbiesProvider tournamentId={tournamentId}>
+          {content}
+        </TournamentLobbiesProvider>
       ) : (
         content
       )}

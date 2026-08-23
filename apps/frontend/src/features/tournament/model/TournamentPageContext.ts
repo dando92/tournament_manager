@@ -12,7 +12,6 @@ export type TournamentPageContextValue = {
   syncstartUrl: string;
   hasStartggApiKey: boolean;
   tournamentStatus: "open" | "closed";
-  songsVersion: number;
   divisions: TournamentDivisionOption[];
   controls: boolean;
   setTournamentName: Dispatch<SetStateAction<string>>;
@@ -20,7 +19,6 @@ export type TournamentPageContextValue = {
   setHasStartggApiKey: Dispatch<SetStateAction<boolean>>;
   setTournamentStatus: Dispatch<SetStateAction<"open" | "closed">>;
   refreshDivisions: () => Promise<void>;
-  refreshSongs: () => void;
   openCreateDivision: () => void;
   participantsManageModal: ParticipantsManageModal;
   setParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;

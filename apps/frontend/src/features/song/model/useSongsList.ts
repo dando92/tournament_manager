@@ -1,46 +1,38 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Song } from "@/features/song/model/types";
 import { deleteSong, listSongs } from "@/features/song/api/song.api";
+import { songKeys } from "@/features/song/api/song.keys";
 
 type Params = {
   tournamentId?: number;
-  songsVersion: number;
 };
 
-export function useSongsList({ tournamentId, songsVersion }: Params) {
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [groups, setGroups] = useState<string[]>([]);
+const noSongs: Song[] = [];
+
+export function useSongsList({ tournamentId }: Params) {
   const [packFilter, setPackFilter] = useState("");
   const [songSearch, setSongSearch] = useState("");
-
-  useEffect(() => {
-    listSongs(tournamentId)
-      .then((catalog) => {
-        setSongs(catalog);
-        setGroups([...new Set(catalog.map((song) => song.group))].sort());
-      })
-      .catch(() => {});
-  }, [songsVersion, tournamentId]);
-
-  const packOptions = useMemo(() => groups, [groups]);
+  const songsQuery = useQuery({
+    queryKey: songKeys.forTournament(tournamentId),
+    queryFn: () => listSongs(tournamentId),
+  });
+  const deleteMutation = useMutation({ mutationFn: deleteSong });
+  const songs = songsQuery.data ?? noSongs;
+  const packOptions = useMemo(
+    () => [...new Set(songs.map((song) => song.group))].sort(),
+    [songs],
+  );
 
   async function handleDeleteSong(id: number) {
-    await deleteSong(id);
-    setSongs((prev) => {
-      const merged = prev.filter((song) => song.id !== id);
-      setGroups([...new Set(merged.map((song) => song.group))].sort());
-      return merged;
-    });
+    await deleteMutation.mutateAsync(id);
   }
 
   async function handleDeletePack(pack: string) {
     const packSongs = songs.filter((song) => song.group === pack);
-    await Promise.allSettled(packSongs.map((song) => deleteSong(song.id)));
-    setSongs((prev) => {
-      const merged = prev.filter((song) => song.group !== pack);
-      setGroups([...new Set(merged.map((song) => song.group))].sort());
-      return merged;
-    });
+    await Promise.allSettled(
+      packSongs.map((song) => deleteMutation.mutateAsync(song.id)),
+    );
   }
 
   return {

@@ -1,53 +1,81 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import { staleAfterUpdate } from '../../src/features/tournament/model/staleAfterUpdate.ts';
-import { matchKeys } from '../../src/features/match/api/match.keys.ts';
-import { divisionKeys } from '../../src/features/division/api/division.keys.ts';
-import { tournamentKeys } from '../../src/features/tournament/api/tournament.keys.ts';
-import { participantKeys } from '../../src/features/participant/api/participant.keys.ts';
+import assert from "node:assert/strict";
+import test from "node:test";
+import { staleAfterUpdate } from "../../src/features/tournament/model/staleAfterUpdate.ts";
+import { matchKeys } from "../../src/features/match/api/match.keys.ts";
+import { divisionKeys } from "../../src/features/division/api/division.keys.ts";
+import { tournamentKeys } from "../../src/features/tournament/api/tournament.keys.ts";
+import { participantKeys } from "../../src/features/participant/api/participant.keys.ts";
+import { songKeys } from "../../src/features/song/api/song.keys.ts";
 
-const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
+const address = {
+  tournamentId: 1,
+  divisionId: 2,
+  phaseId: 3,
+  phaseGroupId: 4,
+  matchId: 5,
+};
 
-test('a match event stales the two lists that hold that match, and nothing else', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'MatchUpdate', data: address }), [
+test("a match event stales the two lists that hold that match, and nothing else", () => {
+  assert.deepEqual(staleAfterUpdate({ event: "MatchUpdate", data: address }), [
     matchKeys.byPhaseGroup(4),
     matchKeys.byDivision(2),
   ]);
 });
 
-test('a pool event stales the tree as well, because the counts it draws moved', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'PhaseGroupUpdate', data: address }), [
+test("a pool event stales the tree as well, because the counts it draws moved", () => {
+  assert.deepEqual(
+    staleAfterUpdate({ event: "PhaseGroupUpdate", data: address }),
+    [
+      tournamentKeys.overview(1),
+      divisionKeys.summary(2),
+      matchKeys.byPhaseGroup(4),
+      matchKeys.byDivision(2),
+    ],
+  );
+});
+
+test("a division event stales its roster, which its seeding writes", () => {
+  assert.deepEqual(
+    staleAfterUpdate({ event: "DivisionUpdate", data: address }),
+    [
+      tournamentKeys.overview(1),
+      divisionKeys.summary(2),
+      divisionKeys.entrants(2),
+    ],
+  );
+});
+
+test("a phase event stales the two projections of the tree it appears in", () => {
+  assert.deepEqual(staleAfterUpdate({ event: "PhaseUpdate", data: address }), [
     tournamentKeys.overview(1),
     divisionKeys.summary(2),
-    matchKeys.byPhaseGroup(4),
-    matchKeys.byDivision(2),
   ]);
 });
 
-test('a division event stales its roster, which its seeding writes', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'DivisionUpdate', data: address }), [
-    tournamentKeys.overview(1),
-    divisionKeys.summary(2),
-    divisionKeys.entrants(2),
-  ]);
+test("a tournament event stales its tree, configuration, roster, and player catalogue", () => {
+  assert.deepEqual(
+    staleAfterUpdate({ event: "TournamentUpdate", data: address }),
+    [
+      tournamentKeys.overview(1),
+      tournamentKeys.configuration(1),
+      participantKeys.forTournament(1),
+      participantKeys.players(),
+    ],
+  );
 });
 
-test('a phase event stales the two projections of the tree it appears in', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'PhaseUpdate', data: address }), [
-    tournamentKeys.overview(1),
-    divisionKeys.summary(2),
-  ]);
+test("a warning is a message to a person, so nothing goes stale", () => {
+  assert.deepEqual(
+    staleAfterUpdate({
+      event: "UiWarning",
+      data: { tournamentId: 1, message: "Careful" },
+    }),
+    [],
+  );
 });
 
-test('a tournament event stales its tree, configuration, roster, and player catalogue', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'TournamentUpdate', data: address }), [
-    tournamentKeys.overview(1),
-    tournamentKeys.configuration(1),
-    participantKeys.forTournament(1),
-    participantKeys.players(),
+test("a song event stales only the tournament song catalogue", () => {
+  assert.deepEqual(staleAfterUpdate({ event: "SongsUpdate", data: address }), [
+    songKeys.forTournament(1),
   ]);
-});
-
-test('a warning is a message to a person, so nothing goes stale', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'UiWarning', data: { tournamentId: 1, message: 'Careful' } }), []);
 });

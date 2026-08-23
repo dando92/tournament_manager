@@ -500,6 +500,22 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Verification: frontend and API builds pass; frontend unit tests pass (48 tests); architecture checks pass. The scoring package suite passes (5 tests).
 - Next action: run the full e2e and local-stack verification.
 
+### Song query-cache follow-up
+
+- Moved the tournament song catalogue and its header management menu onto one
+  named TanStack Query entry. Deleted the `songsVersion` counter and every
+  manual post-mutation refresh.
+- Added the narrow `ui.songs-changed` event. Song create, non-empty import, and
+  delete publish the tournament id; Realtime maps it to `SongsUpdate`, which
+  invalidates only that tournament's song catalogue.
+- A repeated import that writes nothing publishes nothing.
+- Verification: frontend, API, and Realtime builds pass; frontend unit tests
+  pass (49 tests); API unit tests pass (123 tests); Realtime unit tests pass (17
+  tests); the Song writes e2e suite passes (11 tests); architecture checks and
+  all three workspace linters pass with the existing warnings only.
+- Next action: refactor the account and authentication source trees around
+  explicit responsibilities without changing their HTTP or token behaviour.
+
 ## Verification
 
 ```text

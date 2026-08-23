@@ -82,12 +82,12 @@ That is what happened here.
 
 Each aggregate is served by four files, and each has one reason to exist.
 
-| Role | Responsibility | Constraints |
-| --- | --- | --- |
-| `*.queries.ts` | Reads and projects | Returns DTOs, never entities. Does not write or publish. Does not call services. |
-| `*.aggregate.ts` | The domain rules | No injected dependencies, no `await`. Testable without a database. |
-| `*.store.ts` | Loads and saves the aggregate | Exactly one graph definition per aggregate. |
-| `*.commands.ts` | Orchestration | Load, apply, save, publish. No domain logic. |
+| Role             | Responsibility                | Constraints                                                                      |
+| ---------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| `*.queries.ts`   | Reads and projects            | Returns DTOs, never entities. Does not write or publish. Does not call services. |
+| `*.aggregate.ts` | The domain rules              | No injected dependencies, no `await`. Testable without a database.               |
+| `*.store.ts`     | Loads and saves the aggregate | Exactly one graph definition per aggregate.                                      |
+| `*.commands.ts`  | Orchestration                 | Load, apply, save, publish. No domain logic.                                     |
 
 `*.commands.ts` is one class per aggregate, not one class per use case. It stays
 short by construction rather than by discipline: the rules live in the
@@ -110,13 +110,13 @@ expected to be the fifth and is not one: phase 7 records why.
 
 ### Who may call whom
 
-| Caller | May call |
-| --- | --- |
-| Controller | `*.queries` for `GET`; `*.commands` for everything else. Nothing else. |
-| `*.commands` | Its own `*.store`, the publisher, outbound adapters, and `*.queries` only to build a response. |
-| `*.aggregate` | Nothing. No injected dependencies. |
-| `*.store` | The TypeORM repositories of its own aggregate. |
-| `*.queries` | `DataSource` and its own repositories. Not other services, not other queries. |
+| Caller        | May call                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| Controller    | `*.queries` for `GET`; `*.commands` for everything else. Nothing else.                         |
+| `*.commands`  | Its own `*.store`, the publisher, outbound adapters, and `*.queries` only to build a response. |
+| `*.aggregate` | Nothing. No injected dependencies.                                                             |
+| `*.store`     | The TypeORM repositories of its own aggregate.                                                 |
+| `*.queries`   | `DataSource` and its own repositories. Not other services, not other queries.                  |
 
 Two prohibitions carry most of the weight:
 
@@ -162,12 +162,12 @@ see phase 7.
 
 There is one rule for choosing the style, and only two styles are allowed.
 
-| Work | Style | File |
-| --- | --- | --- |
-| Load an aggregate in order to change it | `repository.findOne({ relations })`, one definition per aggregate | `*.store.ts` |
-| Write | `repository.save()`, `DataSource.transaction()` | `*.store.ts` |
-| Read one row, few columns, one table | `repository.find({ select })` | `*.queries.ts` |
-| Read lists, projections, aggregates, counts | Raw SQL through `dataSource.query()` | `*.queries.ts` |
+| Work                                        | Style                                                             | File           |
+| ------------------------------------------- | ----------------------------------------------------------------- | -------------- |
+| Load an aggregate in order to change it     | `repository.findOne({ relations })`, one definition per aggregate | `*.store.ts`   |
+| Write                                       | `repository.save()`, `DataSource.transaction()`                   | `*.store.ts`   |
+| Read one row, few columns, one table        | `repository.find({ select })`                                     | `*.queries.ts` |
+| Read lists, projections, aggregates, counts | Raw SQL through `dataSource.query()`                              | `*.queries.ts` |
 
 `createQueryBuilder` is not used for new reads. It is the middle style: it has
 neither the brevity of `find()` nor the transparency of SQL, and it suggests a
@@ -185,11 +185,11 @@ localized and named.
 ```ts
 /** The rows the query below produces. Changing one without the other is a bug. */
 type MatchRow = {
-    matchId: number;
-    name: string;
-    phaseGroupId: number;
-    roundId: number | null;
-    songTitle: string | null;
+  matchId: number;
+  name: string;
+  phaseGroupId: number;
+  roundId: number | null;
+  songTitle: string | null;
 };
 
 const MATCHES_IN_SCOPE = `
@@ -242,17 +242,17 @@ be isolated by extracting query text.
 Eleven SQL queries and seven `find({ select })` reads cover every current read
 endpoint.
 
-| Class | Methods | SQL | `find({ select })` |
-| --- | --- | --- | --- |
-| `MatchQueries` | `byId`, `byPhaseGroup`, `byDivision` | 2 | — |
-| `TreeQueries` | `forTournament` | 1 | — |
-| `StandingsQueries` | `forDivision`, `forTournament` | 2 | — |
-| `TournamentQueries` | `byId`, `configuration`, `publicList`, `rolesFor`, `hasStartggApiKey` | 1 | 4 |
-| `ParticipantQueries` | `forTournament`, `importPreview` | 1 | 1 |
-| `DivisionQueries` | `entrants`, `availableParticipants` | 2 | — |
-| `PhaseGroupQueries` | `entrants`, `address`, `addressOfMatchPool`, `exists`, `defaultForPhase` | 5 | — |
-| `SongQueries` | `forTournament`, `scoresForSong` | 1 | 1 |
-| `ScoreQueries` | `history` | — | 1 |
+| Class                | Methods                                                                  | SQL | `find({ select })` |
+| -------------------- | ------------------------------------------------------------------------ | --- | ------------------ |
+| `MatchQueries`       | `byId`, `byPhaseGroup`, `byDivision`                                     | 2   | —                  |
+| `TreeQueries`        | `forTournament`                                                          | 1   | —                  |
+| `StandingsQueries`   | `forDivision`, `forTournament`                                           | 2   | —                  |
+| `TournamentQueries`  | `byId`, `configuration`, `publicList`, `rolesFor`, `hasStartggApiKey`    | 1   | 4                  |
+| `ParticipantQueries` | `forTournament`, `importPreview`                                         | 1   | 1                  |
+| `DivisionQueries`    | `entrants`, `availableParticipants`                                      | 2   | —                  |
+| `PhaseGroupQueries`  | `entrants`, `address`, `addressOfMatchPool`, `exists`, `defaultForPhase` | 5   | —                  |
+| `SongQueries`        | `forTournament`, `scoresForSong`                                         | 1   | 1                  |
+| `ScoreQueries`       | `history`                                                                | —   | 1                  |
 
 Three of them replace the most expensive reads in the application:
 `DivisionQueries.availableParticipants` becomes a `NOT EXISTS` instead of
@@ -269,11 +269,11 @@ renames a column updates its queries in the same commit.
 
 Three levels of representation, and only three.
 
-| Level | Contents | Used by |
-| --- | --- | --- |
-| Ref | `{ id, name }` plus minimal discriminators | lists, menus, breadcrumbs, the tree |
-| Summary | the resource plus counts and aggregate state of its children, never the children themselves | cards, tree, overview |
-| Detail | the resource plus its direct children as Ref or Summary, one level only | detail pages |
+| Level   | Contents                                                                                    | Used by                             |
+| ------- | ------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Ref     | `{ id, name }` plus minimal discriminators                                                  | lists, menus, breadcrumbs, the tree |
+| Summary | the resource plus counts and aggregate state of its children, never the children themselves | cards, tree, overview               |
+| Detail  | the resource plus its direct children as Ref or Summary, one level only                     | detail pages                        |
 
 An endpoint does not return four levels of nesting. A page that needs that makes
 two requests. The single motivated exception is Match, whose Detail includes
@@ -442,11 +442,11 @@ src/
 
 Three directories per feature, and only three.
 
-| Directory | Contents | Rule |
-| --- | --- | --- |
-| `api/` | HTTP client and query keys | the only place `axios` appears |
-| `model/` | hooks, contexts, pure functions, view types | no URLs, no JSX |
-| `ui/` | components, modals included | no fetching effect |
+| Directory | Contents                                    | Rule                           |
+| --------- | ------------------------------------------- | ------------------------------ |
+| `api/`    | HTTP client and query keys                  | the only place `axios` appears |
+| `model/`  | hooks, contexts, pure functions, view types | no URLs, no JSX                |
+| `ui/`     | components, modals included                 | no fetching effect             |
 
 The rules are checkable by grep, so they do not regress:
 
@@ -470,13 +470,13 @@ seventeen actions.
 
 ## Naming
 
-| Subject | Rule | Current state |
-| --- | --- | --- |
-| API file names | kebab-case | `BracketSystemProvider.ts`, `IBracketSystem.ts`, `SingleElimination.ts` are PascalCase |
-| API file suffixes | `.controller`, `.commands`, `.aggregate`, `.store`, `.queries`, `.requests` | `.service` and `.manager` with no criterion |
-| Barrels | not used | `dtos.ts`, `guards.ts`, `strategies.ts` exist, and hid 543 dead lines |
-| Frontend file names | PascalCase for components, camelCase otherwise | already followed |
-| Methods | camelCase | `GetMatch`, `AddRound`, `CommitMatchResult` are PascalCase |
+| Subject             | Rule                                                                        | Current state                                                                          |
+| ------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| API file names      | kebab-case                                                                  | `BracketSystemProvider.ts`, `IBracketSystem.ts`, `SingleElimination.ts` are PascalCase |
+| API file suffixes   | `.controller`, `.commands`, `.aggregate`, `.store`, `.queries`, `.requests` | `.service` and `.manager` with no criterion                                            |
+| Barrels             | not used                                                                    | `dtos.ts`, `guards.ts`, `strategies.ts` exist, and hid 543 dead lines                  |
+| Frontend file names | PascalCase for components, camelCase otherwise                              | already followed                                                                       |
+| Methods             | camelCase                                                                   | `GetMatch`, `AddRound`, `CommitMatchResult` are PascalCase                             |
 
 Backend.md already forbids `controllers.ts` and `services.ts` barrels. Extending
 that to DTOs is consistent, and is precisely what allowed the dead files to
@@ -1165,7 +1165,7 @@ class directly. What is left is the rule the aggregate boundaries actually follo
 > aggregate.
 
 `AdvancementManager` is the one exception, and it is not a commands class: an
-advancement rule *is* an edge between two competitions. It works through the two
+advancement rule _is_ an edge between two competitions. It works through the two
 stores and the aggregates they load rather than through either commands class, so
 four entrants moving into one pool load and announce that pool once, and a
 completed pool marks who advanced and closes itself in the same save — three
@@ -1265,13 +1265,16 @@ one load of the tournament — and the migration-runner e2e test.
 `src/tournament/competition/services/` and `src/tournament/competition/dtos/`.
 
 **Song is not an aggregate**, which is the correction this slice makes to the
-model above. A song has no invariant to protect and no consequence to publish:
-it is a title, a group and a difficulty in a pool, nothing about it is decided
-elsewhere, and nothing else is decided by it. So it has a store and a commands
-class of two operations, no `song.aggregate.ts`, and no event — the one screen
-that shows the pool is the one that just wrote to it, and it still re-reads what
-it wrote because it holds its list in `useState`. When that page moves onto the
-query cache, `SongCommands` is where the event it listens for is published.
+model above. A song has no invariant to protect and no domain consequence to
+publish: it is a title, a group and a difficulty in a pool, nothing about it is
+decided elsewhere, and nothing else is decided by it. So it has a store and a
+commands class of two operations and no `song.aggregate.ts`.
+
+The song screen now reads a named query-cache entry shared with its management
+menu. Create, import and delete publish the narrow `ui.songs-changed` cache
+invalidation from `SongCommands`; they do not pretend the tournament aggregate
+changed. The page, header and realtime listener therefore share one copy and
+one update path, and the former `songsVersion` counter is gone.
 
 **The player catalogue has no commands class at all.** Nobody creates a player
 on purpose: they appear because somebody was registered, imported, pasted into a

@@ -1,5 +1,10 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faFileImport, faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronDown,
+  faFileImport,
+  faLayerGroup,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import CreateSongModal from "@/features/song/ui/CreateSongModal";
 import ImportSongsModal from "@/features/song/ui/ImportSongsModal";
 import { useTournamentHeaderSongsManageMenu } from "@/features/song/model/useTournamentHeaderSongsManageMenu";
@@ -7,14 +12,10 @@ import { btnPrimary } from "@/styles/buttonStyles";
 
 type Props = {
   tournamentId: number;
-  songsVersion: number;
-  refreshSongs: () => void;
 };
 
 export default function TournamentHeaderSongsManageMenu({
   tournamentId,
-  songsVersion,
-  refreshSongs,
 }: Props) {
   const {
     menuOpen,
@@ -32,11 +33,7 @@ export default function TournamentHeaderSongsManageMenu({
     openAddInNewGroup,
     triggerImport,
     handleCreateSong,
-  } = useTournamentHeaderSongsManageMenu({
-    tournamentId,
-    songsVersion,
-    refreshSongs,
-  });
+  } = useTournamentHeaderSongsManageMenu({ tournamentId });
 
   return (
     <>
@@ -88,7 +85,10 @@ export default function TournamentHeaderSongsManageMenu({
                 onClick={openAddInNewGroup}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faLayerGroup} className="text-ui-text-mute" />
+                <FontAwesomeIcon
+                  icon={faLayerGroup}
+                  className="text-ui-text-mute"
+                />
                 New pack
               </button>
               <button
@@ -97,7 +97,10 @@ export default function TournamentHeaderSongsManageMenu({
                 onClick={triggerImport}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faFileImport} className="text-ui-text-mute" />
+                <FontAwesomeIcon
+                  icon={faFileImport}
+                  className="text-ui-text-mute"
+                />
                 Import songs
               </button>
             </div>

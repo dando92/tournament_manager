@@ -23,7 +23,8 @@ process.env.DATABASE_NAME = database;
  * The song catalogue as it is written, and what a roll makes of it.
  *
  * A song is not an aggregate: adding one to a pool and taking it out are the
- * whole of it, and neither announces anything. What is worth a database here is
+ * whole of it. Catalogue writes announce the tournament whose cached pool is
+ * stale. What is worth a database here is
  * the read behind a roll — which division has already played what — and the
  * scope a roll now takes from the match it is rolled for rather than from the
  * caller.
@@ -38,10 +39,21 @@ describe('Song writes (e2e)', () => {
   let entrantId: number;
   const published: EventEnvelope[] = [];
 
-  async function addSong(title: string, group: string, difficulty: number, target?: number): Promise<number> {
+  async function addSong(
+    title: string,
+    group: string,
+    difficulty: number,
+    target?: number,
+  ): Promise<number> {
     const created = await request(app.getHttpServer())
       .post('/songs')
-      .send({ title, artist: 'Someone', group, difficulty, tournamentId: target ?? tournamentId })
+      .send({
+        title,
+        artist: 'Someone',
+        group,
+        difficulty,
+        tournamentId: target ?? tournamentId,
+      })
       .expect(201);
 
     return created.body.id;
@@ -50,7 +62,12 @@ describe('Song writes (e2e)', () => {
   async function createMatch(): Promise<number> {
     const match = await request(app.getHttpServer())
       .post('/matches')
-      .send({ name: 'Set', phaseGroupId: poolId, scoringSystem: 'EurocupScoreCalculator', entrantIds: [entrantId] })
+      .send({
+        name: 'Set',
+        phaseGroupId: poolId,
+        scoringSystem: 'EurocupScoreCalculator',
+        entrantIds: [entrantId],
+      })
       .expect(201);
 
     return match.body.id;
@@ -58,9 +75,13 @@ describe('Song writes (e2e)', () => {
 
   /** The songs a match ended up being played on, in the order its rounds hold them. */
   async function songsOf(matchId: number): Promise<Array<number | null>> {
-    const match = await request(app.getHttpServer()).get(`/matches/${matchId}`).expect(200);
+    const match = await request(app.getHttpServer())
+      .get(`/matches/${matchId}`)
+      .expect(200);
 
-    return match.body.rounds.map((round: { song: { id: number } | null }) => round.song?.id ?? null);
+    return match.body.rounds.map(
+      (round: { song: { id: number } | null }) => round.song?.id ?? null,
+    );
   }
 
   beforeAll(async () => {
@@ -88,7 +109,9 @@ describe('Song writes (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    const accountRepository = moduleFixture.get<Repository<Account>>(getRepositoryToken(Account));
+    const accountRepository = moduleFixture.get<Repository<Account>>(
+      getRepositoryToken(Account),
+    );
     const credentials = {
       username: 'song-writes-owner',
       email: 'song-writes-owner@example.test',
@@ -96,8 +119,13 @@ describe('Song writes (e2e)', () => {
       playerName: 'Song Writes Owner',
     };
 
-    await request(app.getHttpServer()).post('/user').send(credentials).expect(201);
-    const account = await accountRepository.findOneByOrFail({ username: credentials.username });
+    await request(app.getHttpServer())
+      .post('/user')
+      .send(credentials)
+      .expect(201);
+    const account = await accountRepository.findOneByOrFail({
+      username: credentials.username,
+    });
     account.isTournamentCreator = true;
     await accountRepository.save(account);
 
@@ -130,8 +158,13 @@ describe('Song writes (e2e)', () => {
       .expect(201);
     entrantId = entrant.body.id;
 
-    await request(app.getHttpServer()).post('/phases').send({ name: 'Qualifiers', divisionId }).expect(201);
-    const summary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+    await request(app.getHttpServer())
+      .post('/phases')
+      .send({ name: 'Qualifiers', divisionId })
+      .expect(201);
+    const summary = await request(app.getHttpServer())
+      .get(`/divisions/${divisionId}/summary`)
+      .expect(200);
     poolId = summary.body.phases[0].phaseGroups[0].id;
   });
 
@@ -140,11 +173,14 @@ describe('Song writes (e2e)', () => {
     await dropTestDatabase(database);
   });
 
-  it('adds a song to the pool of one tournament, and announces nothing', async () => {
+  it('adds a song to the pool of one tournament and announces that catalogue', async () => {
     published.length = 0;
     const songId = await addSong('Anthem', 'Pack A', 5);
 
-    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
+    const pool = await request(app.getHttpServer())
+      .get('/songs')
+      .query({ tournamentId })
+      .expect(200);
     expect(pool.body).toContainEqual({
       id: songId,
       title: 'Anthem',
@@ -153,7 +189,9 @@ describe('Song writes (e2e)', () => {
       chartDifficulty: null,
       group: 'Pack A',
     });
-    expect(published).toEqual([]);
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   /**
@@ -165,9 +203,27 @@ describe('Song writes (e2e)', () => {
   it('imports a folder of charts in one write, keeping the difficulty each chart was written for', async () => {
     published.length = 0;
     const songs = [
-      { title: 'Import Pack/First', artist: 'Composer', group: 'Import Pack', difficulty: 9, chartDifficulty: 'Hard' },
-      { title: 'Import Pack/First', artist: 'Composer', group: 'Import Pack', difficulty: 13, chartDifficulty: 'Expert' },
-      { title: 'Import Pack/Second', artist: 'Composer', group: 'Import Pack', difficulty: 3, chartDifficulty: 'Novice' },
+      {
+        title: 'Import Pack/First',
+        artist: 'Composer',
+        group: 'Import Pack',
+        difficulty: 9,
+        chartDifficulty: 'Hard',
+      },
+      {
+        title: 'Import Pack/First',
+        artist: 'Composer',
+        group: 'Import Pack',
+        difficulty: 13,
+        chartDifficulty: 'Expert',
+      },
+      {
+        title: 'Import Pack/Second',
+        artist: 'Composer',
+        group: 'Import Pack',
+        difficulty: 3,
+        chartDifficulty: 'Novice',
+      },
     ];
 
     const imported = await request(app.getHttpServer())
@@ -176,36 +232,61 @@ describe('Song writes (e2e)', () => {
       .expect(200);
     expect(imported.body).toEqual({ imported: 3, skipped: 0 });
 
-    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
+    const pool = await request(app.getHttpServer())
+      .get('/songs')
+      .query({ tournamentId })
+      .expect(200);
     const packRows = pool.body
       .filter((song: { group: string }) => song.group === 'Import Pack')
-      .map((song: { title: string; difficulty: number; chartDifficulty: string }) => [
-        song.title,
-        song.difficulty,
-        song.chartDifficulty,
-      ]);
+      .map(
+        (song: {
+          title: string;
+          difficulty: number;
+          chartDifficulty: string;
+        }) => [song.title, song.difficulty, song.chartDifficulty],
+      );
     expect(packRows).toEqual([
       ['Import Pack/Second', 3, 'Novice'],
       ['Import Pack/First', 9, 'Hard'],
       ['Import Pack/First', 13, 'Expert'],
     ]);
-    expect(published).toEqual([]);
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   it('adds nothing the second time the same folder is imported', async () => {
     const songs = [
-      { title: 'Repeat Pack/Song', artist: 'Composer', group: 'Repeat Pack', difficulty: 11, chartDifficulty: 'Expert' },
+      {
+        title: 'Repeat Pack/Song',
+        artist: 'Composer',
+        group: 'Repeat Pack',
+        difficulty: 11,
+        chartDifficulty: 'Expert',
+      },
     ];
 
-    await request(app.getHttpServer()).post('/songs/import').send({ tournamentId, songs }).expect(200);
+    await request(app.getHttpServer())
+      .post('/songs/import')
+      .send({ tournamentId, songs })
+      .expect(200);
+    published.length = 0;
     const again = await request(app.getHttpServer())
       .post('/songs/import')
       .send({ tournamentId, songs })
       .expect(200);
 
     expect(again.body).toEqual({ imported: 0, skipped: 1 });
-    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
-    expect(pool.body.filter((song: { group: string }) => song.group === 'Repeat Pack')).toHaveLength(1);
+    expect(published).toEqual([]);
+    const pool = await request(app.getHttpServer())
+      .get('/songs')
+      .query({ tournamentId })
+      .expect(200);
+    expect(
+      pool.body.filter(
+        (song: { group: string }) => song.group === 'Repeat Pack',
+      ),
+    ).toHaveLength(1);
   });
 
   it('refuses the whole import when one chart names a difficulty the application does not know', async () => {
@@ -214,14 +295,29 @@ describe('Song writes (e2e)', () => {
       .send({
         tournamentId,
         songs: [
-          { title: 'Bad Pack/Good', group: 'Bad Pack', difficulty: 9, chartDifficulty: 'Hard' },
-          { title: 'Bad Pack/Bad', group: 'Bad Pack', difficulty: 9, chartDifficulty: 'Ultra' },
+          {
+            title: 'Bad Pack/Good',
+            group: 'Bad Pack',
+            difficulty: 9,
+            chartDifficulty: 'Hard',
+          },
+          {
+            title: 'Bad Pack/Bad',
+            group: 'Bad Pack',
+            difficulty: 9,
+            chartDifficulty: 'Ultra',
+          },
         ],
       })
       .expect(400);
 
-    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
-    expect(pool.body.filter((song: { group: string }) => song.group === 'Bad Pack')).toEqual([]);
+    const pool = await request(app.getHttpServer())
+      .get('/songs')
+      .query({ tournamentId })
+      .expect(200);
+    expect(
+      pool.body.filter((song: { group: string }) => song.group === 'Bad Pack'),
+    ).toEqual([]);
   });
 
   it('refuses an import for a tournament that does not exist', async () => {
@@ -229,7 +325,14 @@ describe('Song writes (e2e)', () => {
       .post('/songs/import')
       .send({
         tournamentId: 999999,
-        songs: [{ title: 'Nowhere/Song', group: 'Nowhere', difficulty: 9, chartDifficulty: 'Hard' }],
+        songs: [
+          {
+            title: 'Nowhere/Song',
+            group: 'Nowhere',
+            difficulty: 9,
+            chartDifficulty: 'Hard',
+          },
+        ],
       })
       .expect(404);
   });
@@ -237,17 +340,31 @@ describe('Song writes (e2e)', () => {
   it('refuses a song for a tournament that does not exist', async () => {
     await request(app.getHttpServer())
       .post('/songs')
-      .send({ title: 'Nowhere', group: 'Pack A', difficulty: 5, tournamentId: 999999 })
+      .send({
+        title: 'Nowhere',
+        group: 'Pack A',
+        difficulty: 5,
+        tournamentId: 999999,
+      })
       .expect(404);
   });
 
   it('takes a song out of the pool', async () => {
     const songId = await addSong('Leaving', 'Pack A', 6);
+    published.length = 0;
 
     await request(app.getHttpServer()).delete(`/songs/${songId}`).expect(204);
 
-    const pool = await request(app.getHttpServer()).get('/songs').query({ tournamentId }).expect(200);
-    expect(pool.body.map((song: { id: number }) => song.id)).not.toContain(songId);
+    const pool = await request(app.getHttpServer())
+      .get('/songs')
+      .query({ tournamentId })
+      .expect(200);
+    expect(pool.body.map((song: { id: number }) => song.id)).not.toContain(
+      songId,
+    );
+    expect(published).toEqual([
+      { type: 'ui.songs-changed', tournamentId, payload: { tournamentId } },
+    ]);
   });
 
   /**

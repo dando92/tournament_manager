@@ -1,34 +1,38 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { Song } from "@/features/song/model/types";
 import { createSong, listSongs } from "@/features/song/api/song.api";
 import { useSongImport } from "@/features/song/model/useSongImport";
+import { songKeys } from "@/features/song/api/song.keys";
 
 type UseTournamentHeaderSongsManageMenuOptions = {
   tournamentId: number;
-  songsVersion: number;
-  refreshSongs: () => void;
 };
+
+const noSongs: Song[] = [];
 
 export function useTournamentHeaderSongsManageMenu({
   tournamentId,
-  songsVersion,
-  refreshSongs,
 }: UseTournamentHeaderSongsManageMenuOptions) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loadingSongsMeta, setLoadingSongsMeta] = useState(false);
   const [addInGroupOpen, setAddInGroupOpen] = useState(false);
   const [addInNewGroupOpen, setAddInNewGroupOpen] = useState(false);
-  const songImport = useSongImport({ tournamentId, refreshSongs });
-
-  useEffect(() => {
-    setLoadingSongsMeta(true);
-    listSongs(tournamentId)
-      .then(setSongs)
-      .catch(() => {})
-      .finally(() => setLoadingSongsMeta(false));
-  }, [songsVersion, tournamentId]);
+  const songImport = useSongImport({ tournamentId });
+  const songsQuery = useQuery({
+    queryKey: songKeys.forTournament(tournamentId),
+    queryFn: () => listSongs(tournamentId),
+  });
+  const createMutation = useMutation({
+    mutationFn: (input: {
+      title: string;
+      difficulty: number;
+      group: string;
+      artist?: string;
+    }) => createSong(tournamentId, input),
+  });
+  const songs = songsQuery.data ?? noSongs;
+  const loadingSongsMeta = songsQuery.isLoading;
 
   const songGroups = useMemo(
     () => [...new Set(songs.map((song) => song.group))].sort(),
@@ -62,9 +66,9 @@ export function useTournamentHeaderSongsManageMenu({
     group: string,
     artist?: string,
   ) => {
-    createSong(tournamentId, { title, artist, difficulty, group })
+    createMutation
+      .mutateAsync({ title, artist, difficulty, group })
       .then(() => {
-        refreshSongs();
         toast.success("Song created.");
       })
       .catch(() => {
