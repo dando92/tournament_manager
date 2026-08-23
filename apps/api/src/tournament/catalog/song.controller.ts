@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
-import { CreatedResourceDto, SongDto } from '@tournament-manager/contracts';
+import { CreatedResourceDto, SongDto, SongImportResultDto } from '@tournament-manager/contracts';
 import { SongCommands } from '@tournament/catalog/song.commands';
 import { SongQueries } from '@tournament/catalog/song.queries';
-import { CreateSongDto } from '@tournament/catalog/song.requests';
+import { CreateSongDto, ImportSongsDto } from '@tournament/catalog/song.requests';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
@@ -17,6 +17,22 @@ export class SongsController {
     @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
     async create(@Body(new ValidationPipe()) dto: CreateSongDto): Promise<CreatedResourceDto> {
         return { id: await this.songCommands.create(dto) };
+    }
+
+    /**
+     * Everything one folder of simfiles held, in one write.
+     *
+     * The browser owns the directory the person picked, so it does the reading
+     * and the parsing; what arrives here is a list of charts like any other
+     * request body, validated row by row and written in one transaction.
+     */
+    @Post('import')
+    @HttpCode(HttpStatus.OK)
+    @RequireOpenTournament({ entity: 'tournament', location: 'body', field: 'tournamentId' })
+    async import(
+        @Body(new ValidationPipe({ whitelist: true, transform: true })) dto: ImportSongsDto,
+    ): Promise<SongImportResultDto> {
+        return await this.songCommands.import(dto.tournamentId, dto.songs);
     }
 
     @Get()

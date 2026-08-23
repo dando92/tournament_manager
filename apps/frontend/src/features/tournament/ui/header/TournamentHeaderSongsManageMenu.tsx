@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faFileImport, faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
 import CreateSongModal from "@/features/song/ui/CreateSongModal";
+import ImportSongsModal from "@/features/song/ui/ImportSongsModal";
 import { useTournamentHeaderSongsManageMenu } from "@/features/song/model/useTournamentHeaderSongsManageMenu";
 import { btnPrimary } from "@/styles/buttonStyles";
 
@@ -22,7 +23,7 @@ export default function TournamentHeaderSongsManageMenu({
     loadingSongsMeta,
     songGroups,
     selectedGroupName,
-    fileInputRef,
+    songImport,
     setAddInGroupOpen,
     setAddInNewGroupOpen,
     openMenu,
@@ -31,7 +32,6 @@ export default function TournamentHeaderSongsManageMenu({
     openAddInNewGroup,
     triggerImport,
     handleCreateSong,
-    handleBulkImport,
   } = useTournamentHeaderSongsManageMenu({
     tournamentId,
     songsVersion,
@@ -52,12 +52,12 @@ export default function TournamentHeaderSongsManageMenu({
         existingGroups={songGroups}
         onCreate={handleCreateSong}
       />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        className="hidden"
-        onChange={handleBulkImport}
+      <ImportSongsModal
+        state={songImport.state}
+        chartMode={songImport.chartMode}
+        onChartModeChange={songImport.setChartMode}
+        onConfirm={songImport.confirm}
+        onClose={songImport.close}
       />
 
       <div className="relative">
@@ -98,7 +98,7 @@ export default function TournamentHeaderSongsManageMenu({
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-ui-text-soft hover:bg-ui-raised disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <FontAwesomeIcon icon={faFileImport} className="text-ui-text-mute" />
-                Import
+                Import songs
               </button>
             </div>
           </>

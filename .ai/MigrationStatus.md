@@ -8,9 +8,20 @@
 - State: Architecture migration complete. Structure refactoring in progress.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
-- Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, and the song list.
+- Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, and the new song import dialog.
 
 ## Completed Checkpoints
+
+### Importing songs from a folder
+
+Requested by the user on 2026-08-23, outside the phase sequence.
+
+- Replaced the JSON song import with a directory importer. The person picks their ITGmania `Songs` folder — or one pack — in the browser, and the discovery and parsing rules of `itgmania-songs-to-json.mjs` now live in `apps/frontend/src/features/song/model/songImport/`: pack detection, hidden folders, `.ssc` over `.sm`, `dance-single` only, and `highest` meaning the highest meter. The parser takes text and gives values, so it is tested from raw simfile strings; the scan takes directory handles, so it is tested from plain objects.
+- The browser owns the folder the person granted, so it does the reading. The API is sent one payload of charts, validates every row, and writes them in one transaction through `POST /songs/import` — a pack is added completely or not at all, where the old importer called `POST /songs` once per row and could leave one half added.
+- A song now carries the difficulty slot its chart was written for as well as its meter. `SongChartDifficulty1787800000000` adds the nullable column and the check constraint over the six names; `Beginner` and `Challenge` are stored as `Novice` and `Expert`, the names a cabinet shows. A slot no version of StepMania names is not guessed: the chart is skipped and reported. Songs added by hand keep a null slot and the ranked meter colour.
+- The songs list draws the slot in the colour ITGmania gives it, from new `chart-*` tokens that repeat the judgment palette because it is the same cabinet palette.
+- Verification passed: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (pre-existing warnings only), 37 frontend unit tests including 22 new ones, 94 API end-to-end tests including four new ones, and the migration-runner test. The schema builder reports no difference between the new migration and the entity metadata.
+- Not yet confirmed by hand: the import dialog itself, which needs a real `Songs` folder and a Chromium-based browser.
 
 ### Withdrawing an entrant now means withdrawn
 
@@ -109,7 +120,7 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 
 ### Structure refactoring phase 4, closing slices: song, live, auth, participant
 
-- Completed the song slice. `createSong` and `deleteSong` joined `listSongs` in `api/song.api.ts`; the songs list had been requested with a hand-written `axios.get` in four places, each spelling the `tournamentId` query string itself. The bulk import and the pack delete keep their loops, because there is no batch route and per-row results are what lets the import report how many succeeded.
+- Completed the song slice. `createSong` and `deleteSong` joined `listSongs` in `api/song.api.ts`; the songs list had been requested with a hand-written `axios.get` in four places, each spelling the `tournamentId` query string itself. The pack delete keeps its loop; the bulk import lost its own when `POST /songs/import` replaced it.
 - Completed the live slice as `model/` and `ui/` with no `api/`. The feature reads a websocket and never makes an HTTP request; declaring an empty directory for the rule's sake would have said something untrue about it.
 - Completed the auth slice, absorbing `features/admin` and `PermissionContext`. Three `.tsx` files reached the server directly — the account page patched its own profile, the roles page listed accounts and flipped their flags, and the permission context asked for the signed-in account's roles — and are now `useAccountInfoPage`, `useManageRolesPage` and three request modules. `shared/services/` no longer exists: the permission context answers what the signed-in account may do, which is the auth feature's own question. `Account.ts` came out of `features/player/types/`, where it had nothing to do with a player.
 - Completed the participant slice, absorbing `player`, `entrant` and `advancement`. None of the three was an area of the application; each was a noun that happened to have a file. `advancement` went to `match` rather than to `participant`: its request and its editor are both about where a match sends its finishers.

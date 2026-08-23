@@ -13,11 +13,12 @@ type SongRow = SongDto;
  * every other identifier rather than being aliased away.
  */
 const SONGS_OF_TOURNAMENT = `
-    SELECT  s."id"         AS "id",
-            s."title"      AS "title",
-            s."artist"     AS "artist",
-            s."difficulty" AS "difficulty",
-            s."group"      AS "group"
+    SELECT  s."id"              AS "id",
+            s."title"           AS "title",
+            s."artist"          AS "artist",
+            s."difficulty"      AS "difficulty",
+            s."chartDifficulty" AS "chartDifficulty",
+            s."group"           AS "group"
     FROM     "song" s
     WHERE    s."tournamentId" = $1
     ORDER BY s."group", s."difficulty", LOWER(s."title"), s."id"

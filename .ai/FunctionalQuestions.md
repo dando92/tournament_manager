@@ -188,3 +188,12 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Is the pasted spelling the one to keep when the catalogue already holds the person under a different capitalization? The person is registered under the stored name today, and the pasted one is reported back as a warning.
 - Evidence: `apps/api/src/tournament/registration/participants.commands.ts` (`addPlayersToDivision`, `distinctNames`), `apps/api/src/tournament/catalog/player.store.ts`, `apps/api/tests/e2e/catalog/player-catalogue.e2e-spec.ts`.
 - Rule: do not lowercase a name on the way in. Whether a catalogue entry should be renamed to the spelling somebody pasted is a decision for the person who owns the catalogue.
+
+### FQ-023 — Two charts of one song at the same level are still one row
+
+- Status: Open. Raised on 2026-08-23 by the ITGmania folder importer.
+- Observed behavior: the importer de-duplicates on song path, pack and meter — the key the CLI script has always used — and the API applies the same key again against the pool it is writing into. A song whose `Hard` and `Expert` charts are both level 13 therefore enters the pool once, under whichever of the two the ordering reached first, and re-importing the same folder adds nothing. Until this feature the pool could not tell the two apart at all; now it stores the slot, so it can.
+- Question: is a chart identified by its path, pack and meter, or by its path, pack and slot? Deciding that it is the slot changes what a repeated import does, what the pool holds, and which of two charts a lobby's completed song resolves to — which is FQ-021 asking the same thing from the other end, since `SONG_OF_TOURNAMENT_BY_TITLE` takes the oldest row of a title regardless of either.
+- A second, smaller half of it: a song added by hand states a meter and no slot, and nothing asks the person for one. If the slot becomes part of a chart's identity, the create form has to state it too.
+- Evidence: `apps/api/src/tournament/catalog/song.store.ts` (`identity`, `import`), `apps/frontend/src/features/song/model/songImport/stepmaniaParser.ts` (`buildImportRows`), `apps/api/tests/e2e/catalog/song-writes.e2e-spec.ts`.
+- Rule: do not widen the key without deciding what a repeated import means. The current key is the one the pool was filled by before this feature, and it is preserved deliberately.

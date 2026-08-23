@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { SongInput, SongStore } from '@tournament/catalog/song.store';
+import { SongImportOutcome, SongInput, SongStore } from '@tournament/catalog/song.store';
 
 /**
  * Adding a song to a pool and taking one out.
@@ -22,6 +22,20 @@ export class SongCommands {
         const song = await this.store.add(input, tournament);
 
         return song.id;
+    }
+
+    /**
+     * A folder of simfiles read in the browser joins the pool.
+     *
+     * The importer used to be the create endpoint called once per row of a
+     * JSON file, which left a pack half added whenever one row failed. It is
+     * one write now, and the tournament is loaded first so an import for a
+     * tournament that does not exist answers `404` before anything is written.
+     */
+    async import(tournamentId: number, songs: SongInput[]): Promise<SongImportOutcome> {
+        const tournament = await this.store.loadTournament(tournamentId);
+
+        return await this.store.import(songs, tournament);
     }
 
     async delete(songId: number): Promise<void> {
