@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faChevronRight, faEllipsis } from "@fortawesome/free-solid-svg-icons";
@@ -36,8 +35,6 @@ type TreeNodeProps = {
   /** Trailing count, for a pool that says how many matches it holds. */
   count?: number;
   strong?: boolean;
-  /** Sits before the label, for the pin marker on a tournament. */
-  leading?: ReactNode;
   onActivate: (deep: boolean) => void;
   onOpenMenu?: (x: number, y: number) => void;
   /** An always-visible action next to the overflow button, for the gear. */
@@ -54,7 +51,6 @@ export default function TreeNode({
   selected = false,
   count,
   strong = false,
-  leading,
   onActivate,
   onOpenMenu,
   extraAction,
@@ -110,8 +106,6 @@ export default function TreeNode({
           className={`w-4 shrink-0 text-xs ${selected ? "text-ui-text-soft" : "text-ui-text-mute"}`}
         />
       ) : null}
-
-      {leading}
 
       <span className={`min-w-0 flex-1 truncate ${strong ? "font-semibold text-ui-text" : ""}`}>{label}</span>
 

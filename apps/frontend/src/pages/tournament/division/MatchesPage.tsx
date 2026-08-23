@@ -94,17 +94,26 @@ export default function DivisionMatchesPage() {
               .filter((group) => group.matches.length > 0)
               .map((group) => (
                 <section key={group.pool.id}>
-                  <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-ui-border bg-ui-raised px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">
-                    <StatusIcon status={poolStatus(group.pool)} className="h-3 w-3" />
-                    {phaseGroupLabel(group.pool)}
-                    {(groups.length > 1 || page.searching) && (
-                      <span className="truncate font-medium normal-case tracking-normal">
-                        {division.name} / {group.phaseName}
+                  <header className="sticky top-0 z-10 border-b border-ui-border bg-ui-raised text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">
+                    <button
+                      type="button"
+                      aria-pressed={page.selectedPhaseGroupId === group.pool.id}
+                      onClick={() => page.selectPhaseGroup(group.pool.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-ui-selected focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-border-strong ${
+                        page.selectedPhaseGroupId === group.pool.id ? "bg-ui-selected text-ui-text-soft" : ""
+                      }`}
+                    >
+                      <StatusIcon status={poolStatus(group.pool)} className="h-3 w-3" />
+                      {phaseGroupLabel(group.pool)}
+                      {(groups.length > 1 || page.searching) && (
+                        <span className="truncate font-medium normal-case tracking-normal">
+                          {division.name} / {group.phaseName}
+                        </span>
+                      )}
+                      <span className="ml-auto font-medium normal-case tracking-normal tabular-nums">
+                        {group.matches.length}
                       </span>
-                    )}
-                    <span className="ml-auto font-medium normal-case tracking-normal tabular-nums">
-                      {group.matches.length}
-                    </span>
+                    </button>
                   </header>
                   {group.matches.map((match) => (
                     <div key={match.id} ref={match.id === highlight.matchId ? page.routedRowRef : undefined}>
@@ -124,20 +133,22 @@ export default function DivisionMatchesPage() {
         </div>
       )}
 
-      {selectedMatch && (
-        <ConnectedMatchCard
-          key={selectedMatch.id}
-          match={selectedMatch}
-          division={division}
-          divisionEntrants={page.entrants}
-          allMatches={page.matches}
-          actions={page.actions}
-          controls={controls}
-          tournamentId={tournamentId}
-          highlight={highlight}
-          onHighlight={page.setHighlight}
-        />
-      )}
+      <div className="flex flex-col gap-3">
+        {page.displayedMatches.map((match) => (
+          <ConnectedMatchCard
+            key={match.id}
+            match={match}
+            division={division}
+            divisionEntrants={page.entrants}
+            allMatches={page.matches}
+            actions={page.actions}
+            controls={controls}
+            tournamentId={tournamentId}
+            highlight={highlight}
+            onHighlight={page.setHighlight}
+          />
+        ))}
+      </div>
 
       {tournamentId !== undefined && <LiveNowPanel tournamentId={tournamentId} controls={controls} />}
 

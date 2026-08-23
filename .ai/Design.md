@@ -138,11 +138,10 @@ finish by itself, a match with every score in will not. Since `pending` is also
 the state that breathes, a collapsed tree points at the branch that needs
 somebody without being opened.
 
-A tournament that is not the open one has no structure loaded, so its row keeps
-its own pin or clock icon rather than claiming a state it cannot know. When the
-open tournament does report one, that icon moves next to the name and the row
-carries the glyph like every other branch — a row still never carries a neutral
-icon and a status glyph in the same slot.
+Pinned and recent tournaments live in separate labelled sections. The pin and
+clock identify those sections once instead of repeating on every row. Only the
+open tournament has structure loaded and can therefore carry a rolled-up status
+glyph; other tournament rows need no identity icon of their own.
 
 The row owns the **state** of a match and the card owns its **contents**, which
 is why commit lives on the row rather than in the card. The right-hand slot is
@@ -151,10 +150,21 @@ is missing, the commit button itself once it can be, and the completed badge
 afterwards. What is left in the card header acts on the match — add a player,
 add a song, the overflow menu — and nothing there reports status.
 
+The right-hand state badge stays written out at every viewport width and sits
+above the match text rather than taking horizontal space away from it. The text
+fades beneath that badge; when it overflows, hovering with a pointer or tapping
+the row on a touch device moves it far enough to reveal the hidden end. A
+hand-scored round is always headed `By hand`, including on mobile, because it is
+a different scoring mode rather than an abbreviated song title.
+
 ## Selection is greyscale
 
 Selected rows and the active navigation item are `ui-selected` with a
 `ui-border-strong` edge and heavier text. No brand tint.
+
+An advancement-route highlight is not ordinary selection: it identifies the
+source or destination of completed progression. Its row tint and card ring use
+`state-done`, matching the route cells that triggered it.
 
 This is the weakest point of the system in the light theme, and it is structural
 rather than a tuning problem. Contrast is a ratio, so the same lightness step is

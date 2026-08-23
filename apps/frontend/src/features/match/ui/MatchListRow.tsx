@@ -1,3 +1,4 @@
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import StatusIcon, { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import {
   getActiveLabel,
@@ -45,6 +46,11 @@ export default function MatchListRow({
   onSelect,
   onCommit,
 }: MatchListRowProps) {
+  const nameViewportRef = useRef<HTMLSpanElement>(null);
+  const nameContentRef = useRef<HTMLSpanElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const [marqueeLayout, setMarqueeLayout] = useState({ distance: 0, fadeWidth: 0 });
+  const [mobileMarquee, setMobileMarquee] = useState(false);
   const progress = getMatchProgress(match);
   const status = getMatchProgressStatus(progress);
   const blocker = getCommitBlocker(match);
@@ -65,9 +71,37 @@ export default function MatchListRow({
         ? players
         : "not started";
 
+  useEffect(() => {
+    const viewport = nameViewportRef.current;
+    const content = nameContentRef.current;
+    const statusOverlay = statusRef.current;
+    if (!viewport || !content || !statusOverlay) return;
+
+    const measure = () => {
+      const fadeWidth = Math.min(viewport.clientWidth, statusOverlay.offsetWidth + 16);
+      setMarqueeLayout({
+        distance: Math.max(0, content.scrollWidth - (viewport.clientWidth - fadeWidth)),
+        fadeWidth,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(content);
+    observer.observe(statusOverlay);
+    return () => observer.disconnect();
+  }, [match.name, match.subtitle, meta]);
+
+  const marqueeStyle = {
+    "--marquee-distance": `${marqueeLayout.distance}px`,
+    WebkitMaskImage: `linear-gradient(to right, black 0, black calc(100% - ${marqueeLayout.fadeWidth}px), transparent 100%)`,
+    maskImage: `linear-gradient(to right, black 0, black calc(100% - ${marqueeLayout.fadeWidth}px), transparent 100%)`,
+  } as CSSProperties;
+  const canMarquee = marqueeLayout.distance > 0;
+
   return (
     <div
-      className={`flex w-full items-center border-b border-ui-border transition-colors last:border-b-0 ${
+      className={`relative flex w-full items-center overflow-hidden border-b border-ui-border transition-colors last:border-b-0 ${
         routed
           ? "bg-state-done/10 shadow-[inset_2px_0_0_rgb(var(--state-done))]"
           : selected
@@ -77,39 +111,49 @@ export default function MatchListRow({
     >
       <button
         type="button"
-        onClick={onSelect}
+        onClick={() => {
+          if (canMarquee && window.matchMedia("(hover: none)").matches) {
+            setMobileMarquee((current) => !current);
+          }
+          onSelect();
+        }}
         title={getActiveLabel(match.active)}
-        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+        className="group/name flex min-w-0 flex-1 items-center gap-3 overflow-hidden px-3 py-2.5 text-left"
       >
         <StatusIcon status={match.active ? "running" : "idle"} label={getActiveLabel(match.active)} />
 
-        <span className={`shrink-0 text-sm text-ui-text ${selected ? "font-bold" : "font-semibold"}`}>
-          {match.name}
-        </span>
-
-        <span className="min-w-0 flex-1 truncate text-[13px] text-ui-text-mute">
-          {match.subtitle ? `${match.subtitle} · ${meta}` : meta}
+        <span
+          ref={nameViewportRef}
+          style={marqueeStyle}
+          className="min-w-0 flex-1 overflow-hidden"
+        >
+          <span
+            ref={nameContentRef}
+            className={`inline-flex w-max items-center gap-3 whitespace-nowrap ${
+              canMarquee && mobileMarquee ? "motion-safe:animate-marquee" : ""
+            } ${canMarquee ? "motion-safe:group-hover/name:animate-marquee" : ""}`}
+          >
+            <span className={`text-sm text-ui-text ${selected ? "font-bold" : "font-semibold"}`}>
+              {match.name}
+            </span>
+            <span className="text-[13px] text-ui-text-mute">
+              {match.subtitle ? `${match.subtitle} · ${meta}` : meta}
+            </span>
+          </span>
         </span>
       </button>
 
-      <div className="flex shrink-0 items-center pr-3">
+      <div ref={statusRef} className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-3">
         {canCommit ? (
           <button
             type="button"
             onClick={onCommit}
-            className="rounded-md border border-state-pending/30 bg-state-pending/10 px-3 py-1 text-xs font-semibold text-ui-text-soft transition-colors hover:bg-state-pending/20"
+            className="pointer-events-auto rounded-md border border-state-pending/30 bg-state-pending/10 px-3 py-1 text-xs font-semibold text-ui-text-soft transition-colors hover:bg-state-pending/20"
           >
             Commit
           </button>
         ) : (
-          <>
-            <span className="hidden sm:block">
-              <StatusBadge status={status} label={label} />
-            </span>
-            <span className="sm:hidden">
-              <StatusIcon status={status} label={label} />
-            </span>
-          </>
+          <StatusBadge status={status} label={label} />
         )}
       </div>
     </div>

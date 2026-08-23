@@ -8,7 +8,14 @@ import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 import { createDivision, deleteDivision, renameDivision } from "@/features/division/api/division.api";
 import { createPhase, deletePhase, updatePhase } from "@/features/division/api/phase.api";
 import { createPhaseGroup, deletePhaseGroup, updatePhaseGroup } from "@/features/division/api/phase-group.api";
-import { getExpandedNodes, setExpandedNodes, treeNodeKey } from "@/shared/lib/treeState";
+import {
+  getCollapsedTournamentSections,
+  getExpandedNodes,
+  setCollapsedTournamentSections,
+  setExpandedNodes,
+  treeNodeKey,
+  type TournamentSectionKey,
+} from "@/shared/lib/treeState";
 import TournamentStructureModals from "@/features/tournament/ui/tree/TournamentStructureModals";
 
 /**
@@ -21,9 +28,9 @@ import TournamentStructureModals from "@/features/tournament/ui/tree/TournamentS
  * context menu and any page act through one implementation instead of two that
  * drift.
  *
- * Only the tournament currently in the URL loads its structure. Expanding a
- * different one navigates to it first, so there is never more than one
- * outstanding overview request.
+ * This provider loads the tournament currently in page scope. The sidebar may
+ * independently preview one other tournament through the same query cache;
+ * selecting a destination then moves page scope to it.
  *
  * The glyphs the tree draws are derived from this structure, so they have to
  * follow the live ones. Nothing here arranges that: `TournamentUpdatesProvider`
@@ -53,6 +60,8 @@ type TournamentTreeContextValue = {
   expandNode: (key: string) => void;
   expandNodes: (keys: string[]) => void;
   collapseAll: () => void;
+  isTournamentSectionCollapsed: (key: TournamentSectionKey) => boolean;
+  toggleTournamentSection: (key: TournamentSectionKey) => void;
 
   dialog: StructureDialog;
   openDialog: (dialog: StructureDialog) => void;
@@ -81,6 +90,8 @@ const defaultValue: TournamentTreeContextValue = {
   expandNode: () => {},
   expandNodes: () => {},
   collapseAll: () => {},
+  isTournamentSectionCollapsed: () => false,
+  toggleTournamentSection: () => {},
   dialog: { kind: "none" },
   openDialog: () => {},
   closeDialog: () => {},
@@ -112,6 +123,7 @@ export function TournamentTreeProvider({
   const navigate = useNavigate();
   const query = useTournamentOverviewQuery(tournamentId);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(getExpandedNodes);
+  const [collapsedTournamentSections, setCollapsedTournamentSectionsState] = useState<ReadonlySet<TournamentSectionKey>>(getCollapsedTournamentSections);
   const [dialog, setDialog] = useState<StructureDialog>({ kind: "none" });
 
   const divisions = useMemo(() => query.data ?? [], [query.data]);
@@ -142,6 +154,10 @@ export function TournamentTreeProvider({
     }
     setExpandedNodes(expanded);
   }, [expanded]);
+
+  useEffect(() => {
+    setCollapsedTournamentSections(collapsedTournamentSections);
+  }, [collapsedTournamentSections]);
 
   const isExpanded = useCallback((key: string) => expanded.has(key), [expanded]);
 
@@ -190,7 +206,24 @@ export function TournamentTreeProvider({
 
   const expandNode = useCallback((key: string) => expandNodes([key]), [expandNodes]);
 
-  const collapseAll = useCallback(() => setExpanded(new Set()), []);
+  const isTournamentSectionCollapsed = useCallback(
+    (key: TournamentSectionKey) => collapsedTournamentSections.has(key),
+    [collapsedTournamentSections],
+  );
+
+  const toggleTournamentSection = useCallback((key: TournamentSectionKey) => {
+    setCollapsedTournamentSectionsState((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const collapseAll = useCallback(() => {
+    setExpanded(new Set());
+    setCollapsedTournamentSectionsState(new Set(["pinned", "recent"]));
+  }, []);
 
   /* ---- structural mutations ----
      None of these draws its own result. The server decides what a phase or a
@@ -347,6 +380,8 @@ export function TournamentTreeProvider({
       expandNode,
       expandNodes,
       collapseAll,
+      isTournamentSectionCollapsed,
+      toggleTournamentSection,
       dialog,
       openDialog,
       closeDialog,
@@ -372,6 +407,8 @@ export function TournamentTreeProvider({
       expandNode,
       expandNodes,
       collapseAll,
+      isTournamentSectionCollapsed,
+      toggleTournamentSection,
       dialog,
       openDialog,
       closeDialog,

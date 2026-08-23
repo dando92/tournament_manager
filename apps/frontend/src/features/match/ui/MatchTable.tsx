@@ -161,24 +161,28 @@ export default function MatchTable({
                     : (round.standings ?? []).some((standing) => standing.points > 0);
                   const title = song ? song.title : "By hand";
                   return (
-                    <th key={round.id} className="px-1 sm:px-3 py-2.5 text-center font-semibold min-w-[70px] sm:min-w-[130px]">
+                    <th key={round.id} className={`px-1 sm:px-3 py-2.5 text-center font-semibold ${song ? "min-w-[70px]" : "min-w-[92px]"} sm:min-w-[130px]`}>
                       <div className="flex items-center justify-center gap-1.5">
-                        <div className="sm:hidden">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (tooltip?.roundId === round.id) {
-                                setTooltip(null);
-                              } else {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setTooltip({ roundId: round.id, title, x: rect.left + rect.width / 2, y: rect.top - 8 });
-                              }
-                            }}
-                            className="font-semibold px-1"
-                          >
-                            {song ? idx + 1 : "\u2014"}
-                          </button>
-                        </div>
+                        {song ? (
+                          <div className="sm:hidden">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (tooltip?.roundId === round.id) {
+                                  setTooltip(null);
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setTooltip({ roundId: round.id, title, x: rect.left + rect.width / 2, y: rect.top - 8 });
+                                }
+                              }}
+                              className="font-semibold px-1"
+                            >
+                              {idx + 1}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="whitespace-nowrap sm:hidden">By hand</span>
+                        )}
                         <span className="hidden sm:inline truncate max-w-[110px]" title={title}>
                           {title}
                         </span>

@@ -10,6 +10,9 @@
  */
 
 const STORAGE_KEY = "tree_expanded";
+const COLLAPSED_TOURNAMENT_SECTIONS_KEY = "tree_collapsed_tournament_sections";
+
+export type TournamentSectionKey = "pinned" | "recent";
 
 export type TreeNodeKind = "tournament" | "division" | "phase";
 
@@ -33,5 +36,26 @@ export function setExpandedNodes(keys: ReadonlySet<string>): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...keys]));
   } catch {
     /* Storage can be unavailable; the tree still works, it just forgets. */
+  }
+}
+
+export function getCollapsedTournamentSections(): Set<TournamentSectionKey> {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_TOURNAMENT_SECTIONS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? new Set(parsed.filter((key): key is TournamentSectionKey => key === "pinned" || key === "recent"))
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function setCollapsedTournamentSections(keys: ReadonlySet<TournamentSectionKey>): void {
+  try {
+    localStorage.setItem(COLLAPSED_TOURNAMENT_SECTIONS_KEY, JSON.stringify([...keys]));
+  } catch {
+    /* Storage can be unavailable; the sections still collapse for this page. */
   }
 }

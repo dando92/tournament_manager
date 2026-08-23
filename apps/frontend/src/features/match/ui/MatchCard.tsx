@@ -3,7 +3,7 @@ import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/participant/model/types";
 import AddEditSongToMatchModal from "@/features/match/ui/AddEditSongToMatchModal";
 import AddPlayersToMatchModal from "@/features/match/ui/AddPlayersToMatchModal";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StandingModal from "@/features/match/ui/StandingModal";
 import EditMatchNotesModal from "@/features/match/ui/EditMatchNotesModal";
 import EditScoringSystemModal from "@/features/match/ui/EditScoringSystemModal";
@@ -143,6 +143,11 @@ export default function MatchCard({
     matchPlayers.length === 0 &&
     !hasIncomingRoutes;
 
+  useEffect(() => {
+    if (!isHighlighted) return;
+    cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [isHighlighted]);
+
   function enterEditMode() {
     setPendingAdvancementRules(
       (match.advancementRules ?? [])
@@ -223,7 +228,7 @@ export default function MatchCard({
       ref={cardRef}
       className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-ui-surface shadow-sm transition-shadow ${
         isHighlighted
-          ? "border-ui-border-strong ring-2 ring-ui-border-strong shadow-ui-border shadow-lg"
+          ? "border-state-done/40 ring-2 ring-state-done/40 shadow-state-done/20 shadow-lg"
           : "border-ui-border"
       }`}
     >

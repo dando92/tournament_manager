@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClockRotateLeft,
   faDownload,
@@ -17,8 +16,10 @@ import { DIVISION_TREE_PAGES, TOURNAMENT_TREE_PAGES } from "@/features/tournamen
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import {
   getSidebarTournaments,
+  groupSidebarTournaments,
   pinTournament,
   removeRecentTournament,
+  type SidebarTournament,
   unpinTournament,
   type RecentTournament,
 } from "@/shared/lib/recentTournaments";
@@ -35,13 +36,15 @@ import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import ContextMenu, { useContextMenu, type ContextMenuItem } from "@/shared/components/ui/ContextMenu";
 import { treeNodeKey } from "@/shared/lib/treeState";
 import { usePermissions } from "@/features/auth/model/PermissionContext";
+import { useTournamentOverviewQuery } from "@/features/tournament/model/useTournamentOverviewQuery";
 
 /**
  * The tournament tree: the whole navigation of the application in one column.
  *
- * Only the tournament the URL points at renders its structure. The others are
- * collapsed entries you click to go to, which keeps exactly one overview
- * request outstanding no matter how many tournaments are listed.
+ * A tournament row expands its structure without changing the current page.
+ * Only that open row is previewed, which keeps at most one additional overview
+ * request outstanding no matter how many tournaments are listed. Destinations
+ * inside the structure still navigate normally.
  *
  * Every destination a viewer cannot reach is left out rather than disabled.
  * A tree that shows doors that do not open teaches people to distrust it.
@@ -53,8 +56,12 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
   const { canEditTournament } = usePermissions();
   const { menu, openMenu, closeMenu } = useContextMenu();
 
-  const [tournaments, setTournaments] = useState<Array<RecentTournament & { pinned: boolean }>>(getSidebarTournaments);
+  const [tournaments, setTournaments] = useState<SidebarTournament[]>(getSidebarTournaments);
+  const [openedTournamentId, setOpenedTournamentId] = useState<number | null>(tree.tournamentId);
   const selection = useMemo(() => parseTreeSelection(location.pathname), [location.pathname]);
+  const previewTournamentId = openedTournamentId !== tree.tournamentId ? openedTournamentId : null;
+  const previewQuery = useTournamentOverviewQuery(previewTournamentId);
+  const tournamentGroups = useMemo(() => groupSidebarTournaments(tournaments), [tournaments]);
 
   /* The list is a localStorage snapshot, and a visit is what refreshes it, so
      it is re-read whenever the route changes rather than only on mount. */
@@ -67,6 +74,7 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
   const { expandNodes } = tree;
   useEffect(() => {
     if (!selection) return;
+    setOpenedTournamentId(selection.tournamentId);
     const path = [treeNodeKey("tournament", selection.tournamentId)];
     if (selection.divisionId) path.push(treeNodeKey("division", selection.divisionId));
     if (selection.phaseId) path.push(treeNodeKey("phase", selection.phaseId));
@@ -251,164 +259,204 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
     return <p className="px-3 py-6 text-center text-xs italic text-ui-text-mute">No tournaments yet.</p>;
   }
 
+  const tournamentSections = [
+    {
+      key: "pinned" as const,
+      label: "Pinned",
+      icon: faThumbtack,
+      tournaments: tournamentGroups.pinned,
+    },
+    {
+      key: "recent" as const,
+      label: "Recents",
+      icon: faClockRotateLeft,
+      tournaments: tournamentGroups.recent,
+    },
+  ].filter((section) => section.tournaments.length > 0);
+
   return (
     <>
-      <div role="tree" aria-label="Tournaments" className="flex flex-col gap-0.5">
-        {tournaments.map((tournament) => {
-          const key = treeNodeKey("tournament", tournament.id);
-          const isCurrent = tree.tournamentId === tournament.id;
-          const expanded = isCurrent && tree.isExpanded(key);
-          const controls = canEditTournament(tournament.id);
-          /* Only the open tournament knows what is inside it. When it does, the
-             row reports it like every other branch and the pin or clock moves
-             next to the name, so a collapsed tree still shows what is waiting. */
-          const rolledUpStatus = isCurrent ? tournamentStatus(tree.divisions) : undefined;
-          const identityIcon = tournament.pinned ? faThumbtack : faClockRotateLeft;
+      <div role="tree" aria-label="Tournaments" className="flex flex-col gap-3">
+        {tournamentSections.map((section) => (
+          <div key={section.key} role="group" aria-label={section.label} className="flex flex-col gap-0.5">
+            <TreeNode
+              label={section.label}
+              depth={0}
+              icon={section.icon}
+              expandable
+              expanded={!tree.isTournamentSectionCollapsed(section.key)}
+              strong
+              onActivate={() => tree.toggleTournamentSection(section.key)}
+            />
+            {!tree.isTournamentSectionCollapsed(section.key) &&
+              section.tournaments.map((tournament) => {
+                const key = treeNodeKey("tournament", tournament.id);
+                const isCurrent = tree.tournamentId === tournament.id;
+                const expanded = openedTournamentId === tournament.id && tree.isExpanded(key);
+                const canControlTournament = canEditTournament(tournament.id);
+                const controls = isCurrent && canControlTournament;
+                const divisions = isCurrent
+                  ? tree.divisions
+                  : openedTournamentId === tournament.id
+                    ? previewQuery.data ?? []
+                    : [];
+                /* Only the open tournament knows what is inside it. When it does, the
+                   row reports it like every other structural branch. */
+                const rolledUpStatus = expanded ? tournamentStatus(divisions) : undefined;
 
-          return (
-            <div key={tournament.id} className="flex flex-col gap-0.5">
-              <TreeNode
-                label={tournament.name}
-                depth={0}
-                strong
-                icon={rolledUpStatus ? undefined : identityIcon}
-                status={rolledUpStatus}
-                leading={
-                  rolledUpStatus ? (
-                    <FontAwesomeIcon icon={identityIcon} className="w-3 shrink-0 text-[10px] text-ui-text-mute" />
-                  ) : undefined
-                }
-                expandable
-                expanded={expanded}
-                selected={Boolean(selection && selection.tournamentId === tournament.id && !selection.page && !selection.divisionId)}
-                onActivate={(deep) => {
-                  if (!isCurrent) {
-                    go(tournamentPagePath(tournament.id, "overview"));
-                    return;
-                  }
-                  tree.toggleNode(key, deep);
-                }}
-                onOpenMenu={(x, y) => openMenu(x, y, tournament.name, tournamentMenu(tournament))}
-                extraAction={
-                  controls
-                    ? {
-                        icon: faGear,
-                        title: "Configuration",
-                        onSelect: () => go(tournamentPagePath(tournament.id, "configuration")),
-                      }
-                    : undefined
-                }
-              />
-
-              {expanded && (
-                <>
-                  {TOURNAMENT_TREE_PAGES.filter((page) => !page.requiresControl || controls).map((page) => (
+                return (
+                  <div key={tournament.id} className="flex flex-col gap-0.5">
                     <TreeNode
-                      key={page.key}
-                      label={page.label}
+                      label={tournament.name}
                       depth={1}
-                      icon={page.icon}
-                      selected={selection?.page === page.key}
-                      onActivate={() => go(tournamentPagePath(tournament.id, page.key))}
+                      strong
+                      status={rolledUpStatus}
+                      expandable
+                      expanded={expanded}
+                      selected={Boolean(
+                        selection && selection.tournamentId === tournament.id && !selection.page && !selection.divisionId,
+                      )}
+                      onActivate={(deep) => {
+                        if (expanded) {
+                          tree.toggleNode(key, deep);
+                          return;
+                        }
+                        setOpenedTournamentId(tournament.id);
+                        tree.expandNode(key);
+                      }}
+                      onOpenMenu={(x, y) => openMenu(x, y, tournament.name, tournamentMenu(tournament))}
+                      extraAction={
+                        canControlTournament
+                          ? {
+                              icon: faGear,
+                              title: "Configuration",
+                              onSelect: () => go(tournamentPagePath(tournament.id, "configuration")),
+                            }
+                          : undefined
+                      }
                     />
-                  ))}
 
-                  {tree.divisions.map((division) => {
-                    const divisionKey = treeNodeKey("division", division.id);
-                    const divisionExpanded = tree.isExpanded(divisionKey);
-                    return (
-                      <div key={division.id} className="flex flex-col gap-0.5">
-                        <TreeNode
-                          label={division.name}
-                          depth={1}
-                          status={divisionStatus(division)}
-                          expandable
-                          expanded={divisionExpanded}
-                          selected={
-                            selection?.divisionId === division.id && !selection.phaseId && !selection.divisionPage
-                          }
-                          onActivate={(deep) => {
-                            tree.toggleNode(divisionKey, deep);
-                            go(divisionPath(tournament.id, division.id));
-                          }}
-                          onOpenMenu={
-                            controls
-                              ? (x, y) => openMenu(x, y, division.name, divisionMenu(division.id, division.name))
-                              : undefined
-                          }
-                        />
+                    {expanded && (
+                      <>
+                        {TOURNAMENT_TREE_PAGES.filter((page) => !page.requiresControl || controls).map((page) => (
+                          <TreeNode
+                            key={page.key}
+                            label={page.label}
+                            depth={2}
+                            icon={page.icon}
+                            selected={selection?.page === page.key}
+                            onActivate={() => go(tournamentPagePath(tournament.id, page.key))}
+                          />
+                        ))}
 
-                        {divisionExpanded && (
-                          <>
-                            {DIVISION_TREE_PAGES.filter((page) => !page.requiresControl || controls).map((page) => (
+                        {divisions.map((division) => {
+                          const divisionKey = treeNodeKey("division", division.id);
+                          const divisionExpanded = tree.isExpanded(divisionKey);
+                          return (
+                            <div key={division.id} className="flex flex-col gap-0.5">
                               <TreeNode
-                                key={page.key}
-                                label={page.label}
+                                label={division.name}
                                 depth={2}
-                                icon={page.icon}
+                                status={divisionStatus(division)}
+                                expandable
+                                expanded={divisionExpanded}
                                 selected={
-                                  selection?.divisionId === division.id && selection.divisionPage === page.key
+                                  selection?.divisionId === division.id && !selection.phaseId && !selection.divisionPage
                                 }
-                                onActivate={() => go(divisionPagePath(tournament.id, division.id, page.key))}
+                                onActivate={(deep) => {
+                                  tree.toggleNode(divisionKey, deep);
+                                  go(divisionPath(tournament.id, division.id));
+                                }}
+                                onOpenMenu={
+                                  controls
+                                    ? (x, y) => openMenu(x, y, division.name, divisionMenu(division.id, division.name))
+                                    : undefined
+                                }
                               />
-                            ))}
 
-                            {division.phases.map((phase) => {
-                              const phaseKey = treeNodeKey("phase", phase.id);
-                              const phaseExpanded = tree.isExpanded(phaseKey);
-                              return (
-                                <div key={phase.id} className="flex flex-col gap-0.5">
-                                  <TreeNode
-                                    label={phase.name}
-                                    depth={2}
-                                    status={phaseStatus(phase)}
-                                    expandable
-                                    expanded={phaseExpanded}
-                                    selected={selection?.phaseId === phase.id && !selection.poolId}
-                                    onActivate={(deep) => {
-                                      tree.toggleNode(phaseKey, deep);
-                                      go(phasePath(tournament.id, division.id, phase.id));
-                                    }}
-                                    onOpenMenu={
-                                      controls
-                                        ? (x, y) => openMenu(x, y, phase.name, phaseMenu(phase.id, phase.name))
-                                        : undefined
-                                    }
-                                  />
+                              {divisionExpanded && (
+                                <>
+                                  {DIVISION_TREE_PAGES.filter((page) => !page.requiresControl || controls).map((page) => (
+                                    <TreeNode
+                                      key={page.key}
+                                      label={page.label}
+                                      depth={3}
+                                      icon={page.icon}
+                                      selected={
+                                        selection?.divisionId === division.id && selection.divisionPage === page.key
+                                      }
+                                      onActivate={() => go(divisionPagePath(tournament.id, division.id, page.key))}
+                                    />
+                                  ))}
 
-                                  {phaseExpanded &&
-                                    (phase.phaseGroups ?? []).map((pool) => (
-                                      <TreeNode
-                                        key={pool.id}
-                                        label={phaseGroupLabel(pool)}
-                                        depth={3}
-                                        status={poolStatus(pool)}
-                                        count={pool.matchCount}
-                                        selected={selection?.poolId === pool.id}
-                                        onActivate={() =>
-                                          go(poolPath(tournament.id, division.id, phase.id, pool.id))
-                                        }
-                                        onOpenMenu={
-                                          controls
-                                            ? (x, y) =>
-                                                openMenu(x, y, phaseGroupLabel(pool), poolMenu(division.id, phase.id, pool.id, phaseGroupLabel(pool)))
-                                            : undefined
-                                        }
-                                      />
-                                    ))}
-                                </div>
-                              );
-                            })}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          );
-        })}
+                                  {division.phases.map((phase) => {
+                                    const phaseKey = treeNodeKey("phase", phase.id);
+                                    const phaseExpanded = tree.isExpanded(phaseKey);
+                                    return (
+                                      <div key={phase.id} className="flex flex-col gap-0.5">
+                                        <TreeNode
+                                          label={phase.name}
+                                          depth={3}
+                                          status={phaseStatus(phase)}
+                                          expandable
+                                          expanded={phaseExpanded}
+                                          selected={selection?.phaseId === phase.id && !selection.poolId}
+                                          onActivate={(deep) => {
+                                            tree.toggleNode(phaseKey, deep);
+                                            go(phasePath(tournament.id, division.id, phase.id));
+                                          }}
+                                          onOpenMenu={
+                                            controls
+                                              ? (x, y) => openMenu(x, y, phase.name, phaseMenu(phase.id, phase.name))
+                                              : undefined
+                                          }
+                                        />
+
+                                        {phaseExpanded &&
+                                          (phase.phaseGroups ?? []).map((pool) => (
+                                            <TreeNode
+                                              key={pool.id}
+                                              label={phaseGroupLabel(pool)}
+                                              depth={4}
+                                              status={poolStatus(pool)}
+                                              count={pool.matchCount}
+                                              selected={selection?.poolId === pool.id}
+                                              onActivate={() =>
+                                                go(poolPath(tournament.id, division.id, phase.id, pool.id))
+                                              }
+                                              onOpenMenu={
+                                                controls
+                                                  ? (x, y) =>
+                                                      openMenu(
+                                                        x,
+                                                        y,
+                                                        phaseGroupLabel(pool),
+                                                        poolMenu(
+                                                          division.id,
+                                                          phase.id,
+                                                          pool.id,
+                                                          phaseGroupLabel(pool),
+                                                        ),
+                                                      )
+                                                  : undefined
+                                              }
+                                            />
+                                          ))}
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        ))}
       </div>
 
       <ContextMenu state={menu} onClose={closeMenu} />

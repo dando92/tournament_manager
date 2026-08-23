@@ -14,9 +14,11 @@ import {
 import Logo from "@/assets/icon.png";
 import { useAuthContext } from "@/features/auth/model/AuthContext";
 import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
+import CreateTournamentModal from "@/features/tournament/ui/CreateTournamentModal";
 import TournamentTree from "@/features/tournament/ui/tree/TournamentTree";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { usePermissions } from "@/features/auth/model/PermissionContext";
+import { rememberTournament } from "@/shared/lib/recentTournaments";
 
 /**
  * The sidebar: a header that acts on the whole list, the tree, and the account.
@@ -32,6 +34,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const tree = useTournamentTree();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const go = (path: string) => {
     navigate(path);
@@ -41,6 +44,15 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full min-w-0 flex-col bg-ui-canvas">
       <SearchTournamentModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CreateTournamentModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(tournament) => {
+          rememberTournament({ id: tournament.id, name: tournament.name });
+          setCreateOpen(false);
+          go(`/tournament/${tournament.id}`);
+        }}
+      />
 
       <button
         type="button"
@@ -62,7 +74,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <HeaderButton
             icon={faPlus}
             title="New tournament"
-            onClick={() => go(state.account ? "/?create=1" : "/login")}
+            onClick={() => setCreateOpen(true)}
           />
         )}
         <HeaderButton icon={faMagnifyingGlass} title="Find a tournament" onClick={() => setSearchOpen(true)} />

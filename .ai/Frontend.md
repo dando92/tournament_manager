@@ -42,6 +42,9 @@ previous layout hard to follow.
   opens the same flat match list at a different depth; the open match is a
   `?match=` search parameter, because it is a sub-state of the list rather than
   another destination.
+- A pool's sticky list header opens every match in that pool as raw cards below
+  the list. A search opens every matching card across the division; selecting a
+  match row returns the lower panel to its single-card detail view.
 - `TournamentUpdatesProvider` and `TournamentTreeProvider` are mounted in
   `MainLayout`, above both the sidebar and the page outlet. The tree draws state
   derived from the same data the pages show, so it has to sit beside them, not
@@ -56,6 +59,15 @@ previous layout hard to follow.
 - Tree expansion, recent tournaments and pinned tournaments persist in
   localStorage. Sidebar width does not: it is a momentary adjustment, not a
   setting.
+- The tournament list groups pinned and recent tournaments under separate
+  headings. The pin and clock identify their section once rather than repeating
+  on every tournament row; a tournament still appears in only one section. Both
+  sections are collapsible and remember their state on the device.
+- A tournament row expands or collapses its structure without navigating. The
+  sidebar previews at most one tournament structure outside the current page;
+  navigation begins at the destinations inside that structure.
+- The sidebar's new-tournament action opens its modal in place. Only successful
+  creation navigates, landing on the new tournament overview.
 
 ## Song Import
 
@@ -111,3 +123,21 @@ Additional frontend architectural and coding rules remain intentionally minimal.
 
 - Import `axios` only from a feature's `api/` module. `app/providers.tsx` is the sole bootstrap exception because it configures the shared client.
 - Browser-gateway DTOs shared with Realtime belong in `@tournament-manager/contracts`; frontend features import them rather than redeclaring flattened transport shapes.
+
+## View and Logic Boundaries
+
+- Logic that is inherently tied to rendering may stay in the component that
+  owns the relevant DOM. This includes element measurement, focus, scrolling,
+  hover and touch interaction, transient animation state, portals, and other
+  behavior that cannot be meaningfully evaluated without the rendered view.
+- Logic that is not inherently tied to rendering must live outside the view in
+  a model function, hook, service, or API module appropriate to its
+  responsibility. This includes domain and product rules, data transformations,
+  filtering, grouping, sorting, persistence, request orchestration, and state
+  shared by more than one view.
+- Prefer pure functions for non-rendering transformations so they can be tested
+  without mounting React. A component may compose their results, but it must not
+  become their only implementation.
+- Do not extract rendering-specific behavior merely to make a component appear
+  smaller. Extract it when it is reused, independently testable, or obscures the
+  component's rendering responsibility.

@@ -14,6 +14,13 @@ export interface RecentTournament {
   logo?: string;
 }
 
+export type SidebarTournament = RecentTournament & { pinned: boolean };
+
+export type SidebarTournamentGroups = {
+  pinned: SidebarTournament[];
+  recent: SidebarTournament[];
+};
+
 const RECENT_KEY = "recent_tournaments";
 const PINNED_KEY = "pinned_tournaments";
 const MAX_RECENT = 8;
@@ -93,7 +100,7 @@ export function getSelectedTournament(): RecentTournament | null {
  * What the sidebar lists: pinned first, then recents that are not already
  * pinned, so a tournament never appears twice.
  */
-export function getSidebarTournaments(): Array<RecentTournament & { pinned: boolean }> {
+export function getSidebarTournaments(): SidebarTournament[] {
   const pinned = getPinnedTournaments();
   const pinnedIds = new Set(pinned.map((entry) => entry.id));
   return [
@@ -102,4 +109,12 @@ export function getSidebarTournaments(): Array<RecentTournament & { pinned: bool
       .filter((entry) => !pinnedIds.has(entry.id))
       .map((entry) => ({ ...entry, pinned: false })),
   ];
+}
+
+/** The two tree sections. Pinned entries are already absent from recents. */
+export function groupSidebarTournaments(tournaments: SidebarTournament[]): SidebarTournamentGroups {
+  return {
+    pinned: tournaments.filter((tournament) => tournament.pinned),
+    recent: tournaments.filter((tournament) => !tournament.pinned),
+  };
 }

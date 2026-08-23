@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalculator, faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/model/types";
-import { getActiveLabel } from "@/features/match/model/matchStatus";
 import { btnSecondary } from "@/styles/buttonStyles";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
 import MusicPlusIcon from "@/shared/components/ui/MusicPlusIcon";
-import StatusDot from "@/shared/components/ui/StatusDot";
 
 type Props = {
   match: Match;
@@ -78,7 +76,6 @@ export default function MatchHeader({
     <div className="flex items-start justify-between gap-3 mb-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <StatusDot on={match.active} label={getActiveLabel(match.active)} />
           {controls && isRenaming ? (
             <input
               ref={inputRef}
