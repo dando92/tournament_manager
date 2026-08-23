@@ -7,10 +7,7 @@ import {
 } from '@tournament-manager/live-messaging';
 import { MatchAddress } from '@match/match.aggregate';
 import { DivisionAddress } from '@tournament/structure/division/division.aggregate';
-import {
-  PhaseAddress,
-  PhaseGroupAddress,
-} from '@tournament/structure/phase-group/phase-group.aggregate';
+import { PhaseAddress, PhaseGroupAddress } from '@tournament/structure/phase-group/phase-group.aggregate';
 
 /**
  * What the interface is told, and where to route it.
@@ -26,15 +23,12 @@ import {
 export class UiUpdatePublisher {
   constructor(
     private readonly config: ConfigService,
-    @Inject(LIVE_EVENT_PUBLISHER)
-    private readonly transport: LiveEventPublisher,
+    @Inject(LIVE_EVENT_PUBLISHER) private readonly transport: LiveEventPublisher,
   ) {}
 
   emitTournamentUpdate(tournamentId: number | null | undefined): Promise<void> {
     if (!tournamentId) return Promise.resolve();
-    return this.publish('ui.tournament-changed', tournamentId, {
-      tournamentId,
-    });
+    return this.publish('ui.tournament-changed', tournamentId, { tournamentId });
   }
 
   emitSongsUpdate(tournamentId: number | null | undefined): Promise<void> {
@@ -43,19 +37,14 @@ export class UiUpdatePublisher {
   }
 
   emitDivisionUpdate(address: DivisionAddress): Promise<void> {
-    if (!address?.tournamentId || !address?.divisionId)
-      return Promise.resolve();
+    if (!address?.tournamentId || !address?.divisionId) return Promise.resolve();
     return this.publish('ui.division-changed', address.tournamentId, address);
   }
 
   emitPhaseUpdate(address: PhaseAddress): Promise<void> {
     if (!address?.tournamentId || !address?.phaseId) return Promise.resolve();
     const { tournamentId, divisionId, phaseId } = address;
-    return this.publish('ui.phase-changed', tournamentId, {
-      tournamentId,
-      divisionId,
-      phaseId,
-    });
+    return this.publish('ui.phase-changed', tournamentId, { tournamentId, divisionId, phaseId });
   }
 
   emitMatchUpdate(address: MatchAddress): Promise<void> {
@@ -64,30 +53,17 @@ export class UiUpdatePublisher {
   }
 
   emitPhaseGroupUpdate(address: PhaseGroupAddress): Promise<void> {
-    if (!address?.tournamentId || !address?.phaseGroupId)
-      return Promise.resolve();
+    if (!address?.tournamentId || !address?.phaseGroupId) return Promise.resolve();
     const { tournamentId, divisionId, phaseId, phaseGroupId } = address;
-    return this.publish('ui.phase-group-changed', tournamentId, {
-      tournamentId,
-      divisionId,
-      phaseId,
-      phaseGroupId,
-    });
+    return this.publish('ui.phase-group-changed', tournamentId, { tournamentId, divisionId, phaseId, phaseGroupId });
   }
 
-  emitWarning(
-    tournamentId: number | null | undefined,
-    message: string,
-  ): Promise<void> {
+  emitWarning(tournamentId: number | null | undefined, message: string): Promise<void> {
     if (!tournamentId) return Promise.resolve();
     return this.publish('ui.warning', tournamentId, { message });
   }
 
-  private publish(
-    type: string,
-    tournamentId: number,
-    payload: unknown,
-  ): Promise<void> {
+  private publish(type: string, tournamentId: number, payload: unknown): Promise<void> {
     const event: EventEnvelope = { type, tournamentId, payload };
     return this.transport.publish(event);
   }

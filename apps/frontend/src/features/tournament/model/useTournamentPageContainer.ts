@@ -9,23 +9,15 @@ import { useTournamentPage } from "@/features/tournament/model/useTournamentPage
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 
 export function useTournamentPageContainer(tournamentId: number) {
-  const divisionMatch = useMatch(
-    "/tournament/:tournamentId/division/:divisionId/*",
-  );
+  const divisionMatch = useMatch("/tournament/:tournamentId/division/:divisionId/*");
   const { canEditTournament } = usePermissions();
   const canControl = canEditTournament(tournamentId);
   const state = useTournamentPage({ tournamentId, canControl });
   const tree = useTournamentTree();
-  const [participantsManageModal, setParticipantsManageModal] =
-    useState<ParticipantsManageModal>("none");
+  const [participantsManageModal, setParticipantsManageModal] = useState<ParticipantsManageModal>("none");
 
-  const parsedDivisionId = divisionMatch?.params.divisionId
-    ? Number(divisionMatch.params.divisionId)
-    : undefined;
-  const currentDivisionId =
-    parsedDivisionId && Number.isFinite(parsedDivisionId)
-      ? parsedDivisionId
-      : undefined;
+  const parsedDivisionId = divisionMatch?.params.divisionId ? Number(divisionMatch.params.divisionId) : undefined;
+  const currentDivisionId = parsedDivisionId && Number.isFinite(parsedDivisionId) ? parsedDivisionId : undefined;
 
   const context: TournamentPageContextValue = {
     tournamentId,

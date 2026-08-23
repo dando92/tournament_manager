@@ -45,6 +45,15 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 ## Agent Tooling
 
+### Formatting Discipline
+
+- Preserve the established formatting of every file you touch; do not reformat
+  unchanged code as part of a functional change.
+- The workspaces do not share one formatting profile. Never run a formatter
+  from the repository root across files owned by different workspaces. When a
+  formatter is needed, use the owning workspace's configuration and scope it to
+  the lines or new files that require formatting.
+
 ### graphify (Claude Code)
 
 This project has a knowledge graph at `graphify-out/` with god nodes, community structure, and cross-file relationships.

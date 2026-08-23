@@ -30,9 +30,7 @@ export function useSongsList({ tournamentId }: Params) {
 
   async function handleDeletePack(pack: string) {
     const packSongs = songs.filter((song) => song.group === pack);
-    await Promise.allSettled(
-      packSongs.map((song) => deleteMutation.mutateAsync(song.id)),
-    );
+    await Promise.allSettled(packSongs.map((song) => deleteMutation.mutateAsync(song.id)));
   }
 
   return {

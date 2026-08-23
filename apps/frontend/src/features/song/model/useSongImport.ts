@@ -8,10 +8,7 @@ import {
 } from "@/features/song/model/songImport/filesystem";
 import { scanSongsDirectory } from "@/features/song/model/songImport/scan";
 import { buildImportRows } from "@/features/song/model/songImport/stepmaniaParser";
-import type {
-  ChartMode,
-  ScanResult,
-} from "@/features/song/model/songImport/types";
+import type { ChartMode, ScanResult } from "@/features/song/model/songImport/types";
 
 /**
  * Importing an ITGmania songs folder, from the picker to the pool.
@@ -45,8 +42,8 @@ const PROGRESS_INTERVAL_MS = 120;
 
 function messageOf(error: unknown, fallback: string): string {
   return (
-    (error as { response?: { data?: { message?: string } } })?.response?.data
-      ?.message ?? (error instanceof Error ? error.message : fallback)
+    (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+    (error instanceof Error ? error.message : fallback)
   );
 }
 
@@ -77,11 +74,7 @@ export function useSongImport({ tournamentId }: Options) {
     /* The picker was closed. Changing your mind is not an error. */
     if (!directory) return;
 
-    setState({
-      status: "scanning",
-      folder: directory.name,
-      progress: { packs: 0, songs: 0, charts: 0 },
-    });
+    setState({ status: "scanning", folder: directory.name, progress: { packs: 0, songs: 0, charts: 0 } });
     lastProgressAt.current = 0;
 
     try {
@@ -100,10 +93,7 @@ export function useSongImport({ tournamentId }: Options) {
 
       setState({ status: "ready", scan });
     } catch (error) {
-      setState({
-        status: "failed",
-        message: messageOf(error, "That folder could not be read."),
-      });
+      setState({ status: "failed", message: messageOf(error, "That folder could not be read.") });
     }
   }, []);
 
@@ -114,38 +104,24 @@ export function useSongImport({ tournamentId }: Options) {
     if (rows.length === 0) {
       setState({
         status: "failed",
-        message:
-          "None of the songs in that folder holds a dance-single chart this application can import.",
+        message: "None of the songs in that folder holds a dance-single chart this application can import.",
       });
       return;
     }
 
-    setState({
-      status: "importing",
-      folder: state.scan.rootName,
-      total: rows.length,
-    });
+    setState({ status: "importing", folder: state.scan.rootName, total: rows.length });
 
     try {
       const result = await importSongs(tournamentId, rows);
       setState({ status: "idle" });
 
-      if (warnings.length > 0)
-        console.warn("Song import warnings:", warnings, state.scan.warnings);
+      if (warnings.length > 0) console.warn("Song import warnings:", warnings, state.scan.warnings);
 
-      const skipped =
-        result.skipped > 0
-          ? ` ${result.skipped} were already in the pool.`
-          : "";
-      toast.success(
-        `Imported ${result.imported} chart${result.imported === 1 ? "" : "s"}.${skipped}`,
-      );
+      const skipped = result.skipped > 0 ? ` ${result.skipped} were already in the pool.` : "";
+      toast.success(`Imported ${result.imported} chart${result.imported === 1 ? "" : "s"}.${skipped}`);
       navigate(`/tournament/${tournamentId}/songs`);
     } catch (error) {
-      setState({
-        status: "failed",
-        message: messageOf(error, "The songs could not be saved."),
-      });
+      setState({ status: "failed", message: messageOf(error, "The songs could not be saved.") });
     }
   }, [chartMode, navigate, state, tournamentId]);
 

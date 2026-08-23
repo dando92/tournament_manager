@@ -543,6 +543,19 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Next action: run local-stack verification when a Docker checkpoint is wanted;
   no further account/Auth structural work remains in this plan.
 
+### Formatting correction
+
+- Removed the unrelated formatting churn introduced by running the repository-
+  root formatter across the Song checkpoint. API files retain their existing
+  indentation and single quotes, frontend files retain their local two-space
+  and double-quote style, Realtime files retain their single quotes, and project
+  documentation retains its manual wrapping.
+- Added a permanent repository instruction to preserve each file's established
+  formatting and never apply one root formatting profile across workspaces.
+- Verification: API, frontend, and Realtime builds and unit suites pass;
+  architecture checks pass; the Song and account/Auth HTTP suites pass (15
+  tests); all three linters pass with the existing warnings only.
+
 ## Verification
 
 ```text

@@ -21,9 +21,7 @@ type TournamentPageHeaderProps = {
   isSongsPage: boolean;
   isParticipantsPage: boolean;
   isLobbiesPage: boolean;
-  onOpenParticipantsManageModal: Dispatch<
-    SetStateAction<ParticipantsManageModal>
-  >;
+  onOpenParticipantsManageModal: Dispatch<SetStateAction<ParticipantsManageModal>>;
 };
 
 export default function TournamentPageHeader({
@@ -44,14 +42,8 @@ export default function TournamentPageHeader({
           {isSongsPage && (
             <TournamentHeaderSongsManageMenu tournamentId={tournamentId} />
           )}
-          {isParticipantsPage && (
-            <TournamentHeaderParticipantsManageMenu
-              onOpen={onOpenParticipantsManageModal}
-            />
-          )}
-          {isLobbiesPage && (
-            <TournamentHeaderLobbyManageMenu tournamentId={tournamentId} />
-          )}
+          {isParticipantsPage && <TournamentHeaderParticipantsManageMenu onOpen={onOpenParticipantsManageModal} />}
+          {isLobbiesPage && <TournamentHeaderLobbyManageMenu tournamentId={tournamentId} />}
         </div>
       )}
     </div>

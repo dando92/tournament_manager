@@ -24,12 +24,8 @@ export function useTournamentHeaderSongsManageMenu({
     queryFn: () => listSongs(tournamentId),
   });
   const createMutation = useMutation({
-    mutationFn: (input: {
-      title: string;
-      difficulty: number;
-      group: string;
-      artist?: string;
-    }) => createSong(tournamentId, input),
+    mutationFn: (input: { title: string; difficulty: number; group: string; artist?: string }) =>
+      createSong(tournamentId, input),
   });
   const songs = songsQuery.data ?? noSongs;
   const loadingSongsMeta = songsQuery.isLoading;
@@ -66,8 +62,7 @@ export function useTournamentHeaderSongsManageMenu({
     group: string,
     artist?: string,
   ) => {
-    createMutation
-      .mutateAsync({ title, artist, difficulty, group })
+    createMutation.mutateAsync({ title, artist, difficulty, group })
       .then(() => {
         toast.success("Song created.");
       })
