@@ -11,11 +11,15 @@ type UsePlayersTabOptions = {
   division: Division;
   entrants: Entrant[];
   orderByName: boolean;
-  onPlayersChanged: () => void;
 };
 
 /**
  * Who is competing in the division right now.
+ *
+ * The roster itself arrives through the query cache: admitting or withdrawing
+ * somebody publishes a division event, which stales the roster and the counts
+ * the tree draws. What is left here is the list of people who are available to
+ * add, which is read for this tab alone.
  *
  * Removing somebody withdraws their entrant rather than deleting it, so the
  * roster keeps the row and states its status. A withdrawn entrant is not
@@ -29,7 +33,7 @@ function competing(entrants: Entrant[]): Participant[] {
     .filter(Boolean);
 }
 
-export function usePlayersTab({ division, entrants, orderByName, onPlayersChanged }: UsePlayersTabOptions) {
+export function usePlayersTab({ division, entrants, orderByName }: UsePlayersTabOptions) {
   const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(competing(entrants));
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
@@ -73,7 +77,6 @@ export function usePlayersTab({ division, entrants, orderByName, onPlayersChange
     try {
       await addParticipantToDivision(division.id, participant.id);
       await loadAvailableParticipants();
-      onPlayersChanged();
     } catch {
       setDivisionParticipants((prev) => prev.filter((entry) => entry.id !== participant.id));
       setAvailableParticipants((prev) => [...prev, participant]);
@@ -87,7 +90,6 @@ export function usePlayersTab({ division, entrants, orderByName, onPlayersChange
       setDivisionParticipants((prev) => prev.filter((participant) => participant.id !== participantId));
       if (participant) setAvailableParticipants((prev) => [...prev, participant]);
       await loadAvailableParticipants();
-      onPlayersChanged();
     } catch {
       // handled by axios interceptor
     }

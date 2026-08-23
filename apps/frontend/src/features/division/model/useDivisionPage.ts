@@ -16,8 +16,11 @@ type UseDivisionPageResult = {
  * What every destination under a division reads: its structure, and the people
  * competing in it.
  *
- * They are two requests because they are two questions. Adding a player changes
- * the roster and the counts the tree draws, so a refresh invalidates both.
+ * They are two requests because they are two questions. Both move on their own
+ * now: every write to a division publishes an event that stales them, so
+ * nothing here re-reads by hand. `refreshDivision` remains for the one write
+ * that still announces nothing — an advancement rule, which is not an
+ * aggregate and has no commands of its own yet.
  */
 export function useDivisionPage(_tournamentId: number, divisionId: number): UseDivisionPageResult {
   const queryClient = useQueryClient();
