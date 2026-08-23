@@ -4,20 +4,13 @@ import type {
   LobbyPlayerReadyDto,
   LobbySongCompletedDto,
   LobbySongSelectedDto,
+  LiveMatchStateDto,
   SyncStartConnectionStatusDto,
 } from '@tournament-manager/contracts';
 import type { SequencedLiveEventEnvelope } from '@tournament-manager/live-messaging';
 import type { RealtimeMessage, RealtimePath } from '../realtime-message';
 
-export type LiveMatchState = {
-  tournamentId: number;
-  lobbyId: string;
-  lobbyName: string;
-  lobbyCode: string;
-  songTitle: string;
-  songPath: string;
-  players: unknown[];
-};
+export type LiveMatchState = LiveMatchStateDto;
 
 export function mapRealtimeEvent(
   source: SequencedLiveEventEnvelope & { sequence: number },

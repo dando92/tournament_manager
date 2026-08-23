@@ -8,12 +8,14 @@ import {
     TournamentRefDto,
 } from '@tournament-manager/contracts';
 import { CreateTournamentDto, UpdateTournamentDto } from '@tournament/management/tournament.requests';
-import { JwtAuthGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { CreatorOrAdminGuard } from '@auth/guards/owner-or-admin.guard';
+import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
 import { AuthService } from '@auth/services/auth.service';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
 import { TournamentCommands } from '@tournament/management/tournament.commands';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('tournaments')

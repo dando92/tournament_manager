@@ -4,7 +4,7 @@ import { RoundSourceDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMa
 import { MatchCommands } from '@match/match.commands';
 import { MatchQueries } from '@match/match.queries';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 /**
  * Every write here answers `204`. What changed reaches the interface through

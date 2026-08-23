@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { AccountService } from '@account/services/account.service';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { TournamentAggregate, TournamentDetails } from '@tournament/management/tournament.aggregate';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';

@@ -2,10 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdvancementCompetitionKind, AdvancementRule } from '@tournament-manager/persistence';
-import { CreateAdvancementRuleDto, UpdateAdvancementRuleDto } from '@tournament/dtos';
+import { CreateAdvancementRuleDto, UpdateAdvancementRuleDto } from './advancement-rule.requests';
 
 @Injectable()
-export class AdvancementRuleService {
+export class AdvancementRuleStore {
   constructor(
     @InjectRepository(AdvancementRule)
     private readonly advancementRuleRepository: Repository<AdvancementRule>,

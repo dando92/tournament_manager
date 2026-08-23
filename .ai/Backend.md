@@ -48,7 +48,10 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Organize API code by functional capability before technical role. The tournament feature groups competition structure, competition execution, SyncStart coordination, tournament management, and participant registration under focused directories.
 - Keep `TournamentModule` as the explicit composition root while these capabilities still share application services. Register controllers and providers directly in the module; do not hide the dependency graph behind aggregate `controllers.ts` or `services.ts` barrels.
 - Split HTTP controllers by use case surface even when they share the same route prefix. Tournament lifecycle, participant management, lobby control, and Start.gg import endpoints remain separate controllers.
-- Keep the existing manager class names until their application responsibilities are refactored. Directory restructuring alone must not rename classes or change behavior.
+- Keep an aggregate's `*.commands`, `*.aggregate`, `*.store`, and `*.queries` files together. Commands orchestrate, aggregates hold synchronous domain rules, stores load or save only their aggregate, and queries return DTOs rather than entities.
+- Keep request DTOs beside their controller as `*.requests.ts`; do not reintroduce DTO, guard, strategy, controller, or service barrels.
+- Keep cross-aggregate advancement in `structure/advancement/`: `AdvancementRunner` walks rules through stores, while `AdvancementRuleCommands` owns rule writes.
+- Keep shared tournament concerns under `tournament/shared/`, including the open-tournament guard, UI update publisher, and common projections.
 - Keep API tests outside `src`. Unit tests mirror the source capability tree under `tests/unit`; complete HTTP tests live under `tests/e2e/<capability>`; infrastructure collaboration tests live under `tests/integration`; reusable test infrastructure remains under `tests/support`.
 
 ## Database Access and Transactions
@@ -61,7 +64,7 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Versioned PostgreSQL migrations are the only schema mechanism.
 - The current pre-production database is disposable and may be reset to a clean baseline.
 
-`PostgresTournamentPersistence` is superseded. Tournament creation and its required transaction belong directly in `TournamentService`.
+`PostgresTournamentPersistence` is superseded. Tournament creation and its required transaction belong directly in `TournamentCommands`.
 
 ## Live Messages
 

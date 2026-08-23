@@ -106,3 +106,8 @@ depth-agnostic so they can be read as a table of paths in
   inside a dialog reads as a click outside that dialog.
 
 Additional frontend architectural and coding rules remain intentionally minimal.
+
+## API Modules and Shared Contracts
+
+- Import `axios` only from a feature's `api/` module. `app/providers.tsx` is the sole bootstrap exception because it configures the shared client.
+- Browser-gateway DTOs shared with Realtime belong in `@tournament-manager/contracts`; frontend features import them rather than redeclaring flattened transport shapes.

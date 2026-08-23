@@ -7,12 +7,12 @@ import {
     GenerateBracketResultDto,
     ParticipantDto,
 } from '@tournament-manager/contracts';
-import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from '@tournament/dtos';
+import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './division.requests';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
 import { StandingsQueries } from '@tournament/competition/standings.queries';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
 @Controller('divisions')

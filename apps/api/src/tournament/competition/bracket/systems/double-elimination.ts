@@ -1,7 +1,7 @@
-import { IBracketSystem } from "@bracket/IBracketSystem";
+import { BracketSystem } from "@bracket/systems/bracket-system";
 import { Entrant, Phase } from "@tournament-manager/persistence";
 
-export class DoubleElimination extends IBracketSystem {
+export class DoubleElimination extends BracketSystem {
     getName(): string {
         return "DoubleElimination";
     }

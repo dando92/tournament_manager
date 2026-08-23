@@ -5,9 +5,10 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 
 import { AuthController } from './controllers/auth.controller';
-import { LocalAuthGuard, AdminGuard } from './guards';
+import { LocalAuthGuard } from './guards/local-auth.guard';
+import { AdminGuard } from './guards/admin.guard';
 import { AuthService } from './services/auth.service';
-import { LocalStrategy } from './strategies';
+import { LocalStrategy } from './strategies/local.strategy';
 
 import { PersistenceModule } from '@tournament-manager/persistence';
 

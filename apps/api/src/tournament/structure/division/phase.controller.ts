@@ -2,7 +2,7 @@ import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Patch, Post, Use
 import { CreatedResourceDto } from '@tournament-manager/contracts';
 import { CreatePhaseDto, UpdatePhaseDto } from '@tournament/structure/division/phase.requests';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 /**
  * The phases of a division: a separate surface on the division aggregate, the

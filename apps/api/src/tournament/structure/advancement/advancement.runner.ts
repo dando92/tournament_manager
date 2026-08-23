@@ -4,8 +4,8 @@ import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
 import { MatchAggregate } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
+import { AdvancementRuleStore } from './advancement-rule.store';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
 
 /** The entrants one rule moves into one pool. */
@@ -29,12 +29,12 @@ type PoolPlacement = {
  * it, and announced once.
  */
 @Injectable()
-export class AdvancementManager {
+export class AdvancementRunner {
     constructor(
         @Inject()
         private readonly matches: MatchStore,
         @Inject()
-        private readonly advancementRules: AdvancementRuleService,
+        private readonly advancementRules: AdvancementRuleStore,
         @Inject()
         private readonly phaseGroups: PhaseGroupStore,
         @Inject()

@@ -28,11 +28,11 @@ import {
     Tournament,
 } from '@tournament-manager/persistence';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { ParticipantsCommands } from '@tournament/registration/participants.commands';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
 import { PlayerStore } from '@tournament/catalog/player.store';
-import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import {
@@ -78,7 +78,7 @@ export class StartggService {
         private readonly participantQueries: ParticipantQueries,
         private readonly players: PlayerStore,
         private readonly uiUpdateGateway: UiUpdatePublisher,
-        private readonly advancementRuleService: AdvancementRuleService,
+        private readonly advancementRuleService: AdvancementRuleStore,
         private readonly phaseGroupCommands: PhaseGroupCommands,
         private readonly phaseGroupQueries: PhaseGroupQueries,
         @InjectRepository(Tournament)

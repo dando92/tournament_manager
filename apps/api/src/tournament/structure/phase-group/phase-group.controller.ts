@@ -2,7 +2,7 @@ import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Patch, Post, Use
 import { CreatedResourceDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/structure/phase-group/phase-group.requests';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
-import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
+import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/shared/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
 @Controller()

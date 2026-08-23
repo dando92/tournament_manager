@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { BracketSystemProvider } from '@bracket/BracketSystemProvider';
+import { BracketCommands } from '@bracket/bracket.commands';
 
 /**
  * What the interface offers when somebody generates a bracket.
@@ -10,7 +10,7 @@ import { BracketSystemProvider } from '@bracket/BracketSystemProvider';
 @Controller('bracket')
 export class BracketController {
     constructor(
-        private readonly bracketSystems: BracketSystemProvider,
+        private readonly bracketSystems: BracketCommands,
     ) {}
 
     @Get('bracket-types')

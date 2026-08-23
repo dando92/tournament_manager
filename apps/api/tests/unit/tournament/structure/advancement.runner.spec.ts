@@ -1,10 +1,10 @@
 import { AdvancementRule, Entrant, Match, MatchResult, Phase, PhaseGroup, PhaseGroupEntrant, Player } from '@tournament-manager/persistence';
-import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
-import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
+import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
 import { PhaseGroupAggregate } from '@tournament/structure/phase-group/phase-group.aggregate';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
 
-import { AdvancementManager } from '@match/services/advancement.manager';
+import { AdvancementRunner } from '@tournament/structure/advancement/advancement.runner';
 import { MatchAggregate } from '@match/match.aggregate';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { MatchStore } from '@match/match.store';
@@ -55,7 +55,7 @@ function rule(overrides: Partial<AdvancementRule>): AdvancementRule {
   } as AdvancementRule;
 }
 
-describe('AdvancementManager', () => {
+describe('AdvancementRunner', () => {
   const matchStore = {
     load: jest.fn(),
     save: jest.fn(),
@@ -72,9 +72,9 @@ describe('AdvancementManager', () => {
     emitPhaseGroupUpdate: jest.fn(),
   };
 
-  const manager = new AdvancementManager(
+  const manager = new AdvancementRunner(
     matchStore as unknown as MatchStore,
-    advancementRuleService as unknown as AdvancementRuleService,
+    advancementRuleService as unknown as AdvancementRuleStore,
     phaseGroupStore as unknown as PhaseGroupStore,
     publisher as unknown as UiUpdatePublisher,
     { getScoringSystem: () => ({ recalc: jest.fn() }) } as unknown as ScoringSystemProvider,

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '@auth/auth.module';
 import { AccountModule } from '@account/account.module';
-import { AdminGuard, CreatorOrAdminGuard, TournamentAccessGuard } from '@auth/guards';
+import { AdminGuard } from '@auth/guards/admin.guard';
+import { CreatorOrAdminGuard } from '@auth/guards/owner-or-admin.guard';
+import { TournamentAccessGuard } from '@auth/guards/tournament-access.guard';
 import { PersistenceModule } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { LiveMessagingModule } from '../live-messaging/live-messaging.module';
@@ -9,28 +11,28 @@ import { StartggModule } from '../integrations/startgg/startgg.module';
 import { StartggMatchReporter } from '../integrations/startgg/startgg-match.reporter';
 import { StartggService } from '../integrations/startgg/startgg.service';
 import { TournamentStartggController } from '../integrations/startgg/tournament-startgg.controller';
-import { AdvancementRulesController } from './structure/controllers/advancement-rules.controller';
+import { AdvancementRulesController } from './structure/advancement/advancement-rule.controller';
 import { DivisionsController } from './structure/division/division.controller';
 import { DivisionQueries } from './structure/division/division.queries';
 import { TreeQueries } from './structure/tree.queries';
 import { StandingsQueries } from './competition/standings.queries';
 import { PhaseGroupsController } from './structure/phase-group/phase-group.controller';
 import { PhasesController } from './structure/division/phase.controller';
-import { AdvancementRuleManager } from './structure/services/advancement-rule.manager';
-import { AdvancementRuleService } from './structure/services/advancement-rule.service';
+import { AdvancementRuleCommands } from './structure/advancement/advancement-rule.commands';
+import { AdvancementRuleStore } from './structure/advancement/advancement-rule.store';
 import { DivisionCommands } from './structure/division/division.commands';
 import { DivisionStore } from './structure/division/division.store';
 import { PhaseGroupCommands } from './structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from './structure/phase-group/phase-group.queries';
 import { PhaseGroupStore } from './structure/phase-group/phase-group.store';
 import { BracketController } from './competition/bracket/bracket.controller';
-import { BracketSystemProvider } from './competition/bracket/BracketSystemProvider';
+import { BracketCommands } from './competition/bracket/bracket.commands';
 import { MatchesController } from './competition/match/match.controller';
-import { AdvancementManager } from './competition/match/services/advancement.manager';
+import { AdvancementRunner } from './structure/advancement/advancement.runner';
 import { MatchCommands } from './competition/match/match.commands';
 import { MatchQueries } from './competition/match/match.queries';
 import { MatchStore } from './competition/match/match.store';
-import { UiUpdatePublisher } from './competition/match/services/ui-update.publisher';
+import { UiUpdatePublisher } from './shared/ui-update.publisher';
 import { ScoresController } from './competition/score.controller';
 import { ScoreQueries } from './competition/score.queries';
 import { ScoreStore } from './competition/score.store';
@@ -48,7 +50,7 @@ import { ParticipantsCommands } from './registration/participants.commands';
 import { TournamentCommands } from './management/tournament.commands';
 import { TournamentQueries } from './management/tournament.queries';
 import { TournamentStore } from './management/tournament.store';
-import { TournamentOpenGuard } from './guards/tournament-open.guard';
+import { TournamentOpenGuard } from './shared/tournament-open.guard';
 import { TournamentsController } from './management/tournament.controller';
 import { ParticipantQueries } from './registration/participants.queries';
 import { TournamentParticipantsController } from './registration/participants.controller';
@@ -70,10 +72,10 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         MatchCommands,
         MatchQueries,
         MatchStore,
-        AdvancementManager,
+        AdvancementRunner,
         SongRoller,
         ScoringSystemProvider,
-        BracketSystemProvider,
+        BracketCommands,
         TournamentSyncStartService,
         TournamentSyncStartBootstrap,
         PlayerQueries,
@@ -88,8 +90,8 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         SongStore,
         StartggService,
         StartggMatchReporter,
-        AdvancementRuleService,
-        AdvancementRuleManager,
+        AdvancementRuleStore,
+        AdvancementRuleCommands,
         UiUpdatePublisher,
         CompletedSongService,
         DivisionQueries,
