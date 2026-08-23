@@ -9,6 +9,7 @@ import { Account } from '@tournament-manager/persistence';
 import { LIVE_EVENT_PUBLISHER } from '@tournament-manager/live-messaging';
 import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { TournamentSyncStartService } from '../../../src/tournament/syncstart/tournament-syncstart.service';
+import { PhaseGroupQueries } from '../../../src/tournament/structure/phase-group/phase-group.queries';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -18,13 +19,6 @@ import {
 const database = getTestDatabaseName('phase_group_writes');
 
 process.env.DATABASE_NAME = database;
-
-type SeatBody = {
-  seedNum: number | null;
-  slot: number | null;
-  status: string;
-  entrant: { id: number; name: string };
-};
 
 /**
  * Every write a pool undergoes, against a real PostgreSQL.
@@ -38,6 +32,7 @@ type SeatBody = {
 describe('Phase group writes (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let phaseGroupQueries: PhaseGroupQueries;
   let accessToken: string;
 
   let tournamentId: number;
@@ -55,10 +50,11 @@ describe('Phase group writes (e2e)', () => {
     return [...published];
   }
 
-  async function seats(phaseGroupId: number): Promise<SeatBody[]> {
-    const response = await request(app.getHttpServer()).get(`/phase-groups/${phaseGroupId}/entrants`).expect(200);
-
-    return response.body;
+  /* Nothing calls a pool's roster over HTTP, so the route was removed with the
+     other reads no client makes. The query is what the pool answers with, and it
+     is what this suite asserts through. */
+  function seats(phaseGroupId: number) {
+    return phaseGroupQueries.entrants(phaseGroupId);
   }
 
   async function createMatch(phaseGroupId: number, entrantIds: number[]): Promise<number> {
@@ -96,6 +92,7 @@ describe('Phase group writes (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    phaseGroupQueries = moduleFixture.get(PhaseGroupQueries);
     const accountRepository = moduleFixture.get<Repository<Account>>(getRepositoryToken(Account));
     const credentials = {
       username: 'phase-group-writes-owner',
@@ -253,7 +250,7 @@ describe('Phase group writes (e2e)', () => {
       .expect(201);
 
     const seated = await seats(generated.body.phaseGroupId);
-    expect(seated.map((seat) => [seat.entrant.name, seat.seedNum, seat.slot])).toEqual([
+    expect(seated.map((seat) => [seat.entrant.name, Number(seat.seedNum), Number(seat.slot)])).toEqual([
       ['Ann', 1, 1],
       ['Bob', 2, 2],
     ]);

@@ -1,17 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
-import { CreatedResourceDto, PhaseGroupEntrantDto } from '@tournament-manager/contracts';
+import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Patch, Post, UseGuards, ValidationPipe } from '@nestjs/common';
+import { CreatedResourceDto } from '@tournament-manager/contracts';
 import { CreatePhaseGroupDto, UpdatePhaseGroupDto } from '@tournament/structure/phase-group/phase-group.requests';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
-import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import { RequireOpenTournament, TournamentOpenGuard } from '@tournament/guards/tournament-open.guard';
 
 @UseGuards(TournamentOpenGuard)
 @Controller()
 export class PhaseGroupsController {
-    constructor(
-        private readonly commands: PhaseGroupCommands,
-        private readonly queries: PhaseGroupQueries,
-    ) {}
+    constructor(private readonly commands: PhaseGroupCommands) {}
 
     @Post('phases/:phaseId/phase-groups')
     @RequireOpenTournament({ entity: 'phase', location: 'params', field: 'phaseId' })
@@ -20,11 +16,6 @@ export class PhaseGroupsController {
         @Body(new ValidationPipe()) dto: CreatePhaseGroupDto,
     ): Promise<CreatedResourceDto> {
         return { id: await this.commands.create(Number(phaseId), dto) };
-    }
-
-    @Get('phase-groups/:id/entrants')
-    async getEntrants(@Param('id') id: number): Promise<PhaseGroupEntrantDto[]> {
-        return this.queries.entrants(Number(id));
     }
 
     @Patch('phase-groups/:id')

@@ -167,9 +167,8 @@ describe('Tournament management (e2e)', () => {
     const phaseGroupId = phaseGroupResponse.body.id;
 
     /* Pool membership is derived: an entrant is in a pool because a match there
-       holds it. The routes that put one in by hand were removed in e9c02ed
-       precisely because they fought that derivation, so the way to seed a pool
-       is to give it a match. */
+       holds it. What that reads back is asserted in `phase-group-writes`; here
+       the match is what gives the tree something to count. */
     await request(app.getHttpServer())
       .post('/matches')
       .send({
@@ -179,15 +178,6 @@ describe('Tournament management (e2e)', () => {
         entrantIds: [entrantId],
       })
       .expect(201);
-
-    await request(app.getHttpServer())
-      .get(`/phase-groups/${phaseGroupId}/entrants`)
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body).toContainEqual(
-          expect.objectContaining({ entrant: expect.objectContaining({ id: entrantId }) }),
-        );
-      });
 
     /* Creating a phase gives it a default pool, so the phase holds two: the
        default one and the one this test named. They come back in the order they

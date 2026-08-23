@@ -9,6 +9,7 @@ import { Account } from '@tournament-manager/persistence';
 import { LIVE_EVENT_PUBLISHER } from '@tournament-manager/live-messaging';
 import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { TournamentSyncStartService } from '../../../src/tournament/syncstart/tournament-syncstart.service';
+import { PhaseGroupQueries } from '../../../src/tournament/structure/phase-group/phase-group.queries';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -42,6 +43,7 @@ type EntrantBody = {
 describe('Division writes (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let phaseGroupQueries: PhaseGroupQueries;
   let accessToken: string;
 
   let tournamentId: number;
@@ -83,6 +85,7 @@ describe('Division writes (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    phaseGroupQueries = moduleFixture.get(PhaseGroupQueries);
     const accountRepository = moduleFixture.get<Repository<Account>>(getRepositoryToken(Account));
     const credentials = {
       username: 'division-writes-owner',
@@ -316,10 +319,8 @@ describe('Division writes (e2e)', () => {
 
       expect(generated.body).toEqual({ phaseId: expect.any(Number), phaseGroupId: expect.any(Number) });
 
-      const pool = await request(app.getHttpServer())
-        .get(`/phase-groups/${generated.body.phaseGroupId}/entrants`)
-        .expect(200);
-      expect(pool.body.map((seat: { entrant: { id: number } }) => seat.entrant.id)).toEqual(seeded);
+      const seats = await phaseGroupQueries.entrants(generated.body.phaseGroupId);
+      expect(seats.map((seat) => seat.entrant.id)).toEqual(seeded);
 
       const matches = await request(app.getHttpServer())
         .get(`/matches/phase-group/${generated.body.phaseGroupId}`)
