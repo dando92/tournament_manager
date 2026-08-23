@@ -6,6 +6,7 @@ import { AccountService } from '@account/services/account.service';
 import { PlayerStore, normalizePlayerName } from '@tournament/catalog/player.store';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { ParticipantQueries } from '@tournament/registration/participants.queries';
+import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 
@@ -41,6 +42,7 @@ export class ParticipantsCommands {
         private readonly accounts: AccountService,
         private readonly divisions: DivisionCommands,
         private readonly divisionQueries: DivisionQueries,
+        private readonly publisher: UiUpdatePublisher,
     ) {}
 
     /** Answers with the participant id: the caller shows the person it just registered. */
@@ -49,6 +51,7 @@ export class ParticipantsCommands {
         const participant = tournament.register(await this.playerFor(input));
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
 
         return participant.id;
     }
@@ -71,6 +74,7 @@ export class ParticipantsCommands {
         );
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
 
         /* The ids are read after the save: somebody registered for the first
            time is a row that does not exist until then. */
@@ -89,6 +93,7 @@ export class ParticipantsCommands {
         const participants = players.map((player) => tournament.register(player));
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
 
         return participants;
     }
@@ -113,6 +118,7 @@ export class ParticipantsCommands {
 
         tournament.unregister(participantId);
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
     }
 
     async grantStaff(tournamentId: number, participantId: number): Promise<void> {
@@ -122,6 +128,7 @@ export class ParticipantsCommands {
         tournament.grantStaff(participantId, account);
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
     }
 
     async revokeStaff(tournamentId: number, participantId: number): Promise<void> {
@@ -129,6 +136,7 @@ export class ParticipantsCommands {
         tournament.revokeStaff(participantId);
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
     }
 
     /** A player competes in a division: they are registered in its tournament first. */
@@ -139,6 +147,7 @@ export class ParticipantsCommands {
         const participant = tournament.register(players.get(playerId));
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
         await this.divisions.addParticipants(divisionId, [participant.id]);
     }
 
@@ -167,6 +176,7 @@ export class ParticipantsCommands {
         const registered = names.map((name) => tournament.register(known.get(normalizePlayerName(name))));
 
         await this.tournaments.save(tournament);
+        await this.publisher.emitTournamentUpdate(tournamentId);
 
         /* The ids are read after the save, for the same reason `importAll`
            reads them there: a participant registered for the first time has

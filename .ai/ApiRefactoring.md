@@ -1240,12 +1240,12 @@ always published. Its three commands are `DivisionCommands.addPhase`,
 `structure/division/` as a second surface on that aggregate. The bracket systems
 lose the `PhaseService` none of them called.
 
-Two things the slice does not do. The tournament configuration and participants
-pages still hold their state in `useState` and re-read by hand after a write, so
-the new event stales the tree rather than them; putting those two pages on the
-query cache is the frontend work phase 4 left behind. And `PlayerService`
-remains: a player belongs to the application rather than to a tournament, so it
-is a catalogue like Song and is refactored with it.
+The configuration and participants pages were subsequently moved onto named
+query-cache entries. Their writes now arrive through `ui.tournament-changed`,
+which invalidates the tree, configuration, roster, and player catalogue for
+every viewer. `PlayerService` remains: a player belongs to the application
+rather than to a tournament, so it is a catalogue like Song and is refactored
+with it.
 
 Verification: `npm run verify` passes — architecture boundaries, every workspace
 build, lint (three pre-existing warnings, none in the changed files), contracts,

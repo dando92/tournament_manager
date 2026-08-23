@@ -4,6 +4,7 @@ import { staleAfterUpdate } from '../../src/features/tournament/model/staleAfter
 import { matchKeys } from '../../src/features/match/api/match.keys.ts';
 import { divisionKeys } from '../../src/features/division/api/division.keys.ts';
 import { tournamentKeys } from '../../src/features/tournament/api/tournament.keys.ts';
+import { participantKeys } from '../../src/features/participant/api/participant.keys.ts';
 
 const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
 
@@ -38,9 +39,12 @@ test('a phase event stales the two projections of the tree it appears in', () =>
   ]);
 });
 
-test('a tournament event stales the tree alone', () => {
+test('a tournament event stales its tree, configuration, roster, and player catalogue', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'TournamentUpdate', data: address }), [
     tournamentKeys.overview(1),
+    tournamentKeys.configuration(1),
+    participantKeys.forTournament(1),
+    participantKeys.players(),
   ]);
 });
 

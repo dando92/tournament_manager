@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Participant, Player } from "@/features/participant/model/types";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { Participant, Player } from "@/features/participant/model/types";
 import { getAllPlayers } from "@/features/participant/api/player.api";
-import {
-  ParticipantsManageModal,
-  useTournamentPageContext,
-} from "@/features/tournament/model/TournamentPageContext";
+import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import {
   createParticipant,
   importParticipants,
@@ -15,46 +13,47 @@ import {
   removeParticipantStaff,
   type ParticipantImportPreviewEntry,
 } from "@/features/participant/api/participant.api";
+import { participantKeys } from "@/features/participant/api/participant.keys";
+
+const noParticipants: Participant[] = [];
+const noPlayers: Player[] = [];
 
 /**
  * The participant roster and the three ways of adding to it: one name, a
  * selection from the player database, or a pasted list.
  *
- * The roster is re-read after every change rather than patched in place: a
- * registration can create a player, and a staff change can come from
- * elsewhere, so the server's answer is the only complete one.
+ * The server remains the roster authority. Mutations publish a tournament
+ * update, which invalidates this shared query for every client.
  */
 export function useTournamentParticipantsPage() {
   const { tournamentId, controls, participantsManageModal, setParticipantsManageModal } =
     useTournamentPageContext();
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [name, setName] = useState("");
   const [participantSearch, setParticipantSearch] = useState("");
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [bulkText, setBulkText] = useState("");
   const [preview, setPreview] = useState<ParticipantImportPreviewEntry[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [previousManageModal, setPreviousManageModal] = useState<ParticipantsManageModal>("none");
-
-  const refreshParticipants = useCallback(async () => {
-    setParticipants(await listParticipants(tournamentId));
-  }, [tournamentId]);
-
-  useEffect(() => {
-    refreshParticipants().catch(() => {});
-    getAllPlayers().then(setAllPlayers).catch(() => {});
-  }, [refreshParticipants, tournamentId]);
-
-  /* The start.gg import runs in a modal the header owns, so its closing is the
-     only signal that the roster may have changed. */
-  useEffect(() => {
-    if (previousManageModal === "startgg" && participantsManageModal === "none") {
-      refreshParticipants().catch(() => {});
-    }
-    setPreviousManageModal(participantsManageModal);
-  }, [participantsManageModal, previousManageModal, refreshParticipants]);
+  const participantsQuery = useQuery({
+    queryKey: participantKeys.forTournament(tournamentId),
+    queryFn: () => listParticipants(tournamentId),
+  });
+  const playersQuery = useQuery({
+    queryKey: participantKeys.players(),
+    queryFn: getAllPlayers,
+  });
+  const registerMutation = useMutation({
+    mutationFn: (payload: { playerId?: number; playerName?: string }) => createParticipant(tournamentId, payload),
+  });
+  const importMutation = useMutation({
+    mutationFn: (entries: Array<{ name: string; playerId?: number }>) => importParticipants(tournamentId, entries),
+  });
+  const removeMutation = useMutation({ mutationFn: (participantId: number) => removeParticipant(tournamentId, participantId) });
+  const grantStaffMutation = useMutation({ mutationFn: (participantId: number) => makeParticipantStaff(tournamentId, participantId) });
+  const revokeStaffMutation = useMutation({ mutationFn: (participantId: number) => removeParticipantStaff(tournamentId, participantId) });
+  const participants = participantsQuery.data ?? noParticipants;
+  const allPlayers = playersQuery.data ?? noPlayers;
+  const submitting = registerMutation.isPending || importMutation.isPending;
 
   const participantPlayerIds = useMemo(
     () => new Set(participants.map((participant) => participant.player.id)),
@@ -88,43 +87,28 @@ export function useTournamentParticipantsPage() {
 
   async function handleRegister() {
     if (!name.trim()) return;
-    setSubmitting(true);
-    try {
-      await createParticipant(tournamentId, { playerName: name.trim() });
-      setName("");
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
+    await registerMutation.mutateAsync({ playerName: name.trim() });
+    setName("");
+    setParticipantsManageModal("none");
   }
 
   async function handleAddExistingPlayers() {
     if (selectedPlayerIds.length === 0) return;
-    setSubmitting(true);
-    try {
-      await Promise.all(selectedPlayerIds.map((playerId) => createParticipant(tournamentId, { playerId })));
-      setSelectedPlayerIds([]);
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
+    await Promise.all(selectedPlayerIds.map((playerId) => registerMutation.mutateAsync({ playerId })));
+    setSelectedPlayerIds([]);
+    setParticipantsManageModal("none");
   }
 
   async function handleRemove(participantId: number) {
-    await removeParticipant(tournamentId, participantId);
-    await refreshParticipants();
+    await removeMutation.mutateAsync(participantId);
   }
 
   async function handleMakeStaff(participantId: number) {
-    await makeParticipantStaff(tournamentId, participantId);
-    await refreshParticipants();
+    await grantStaffMutation.mutateAsync(participantId);
   }
 
   async function handleRemoveStaff(participantId: number) {
-    await removeParticipantStaff(tournamentId, participantId);
-    await refreshParticipants();
+    await revokeStaffMutation.mutateAsync(participantId);
   }
 
   async function handlePreviewImport() {
@@ -150,16 +134,10 @@ export function useTournamentParticipantsPage() {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      await importParticipants(tournamentId, entries);
-      setBulkText("");
-      setPreview([]);
-      setParticipantsManageModal("none");
-      await refreshParticipants();
-    } finally {
-      setSubmitting(false);
-    }
+    await importMutation.mutateAsync(entries);
+    setBulkText("");
+    setPreview([]);
+    setParticipantsManageModal("none");
   }
 
   return {
