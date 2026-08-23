@@ -1,5 +1,5 @@
 import { IBracketSystem } from "@bracket/IBracketSystem";
-import { Division, Entrant, Phase } from "@tournament-manager/persistence";
+import { Entrant, Phase } from "@tournament-manager/persistence";
 
 export class DoubleElimination extends IBracketSystem {
     getName(): string {
@@ -10,7 +10,7 @@ export class DoubleElimination extends IBracketSystem {
         return "DoubleElimination";
     }
 
-    protected async createBracket(entrants: Entrant[], playerPerMatch: number, _division: Division, phase: Phase, phaseGroupId?: number): Promise<void> {
+    protected async createBracket(entrants: Entrant[], playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<void> {
         if (playerPerMatch !== 2 && playerPerMatch !== 4 && playerPerMatch !== 8) {
             throw new Error(`DoubleElimination only supports playerPerMatch of 2, 4, or 8, got ${playerPerMatch}`);
         }

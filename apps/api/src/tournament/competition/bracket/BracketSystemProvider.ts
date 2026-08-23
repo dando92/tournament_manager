@@ -5,7 +5,6 @@ import { SingleElimination } from "@bracket/SingleElimination";
 import { IBracketSystem } from "@bracket/IBracketSystem";
 import { KingOfTheHill } from "@bracket/KingOfTheHill";
 import { MatchCommands } from "@match/match.commands";
-import { DivisionService } from "@tournament/structure/division/division.service";
 import { PhaseService } from "@tournament/structure/services/phase.service";
 import { AdvancementRuleService } from "@tournament/structure/services/advancement-rule.service";
 import { PhaseGroupService } from "@tournament/structure/services/phase-group.service";
@@ -17,16 +16,14 @@ export class BracketSystemProvider {
         @Inject()
         private readonly matchCommands: MatchCommands,
         @Inject()
-        private readonly divisionService: DivisionService,
-        @Inject()
         private readonly phaseService: PhaseService,
         @Inject()
         private readonly advancementRuleService: AdvancementRuleService,
         @Inject()
         private readonly phaseGroupService: PhaseGroupService,
     ) {
-        const args: [MatchCommands, DivisionService, PhaseService, AdvancementRuleService, PhaseGroupService] =
-            [matchCommands, divisionService, phaseService, advancementRuleService, phaseGroupService];
+        const args: [MatchCommands, PhaseService, AdvancementRuleService, PhaseGroupService] =
+            [matchCommands, phaseService, advancementRuleService, phaseGroupService];
 
         const all: IBracketSystem[] = [
             new DoubleElimination(...args),

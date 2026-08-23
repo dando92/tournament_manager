@@ -28,14 +28,13 @@ import {
     Player,
     Tournament,
 } from '@tournament-manager/persistence';
-import { DivisionService } from '@tournament/structure/division/division.service';
-import { EntrantService } from '@tournament/services/entrant.service';
+import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { ParticipantService } from '@tournament/services/participant.service';
 import { PhaseService } from '@tournament/structure/services/phase.service';
 import { PlayerService } from '@player/player.service';
 import { TournamentService } from '@tournament/services/tournament.service';
-import { CreateDivisionDto, CreatePhaseDto } from '@tournament/dtos';
+import { CreatePhaseDto } from '@tournament/dtos';
 import { AdvancementRuleService } from '@tournament/structure/services/advancement-rule.service';
 import { PhaseGroupService } from '@tournament/structure/services/phase-group.service';
 import {
@@ -77,10 +76,9 @@ export class StartggService {
     constructor(
         private readonly startggClient: StartggClient,
         private readonly tournamentService: TournamentService,
-        private readonly divisionService: DivisionService,
+        private readonly divisionCommands: DivisionCommands,
         private readonly phaseService: PhaseService,
         private readonly participantService: ParticipantService,
-        private readonly entrantService: EntrantService,
         private readonly playerService: PlayerService,
         private readonly uiUpdateGateway: UiUpdatePublisher,
         private readonly advancementRuleService: AdvancementRuleService,
@@ -668,10 +666,11 @@ export class StartggService {
             : null;
 
         if (!division) {
-            const dto = new CreateDivisionDto();
-            dto.name = snapshot.name;
-            dto.tournamentId = tournamentId;
-            division = await this.divisionService.create(dto);
+            const divisionId = await this.divisionCommands.create({ name: snapshot.name, tournamentId });
+            division = await this.divisionRepository.findOne({
+                where: { id: divisionId },
+                relations: { tournament: true, entrants: true, phases: true },
+            });
         }
 
         this.cacheMapping(mappingCache, {
@@ -748,7 +747,11 @@ export class StartggService {
             if (!participant) {
                 throw new NotFoundException(`No local participant resolved for start.gg participant ${entrant.participants[0].id}`);
             }
-            localEntrant = await this.entrantService.addSinglesEntrant(divisionId, participant.id);
+            const [entrantId] = await this.divisionCommands.addParticipants(divisionId, [participant.id]);
+            localEntrant = await this.entrantRepository.findOne({
+                where: { id: entrantId },
+                relations: { participants: { player: true }, division: true },
+            });
         }
 
         if (!localEntrant) {

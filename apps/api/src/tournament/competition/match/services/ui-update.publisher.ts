@@ -6,6 +6,7 @@ import {
   type LiveEventPublisher,
 } from '@tournament-manager/live-messaging';
 import { MatchAddress } from '@match/match.aggregate';
+import { DivisionAddress } from '@tournament/structure/division/division.aggregate';
 import { UiUpdateContextService } from './ui-update-context.service';
 
 @Injectable()
@@ -19,6 +20,12 @@ export class UiUpdatePublisher {
   emitTournamentUpdate(tournamentId: number | null | undefined): Promise<void> {
     if (!tournamentId) return Promise.resolve();
     return this.publish('ui.tournament-changed', tournamentId, { tournamentId });
+  }
+
+  /** The division writes carry the address of what they changed, like the match writes. */
+  emitDivisionUpdate(address: DivisionAddress): Promise<void> {
+    if (!address?.tournamentId || !address?.divisionId) return Promise.resolve();
+    return this.publish('ui.division-changed', address.tournamentId, address);
   }
 
   async emitDivisionUpdateByDivisionId(divisionId: number | null | undefined): Promise<void> {

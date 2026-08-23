@@ -1,7 +1,6 @@
 import { IsArray, IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { Tournament } from '@tournament-manager/persistence';
 
 export class CreateDivisionDto {
   @ApiProperty({ description: 'The name of the division', example: 'Division A' })
@@ -30,8 +29,6 @@ export class UpdateDivisionDto {
   @IsNumber()
   @Type(() => Number)
   tournamentId: number;
-
-  tournament?: Tournament;
 }
 
 export class GenerateDivisionBracketDto {

@@ -24,6 +24,23 @@ const SONGS_OF_TOURNAMENT = `
 `;
 
 /**
+ * The songs already played somewhere in a division.
+ *
+ * The roller subtracts them from the pool, so a bracket does not ask a division
+ * to play the same song twice. A round without a song — one scored by hand —
+ * has nothing to exclude and is skipped by the join.
+ */
+const SONGS_PLAYED_IN_DIVISION = `
+    SELECT DISTINCT r."songId" AS "songId"
+    FROM        "round" r
+    JOIN        "match" m       ON m."id" = r."matchId"
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" p        ON p."id" = pg."phaseId"
+    WHERE       p."divisionId" = $1
+        AND     r."songId" IS NOT NULL
+`;
+
+/**
  * Every read of the song catalogue.
  *
  * It projects and nothing else. The roller loads the same songs as entities,
@@ -41,5 +58,11 @@ export class SongQueries {
         const rows: SongRow[] = await this.dataSource.query(SONGS_OF_TOURNAMENT, [tournamentId]);
 
         return rows;
+    }
+
+    async playedInDivision(divisionId: number): Promise<number[]> {
+        const rows: Array<{ songId: number }> = await this.dataSource.query(SONGS_PLAYED_IN_DIVISION, [divisionId]);
+
+        return rows.map((row) => row.songId);
     }
 }

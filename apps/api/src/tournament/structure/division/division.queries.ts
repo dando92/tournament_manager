@@ -112,6 +112,20 @@ export class DivisionQueries {
     }
 
     /**
+     * Which tournament a division belongs to, for the callers that have to
+     * reach the tournament before they can reach the division — registering a
+     * player creates a participant of the tournament first.
+     */
+    async tournamentIdOf(divisionId: number): Promise<number | null> {
+        const rows: Array<{ tournamentId: number | null }> = await this.dataSource.query(
+            'SELECT d."tournamentId" AS "tournamentId" FROM "division" d WHERE d."id" = $1',
+            [divisionId],
+        );
+
+        return rows[0]?.tournamentId ?? null;
+    }
+
+    /**
      * Whether a division exists. Its three read routes answer `404` for one that
      * does not, which an empty collection cannot say on its own.
      */

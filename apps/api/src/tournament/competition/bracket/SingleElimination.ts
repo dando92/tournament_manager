@@ -1,5 +1,5 @@
 import { IBracketSystem } from "@bracket/IBracketSystem";
-import { Division, Entrant, Phase } from "@tournament-manager/persistence";
+import { Entrant, Phase } from "@tournament-manager/persistence";
 
 type PlayerInfo = {
     match: number;
@@ -15,7 +15,7 @@ export class SingleElimination extends IBracketSystem {
         return "SingleElimination";
     }
 
-    protected async createBracket(entrants: Entrant[], playerPerMatch: number, _division: Division, phase: Phase, phaseGroupId?: number): Promise<void> {
+    protected async createBracket(entrants: Entrant[], playerPerMatch: number, phase: Phase, phaseGroupId?: number): Promise<void> {
         const firstRound = await this.buildStructure(entrants.length, playerPerMatch, phase, phaseGroupId);
         await this.fillFirstWave(entrants, firstRound, playerPerMatch);
     }
