@@ -6,7 +6,6 @@ import { UiUpdatePublisher } from '@match/services/ui-update.publisher';
 import { DivisionAggregate, DivisionDetails } from '@tournament/structure/division/division.aggregate';
 import { DivisionStore } from '@tournament/structure/division/division.store';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
-import { PhaseService } from '@tournament/structure/services/phase.service';
 
 export type CreateDivisionInput = DivisionDetails & {
     name: string;
@@ -42,7 +41,6 @@ export class DivisionCommands {
     constructor(
         private readonly store: DivisionStore,
         private readonly publisher: UiUpdatePublisher,
-        private readonly phases: PhaseService,
         private readonly phaseGroups: PhaseGroupCommands,
         private readonly bracketSystems: BracketSystemProvider,
     ) {}
@@ -118,6 +116,42 @@ export class DivisionCommands {
     }
 
     /**
+     * A phase, and the pool every phase starts with.
+     *
+     * A phase is part of the division rather than an aggregate of its own, so
+     * these are division commands: they load the division, change its
+     * structure, save once and announce the division. The pool is created by
+     * the pool's own commands, which is the one direction a command may reach
+     * in — downwards, into the structure it is making.
+     */
+    async addPhase(divisionId: number, name: string, withDefaultPhaseGroup = true): Promise<number> {
+        const division = await this.store.loadOrFail(divisionId);
+        const phase = division.addPhase(name);
+
+        await this.store.save(division);
+        await this.publisher.emitDivisionUpdate(division.address);
+        if (withDefaultPhaseGroup) await this.phaseGroups.create(phase.id, {});
+
+        return phase.id;
+    }
+
+    async renamePhase(phaseId: number, name: string): Promise<void> {
+        const division = await this.store.loadOrFail(await this.store.locatePhase(phaseId));
+        division.renamePhase(phaseId, name);
+
+        await this.store.save(division);
+        await this.publisher.emitDivisionUpdate(division.address);
+    }
+
+    async removePhase(phaseId: number): Promise<void> {
+        const division = await this.store.loadOrFail(await this.store.locatePhase(phaseId));
+        division.removePhase(phaseId);
+
+        await this.store.save(division);
+        await this.publisher.emitDivisionUpdate(division.address);
+    }
+
+    /**
      * Answers with the phase and the pool it built, for the same reason a
      * creation answers with an id: the caller navigates into them.
      *
@@ -131,17 +165,14 @@ export class DivisionCommands {
         const system = this.bracketSystems.getBracketSystem(input.bracketType);
         if (!system) throw new BadRequestException(`Unknown bracket type ${input.bracketType}`);
 
-        const phase = await this.phases.create({
-            divisionId,
-            name: input.phaseName?.trim() || `Bracket ${division.nextPhaseNumber}`,
-        });
+        const entrants = division.activeEntrants;
+        const phase = division.addPhase(input.phaseName?.trim() || `Bracket ${division.nextPhaseNumber}`);
+
+        await this.store.save(division);
+        await this.publisher.emitDivisionUpdate(division.address);
+
         const phaseGroupId = await this.phaseGroups.create(phase.id, { bracketType: input.bracketType });
-        await system.generateForExistingPhaseGroup(
-            phase,
-            phaseGroupId,
-            division.activeEntrants,
-            input.playerPerMatch ?? 2,
-        );
+        await system.generateForExistingPhaseGroup(phase, phaseGroupId, entrants, input.playerPerMatch ?? 2);
 
         return { phaseId: phase.id, phaseGroupId };
     }

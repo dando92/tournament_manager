@@ -1,4 +1,4 @@
-import { Division, Entrant, Participant } from '@tournament-manager/persistence';
+import { Division, Entrant, Participant, Phase } from '@tournament-manager/persistence';
 import { DivisionAggregate } from '@tournament/structure/division/division.aggregate';
 
 describe('DivisionAggregate', () => {
@@ -114,5 +114,52 @@ describe('DivisionAggregate', () => {
 
   it('carries the address its events are routed by', () => {
     expect(division([]).address).toEqual({ tournamentId: 7, divisionId: 4 });
+  });
+
+  /* A phase is a name and a position inside the division rather than an
+     aggregate of its own, so changing one is a change to the division. */
+  describe('its phases', () => {
+    function withPhases(...phases: Array<Partial<Phase>>): DivisionAggregate {
+      return DivisionAggregate.of({ id: 4, phases, entrants: [] } as Division);
+    }
+
+    it('adds a phase to the division that holds it', () => {
+      const roster = withPhases();
+
+      const phase = roster.addPhase('Qualifiers');
+
+      expect(phase.name).toBe('Qualifiers');
+      expect(roster.entity.phases).toEqual([phase]);
+      expect(phase.division).toBe(roster.entity);
+    });
+
+    it('renames a phase and trims what it was given', () => {
+      const roster = withPhases({ id: 9, name: 'Qualifiers' });
+
+      roster.renamePhase(9, '  Finals  ');
+
+      expect(roster.entity.phases[0].name).toBe('Finals');
+    });
+
+    it('keeps the current name when the new one is blank', () => {
+      const roster = withPhases({ id: 9, name: 'Qualifiers' });
+
+      roster.renamePhase(9, '   ');
+
+      expect(roster.entity.phases[0].name).toBe('Qualifiers');
+    });
+
+    it('removes a phase and tells the store to delete its row', () => {
+      const roster = withPhases({ id: 9 }, { id: 10 });
+
+      roster.removePhase(9);
+
+      expect(roster.entity.phases.map((phase) => phase.id)).toEqual([10]);
+      expect(roster.removals).toEqual([9]);
+    });
+
+    it('refuses a phase of another division', () => {
+      expect(() => withPhases({ id: 9 }).removePhase(404)).toThrow('Phase with ID 404 not found');
+    });
   });
 });
