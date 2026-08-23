@@ -398,6 +398,17 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - Open question recorded as FQ-013: a change committed between the HTTP read and the socket connection is announced by a signal the client now discards.
 - Verification: `npm run check:architecture` passes, realtime `tsc --noEmit` clean and 16/16 unit tests, API `tsc --noEmit` clean with tests included, realtime e2e 2/2 against a real Redis, frontend `vite build` and `eslint` clean.
 
+### Phase 6 of the API refactoring: one update path
+
+- Made every mutation under `src/tournament` answer `204`, with two stated exceptions: a creation answers `201 { id }` because an event cannot tell a caller the address of something that did not exist when it sent the request, and a commit answers `200 { startggReport }` because the outcome of an external side effect concerns whoever pressed the button rather than everyone watching. Ten match commands lost the projection that followed their save, and `MatchCommands` no longer holds `MatchQueries`.
+- Deleted the reducer beside the query cache in `useMatches`, with `matchesReducer.ts` and `matchesActions.ts`. Each action used to write both copies and then receive the same change a third time over the socket, and the patch it applied was only ever right for the match it addressed.
+- Narrowed the realtime invalidation to what an event names, in `staleAfterUpdate`. A match event stales two match lists; the tree moves under a pool event, which a match write publishes only when the pool's own counts changed. `MatchAggregate.poolState` decides that in the terms `TreeQueries` counts them.
+- Dropped the by-hand tree refresh from the structural mutators, so the person who renamed a pool and the person watching it now see it the same way. `refreshTree` remains for bracket generation, which navigates into what it just built.
+- Fixed `DivisionService.update`, which published nothing: a renamed division only moved for whoever renamed it.
+- Added `tests/unit/alias-resolver.mjs` so `node --test` resolves the `@/` alias. Without it only files importing types alone could be covered, which is a strange rule for what a test may cover.
+- Verification: `npm run verify` passes — architecture boundaries, every workspace build, lint (nine pre-existing warnings, none in the changed files), contracts, 131 unit tests, 38 API e2e tests against PostgreSQL, and the migration-runner e2e test. `npm run local:up` rebuilds every image and the stack comes up healthy; `node scripts/verify-local.mjs` passes all eleven checks.
+- Next action: phase 7 of [ApiRefactoring.md](ApiRefactoring.md) — give Division, PhaseGroup, Tournament and Song the four roles Match has, one branch per aggregate, moving each into its target directory in the commit before the one that changes its roles. The writes that still publish nothing — division entrants and advancement rules — get their events there, and their callers lose the by-hand re-reads noted above.
+
 ## Verification
 
 ```text
