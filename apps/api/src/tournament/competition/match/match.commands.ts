@@ -1,8 +1,8 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Player, Score, Song } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
-import { StartggService } from '@api/integrations/startgg/startgg.service';
+import { StartggMatchReporter } from '@api/integrations/startgg/startgg-match.reporter';
 import { MatchAggregate, MatchDetails, MatchPoolState } from '@match/match.aggregate';
 import { MatchStore } from '@match/match.store';
 import { AdvancementManager } from '@match/services/advancement.manager';
@@ -60,12 +60,7 @@ export class MatchCommands {
         private readonly phaseGroups: PhaseGroupService,
         private readonly advancementRules: AdvancementRuleService,
         private readonly songRoller: SongRoller,
-        /* The start.gg service is both the importer and the report client, and
-           the importer registers divisions, which reach the bracket systems and
-           so reach this class again. Splitting the two halves removes the cycle;
-           until then the report client is resolved lazily. */
-        @Inject(forwardRef(() => StartggService))
-        private readonly startgg: StartggService,
+        private readonly startgg: StartggMatchReporter,
     ) {}
 
     /** Answers with the new match id: the bracket systems build structures out of them. */
