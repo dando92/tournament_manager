@@ -102,9 +102,10 @@ today.
 
 If a commands class passes roughly 300 lines, the aggregate boundary is wrong
 rather than the class being long. Bracket generation creates phases, pools and
-matches, so it is a command on Division. `syncDerivedEntrants` is a command on
-PhaseGroup, which `MatchService` currently calls by hand. The aggregates in this
-application are Tournament, Division, PhaseGroup, Match and Song.
+matches, so it is a command on Division. `syncDerivedEntrants` was to be a
+command on PhaseGroup, which `MatchService` called by hand; phase 7 deleted it
+rather than moving it, because what it maintained is derived. The aggregates in
+this application are Tournament, Division, PhaseGroup, Match and Song.
 
 ### Who may call whom
 
@@ -120,9 +121,12 @@ Two prohibitions carry most of the weight:
 
 - **A commands class does not call another commands class.** If a command must
   trigger another, either it is the same aggregate — in which case it is a
-  method on the aggregate — or it is an event. Today `MatchManager` calls
-  `MatchWorkflowManager`, which calls `AdvancementManager`, which calls
-  `PhaseGroupService`, and each reloads what its caller already held.
+  method on the aggregate — or it is derived rather than maintained. Today
+  `MatchManager` calls `MatchWorkflowManager`, which calls `AdvancementManager`,
+  which calls `PhaseGroupService`, and each reloads what its caller already held.
+  Phase 7 refined this into the rule the aggregates actually follow: a command
+  may **create** the structure below it and may not **maintain** the structure
+  above or beside it.
 - **Nothing calls a store or a service inside a `map` or a `for` over a
   collection.** When N elements need a value, the method is `findByIds(ids)` and
   the grouping happens in memory.
@@ -149,8 +153,9 @@ lookup query for every event published — is deleted rather than replaced.
 
 Writing is one transaction through `DataSource.transaction()`, as
 [Backend.md](Backend.md) already requires, with array saves in place of the
-per-row saves in `syncDerivedEntrants`, `replaceEntrants`,
-`markEntrantsAdvanced` and `updateSeeding`.
+per-row saves in `replaceEntrants`, `markEntrantsAdvanced` and `updateSeeding`.
+The fourth of them, `syncDerivedEntrants`, is not saved in one call but deleted:
+see phase 7.
 
 ## Database access
 
@@ -244,7 +249,7 @@ endpoint.
 | `TournamentQueries` | `byId`, `configuration`, `publicList`, `rolesFor`, `hasStartggApiKey` | 1 | 4 |
 | `ParticipantQueries` | `forTournament`, `importPreview` | 1 | 1 |
 | `DivisionQueries` | `entrants`, `availableParticipants` | 2 | — |
-| `PhaseGroupQueries` | `entrants` | 1 | — |
+| `PhaseGroupQueries` | `entrants`, `address`, `addressOfMatchPool`, `exists`, `defaultForPhase` | 5 | — |
 | `SongQueries` | `forTournament`, `scoresForSong` | 1 | 1 |
 | `ScoreQueries` | `history` | — | 1 |
 
@@ -526,9 +531,9 @@ and nothing else: `GET /divisions/:id` with `DivisionService.findOne` and
 `PhaseGroupService.findByPhase`.
 
 `GET /phase-groups/:id/entrants` was listed as a candidate and kept. No client
-calls it, but its end-to-end test is the only coverage of derived pool
-membership, which phases 2 and 7 refactor. It is removed in phase 7, once
-`PhaseGroupQueries` gives that test something else to assert through.
+called it, but its end-to-end test was the only coverage of derived pool
+membership, which phases 2 and 7 refactor. Phase 7 removed it, once
+`PhaseGroupQueries.entrants` gave that test something else to assert through.
 
 Verification passed: `tsc --noEmit`, `npm run build`, `npm run lint` (four
 pre-existing warnings, none in the changed files), 57 unit tests, 11
@@ -1054,8 +1059,9 @@ resumes at a sequence it has not seen invalidates everything on screen.
 ### Phase 7 — Remaining aggregates
 
 - Give Division, PhaseGroup, Tournament and Song the same four roles.
-- Move `syncDerivedEntrants` into PhaseGroup commands and bracket generation
-  into Division commands.
+- Move bracket generation into Division commands. `syncDerivedEntrants` was to
+  become a PhaseGroup command; the PhaseGroup slice deleted it instead, for the
+  reason recorded there.
 - Perform the directory moves for each aggregate immediately before refactoring
   it, so a reviewer sees the move in one commit and the change of roles in the
   next.
@@ -1114,6 +1120,74 @@ entrant and the seed they had, that a command loads the division once, and that 
 generated bracket seats the entrants in seeded order — and the migration-runner
 e2e test.
 
+#### PhaseGroup (done)
+
+`structure/phase-group/` holds `phase-group.{controller,commands,aggregate,store,queries,requests}.ts`.
+`PhaseGroupService` and `PhaseGroupManager` are gone, and with them the graph
+that loaded every match of a pool with its entrants and their players in order
+to answer whether a name had changed.
+
+The slice had to settle how one aggregate's write reaches another, because
+`MatchCommands` called `PhaseGroupService.syncDerivedEntrants` after four of its
+commands. **The copy was the problem rather than the call.** A pool's roster has
+two sources and only one of them is a decision the pool made:
+
+- A **seat** — a `phase_group_entrant` row — is what the pool decided: the order
+  a generated bracket seated people in, or a placement an advancement rule
+  produced.
+- Playing in a match of the pool is the other, and it is **derived**.
+  `syncDerivedEntrants` copied it into seat rows, one query and one save per
+  entrant, and every match write had to remember to call it.
+
+`PhaseGroupQueries.entrants` derives it instead, in one SQL query: the seats of
+the pool, unioned with the entrants its matches hold, seated ones first in seeded
+order. `syncDerivedEntrants` is deleted, `MatchCommands` no longer depends on the
+pool at all, and no commands class calls another.
+
+`GET /phase-groups/:id/entrants` went with it, as phase 0 recorded it would. No
+client ever called it; it survived that phase because the end-to-end coverage of
+pool membership ran through it, and that coverage now asserts against the query
+class directly. What is left is the rule the aggregate boundaries actually follow:
+
+> A command may create the structure below it — a division generates a phase, a
+> pool and its matches — and it may not maintain the structure above or beside
+> it. Anything that has to be maintained is either derived on read or the same
+> aggregate.
+
+`AdvancementManager` is the one exception, and it is not a commands class: an
+advancement rule *is* an edge between two competitions. It works through the two
+stores and the aggregates they load rather than through either commands class, so
+four entrants moving into one pool load and announce that pool once, and a
+completed pool marks who advanced and closes itself in the same save — three
+loads, N saves and two events became one, one and one.
+
+The advancement rules gained the event they never published. They have no
+aggregate, so they read their address in `PhaseGroupQueries` and announce the
+pool their source sits in, which is the read a rule changes: the tree draws the
+rules leaving each pool and the match list the ones leaving each match. On the
+frontend the two by-hand re-reads that stood in for that event are gone, and
+`refreshDivision` with them.
+
+`UiUpdateContextService` is deleted — 138 lines and a lookup query per event
+published. Every caller already held the address: the pool writes carry it in
+their graph, a match that changed pools carries the one it left, the phases load
+their division with its tournament, and the start.gg import knows the tournament
+and the division it is importing into.
+
+What a pool's seats say about somebody the pool never seated is recorded as
+FQ-020.
+
+Verification: `npm run verify` passes — architecture boundaries, every workspace
+build, lint (three pre-existing warnings, none in the changed files), contracts,
+103 unit tests including the new `phase-group.aggregate.spec.ts`, 61 API e2e
+tests against PostgreSQL — ten of them new, in `phase-group-writes.e2e-spec.ts`,
+covering what each write announces, that a pool takes the first free letter of
+its phase, that an entrant a match introduced is read without a seat and leaves
+with the match, that creating a match writes no row into the pool, that a
+generated bracket seats people in seeded order, and that a command loads the pool
+once — and the migration-runner e2e test. Frontend `tsc --noEmit`, `eslint`,
+`vite build` and `node --test` (15/15) pass.
+
 ### Phase 8 — File tree and naming
 
 What the aggregate phases cannot carry, because it belongs to no aggregate.
@@ -1162,6 +1236,11 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
   an unexpected `null` from a `LEFT JOIN` passes unnoticed. Enabling strict null
   checks is out of scope here and belongs in
   [FunctionalQuestions.md](FunctionalQuestions.md).
-- Whether `Phase` deserves its own aggregate or remains part of the structure
-  aggregate alongside Division and PhaseGroup is decided in Phase 7, when its
-  commands are collected in one place.
+- ~~Whether `Phase` deserves its own aggregate~~ — decided in phase 7. It does
+  not. A phase is a name and a position inside the division that holds it, it
+  publishes a division event, and its three commands belong on `DivisionCommands`
+  as `addPhase`, `renamePhase` and `removePhase`. `PhaseService` still holds them
+  and still loads its division with its tournament to address that event without
+  a lookup; folding it into the division aggregate goes with the Tournament slice
+  rather than leaving `structure/services/` half-populated for a phase in
+  between.
