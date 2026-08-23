@@ -152,11 +152,10 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-018 — A rolled song trusts the division id the client sent
 
-- Status: Open. Behavior narrowed rather than decided on 2026-08-23.
-- Observed behavior: `POST /matches` accepts `tournamentId`, `divisionId`, `group` and `levels` as roll instructions, and none of them is checked against the pool the match is created in. The roller used to load the division named by `divisionId` and answer with no song at all when that division did not exist, which made a wrong id look like an empty song pool. It now asks `SongQueries.playedInDivision` for the songs to exclude, so an id that names nothing excludes nothing and the match is given songs the division may already have played. A missing `divisionId` or `tournamentId` still rolls nothing, which is the case the guard covers.
-- Question: Should the roll instructions be derived from the pool the match belongs to instead of being sent by the client? The match already knows its pool, its phase and its division, so `divisionId` and `tournamentId` are the caller restating what the server can read.
-- Evidence: `apps/api/src/tournament/competition/services/song.roller.ts`, `apps/api/src/tournament/competition/match/match.commands.ts` (`rolledSongs`), `apps/api/src/tournament/catalog/song.queries.ts`.
-- Rule: do not change the request contract during the aggregate phases. The answer belongs with the Song aggregate, which is where the roller ends up.
+- Status: Resolved on 2026-08-23 by the Song catalogue slice.
+- Observed behavior: `POST /matches` and `POST /matches/:id/rounds` accepted `tournamentId`, `divisionId`, `group` and `levels` as roll instructions, and none of the first two was checked against the pool the match was created in. The roller answered with no song at all unless it had both, and the one client there is sent the division and never the tournament, so every rolled round silently added no song.
+- Decision: the roll instructions the caller sends are the group and the level. Which division a roll draws from is the match's own, and which tournament's pool that division belongs to is read with it: `MatchCommands.rolledSongs` takes both from `MatchAggregate.address`, which the store's graph already reaches. `tournamentId` and `divisionId` are gone from `CreateMatchWithSongsDto` and `RoundSourceDto`, and the frontend no longer sends them.
+- Evidence: `apps/api/src/tournament/catalog/song-roller.ts`, `apps/api/src/tournament/competition/match/match.commands.ts` (`rolledSongs`), `apps/api/tests/e2e/catalog/song-writes.e2e-spec.ts`.
 
 ### FQ-019 — Removing the hand-scored round is a rule only the interface applies
 
@@ -173,3 +172,19 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: Is `advanced` a property of a seat or of a person's presence in the pool? If a pool page is built that shows who moved on, it either seats everybody it draws — which puts the copy back, under a rule that says when it is written — or it reads the status from the advancement rules that fired, which is where the fact actually lives.
 - Evidence: `apps/api/src/tournament/structure/phase-group/phase-group.aggregate.ts` (`markAdvanced`, `seat`, `place`), `apps/api/src/tournament/structure/phase-group/phase-group.queries.ts`, `apps/api/tests/e2e/structure/phase-group-writes.e2e-spec.ts`.
 - Rule: do not reintroduce a derived seat row to carry a status nothing reads. The reader decides the shape.
+
+### FQ-021 — A lobby reports a song by path and the pool is keyed by title
+
+- Status: Open. Characterized on 2026-08-23 while splitting the completed-song ingestion.
+- Observed behavior: a completed song carries both `song.songPath` and `song.title`, and the ingestion looks the pool up by `title = songPath`. On the cabinets this application is used with the two happen to agree; nothing enforces it. A song the pool does not hold under that exact title is not resolved, so every score of that lobby is answered with `No database player-song found for <name> on "<path>"` and none of the runs is written down — not even as a score with no round behind it, because there is no song row to attach one to.
+- Question: Should the pool be matched by path, by title, by either, or should an unrecognized song be added to the tournament's pool as it is played? The warning says the player and the song were not found together, which is a third question: it does not distinguish a stranger in the lobby from a song nobody added.
+- Evidence: `apps/api/src/tournament/catalog/song.queries.ts` (`SONG_OF_TOURNAMENT_BY_TITLE`), `apps/api/src/tournament/syncstart/completed-song.service.ts`, `apps/api/tests/e2e/syncstart/completed-song.e2e-spec.ts`.
+- Rule: do not widen the match to the path as well without deciding what an unrecognized song means. Two songs of one pool can share a title, and the query already takes the older of them.
+
+### FQ-022 — The bulk add lowercased everybody it created
+
+- Status: Open. Behavior changed on 2026-08-23 by the Player catalogue slice, and recorded here rather than decided.
+- Observed behavior: `POST /players/divisions/:id/bulk` lowercased every pasted name, matched the catalogue on the lowercased form with an exact comparison, and created anybody new under that lowercased name. So it recognized an existing player only when their stored name was already lowercase — `Ann` pasted as `ann` created a second `ann` — and a division filled from a pasted list showed everybody in lower case. Every other surface that registers people matches on the normalized name and keeps the name as it was given. The bulk add now does the same: names are trimmed, distinct by their normalized form, matched against the catalogue ignoring case, and created as they were typed.
+- Question: Is the pasted spelling the one to keep when the catalogue already holds the person under a different capitalization? The person is registered under the stored name today, and the pasted one is reported back as a warning.
+- Evidence: `apps/api/src/tournament/registration/participants.commands.ts` (`addPlayersToDivision`, `distinctNames`), `apps/api/src/tournament/catalog/player.store.ts`, `apps/api/tests/e2e/catalog/player-catalogue.e2e-spec.ts`.
+- Rule: do not lowercase a name on the way in. Whether a catalogue entry should be renamed to the spelling somebody pasted is a decision for the person who owns the catalogue.
