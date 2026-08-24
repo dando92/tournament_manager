@@ -108,6 +108,7 @@ function uiEventName(type: string): string | undefined {
     'ui.division-changed': 'DivisionUpdate',
     'ui.phase-changed': 'PhaseUpdate',
     'ui.phase-group-changed': 'PhaseGroupUpdate',
+    'ui.control-room-flow-changed': 'ControlRoomFlowUpdate',
   };
   return names[type];
 }

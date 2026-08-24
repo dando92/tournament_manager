@@ -1,6 +1,7 @@
 export * from './account';
 export * from './catalog';
 export * from './match';
+export * from './control-room';
 export * from './projections';
 export * from './registration';
 export * from './realtime';

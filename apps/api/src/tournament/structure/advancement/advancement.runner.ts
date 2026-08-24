@@ -7,6 +7,7 @@ import { MatchStore } from '@match/match.store';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { AdvancementRuleStore } from './advancement-rule.store';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
+import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
 
 /** The entrants one rule moves into one pool. */
 type PoolPlacement = {
@@ -41,6 +42,7 @@ export class AdvancementRunner {
         private readonly publisher: UiUpdatePublisher,
         @Inject()
         private readonly scoringSystems: ScoringSystemProvider,
+        private readonly controlRoom: ControlRoomRunner,
     ) {}
 
     async advanceFromMatch(match: MatchAggregate): Promise<void> {
@@ -99,6 +101,7 @@ export class AdvancementRunner {
         else if (!target.removeEntrant(entrant.id, this.scoringSystems)) return;
 
         await this.matches.save(target);
+        await this.controlRoom.recalculateForMatch(target.id);
         await this.publisher.emitMatchUpdate(target.address);
         /* Who is in a match decides whether it is waiting on anyone, so placing
            an entrant moves the counts of the pool it landed in. */

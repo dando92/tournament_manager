@@ -5,6 +5,7 @@ import { participantKeys } from "@/features/participant/api/participant.keys";
 import { songKeys } from "@/features/song/api/song.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 import { lobbyControlKeys } from "@/features/tournament/api/lobbies.api";
+import { controlRoomKeys } from "@/features/control-room/api/control-room.keys";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -41,6 +42,11 @@ type UiWarningMessage = {
   message: string;
 };
 
+type ControlRoomFlowUpdateMessage = {
+  tournamentId: number;
+  flowId: number;
+};
+
 export type TournamentSocketMessage =
   | { event: "TournamentUpdate"; data: TournamentUpdateMessage }
   | { event: "SongsUpdate"; data: TournamentUpdateMessage }
@@ -48,6 +54,7 @@ export type TournamentSocketMessage =
   | { event: "PhaseUpdate"; data: PhaseUpdateMessage }
   | { event: "PhaseGroupUpdate"; data: PhaseGroupUpdateMessage }
   | { event: "MatchUpdate"; data: MatchUpdateMessage }
+  | { event: "ControlRoomFlowUpdate"; data: ControlRoomFlowUpdateMessage }
   | { event: "UiWarning"; data: UiWarningMessage };
 
 /**
@@ -96,6 +103,13 @@ export function staleAfterUpdate(message: TournamentSocketMessage): QueryKey[] {
       return [
         matchKeys.byPhaseGroup(message.data.phaseGroupId),
         matchKeys.byDivision(message.data.divisionId),
+        lobbyControlKeys.options(message.data.tournamentId),
+        controlRoomKeys.all(message.data.tournamentId),
+      ];
+    case "ControlRoomFlowUpdate":
+      return [
+        controlRoomKeys.all(message.data.tournamentId),
+        controlRoomKeys.editor(message.data.flowId),
         lobbyControlKeys.options(message.data.tournamentId),
       ];
     default:

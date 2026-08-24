@@ -45,17 +45,15 @@ previous layout hard to follow.
 - A pool's sticky list header opens every match in that pool as raw cards below
   the list. A search opens every matching card across the division; selecting a
   match row returns the lower panel to its single-card detail view.
-- Editors see one lobby-control card below the match cards instead of the live
-  view. Its lobby selector remains explicit even when the legacy deployment has
-  one lobby, and its song selector contains the distinct song paths assigned to
-  active matches anywhere in the tournament. Read-only viewers continue to see
-  the live view in that position.
-- Match Control is a tournament-level destination for staff. It presents
+- The match list always keeps the live view below its match cards. Lobby
+  operation belongs to the tournament Control Room instead of the division
+  match display.
+- Control Room is a tournament-level destination for staff. It presents
   persisted match flows, their current or waiting match, queue, lifecycle
   actions, and an independent lobby-control card. Flow editing is available
   only while a flow is inactive; Unassigned exists only inside that editor.
   Completed flows are immutable and may be archived from the control room. See
-  [MatchControl.md](MatchControl.md).
+  [ControlRoom.md](ControlRoom.md).
 - `TournamentUpdatesProvider` and `TournamentTreeProvider` are mounted in
   `MainLayout`, above both the sidebar and the page outlet. The tree draws state
   derived from the same data the pages show, so it has to sit beside them, not

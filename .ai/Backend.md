@@ -57,12 +57,12 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
   `AccountQueries` rather than opening an account repository itself.
 - Keep cross-aggregate advancement in `structure/advancement/`: `AdvancementRunner` walks rules through stores, while `AdvancementRuleCommands` owns rule writes.
 - Keep shared tournament concerns under `tournament/shared/`, including the open-tournament guard, UI update publisher, and common projections.
-- Tournament match flows belong under `tournament/competition/match-flow` as a
+- Tournament control-room flows belong under `tournament/competition/control-room` as a
   PostgreSQL-authoritative aggregate and synchronous runner. Stale is a
   diagnosis on a running flow, not a lifecycle state. Match commands invoke a
   narrow recalculation collaborator after relevant persisted changes; Redis UI
   invalidations do not drive progression. The complete model and delivery plan
-  are defined in [MatchControl.md](MatchControl.md).
+  are defined in [ControlRoom.md](ControlRoom.md).
 - Keep API tests outside `src`. Unit tests mirror the source capability tree under `tests/unit`; complete HTTP tests live under `tests/e2e/<capability>`; infrastructure collaboration tests live under `tests/integration`; reusable test infrastructure remains under `tests/support`.
 
 ## Database Access and Transactions

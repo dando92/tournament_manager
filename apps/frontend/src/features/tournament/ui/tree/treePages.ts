@@ -7,6 +7,7 @@ import {
   faTableColumns,
   faTowerBroadcast,
   faUsers,
+  faSliders,
 } from "@fortawesome/free-solid-svg-icons";
 
 /**
@@ -34,6 +35,7 @@ export const TOURNAMENT_TREE_PAGES: readonly TreePage[] = [
   { key: "songs", label: "Songs", icon: faMusic },
   { key: "lobbies", label: "Lobbies", icon: faDesktop, requiresControl: true },
   { key: "live", label: "Live", icon: faTowerBroadcast },
+  { key: "control-room", label: "Control Room", icon: faSliders, requiresControl: true },
   { key: "stats", label: "Stats", icon: faChartColumn },
 ];
 

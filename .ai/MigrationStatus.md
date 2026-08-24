@@ -2,15 +2,28 @@
 
 ## Current Position
 
-- Last updated: 2026-08-23.
-- Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 complete. Every read endpoint answers from a `*.queries.ts` class; no controller reaches a service for a `GET`.
-- State: Architecture migration complete. Structure refactoring in progress.
+- Last updated: 2026-08-24.
+- Completed plans: [Simplified Architecture Migration Plan](MigrationPlan.md), [API and Frontend Structure Refactoring](ApiRefactoring.md), and [Control Room](ControlRoom.md).
+- Active plan: none.
+- State: Architecture migration and Control Room delivery complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
+- Next action: manually exercise the Control Room with real lobby and cabinet sessions, including two concurrent flows.
 - Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints
+
+### Tournament Control Room
+
+Requested by the user on 2026-08-24, after the legacy lobby-control checkpoint.
+
+- Added PostgreSQL-authoritative tournament flows with persisted unique match assignment, ordering, cursor, lifecycle, stale diagnosis, archive visibility, and optimistic editor versioning. The row-locked synchronous runner advances ready-to-commit matches without committing them, keeps blocked flows running and stale, and reconciles running flows at API startup.
+- Added Start, Start from here, Pause, Resume, Stop, Archive, Unarchive, editor, and query endpoints. Relevant match, standing, song, entrant, advancement, commit, reopen, deletion, and tournament lifecycle writes recalculate affected flows. Manual match activation is refused while a tournament flow is running or paused.
+- Added backend-enforced rollback confirmation. A confirmed rollback stops the affected running or paused flow, deactivates its current match, and then applies the mutation. Completed-flow results cannot be reopened. Closing a tournament stops operational flows; reopening does not restart them.
+- Added the tournament-level Control Room frontend with multiple flow panels, current match cards, queue context actions, stale explanations, persisted drag-and-drop ordering with keyboard controls, Unassigned only inside the inactive editor, and completed-flow archive visibility.
+- Moved the independent lobby-control card into each operational flow panel without creating a lobby-to-flow or lobby-to-match binding. Restored the live panel below division match cards for staff and viewers.
+- Renamed and finalized [ControlRoom.md](ControlRoom.md), synchronized backend, frontend, and design decisions, and resolved FQ-027.
+- Verification: `npm run verify` passes. This covers architecture checks, all workspace builds, lint with the six existing warnings only, contracts, 135 API unit tests, 102 API end-to-end tests, and the migration-runner end-to-end test. The Control Room end-to-end suite covers no-commit advancement and manual activation protection, stale recovery, pause/resume/completion/archive, concurrent independent flows, and confirmed rollback shutdown.
+- Next action: manually verify the responsive Control Room, drag-and-drop editor, context menu, and real lobby controls with multiple cabinets.
 
 ### Talking to legacy ITGmania cabinets
 

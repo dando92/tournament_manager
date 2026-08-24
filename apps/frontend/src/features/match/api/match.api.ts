@@ -1,6 +1,19 @@
 import axios from "axios";
 import { Match, Score, CommitMatchResultResponse, CreateMatchRequest, RoundSourceRequest } from "@/features/match/model/types";
 
+const confirmationHeaders = { "x-confirm-control-room-stop": "true" };
+
+async function withControlRoomStopConfirmation(request: (confirmed: boolean) => Promise<void>): Promise<void> {
+  try {
+    await request(false);
+  } catch (error) {
+    const response = (error as { response?: { data?: { code?: string; message?: string } } })?.response;
+    if (response?.data?.code !== "CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED") throw error;
+    if (!window.confirm(`${response.data.message ?? "This change will stop a running control room flow."} Continue?`)) return;
+    await request(true);
+  }
+}
+
 /**
  * Every request the matches of a division answer.
  *
@@ -89,7 +102,11 @@ export async function updateMatchScoringSystem(matchId: number, scoringSystem: s
 
 export async function updateMatchEntrants(matchId: number, entrantIds: number[]): Promise<void> {
   try {
-    await axios.patch(`matches/${matchId}`, { entrantIds });
+    await withControlRoomStopConfirmation((confirmed) => axios.patch(
+      `matches/${matchId}`,
+      { entrantIds },
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error updating match entrants:", error);
     throw new Error("Unable to update match entrants.");
@@ -98,7 +115,10 @@ export async function updateMatchEntrants(matchId: number, entrantIds: number[])
 
 export async function deleteMatch(matchId: number): Promise<void> {
   try {
-    await axios.delete("matches/" + matchId);
+    await withControlRoomStopConfirmation((confirmed) => axios.delete(
+      `matches/${matchId}`,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error deleting match:", error);
     throw new Error("Unable to delete match.");
@@ -111,7 +131,11 @@ export async function deleteMatch(matchId: number): Promise<void> {
  */
 export async function addRound(matchId: number, source: RoundSourceRequest = {}): Promise<void> {
   try {
-    await axios.post(`matches/${matchId}/rounds`, source);
+    await withControlRoomStopConfirmation((confirmed) => axios.post(
+      `matches/${matchId}/rounds`,
+      source,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error adding round to match:", error);
     throw new Error("Unable to add a round to the match.");
@@ -120,7 +144,10 @@ export async function addRound(matchId: number, source: RoundSourceRequest = {})
 
 export async function deleteRound(roundId: number): Promise<void> {
   try {
-    await axios.delete(`rounds/${roundId}`);
+    await withControlRoomStopConfirmation((confirmed) => axios.delete(
+      `rounds/${roundId}`,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error deleting round:", error);
     throw new Error("Unable to delete the round.");
@@ -129,7 +156,11 @@ export async function deleteRound(roundId: number): Promise<void> {
 
 export async function replaceRoundSong(roundId: number, source: RoundSourceRequest): Promise<void> {
   try {
-    await axios.put(`rounds/${roundId}`, source);
+    await withControlRoomStopConfirmation((confirmed) => axios.put(
+      `rounds/${roundId}`,
+      source,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error replacing the song of a round:", error);
     throw new Error("Unable to replace the song of the round.");
@@ -151,7 +182,11 @@ export async function upsertScore(
 
 export async function upsertPoints(roundId: number, playerId: number, points: number): Promise<void> {
   try {
-    await axios.put(`rounds/${roundId}/points/${playerId}`, { points });
+    await withControlRoomStopConfirmation((confirmed) => axios.put(
+      `rounds/${roundId}/points/${playerId}`,
+      { points },
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error saving points:", error);
     throw new Error("Unable to save the points.");
@@ -160,7 +195,10 @@ export async function upsertPoints(roundId: number, playerId: number, points: nu
 
 export async function deleteStanding(roundId: number, playerId: number): Promise<void> {
   try {
-    await axios.delete(`rounds/${roundId}/standings/${playerId}`);
+    await withControlRoomStopConfirmation((confirmed) => axios.delete(
+      `rounds/${roundId}/standings/${playerId}`,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error deleting a standing:", error);
     throw new Error("Unable to delete the standing.");
@@ -200,7 +238,10 @@ export async function commitMatchResult(matchId: number): Promise<CommitMatchRes
 
 export async function reopenMatchResult(matchId: number): Promise<void> {
   try {
-    await axios.delete(`matches/${matchId}/result`);
+    await withControlRoomStopConfirmation((confirmed) => axios.delete(
+      `matches/${matchId}/result`,
+      confirmed ? { headers: confirmationHeaders } : undefined,
+    ).then(() => undefined));
   } catch (error) {
     console.error("Error re-opening match result:", error);
     throw new Error("Unable to re-open match result.");

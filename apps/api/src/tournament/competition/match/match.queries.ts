@@ -15,7 +15,7 @@ import {
  * Which matches a projection covers. The three read routes differ in this and
  * in nothing else, so they share one query and one mapper.
  */
-type MatchScope = 'match' | 'phaseGroup' | 'division';
+type MatchScope = 'match' | 'phaseGroup' | 'division' | 'tournament';
 
 const SCOPE_PREDICATE: Record<MatchScope, string> = {
     match: 'm."id" = $1',
@@ -25,6 +25,13 @@ const SCOPE_PREDICATE: Record<MatchScope, string> = {
         FROM    "phase_group" pg
         JOIN    "phase" ph ON ph."id" = pg."phaseId"
         WHERE   ph."divisionId" = $1
+    )`,
+    tournament: `m."phaseGroupId" IN (
+        SELECT  pg."id"
+        FROM    "phase_group" pg
+        JOIN    "phase" ph ON ph."id" = pg."phaseId"
+        JOIN    "division" d ON d."id" = ph."divisionId"
+        WHERE   d."tournamentId" = $1
     )`,
 };
 
@@ -247,6 +254,10 @@ export class MatchQueries {
 
     async byDivision(divisionId: number): Promise<MatchDto[]> {
         return await this.inScope('division', divisionId);
+    }
+
+    async byTournament(tournamentId: number): Promise<MatchDto[]> {
+        return await this.inScope('tournament', tournamentId);
     }
 
     /**

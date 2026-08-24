@@ -289,15 +289,13 @@ It opens a focused modal with one select field and a warning when the match has
 played scores, because saving immediately recalculates completed song rounds.
 Completed matches hide the action until they are reopened.
 
-The match page gives its lower operational slot one purpose per permission
-level. Staff see the lobby-control card, with lobby and active-match song
-selectors followed by separate **Select song** and **Start cabinets** actions.
-Read-only viewers see the live panel instead. The two panels are not stacked:
-operators need an unambiguous control surface, while viewers need telemetry.
+The match page keeps the live panel below the match cards for every permission
+level. The lobby-control card lives in Control Room, where staff operate flows
+and cabinets together without binding a lobby to a flow or match.
 
 ## Match control room
 
-Match Control presents each non-archived flow as one operational panel. The
+Control Room presents each non-archived flow as one operational panel. The
 lifecycle state and a stale diagnosis are separate: a stale flow is labelled
 **Running — Waiting**, while **Paused** always means an operator deliberately
 suppressed advancement. The panel shows the active match card, or the pending
@@ -307,4 +305,4 @@ control. It never implies that a lobby is assigned to a flow or match.
 Only inactive flows expose Edit and Start from here. Completed flows expose
 Archive and stay immutable; archived flows are hidden until **Show archived**
 is enabled. The detailed interaction and lifecycle rules are defined in
-[MatchControl.md](MatchControl.md).
+[ControlRoom.md](ControlRoom.md).

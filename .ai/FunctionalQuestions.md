@@ -224,7 +224,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-027 — Expected entrants and rollback after a match flow completes
 
-- Status: Open. Raised while specifying tournament Match Control.
+- Status: Resolved on 2026-08-24 while implementing tournament Control Room.
 - Observed behavior: a running flow must remain stale rather than activate a
   match that cannot yet be played. Zero entrants and exactly one player are
   unambiguous, but generated matches may require more than two players and the
@@ -233,14 +233,13 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   currently be reopened through the ordinary match command. Reopening one can
   invalidate the historical sequence without any lifecycle transition the
   completed flow is allowed to make.
-- Questions: How is the expected entrant count derived for matches with more
-  than two slots? Should reopening or otherwise rolling back a match in a
-  completed or archived flow be refused, confirmed while leaving the historical
-  flow unchanged, or represented by a new flow-level action? When a tournament
-  closes, do running flows remain armed and stale until reopen, or are they
-  explicitly stopped?
-- Evidence: [MatchControl.md](MatchControl.md),
+- Decision: every match requires at least two player entrants, raised to the
+  greatest target slot of its incoming advancement rules. Reopening a result in
+  a completed or archived flow is refused. Closing a tournament explicitly
+  stops running and paused flows and deactivates their current matches; reopening
+  does not restart them.
+- Evidence: [ControlRoom.md](ControlRoom.md),
   `apps/api/src/tournament/competition/match/match.aggregate.ts`, and
   `apps/api/src/tournament/structure/advancement/advancement.runner.ts`.
-- Rule: do not implement expected-slot inference, completed-flow rollback, or
-  tournament-close flow behavior until the user selects the intended rules.
+- Rule: preserve these choices unless the user explicitly changes the Control
+  Room lifecycle or entrant-readiness model.

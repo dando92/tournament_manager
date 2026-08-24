@@ -1,14 +1,14 @@
-# Match Control
+# Control Room
 
 ## Purpose
 
-Match Control is the tournament-level operational page that defines and runs
+Control Room is the tournament-level operational page that defines and runs
 ordered match flows. A tournament may run several flows concurrently, for
 example on separate cabinets or stages. Each flow owns an ordered queue and
 automatically moves its active match forward when the current match becomes
 ready to commit.
 
-Match Control does not commit results. An operator remains responsible for
+Control Room does not commit results. An operator remains responsible for
 reviewing and committing every result.
 
 The lobby-control card is displayed beside a flow's current match as an
@@ -153,18 +153,17 @@ of:
 
 Initial stable stale codes are:
 
-| Code | Meaning |
-| --- | --- |
-| `NO_ENTRANTS` | The match has no player entrant. |
-| `NOT_ENOUGH_ENTRANTS` | The match has exactly one player entrant. |
-| `UNRESOLVED_ENTRANTS` | Expected entrant slots are not resolved. The exact derivation remains open. |
-| `NO_ROUNDS` | The match has no playable or hand-scored round. |
-| `MATCH_ALREADY_ACTIVE` | The queued match is already active outside the transition the runner owns. |
-| `ENTRANTS_ALREADY_ACTIVE` | At least one player is present in another active match. |
-| `MATCH_REMOVED` | The current entry no longer resolves to a match. |
-| `MATCH_OUTSIDE_TOURNAMENT` | The match no longer belongs to the flow's tournament. |
-| `TOURNAMENT_CLOSED` | The tournament lifecycle prevents activation. The close/reopen behavior remains open. |
-| `CURRENT_MATCH_CHANGED_EXTERNALLY` | A protected current-match invariant changed outside flow commands. |
+| Code                               | Meaning                                                                                                                                               |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NO_ENTRANTS`                      | The match has no player entrant.                                                                                                                      |
+| `NOT_ENOUGH_ENTRANTS`              | The match has exactly one player entrant.                                                                                                             |
+| `UNRESOLVED_ENTRANTS`              | The player entrants do not fill the required slots. The requirement is at least two players, raised to the greatest incoming advancement target slot. |
+| `NO_ROUNDS`                        | The match has no playable or hand-scored round.                                                                                                       |
+| `MATCH_ALREADY_ACTIVE`             | The queued match is already active outside the transition the runner owns.                                                                            |
+| `ENTRANTS_ALREADY_ACTIVE`          | At least one player is present in another active match.                                                                                               |
+| `MATCH_REMOVED`                    | The current entry no longer resolves to a match.                                                                                                      |
+| `MATCH_OUTSIDE_TOURNAMENT`         | The match no longer belongs to the flow's tournament.                                                                                                 |
+| `CURRENT_MATCH_CHANGED_EXTERNALLY` | A protected current-match invariant changed outside flow commands.                                                                                    |
 
 The database stores the stable code and structured details such as match id,
 match name, entrant counts, blocking match ids, and blocking player ids. The UI
@@ -216,7 +215,7 @@ match behind the runner.
 
 A mutation that can invalidate the current progress of a running or paused
 flow requires backend-enforced confirmation. Without confirmation the API
-answers `409 MATCH_FLOW_STOP_CONFIRMATION_REQUIRED`, naming the affected flow
+answers `409 CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED`, naming the affected flow
 and match. The client explains that continuing will stop the flow and repeats
 the command only after explicit confirmation.
 
@@ -226,14 +225,14 @@ The confirmed operation:
 2. deactivates its current match;
 3. applies the requested match mutation;
 4. leaves the flow inactive at the preserved cursor;
-5. records the interruption reason for the response and UI notification.
+5. reports why the flow was interrupted in the confirmation response and UI notification.
 
 The frontend is not the authority for this protection: direct API callers must
 receive the same requirement.
 
 ## Persistence model
 
-`match_flow` stores:
+`control_room_flow` stores:
 
 - id and tournament foreign key;
 - name;
@@ -243,7 +242,7 @@ receive the same requirement.
 - nullable archive timestamp;
 - optimistic concurrency version.
 
-`match_flow_entry` stores:
+`control_room_flow_entry` stores:
 
 - id and flow foreign key;
 - match foreign key;
@@ -256,24 +255,24 @@ operator's edit.
 
 ## API surface
 
-The planned HTTP surface is:
+The HTTP surface is:
 
 ```text
-GET    /tournaments/:tournamentId/match-flows
-GET    /match-flows/:flowId
-GET    /match-flows/:flowId/editor
-POST   /tournaments/:tournamentId/match-flows
-PATCH  /match-flows/:flowId
-DELETE /match-flows/:flowId
+GET    /tournaments/:tournamentId/control-room/flows
+GET    /control-room/flows/:flowId
+GET    /control-room/flows/:flowId/editor
+POST   /tournaments/:tournamentId/control-room/flows
+PATCH  /control-room/flows/:flowId
+DELETE /control-room/flows/:flowId
 
-PUT    /match-flows/:flowId/entries
-POST   /match-flows/:flowId/start
-POST   /match-flows/:flowId/pause
-POST   /match-flows/:flowId/resume
-POST   /match-flows/:flowId/stop
-POST   /match-flows/:flowId/start-from/:entryId
-POST   /match-flows/:flowId/archive
-DELETE /match-flows/:flowId/archive
+PUT    /control-room/flows/:flowId/entries
+POST   /control-room/flows/:flowId/start
+POST   /control-room/flows/:flowId/pause
+POST   /control-room/flows/:flowId/resume
+POST   /control-room/flows/:flowId/stop
+POST   /control-room/flows/:flowId/start-from/:entryId
+POST   /control-room/flows/:flowId/archive
+DELETE /control-room/flows/:flowId/archive
 ```
 
 Creation answers `201 { id }`; other successful commands answer `204`. Query
@@ -281,12 +280,12 @@ DTOs include lifecycle state, current entry, queue, archive state, stale code,
 stale details, and the projected match data required by the control room. The
 editor query additionally includes unassigned matches.
 
-Writes publish `ui.match-flow-changed` addressed by tournament and flow. Any
+Writes publish `ui.control-room-flow-changed` addressed by tournament and flow. Any
 automatic active-state change also publishes the existing match invalidation.
 
 ## Frontend behavior
 
-Match Control is a tournament-level tree destination. It shows one operational
+Control Room is a tournament-level tree destination. It shows one operational
 panel per non-archived flow. A panel contains:
 
 - flow name and lifecycle status;
@@ -314,27 +313,30 @@ provides `Show archived`; unarchiving changes visibility only.
 The API capability belongs under:
 
 ```text
-apps/api/src/tournament/competition/match-flow/
-    match-flow.aggregate.ts
-    match-flow.commands.ts
-    match-flow.controller.ts
-    match-flow.requests.ts
-    match-flow.store.ts
-    match-flow.queries.ts
-    match-flow.runner.ts
-    match-flow.eligibility.ts
-    match-flow.bootstrap.ts
+apps/api/src/tournament/competition/control-room/
+    control-room.aggregate.ts
+    control-room.commands.ts
+    control-room.controller.ts
+    control-room.requests.ts
+    control-room.store.ts
+    control-room.queries.ts
+    control-room.runner.ts
+    control-room.eligibility.ts
+    control-room.bootstrap.ts
 ```
 
-Shared DTOs belong in `packages/contracts/src/match-flow.ts`; TypeORM metadata
+Shared DTOs belong in `packages/contracts/src/control-room.ts`; TypeORM metadata
 belongs in `packages/persistence/src/entities/`; executable schema changes
 belong in `apps/migrations`.
 
-The frontend capability belongs under `apps/frontend/src/features/match-flow/`
+The frontend capability belongs under `apps/frontend/src/features/control-room/`
 with `api`, `model`, and `ui` roles. The route page is
-`apps/frontend/src/pages/tournament/MatchControlPage.tsx`.
+`apps/frontend/src/pages/tournament/ControlRoomPage.tsx`.
 
 ## Implementation plan
+
+Status: delivered on 2026-08-24. The phases below are retained as the
+implementation and verification record.
 
 Each phase is a coherent checkpoint. Relevant unit and end-to-end tests pass
 before proceeding, and the migration status records the completed checkpoint
@@ -342,7 +344,7 @@ when implementation begins.
 
 ### Phase 1: schema and contracts
 
-- Add `match_flow` and `match_flow_entry` entities and the clean-baseline
+- Add `control_room_flow` and `control_room_flow_entry` entities and the clean-baseline
   migration.
 - Add lifecycle, stale-code, stale-detail, control-room, editor, and command
   contracts.
@@ -417,15 +419,13 @@ when implementation begins.
 - Update local fixtures and operational documentation with a representative
   multi-flow tournament.
 
-## Open decisions
+## Resolved decisions
 
-Implementation must not silently decide these questions:
+- A match requires at least two player entrants. Incoming advancement rules
+  raise that requirement to their greatest target slot.
+- Reopening a result that belongs to a completed or archived flow is refused.
+  Completed flow history remains terminal and immutable.
+- Closing a tournament stops its running and paused flows and deactivates their
+  current matches. Reopening the tournament does not restart them.
 
-- How is the expected entrant count derived for matches that may require more
-  than two players?
-- What happens when an operator attempts to reopen or otherwise roll back a
-  match that belongs to a completed or archived flow?
-- Does closing a tournament leave running flows armed and stale until reopen,
-  or explicitly stop them?
-
-These questions are also tracked in [FunctionalQuestions.md](FunctionalQuestions.md).
+These decisions resolve FQ-027 in [FunctionalQuestions.md](FunctionalQuestions.md).
