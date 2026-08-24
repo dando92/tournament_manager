@@ -13,7 +13,13 @@ type IncomingMessage = {
   data?: {
     code?: unknown;
     password?: unknown;
+    songPath?: unknown;
   };
+};
+
+export type LegacyLobbyCommands = {
+  selectSong(songPath: string): Promise<void>;
+  startSong(songPath: string): Promise<void>;
 };
 
 /**
@@ -39,6 +45,7 @@ export class SyncStartCompatibilityServer {
     private readonly config: BridgeConfig,
     private readonly logger: Logger,
     private readonly lobby: BridgeLobbyView,
+    private readonly commands: LegacyLobbyCommands,
   ) {
     this.server = new WebSocketServer({
       port: config.webSocketPort,
@@ -81,7 +88,7 @@ export class SyncStartCompatibilityServer {
     this.logger.info("Client connected");
 
     socket.on("pong", () => this.alive.add(socket));
-    socket.on("message", (raw) => this.handleMessage(socket, raw.toString()));
+    socket.on("message", (raw) => void this.handleMessage(socket, raw.toString()));
     socket.on("close", () => {
       this.attached.delete(socket);
       this.alive.delete(socket);
@@ -92,7 +99,7 @@ export class SyncStartCompatibilityServer {
     );
   }
 
-  private handleMessage(socket: WebSocket, raw: string): void {
+  private async handleMessage(socket: WebSocket, raw: string): Promise<void> {
     const message = this.parse(raw);
     if (!message) {
       this.logger.warn("Ignoring unparseable client message", {
@@ -129,6 +136,10 @@ export class SyncStartCompatibilityServer {
       case "leaveLobby":
         this.attached.delete(socket);
         return this.send(socket, { event: "lobbyLeft", data: { left: true } });
+      case "changeSong":
+        return this.runCommand(socket, event, message, (songPath) => this.commands.selectSong(songPath));
+      case "startSong":
+        return this.runCommand(socket, event, message, (songPath) => this.commands.startSong(songPath));
       default:
         this.logger.warn("Unsupported client event", { event });
         return this.fail(
@@ -136,6 +147,25 @@ export class SyncStartCompatibilityServer {
           event,
           "Event is not supported by the legacy bridge",
         );
+    }
+  }
+
+  private async runCommand(
+    socket: WebSocket,
+    event: string,
+    message: IncomingMessage,
+    command: (songPath: string) => Promise<void>,
+  ): Promise<void> {
+    if (!this.attached.has(socket)) return this.fail(socket, event, "Client is not attached to the lobby");
+    const songPath = typeof message.data?.songPath === "string" ? message.data.songPath.trim() : "";
+    if (!songPath) return this.fail(socket, event, "Song path is required");
+
+    try {
+      await command(songPath);
+      this.send(socket, { event: "responseStatus", data: { event, success: true } });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.fail(socket, event, detail);
     }
   }
 

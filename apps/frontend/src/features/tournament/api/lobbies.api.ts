@@ -2,6 +2,8 @@ import axios from "axios";
 import type {
   SyncStartLobbiesDto,
   SyncStartServerStatusDto,
+  LobbyControlOptionsDto,
+  LobbyControlCommandRequest,
 } from "@tournament-manager/contracts";
 
 /**
@@ -53,4 +55,23 @@ export async function createLobby(tournamentId: number, request: CreateLobbyRequ
 
 export async function disconnectLobby(tournamentId: number, lobbyId: string): Promise<void> {
   await axios.delete(`tournaments/${tournamentId}/lobbies/${lobbyId}/disconnect`);
+}
+
+export const lobbyControlKeys = {
+  options: (tournamentId: number) => ["lobby-control", tournamentId] as const,
+};
+
+export async function getLobbyControlOptions(tournamentId: number): Promise<LobbyControlOptionsDto> {
+  const response = await axios.get<LobbyControlOptionsDto>(`tournaments/${tournamentId}/lobbies/control-options`);
+  return response.data;
+}
+
+export async function selectLobbySong(tournamentId: number, lobbyId: string, songId: number): Promise<void> {
+  const request: LobbyControlCommandRequest = { songId };
+  await axios.post(`tournaments/${tournamentId}/lobbies/${encodeURIComponent(lobbyId)}/select-song`, request);
+}
+
+export async function startLobbySong(tournamentId: number, lobbyId: string, songId: number): Promise<void> {
+  const request: LobbyControlCommandRequest = { songId };
+  await axios.post(`tournaments/${tournamentId}/lobbies/${encodeURIComponent(lobbyId)}/start`, request);
 }

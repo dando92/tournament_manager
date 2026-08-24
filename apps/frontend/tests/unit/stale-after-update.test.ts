@@ -6,22 +6,27 @@ import { divisionKeys } from '../../src/features/division/api/division.keys.ts';
 import { tournamentKeys } from '../../src/features/tournament/api/tournament.keys.ts';
 import { participantKeys } from '../../src/features/participant/api/participant.keys.ts';
 import { songKeys } from '../../src/features/song/api/song.keys.ts';
+import { lobbyControlKeys } from '../../src/features/tournament/api/lobbies.api.ts';
+import { controlRoomKeys } from '../../src/features/control-room/api/control-room.keys.ts';
 
 const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
 
-test('a match event stales the two lists that hold that match, and nothing else', () => {
+test('a match event stales its lists and the active-song lobby controls', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'MatchUpdate', data: address }), [
     matchKeys.byPhaseGroup(4),
     matchKeys.byDivision(2),
+    lobbyControlKeys.options(1),
+    controlRoomKeys.all(1),
   ]);
 });
 
-test('a pool event stales the tree as well, because the counts it draws moved', () => {
+test('a pool event stales the tree, match lists, and active-song lobby controls', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'PhaseGroupUpdate', data: address }), [
     tournamentKeys.overview(1),
     divisionKeys.summary(2),
     matchKeys.byPhaseGroup(4),
     matchKeys.byDivision(2),
+    lobbyControlKeys.options(1),
   ]);
 });
 
@@ -56,5 +61,13 @@ test('a warning is a message to a person, so nothing goes stale', () => {
 test('a song event stales only the tournament song catalogue', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'SongsUpdate', data: address }), [
     songKeys.forTournament(1),
+  ]);
+});
+
+test('a control room event stales its flow list, editor, and lobby options', () => {
+  assert.deepEqual(staleAfterUpdate({ event: 'ControlRoomFlowUpdate', data: { tournamentId: 1, flowId: 9 } }), [
+    controlRoomKeys.all(1),
+    controlRoomKeys.editor(9),
+    lobbyControlKeys.options(1),
   ]);
 });

@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindOptionsRelations, In, Repository } from 'typeorm';
+import { DataSource, FindOptionsRelations, In, QueryFailedError, Repository } from 'typeorm';
 import {
     Entrant,
     Match,
@@ -62,6 +62,8 @@ export class MatchStore {
         private readonly songs: Repository<Song>,
         @InjectRepository(Score)
         private readonly scores: Repository<Score>,
+        @InjectRepository(Standing)
+        private readonly standings: Repository<Standing>,
     ) {}
 
     async load(id: number): Promise<MatchAggregate | null> {
@@ -148,6 +150,25 @@ export class MatchStore {
         return (await this.loadScores([id])).get(id);
     }
 
+    async loadAssignableScore(id: number, roundId: number, playerId: number): Promise<Score> {
+        const score = await this.loadScore(id);
+        const assignment = await this.standings.findOne({
+            where: { score: { id } },
+            relations: { round: true, player: true },
+        });
+        if (assignment && (assignment.round.id !== roundId || assignment.player.id !== playerId)) {
+            throw new ConflictException({
+                code: 'SCORE_ALREADY_ASSIGNED',
+                message: `Score ${id} is already assigned to another standing`,
+                scoreId: id,
+                standingId: assignment.id,
+                roundId: assignment.round.id,
+            });
+        }
+
+        return score;
+    }
+
     async loadScores(ids: number[]): Promise<Map<number, Score>> {
         if (ids.length === 0) return new Map();
 
@@ -162,21 +183,34 @@ export class MatchStore {
     async save(match: MatchAggregate): Promise<void> {
         const removals = match.removals;
 
-        await this.dataSource.transaction(async (manager) => {
-            if (removals.standingIds.length > 0) await manager.delete(Standing, removals.standingIds);
-            if (removals.roundIds.length > 0) await manager.delete(Round, removals.roundIds);
+        try {
+            await this.dataSource.transaction(async (manager) => {
+                if (removals.standingIds.length > 0) await manager.delete(Standing, removals.standingIds);
+                if (removals.roundIds.length > 0) await manager.delete(Round, removals.roundIds);
 
-            /* A standing points at its score, so the score exists first. The
-               ones already stored are left alone: a percentage is evidence and
-               is never rewritten by a standing being moved. */
-            const unsavedScores = this.unsavedScoresOf(match);
-            if (unsavedScores.length > 0) await manager.save(Score, unsavedScores);
+                /* A standing points at its score, so the score exists first. The
+                   ones already stored are left alone: a percentage is evidence and
+                   is never rewritten by a standing being moved. */
+                const unsavedScores = this.unsavedScoresOf(match);
+                if (unsavedScores.length > 0) await manager.save(Score, unsavedScores);
 
-            await manager.save(Match, match.entity);
+                await manager.save(Match, match.entity);
 
-            /* The match row released it above; the row itself is ours to drop. */
-            if (removals.matchResultId) await manager.delete(MatchResult, removals.matchResultId);
-        });
+                /* The match row released it above; the row itself is ours to drop. */
+                if (removals.matchResultId) await manager.delete(MatchResult, removals.matchResultId);
+            });
+        } catch (error) {
+            const constraint = error instanceof QueryFailedError
+                ? (error.driverError as { constraint?: string }).constraint
+                : undefined;
+            if (constraint === 'REL_90f3771a995658f98fc55e07a8') {
+                throw new ConflictException({
+                    code: 'SCORE_ALREADY_ASSIGNED',
+                    message: 'The selected score is already assigned to another standing',
+                });
+            }
+            throw error;
+        }
 
         match.settle();
     }

@@ -27,6 +27,7 @@ type Props = {
   onEditAdvancementRules?: () => void;
   onToggleActive: () => void;
   onReopenMatch: () => void;
+  manualActivationAllowed?: boolean;
 };
 
 export default function MatchHeader({
@@ -48,12 +49,13 @@ export default function MatchHeader({
   onEditAdvancementRules,
   onToggleActive,
   onReopenMatch,
+  manualActivationAllowed = true,
 }: Props) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isMatchEnded = Boolean(match.matchResult);
-  const canToggleActive = !isMatchEnded || match.active;
+  const canToggleActive = manualActivationAllowed && (!isMatchEnded || match.active);
 
   useEffect(() => {
     if (isRenaming) inputRef.current?.focus();
@@ -144,7 +146,9 @@ export default function MatchHeader({
               items={[
                 {
                   key: "active",
-                  label: match.active ? "Set not active" : "Set active",
+                  label: manualActivationAllowed
+                    ? match.active ? "Set not active" : "Set active"
+                    : "Activation controlled by Control Room",
                   icon: faTowerBroadcast,
                   disabled: !canToggleActive,
                   onSelect: onToggleActive,

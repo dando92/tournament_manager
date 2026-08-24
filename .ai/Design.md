@@ -288,3 +288,23 @@ The match actions menu contains **Edit scoring system** for editable matches.
 It opens a focused modal with one select field and a warning when the match has
 played scores, because saving immediately recalculates completed song rounds.
 Completed matches hide the action until they are reopened.
+
+The match page keeps the live panel below the match cards for every permission
+level. The lobby-control card lives in Control Room, where staff operate flows
+and cabinets together without binding a lobby to a flow or match.
+
+## Match control room
+
+Control Room presents each non-archived flow as one operational panel. The
+lifecycle state and a stale diagnosis are separate: a stale flow is labelled
+**Running — Waiting**, while **Paused** always means an operator deliberately
+suppressed advancement. The panel shows the active match card, or the pending
+match card and its blocking reason while waiting, beside an independent lobby
+control. It never implies that a lobby is assigned to a flow or match.
+
+Only inactive flows expose Edit and Start from here. Completed flows expose
+Archive and stay immutable until a confirmed result reopen returns them to
+inactive at that match. Archived flows are hidden until **Show archived** is
+enabled. An interrupted inactive flow explains why it stopped and warns when
+the reopened match may still be ready to commit. The detailed interaction and lifecycle rules are defined in
+[ControlRoom.md](ControlRoom.md).

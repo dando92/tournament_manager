@@ -1,9 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, Index, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 
 import { Song } from './song.entity';
 import { Player } from './player.entity';
 
 @Entity()
+@Index('IDX_score_song_player_id', ['song', 'player', 'id'])
 export class Score {
   @PrimaryGeneratedColumn()
   id: number;

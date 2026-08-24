@@ -10,12 +10,18 @@ describe('TournamentSyncStartService', () => {
     connectLobby: jest.fn(),
     createLobby: jest.fn(),
     disconnectLobby: jest.fn(),
+    selectSong: jest.fn(),
+    startSong: jest.fn(),
+  };
+  const matches = {
+    activeSongsForTournament: jest.fn(),
+    activeSongForTournament: jest.fn(),
   };
   let service: TournamentSyncStartService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new TournamentSyncStartService(client);
+    service = new TournamentSyncStartService(client, matches as any);
   });
 
   it('delegates tournament configuration to the abstract client', async () => {
@@ -53,6 +59,35 @@ describe('TournamentSyncStartService', () => {
       lobbyName: '',
       password: '',
     });
+  });
+
+  it('lists every active tournament song with the available lobbies', async () => {
+    client.listLobbies.mockResolvedValue({ status: { isActive: true, isConnected: true }, lobbies: [{ id: 'BRDG' }] });
+    matches.activeSongsForTournament.mockResolvedValue([{ id: 12, title: 'Pack/Song' }]);
+
+    await expect(service.controlOptions(7)).resolves.toEqual({
+      lobbies: [{ id: 'BRDG' }],
+      songs: [{ id: 12, title: 'Pack/Song' }],
+    });
+  });
+
+  it('resolves an active song before sending lobby commands', async () => {
+    matches.activeSongForTournament.mockResolvedValue({ id: 12, title: 'Pack/Song' });
+
+    await service.selectSong(7, 'BRDG', 12);
+    await service.startSong(7, 'BRDG', 12);
+
+    expect(client.selectSong).toHaveBeenCalledWith({ tournamentId: 7, lobbyId: 'BRDG', songPath: 'Pack/Song' });
+    expect(client.startSong).toHaveBeenCalledWith({ tournamentId: 7, lobbyId: 'BRDG', songPath: 'Pack/Song' });
+  });
+
+  it('rejects songs outside active tournament matches', async () => {
+    matches.activeSongForTournament.mockResolvedValue(null);
+
+    await expect(service.selectSong(7, 'BRDG', 12)).rejects.toThrow(
+      'Song 12 is not assigned to an active match in tournament 7',
+    );
+    expect(client.selectSong).not.toHaveBeenCalled();
   });
 });
 

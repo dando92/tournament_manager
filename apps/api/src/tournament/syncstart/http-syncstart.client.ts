@@ -8,6 +8,7 @@ import type {
   ConnectSyncStartLobbyRequest,
   CreatedSyncStartLobbyDto,
   CreateSyncStartLobbyRequest,
+  SyncStartLobbySongCommandRequest,
   SyncStartServerStatusDto,
   SyncStartLobbiesDto,
 } from '@tournament-manager/contracts';
@@ -86,6 +87,22 @@ export class HttpSyncStartClient implements SyncStartClient {
     await this.request(
       'DELETE',
       `${this.tournamentPath(tournamentId)}/lobbies/${encodeURIComponent(lobbyId)}`,
+    );
+  }
+
+  async selectSong(request: SyncStartLobbySongCommandRequest): Promise<void> {
+    await this.lobbySongCommand(request, 'select-song');
+  }
+
+  async startSong(request: SyncStartLobbySongCommandRequest): Promise<void> {
+    await this.lobbySongCommand(request, 'start');
+  }
+
+  private async lobbySongCommand(request: SyncStartLobbySongCommandRequest, command: string): Promise<void> {
+    await this.request(
+      'POST',
+      `${this.tournamentPath(request.tournamentId)}/lobbies/${encodeURIComponent(request.lobbyId)}/${command}`,
+      { songPath: request.songPath },
     );
   }
 

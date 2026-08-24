@@ -112,10 +112,41 @@ describe("LobbySession", () => {
 
     await expect(connected).rejects.toThrow("Lobby ABCD is already connected");
   });
+
+  it("waits for command acknowledgement from the lobby connection", async () => {
+    const transport = new FakeWebSocketTransport();
+    const session = new LobbySession(
+      7,
+      "ws://syncstart",
+      { type: "spectate", lobbyCode: "ABCD" },
+      "Finals",
+      "",
+      {},
+      { onLobbyCodeChanged: jest.fn(), onLobbyClosed: jest.fn() },
+      () => transport,
+    );
+    const connected = session.connect();
+    transport.open();
+    transport.message(JSON.stringify({ event: "lobbyState", data: { code: "ABCD", spectators: [], players: [] } }));
+    await connected;
+
+    const changeSong = session.changeSong("Pack/Song");
+    expect(transport.sent).toContain(JSON.stringify({ event: "changeSong", data: { songPath: "Pack/Song" } }));
+    transport.message(JSON.stringify({ event: "responseStatus", data: { event: "changeSong", success: true } }));
+    await expect(changeSong).resolves.toBeUndefined();
+
+    const startSong = session.startSong("Pack/Song");
+    transport.message(JSON.stringify({
+      event: "responseStatus",
+      data: { event: "startSong", success: false, message: "UDP unavailable" },
+    }));
+    await expect(startSong).rejects.toThrow("UDP unavailable");
+    session.disconnect();
+  });
 });
 
 class FakeWebSocketTransport implements WebSocketTransport {
-  readyState = WebSocket.CONNECTING;
+  readyState: number = WebSocket.CONNECTING;
   readonly sent: string[] = [];
   private readonly listeners = new Map<string, Array<(...args: any[]) => void>>();
 

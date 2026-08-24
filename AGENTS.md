@@ -88,6 +88,7 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - [Legacy ITGmania SyncStart bridge](.ai/LegacySyncStartBridge.md)
 - [Scoring model refactoring plan and decisions](.ai/ScoringRefactoring.md)
 - [API and frontend structure refactoring plan and decisions](.ai/ApiRefactoring.md)
+- [Tournament Control Room flows and implementation plan](.ai/ControlRoom.md)
 
 ## Repository Architecture
 

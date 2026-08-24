@@ -30,6 +30,12 @@ type PendingLobbyConnection = {
   timeout: ReturnType<typeof setTimeout>;
 };
 
+type PendingLobbyCommand = {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeout: ReturnType<typeof setTimeout>;
+};
+
 type SyncStartMessage<T = unknown> = {
   event: string;
   data?: T;
@@ -41,6 +47,7 @@ export class LobbySession {
   private readonly stateInterpreter = new LobbyStateInterpreter();
   private currentLobbyCode: string | null;
   private pendingConnect: PendingLobbyConnection | null = null;
+  private readonly pendingCommands = new Map<string, PendingLobbyCommand>();
   private connectedNotificationSent = false;
 
   constructor(
@@ -91,7 +98,16 @@ export class LobbySession {
 
   disconnect(): void {
     this.rejectPendingConnect(new Error("SyncStart lobby disconnected"));
+    this.rejectPendingCommands(new Error("SyncStart lobby disconnected"));
     this.connection.Disconnect();
+  }
+
+  changeSong(songPath: string): Promise<void> {
+    return this.sendCommand("changeSong", songPath);
+  }
+
+  startSong(songPath: string): Promise<void> {
+    return this.sendCommand("startSong", songPath);
   }
 
   private waitForInitialState(): Promise<LobbyConnectionResultDto> {
@@ -134,6 +150,14 @@ export class LobbySession {
       await this.handleLobbyState(payload.data as SyncStartLobbyStatePayload);
       return;
     }
+    if (payload.event === "responseStatus") {
+      this.handleCommandResponse(payload.data as {
+        event?: string;
+        success?: boolean;
+        message?: string;
+      });
+      return;
+    }
     if (payload.event === "clientDisconnected" && this.connection.IsActive()) {
       const reason = (payload.data as { reason?: string })?.reason ?? "(no reason)";
       console.warn(
@@ -173,6 +197,7 @@ export class LobbySession {
     this.rejectPendingConnect(new Error(
       `Connection closed, code=${event.code ?? "unknown"} reason=${event.reason ?? "(no reason)"}`,
     ));
+    this.rejectPendingCommands(new Error("SyncStart lobby connection closed"));
 
     if (this.currentLobbyCode) {
       await this.observer.OnDisconnection?.({
@@ -245,6 +270,46 @@ export class LobbySession {
     this.pendingConnect = null;
     clearTimeout(pending.timeout);
     pending.reject(error);
+  }
+
+  private sendCommand(event: string, songPath: string): Promise<void> {
+    if (!songPath.trim()) return Promise.reject(new Error("Song path is required"));
+    if (this.pendingCommands.has(event)) {
+      return Promise.reject(new Error(`${event} is already pending for lobby ${this.currentLobbyCode ?? "unknown"}`));
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pendingCommands.delete(event);
+        reject(new Error(`${event} response timeout`));
+      }, 5000);
+      this.pendingCommands.set(event, { resolve, reject, timeout });
+      try {
+        this.connection.Send(JSON.stringify({ event, data: { songPath } }));
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pendingCommands.delete(event);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  }
+
+  private handleCommandResponse(data: { event?: string; success?: boolean; message?: string }): void {
+    if (!data.event) return;
+    const pending = this.pendingCommands.get(data.event);
+    if (!pending) return;
+    clearTimeout(pending.timeout);
+    this.pendingCommands.delete(data.event);
+    if (data.success) pending.resolve();
+    else pending.reject(new Error(data.message || `${data.event} failed`));
+  }
+
+  private rejectPendingCommands(error: Error): void {
+    for (const pending of this.pendingCommands.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(error);
+    }
+    this.pendingCommands.clear();
   }
 
   private parseMessage(message: string): SyncStartMessage | null {

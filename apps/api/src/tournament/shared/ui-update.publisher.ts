@@ -52,6 +52,11 @@ export class UiUpdatePublisher {
     return this.publish('ui.match-changed', address.tournamentId, address);
   }
 
+  emitControlRoomFlowUpdate(tournamentId: number | null | undefined, flowId: number | null | undefined): Promise<void> {
+    if (!tournamentId || !flowId) return Promise.resolve();
+    return this.publish('ui.control-room-flow-changed', tournamentId, { tournamentId, flowId });
+  }
+
   emitPhaseGroupUpdate(address: PhaseGroupAddress): Promise<void> {
     if (!address?.tournamentId || !address?.phaseGroupId) return Promise.resolve();
     const { tournamentId, divisionId, phaseId, phaseGroupId } = address;

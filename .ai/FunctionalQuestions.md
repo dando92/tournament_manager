@@ -221,3 +221,28 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: should the judgment model keep roll fields it never receives from a legacy cabinet and never displays, or should the legacy payload be extended to send the two counts apart? Extending the cabinet is the only lossless answer and requires a game build.
 - Evidence: `tools/legacy-syncstart-bridge/src/domain/judgment-mapper.ts`, `packages/contracts/src/syncstart.ts` (`LobbyJudgmentsDto`).
 - Rule: do not present the combined total as a hold-only count anywhere it could be read as exact.
+
+### FQ-027 — Expected entrants and rollback after a match flow completes
+
+- Status: Resolved on 2026-08-24 while implementing tournament Control Room.
+- Observed behavior: a running flow must remain stale rather than activate a
+  match that cannot yet be played. Zero entrants and exactly one player are
+  unambiguous, but generated matches may require more than two players and the
+  match does not currently carry one authoritative expected-entrant count.
+  A completed flow normally remains immutable, but operational corrections may
+  still require reopening one of its results. Reopening a source after an
+  affected advancement target has progressed would remove entrants from a
+  competition that already used them.
+- Decision: every match requires at least two player entrants, raised to the
+  greatest target slot of its incoming advancement rules. Reopening a result in
+  a completed or archived flow requires confirmation, disarchives the flow,
+  returns it to inactive at that match, and records the interruption. It is
+  refused when an actually affected advancement target already has a committed
+  result or score evidence; there is no force override. Closing a tournament
+  explicitly stops running and paused flows and deactivates their current
+  matches; reopening does not restart them.
+- Evidence: [ControlRoom.md](ControlRoom.md),
+  `apps/api/src/tournament/competition/match/match.aggregate.ts`, and
+  `apps/api/src/tournament/structure/advancement/advancement.runner.ts`.
+- Rule: preserve these choices unless the user explicitly changes the Control
+  Room lifecycle or entrant-readiness model.

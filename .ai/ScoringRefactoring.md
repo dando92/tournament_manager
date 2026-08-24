@@ -220,3 +220,25 @@ hand-scored column with nothing typed is indistinguishable from one that is
 deliberately zero. Either a stated zero is written as a real standing, which the
 model supports, or a match holding a hand-scored round can never be complete by
 omission.
+
+## Score availability and ownership
+
+A score records one played run and can be evidence for at most one standing.
+The existing one-to-one `standing.scoreId` constraint remains the authoritative
+guard: reusing the same run in two matches would count one performance twice.
+
+The standing editor lists only scores for its player and song that are not
+already assigned. When editing an existing standing, the frontend retains its
+current score as the selected value even though the availability query omits
+assigned scores. The write path also validates the assignment and returns the
+stable `SCORE_ALREADY_ASSIGNED` conflict instead of exposing a database unique
+constraint failure as a server error.
+
+Scores keep their surrogate `id` as their key and do not duplicate a
+`tournamentId`. In the current model their song already determines the
+tournament through `score.songId -> song.tournamentId`; the availability query
+is narrower still because it is addressed by both song and player. The lookup
+is supported by an index on `(songId, playerId, id)`. A direct tournament
+relationship should be reconsidered only if scores acquire tournament-level
+ownership independent of songs, such as after introducing a global song
+catalogue.

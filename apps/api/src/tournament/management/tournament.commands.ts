@@ -5,6 +5,7 @@ import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { TournamentAggregate, TournamentDetails } from '@tournament/management/tournament.aggregate';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
+import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
 
 export type CreateTournamentInput = TournamentDetails & {
     name: string;
@@ -33,6 +34,7 @@ export class TournamentCommands {
         private readonly publisher: UiUpdatePublisher,
         private readonly accounts: AccountCommands,
         private readonly syncStart: TournamentSyncStartService,
+        private readonly controlRoom: ControlRoomRunner,
     ) {}
 
     /** Answers with the new tournament id: the caller navigates into what it made. */
@@ -74,6 +76,7 @@ export class TournamentCommands {
         const tournament = await this.store.loadOrFail(tournamentId);
         const closed = tournament.close();
         if (closed) await this.store.save(tournament);
+        if (closed) await this.controlRoom.stopTournament(tournamentId);
 
         await this.syncStart.closeTournament(tournamentId);
         if (closed) await this.publisher.emitTournamentUpdate(tournamentId);

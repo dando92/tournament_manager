@@ -17,6 +17,7 @@ const ParticipantsPage = lazy(() => import("@/pages/tournament/ParticipantsPage"
 const SongsPage = lazy(() => import("@/pages/tournament/SongsPage"));
 const LobbiesPage = lazy(() => import("@/pages/tournament/LobbiesPage"));
 const LivePage = lazy(() => import("@/pages/tournament/LivePage"));
+const ControlRoomPage = lazy(() => import("@/pages/tournament/ControlRoomPage"));
 const StatsPage = lazy(() => import("@/pages/tournament/StatsPage"));
 const ConfigurationPage = lazy(() => import("@/pages/tournament/ConfigurationPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -58,6 +59,7 @@ export default function AppRouter() {
               <Route path="songs" element={<SongsPage />} />
               <Route path="lobbies" element={<LobbiesPage />} />
               <Route path="live" element={<LivePage />} />
+              <Route path="control-room" element={<ControlRoomPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="configuration" element={<ConfigurationPage />} />
 

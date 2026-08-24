@@ -18,6 +18,8 @@ import { ExternalMapping } from './entities/external_mapping.entity';
 import { AdvancementRule } from './entities/advancement-rule.entity';
 import { PhaseGroup } from './entities/phase-group.entity';
 import { PhaseGroupEntrant } from './entities/phase-group-entrant.entity';
+import { ControlRoomFlow } from './entities/control-room-flow.entity';
+import { ControlRoomFlowEntry } from './entities/control-room-flow-entry.entity';
 export type { ParticipantRole, ParticipantStatus } from './entities/participant.entity';
 export type { EntrantType, EntrantStatus } from './entities/entrant.entity';
 export type { MatchResultEntry } from './entities/match_result.entity';
@@ -26,6 +28,7 @@ export type { PhaseGroupState } from './entities/phase-group.entity';
 export type { PhaseGroupEntrantStatus } from './entities/phase-group-entrant.entity';
 export type { TournamentStatus } from './entities/tournament.entity';
 export type { ChartDifficulty } from './entities/song.entity';
+export type { ControlRoomFlowStatus } from './entities/control-room-flow.entity';
 export type {
     ExternalProvider,
     ExternalMappingLocalType,
@@ -52,6 +55,8 @@ export { ExternalMapping }
 export { AdvancementRule }
 export { PhaseGroup }
 export { PhaseGroupEntrant }
+export { ControlRoomFlow }
+export { ControlRoomFlowEntry }
 
 export const Entities = [
     Division,
@@ -74,4 +79,6 @@ export const Entities = [
     ,AdvancementRule
     ,PhaseGroup
     ,PhaseGroupEntrant
+    ,ControlRoomFlow
+    ,ControlRoomFlowEntry
 ];

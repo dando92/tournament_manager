@@ -8,6 +8,7 @@ import { AdvancementRunner } from '@tournament/structure/advancement/advancement
 import { MatchAggregate } from '@match/match.aggregate';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { MatchStore } from '@match/match.store';
+import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
 
 function entrant(id: number, playerId: number): Entrant {
   return {
@@ -71,6 +72,9 @@ describe('AdvancementRunner', () => {
     emitMatchUpdate: jest.fn(),
     emitPhaseGroupUpdate: jest.fn(),
   };
+  const controlRoom = {
+    recalculateForMatch: jest.fn(),
+  };
 
   const manager = new AdvancementRunner(
     matchStore as unknown as MatchStore,
@@ -78,6 +82,7 @@ describe('AdvancementRunner', () => {
     phaseGroupStore as unknown as PhaseGroupStore,
     publisher as unknown as UiUpdatePublisher,
     { getScoringSystem: () => ({ recalc: jest.fn() }) } as unknown as ScoringSystemProvider,
+    controlRoom as unknown as ControlRoomRunner,
   );
 
   /** What the store handed back, which is what the save was called with. */

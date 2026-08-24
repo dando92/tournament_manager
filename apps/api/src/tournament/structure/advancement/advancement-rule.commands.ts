@@ -5,6 +5,7 @@ import { MatchQueries } from '@match/match.queries';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import { AdvancementRuleStore } from './advancement-rule.store';
+import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
 
 /**
  * The rules that say where the entrants of a competition go next.
@@ -23,6 +24,7 @@ export class AdvancementRuleCommands {
     private readonly matchQueries: MatchQueries,
     private readonly phaseGroupQueries: PhaseGroupQueries,
     private readonly publisher: UiUpdatePublisher,
+    private readonly controlRoom: ControlRoomRunner,
   ) {}
 
   async updateForSource(
@@ -31,6 +33,7 @@ export class AdvancementRuleCommands {
     rules: AdvancementRuleInputDto[],
   ): Promise<void> {
     await this.assertSourceExists(sourceKind, sourceId);
+    const previous = await this.advancementRules.findBySource(sourceKind, sourceId);
     await this.advancementRules.deleteBySource(sourceKind, sourceId);
     await this.advancementRules.createAll(
       (rules ?? []).map((rule) => ({
@@ -42,6 +45,11 @@ export class AdvancementRuleCommands {
         targetSlot: rule.targetSlot,
       })),
     );
+
+    const affectedMatchIds = [...previous, ...(rules ?? [])]
+      .filter((rule) => rule.targetKind === 'match')
+      .map((rule) => rule.targetId);
+    await this.controlRoom.recalculateForMatches([...new Set(affectedMatchIds)]);
 
     await this.announce(sourceKind, sourceId);
   }

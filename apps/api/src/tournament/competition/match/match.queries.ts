@@ -8,13 +8,14 @@ import {
     EntrantDto,
     MatchResultEntryDto,
     MatchRoundDto,
+    SongRefDto,
 } from '@tournament-manager/contracts';
 
 /**
  * Which matches a projection covers. The three read routes differ in this and
  * in nothing else, so they share one query and one mapper.
  */
-type MatchScope = 'match' | 'phaseGroup' | 'division';
+type MatchScope = 'match' | 'phaseGroup' | 'division' | 'tournament';
 
 const SCOPE_PREDICATE: Record<MatchScope, string> = {
     match: 'm."id" = $1',
@@ -24,6 +25,13 @@ const SCOPE_PREDICATE: Record<MatchScope, string> = {
         FROM    "phase_group" pg
         JOIN    "phase" ph ON ph."id" = pg."phaseId"
         WHERE   ph."divisionId" = $1
+    )`,
+    tournament: `m."phaseGroupId" IN (
+        SELECT  pg."id"
+        FROM    "phase_group" pg
+        JOIN    "phase" ph ON ph."id" = pg."phaseId"
+        JOIN    "division" d ON d."id" = ph."divisionId"
+        WHERE   d."tournamentId" = $1
     )`,
 };
 
@@ -200,6 +208,27 @@ const LIVE_TARGETS_FOR_SONG = `
     ORDER BY pa."playerId", m."id", r."id"
 `;
 
+const ACTIVE_TOURNAMENT_SONGS_BASE = `
+    SELECT
+            so."id"    AS "id",
+            so."title" AS "title"
+    FROM        "round" r
+    JOIN        "song" so       ON so."id" = r."songId"
+    JOIN        "match" m       ON m."id" = r."matchId" AND m."active" = TRUE
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+    JOIN        "division" d     ON d."id" = ph."divisionId"
+    WHERE       d."tournamentId" = $1
+`;
+
+const ACTIVE_TOURNAMENT_SONGS = `
+    SELECT DISTINCT ON (active_song."title")
+            active_song."id",
+            active_song."title"
+    FROM (${ACTIVE_TOURNAMENT_SONGS_BASE}) active_song
+    ORDER BY active_song."title", active_song."id"
+`;
+
 /**
  * Every read of a match, in the one shape the interface consumes.
  *
@@ -227,6 +256,10 @@ export class MatchQueries {
         return await this.inScope('division', divisionId);
     }
 
+    async byTournament(tournamentId: number): Promise<MatchDto[]> {
+        return await this.inScope('tournament', tournamentId);
+    }
+
     /**
      * The rounds waiting for these players on this song, one per player.
      *
@@ -237,6 +270,20 @@ export class MatchQueries {
         if (playerIds.length === 0) return [];
 
         return await this.dataSource.query(LIVE_TARGETS_FOR_SONG, [tournamentId, songId, playerIds]);
+    }
+
+    /** Every distinct song assigned to a match currently accepting lobby results. */
+    async activeSongsForTournament(tournamentId: number): Promise<SongRefDto[]> {
+        return await this.dataSource.query(ACTIVE_TOURNAMENT_SONGS, [tournamentId]);
+    }
+
+    async activeSongForTournament(tournamentId: number, songId: number): Promise<SongRefDto | null> {
+        const songs = await this.dataSource.query<SongRefDto[]>(
+            `${ACTIVE_TOURNAMENT_SONGS_BASE}
+             AND so."id" = $2`,
+            [tournamentId, songId],
+        );
+        return songs[0] ?? null;
     }
 
     /** Whether a match exists, for the callers that only need to refuse when it does not. */

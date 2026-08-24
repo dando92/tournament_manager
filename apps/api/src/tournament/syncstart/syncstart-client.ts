@@ -4,6 +4,7 @@ import type {
   ConnectSyncStartLobbyRequest,
   CreatedSyncStartLobbyDto,
   CreateSyncStartLobbyRequest,
+  SyncStartLobbySongCommandRequest,
   SyncStartServerStatusDto,
   SyncStartLobbiesDto,
 } from '@tournament-manager/contracts';
@@ -25,4 +26,6 @@ export interface SyncStartClient {
     request: CreateSyncStartLobbyRequest,
   ): Promise<CreatedSyncStartLobbyDto>;
   disconnectLobby(tournamentId: number, lobbyId: string): Promise<void>;
+  selectSong(request: SyncStartLobbySongCommandRequest): Promise<void>;
+  startSong(request: SyncStartLobbySongCommandRequest): Promise<void>;
 }

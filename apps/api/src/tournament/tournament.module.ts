@@ -58,6 +58,14 @@ import { TournamentLobbiesController } from './syncstart/tournament-lobbies.cont
 import { TournamentSyncStartBootstrap } from './syncstart/tournament-syncstart.bootstrap';
 import { TournamentSyncStartModule } from './syncstart/syncstart.module';
 import { TournamentSyncStartService } from './syncstart/tournament-syncstart.service';
+import { ControlRoomController } from './competition/control-room/control-room.controller';
+import { ControlRoomCommands } from './competition/control-room/control-room.commands';
+import { ControlRoomQueries } from './competition/control-room/control-room.queries';
+import { ControlRoomStore } from './competition/control-room/control-room.store';
+import { ControlRoomRunner } from './competition/control-room/control-room.runner';
+import { ControlRoomBootstrap } from './competition/control-room/control-room.bootstrap';
+import { ControlRoomMutationGuard } from './competition/control-room/control-room-mutation.guard';
+import { AdvancementRollbackGuard } from './structure/advancement/advancement-rollback.guard';
 
 @Module({
     imports: [
@@ -104,6 +112,13 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         TournamentQueries,
         TournamentCommands,
         TournamentStore,
+        ControlRoomCommands,
+        ControlRoomQueries,
+        ControlRoomStore,
+        ControlRoomRunner,
+        ControlRoomBootstrap,
+        ControlRoomMutationGuard,
+        AdvancementRollbackGuard,
         TournamentAccessGuard,
         TournamentOpenGuard,
         AdminGuard,
@@ -125,6 +140,7 @@ import { TournamentSyncStartService } from './syncstart/tournament-syncstart.ser
         ScoresController,
         RoundsController,
         BracketController,
+        ControlRoomController,
     ],
 })
 export class TournamentModule {}

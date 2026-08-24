@@ -58,6 +58,7 @@ type MatchCardProps = {
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
+  manualActivationAllowed?: boolean;
 };
 
 type StandingModalState = {
@@ -112,6 +113,7 @@ export default function MatchCard({
   onUpdateMatchAdvancementRules,
   onUpdateMatchActive,
   onReopenMatchResult,
+  manualActivationAllowed = true,
 }: MatchCardProps) {
   const [addSongToMatchModalOpen, setAddSongToMatchModalOpen] = useState(false);
   const [addPlayersToMatchModalOpen, setAddPlayersToMatchModalOpen] = useState(false);
@@ -310,6 +312,7 @@ export default function MatchCard({
         onEditAdvancementRules={enterEditMode}
         onToggleActive={toggleActive}
         onReopenMatch={reopenMatch}
+        manualActivationAllowed={manualActivationAllowed}
       />
 
       {showEmptySlots && (

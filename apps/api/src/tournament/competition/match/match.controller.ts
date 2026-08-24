@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { CommitMatchResultResponseDto, CreatedResourceDto, MatchDto } from '@tournament-manager/contracts';
 import { RoundSourceDto, CreateMatchWithSongsDto, UpdateMatchActiveDto, UpdateMatchDto } from '@match/match.requests';
 import { MatchCommands } from '@match/match.commands';
@@ -52,22 +52,22 @@ export class MatchesController {
     @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto): Promise<void> {
-        return this.matchCommands.update(Number(id), dto);
+    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+        return this.matchCommands.update(Number(id), dto, confirmation === 'true');
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    remove(@Param('id') id: number): Promise<void> {
-        return this.matchCommands.delete(Number(id));
+    remove(@Param('id') id: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+        return this.matchCommands.delete(Number(id), confirmation === 'true');
     }
 
     @Post(':matchId/rounds')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto): Promise<void> {
-        return this.matchCommands.addRound(Number(matchId), dto);
+    addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+        return this.matchCommands.addRound(Number(matchId), dto, confirmation === 'true');
     }
 
     @Put(':matchId/active')
@@ -92,7 +92,7 @@ export class MatchesController {
     @Delete(':matchId/result')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    reopenMatchResult(@Param('matchId') matchId: number): Promise<void> {
-        return this.matchCommands.reopenResult(Number(matchId));
+    reopenMatchResult(@Param('matchId') matchId: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+        return this.matchCommands.reopenResult(Number(matchId), confirmation === 'true');
     }
 }

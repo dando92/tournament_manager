@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Headers, HttpCode, HttpStatus, Param, Put, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MatchCommands } from '@match/match.commands';
 import { UpsertPointsDto, UpsertScoreDto } from '@match/rounds.requests';
 import { RoundSourceDto } from '@match/match.requests';
@@ -27,15 +27,16 @@ export class RoundsController {
     replaceSong(
         @Param('roundId') roundId: number,
         @Body(new ValidationPipe()) dto: RoundSourceDto,
+        @Headers('x-confirm-control-room-stop') confirmation?: string,
     ): Promise<void> {
-        return this.matchCommands.replaceRoundSong(Number(roundId), dto);
+        return this.matchCommands.replaceRoundSong(Number(roundId), dto, confirmation === 'true');
     }
 
     @Delete(':roundId')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    removeRound(@Param('roundId') roundId: number): Promise<void> {
-        return this.matchCommands.removeRound(Number(roundId));
+    removeRound(@Param('roundId') roundId: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+        return this.matchCommands.removeRound(Number(roundId), confirmation === 'true');
     }
 
     @Put(':roundId/scores/:playerId')
@@ -56,8 +57,9 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertPointsDto,
+        @Headers('x-confirm-control-room-stop') confirmation?: string,
     ): Promise<void> {
-        return this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points);
+        return this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points, confirmation === 'true');
     }
 
     @Delete(':roundId/standings/:playerId')
@@ -66,7 +68,8 @@ export class RoundsController {
     removeStanding(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
+        @Headers('x-confirm-control-room-stop') confirmation?: string,
     ): Promise<void> {
-        return this.matchCommands.removeStanding(Number(roundId), Number(playerId));
+        return this.matchCommands.removeStanding(Number(roundId), Number(playerId), confirmation === 'true');
     }
 }

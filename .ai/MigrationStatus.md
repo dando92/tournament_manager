@@ -2,15 +2,28 @@
 
 ## Current Position
 
-- Last updated: 2026-08-23.
-- Completed plan: [Simplified Architecture Migration Plan](MigrationPlan.md).
-- Active plan: [API and Frontend Structure Refactoring](ApiRefactoring.md), phase 5 complete. Every read endpoint answers from a `*.queries.ts` class; no controller reaches a service for a `GET`.
-- State: Architecture migration complete. Structure refactoring in progress.
+- Last updated: 2026-08-24.
+- Completed plans: [Simplified Architecture Migration Plan](MigrationPlan.md), [API and Frontend Structure Refactoring](ApiRefactoring.md), and [Control Room](ControlRoom.md).
+- Active plan: none.
+- State: Architecture migration and Control Room delivery complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: phase 6, one update path. Mutations answer `204`, the frontend drops the reducer in `useMatches` and relies on the query cache, and the realtime invalidation narrows to what an event actually touches. It is the exception that spans both workspaces in one branch, because either half alone leaves the interface without an update path.
+- Next action: manually exercise the Control Room with real lobby and cabinet sessions, including two concurrent flows.
 - Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints
+
+### Tournament Control Room
+
+Requested by the user on 2026-08-24, after the legacy lobby-control checkpoint.
+
+- Added PostgreSQL-authoritative tournament flows with persisted unique match assignment, ordering, cursor, lifecycle, stale diagnosis, archive visibility, and optimistic editor versioning. The row-locked synchronous runner advances ready-to-commit matches without committing them, keeps blocked flows running and stale, and reconciles running flows at API startup.
+- Added Start, Start from here, Pause, Resume, Stop, Archive, Unarchive, editor, and query endpoints. Relevant match, standing, song, entrant, advancement, commit, reopen, deletion, and tournament lifecycle writes recalculate affected flows. Manual match activation is refused while a tournament flow is running or paused.
+- Added backend-enforced rollback confirmation. A confirmed rollback stops the affected running or paused flow, deactivates its current match, and then applies the mutation. A confirmed completed-flow result reopen disarchives the flow, returns it to inactive at that match, and records the interruption. Reopen is refused when an affected advancement target already has scores or a committed result. Closing a tournament stops operational flows; reopening does not restart them.
+- Added the tournament-level Control Room frontend with multiple flow panels, current match cards, queue context actions, stale explanations, persisted drag-and-drop ordering with keyboard controls, Unassigned only inside the inactive editor, and completed-flow archive visibility.
+- Moved the independent lobby-control card into each operational flow panel without creating a lobby-to-flow or lobby-to-match binding. Restored the live panel below division match cards for staff and viewers.
+- Renamed and finalized [ControlRoom.md](ControlRoom.md), synchronized backend, frontend, and design decisions, and resolved FQ-027.
+- Verification: `npm run verify` passes. This covers architecture checks, all workspace builds, lint with the six existing warnings only, contracts, 136 API unit tests, 105 API end-to-end tests, and the migration-runner end-to-end test. The Control Room end-to-end suite covers no-commit advancement and manual activation protection, stale recovery, pause/resume/completion/archive, concurrent independent flows, confirmed rollback shutdown, completed-flow reopening, and progress protection for both match and pool advancement targets.
+- Next action: manually verify the responsive Control Room, drag-and-drop editor, context menu, and real lobby controls with multiple cabinets.
 
 ### Talking to legacy ITGmania cabinets
 
@@ -20,7 +33,7 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 - What the application actually reads was verified before anything was written, and two of the answers changed the design. `exScore` is the run — `CompletedSongService` records `percentage: score.exScore` and refuses a score without it — and `screenName` is load-bearing: `LobbyStateInterpreter` reports a completed song only when a player it last saw on `ScreenGameplay` appears on an evaluation screen. The earlier JavaScript prototype published a final score alone, with no gameplay snapshot before it, so nothing it ever sent could have been recorded as a standing.
 - A completed song is therefore published as two snapshots, gameplay then evaluation, and only once every player the session saw has sent a final message. A snapshot that turned one player to evaluation while the other was still playing would record the second player's half-finished run and record it again when they finished, because a completion carries every player in the snapshot.
 - The song identifier needs no translation: the cabinet reports `Pack/SongFolder` and the folder importer stores that as a song's title, which is what `SONG_OF_TOURNAMENT_BY_TITLE` compares `songPath` against.
-- `npm run local_sync:up` starts the local stack together with the bridge, from `docker-compose.legacy-bridge.yml`. The fixture is left alone: the tournament's SyncStart URL is set to `ws://legacy-syncstart-bridge:1337` by hand. `npm run local_sync:bridge` runs the same bridge outside Docker for a host that does not deliver broadcast into a container.
+- `npm run local_sync:up` starts the detached local Compose stack and then runs the legacy bridge on the host, where LAN broadcast is reliable. The fixture is left alone: the tournament's SyncStart URL is set to `ws://host.docker.internal:1337` by hand. `npm run local_sync:bridge` runs only the host bridge when the stack is already running; `docker-compose.legacy-bridge.yml` remains available for deployments whose container networking delivers LAN broadcast.
 - Recorded two behaviours rather than deciding them: a legacy cabinet has no EX score and reports the dance-point percentage that is stored in its place (FQ-025), and its hold total includes rolls because the wire never separates them (FQ-026).
 - Verification: `npm run check:architecture`, `npm run build` across every workspace, `npm run lint` (pre-existing warnings only), 33 new unit tests over the parser, the score and judgment mapping, the session state machine and the WebSocket contract, and the full `npm run test:unit` suite. The image builds, and a container with `53000/udp` published turned a song, a live score and a final score into the gameplay and evaluation snapshots a standing needs — over unicast and over `255.255.255.255` from this host.
 - Not yet confirmed by hand: a real legacy cabinet on the venue LAN. Broadcast delivery from another machine, through the host firewall and the Docker port forwarder, is the one property no test here can stand in for.

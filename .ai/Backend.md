@@ -57,6 +57,16 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
   `AccountQueries` rather than opening an account repository itself.
 - Keep cross-aggregate advancement in `structure/advancement/`: `AdvancementRunner` walks rules through stores, while `AdvancementRuleCommands` owns rule writes.
 - Keep shared tournament concerns under `tournament/shared/`, including the open-tournament guard, UI update publisher, and common projections.
+- Tournament control-room flows belong under `tournament/competition/control-room` as a
+  PostgreSQL-authoritative aggregate and synchronous runner. Stale is a
+  diagnosis on a running flow, not a lifecycle state. Match commands invoke a
+  narrow recalculation collaborator after relevant persisted changes; Redis UI
+  invalidations do not drive progression. Confirmed completed-flow result
+  reopening returns the flow to inactive at that match. Before reopening,
+  `AdvancementRollbackGuard` refuses removal from any actually affected target
+  match or pool that already has score evidence or a committed result. The
+  complete model and delivery plan
+  are defined in [ControlRoom.md](ControlRoom.md).
 - Keep API tests outside `src`. Unit tests mirror the source capability tree under `tests/unit`; complete HTTP tests live under `tests/e2e/<capability>`; infrastructure collaboration tests live under `tests/integration`; reusable test infrastructure remains under `tests/support`.
 
 ## Database Access and Transactions
@@ -90,6 +100,13 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 ## SyncStart Communication
 
 - API sends connection and lobby commands through authenticated internal HTTP endpoints.
+- Public lobby-control commands accept a tournament song identifier, never a
+  caller-supplied cabinet path. The API resolves the path only when that song is
+  assigned to an active match in the tournament, then addresses the selected
+  lobby through SyncStart internal HTTP.
+- `LobbySession` sends `changeSong` and `startSong` on its own lobby connection
+  and waits for `responseStatus`; the legacy bridge translates those commands
+  to acknowledged UDP broadcasts.
 - SyncStart sends normalized completed songs to an authenticated idempotent API endpoint.
 - The API applies score, standing, match, and advancement behavior synchronously.
 - Completed-song delivery is best effort. Manual score entry is the approved recovery for an occasional loss.

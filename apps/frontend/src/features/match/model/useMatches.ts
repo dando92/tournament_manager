@@ -143,8 +143,16 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
 
       reopenMatchResult: (matchId: number) =>
         run(async () => {
-          await MatchesApi.reopenMatchResult(matchId);
-          toast.success("Match re-opened.");
+          try {
+            const reopened = await MatchesApi.reopenMatchResult(matchId);
+            if (reopened) toast.success("Match re-opened.");
+          } catch (error) {
+            if (error instanceof MatchesApi.AdvancementRollbackBlockedError) {
+              toast.error(error.message);
+              return;
+            }
+            throw error;
+          }
         }, "Error re-opening match."),
     },
   };

@@ -11,6 +11,10 @@ import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { SongRoller } from '@tournament/catalog/song-roller';
 import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
+import { ControlRoomMutationGuard } from '@tournament/competition/control-room/control-room-mutation.guard';
+import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { ControlRoomStore } from '@tournament/competition/control-room/control-room.store';
+import { AdvancementRollbackGuard } from '@tournament/structure/advancement/advancement-rollback.guard';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
@@ -65,6 +69,10 @@ export class MatchCommands {
         private readonly advancementRules: AdvancementRuleStore,
         private readonly songRoller: SongRoller,
         private readonly startgg: StartggMatchReporter,
+        private readonly controlRoom: ControlRoomRunner,
+        private readonly controlRoomGuard: ControlRoomMutationGuard,
+        private readonly controlRoomStore: ControlRoomStore,
+        private readonly advancementRollbackGuard: AdvancementRollbackGuard,
     ) {}
 
     /** Answers with the new match id: the bracket systems build structures out of them. */
@@ -82,10 +90,16 @@ export class MatchCommands {
         return match.id;
     }
 
-    async update(matchId: number, input: UpdateMatchInput): Promise<void> {
-        const match = await this.store.loadOrFail(matchId);
-        const before = match.poolState;
+    async update(matchId: number, input: UpdateMatchInput, confirmControlRoomStop = false): Promise<void> {
+        let match = await this.store.loadOrFail(matchId);
+        let before = match.poolState;
         const membershipChanged = input.entrantIds !== undefined || input.phaseGroupId !== undefined;
+        const removesEntrants = input.entrantIds !== undefined && match.entrants.some((entrant) => !input.entrantIds.includes(entrant.id));
+        if (removesEntrants || input.phaseGroupId !== undefined) {
+            await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+            match = await this.store.loadOrFail(matchId);
+            before = match.poolState;
+        }
         if (membershipChanged || input.scoringSystem !== undefined) match.assertEditable();
 
         const origin = match.address;
@@ -102,6 +116,7 @@ export class MatchCommands {
         }
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
         /* A match that changed hands or changed pools moves the counts of every
            pool it touched, whichever way its own standings went. The pool it
@@ -112,18 +127,23 @@ export class MatchCommands {
         }
     }
 
-    async delete(matchId: number): Promise<void> {
+    async delete(matchId: number, confirmControlRoomStop = false): Promise<void> {
         const match = await this.store.load(matchId);
         if (!match) return;
+
+        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+        const flowId = await this.controlRoomStore.flowIdForMatch(matchId);
 
         const address = match.address;
         await this.advancementRules.deleteInvolvingMatch(matchId);
         await this.store.remove(match);
+        if (flowId) await this.controlRoom.recalculate(flowId);
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 
     async setActive(matchId: number, active: boolean): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
+        await this.controlRoomGuard.assertManualActivationAllowed(match.address.tournamentId);
         match.activate(active);
 
         await this.store.save(match);
@@ -151,23 +171,32 @@ export class MatchCommands {
         await this.saveAndAnnounceMembership(match);
     }
 
-    async addRound(matchId: number, source: RoundSourceDto): Promise<void> {
-        const match = await this.store.loadOrFail(matchId);
-        const before = match.poolState;
+    async addRound(matchId: number, source: RoundSourceDto, confirmControlRoomStop = false): Promise<void> {
+        let match = await this.store.loadOrFail(matchId);
+        let before = match.poolState;
+        if (before.awaitingCommit) {
+            await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+            match = await this.store.loadOrFail(matchId);
+            before = match.poolState;
+        }
         match.assertEditable();
         await this.addRounds(match, source);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
-    async removeRound(roundId: number): Promise<void> {
-        const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+    async removeRound(roundId: number, confirmControlRoomStop = false): Promise<void> {
+        const matchId = await this.store.locateRound(roundId);
+        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+        const match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         match.assertEditable();
         match.removeRound(roundId);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
@@ -176,14 +205,17 @@ export class MatchCommands {
      * the standings under it were scored on the song that is leaving. Both halves
      * are one change to one aggregate, so they are one load and one save.
      */
-    async replaceRoundSong(roundId: number, source: RoundSourceDto): Promise<void> {
-        const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
+    async replaceRoundSong(roundId: number, source: RoundSourceDto, confirmControlRoomStop = false): Promise<void> {
+        const matchId = await this.store.locateRound(roundId);
+        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+        const match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         match.assertEditable();
         match.removeRound(roundId);
         await this.addRounds(match, source);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
@@ -194,32 +226,47 @@ export class MatchCommands {
 
         const player = await this.store.loadPlayer(playerId);
         const score = input.scoreId
-            ? await this.store.loadScore(input.scoreId)
+            ? await this.store.loadAssignableScore(input.scoreId, roundId, playerId)
             : this.draftScore(player, match.songOf(roundId), input);
 
         match.upsertScore(roundId, player, score, this.scoringSystems);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
-    async upsertPoints(roundId: number, playerId: number, points: number): Promise<void> {
-        const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
-        const before = match.poolState;
+    async upsertPoints(roundId: number, playerId: number, points: number, confirmControlRoomStop = false): Promise<void> {
+        const matchId = await this.store.locateRound(roundId);
+        let match = await this.store.loadOrFail(matchId);
+        let before = match.poolState;
+        if (points === 0 && before.awaitingCommit) {
+            await this.controlRoomGuard.protectRollback(match.id, confirmControlRoomStop);
+            match = await this.store.loadOrFail(matchId);
+            before = match.poolState;
+        }
         match.assertEditable();
         match.upsertPoints(roundId, await this.store.loadPlayer(playerId), points);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
-    async removeStanding(roundId: number, playerId: number): Promise<void> {
-        const match = await this.store.loadOrFail(await this.store.locateRound(roundId));
-        const before = match.poolState;
+    async removeStanding(roundId: number, playerId: number, confirmControlRoomStop = false): Promise<void> {
+        const matchId = await this.store.locateRound(roundId);
+        let match = await this.store.loadOrFail(matchId);
+        let before = match.poolState;
+        if (before.awaitingCommit) {
+            await this.controlRoomGuard.protectRollback(match.id, confirmControlRoomStop);
+            match = await this.store.loadOrFail(matchId);
+            before = match.poolState;
+        }
         match.assertEditable();
         match.removeStanding(roundId, playerId);
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
@@ -240,19 +287,26 @@ export class MatchCommands {
         await this.store.save(match);
 
         await this.advancement.advanceFromMatch(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         const startggReport = await this.report(match);
         await this.announce(match, before);
 
         return startggReport;
     }
 
-    async reopenResult(matchId: number): Promise<void> {
-        const match = await this.store.loadOrFail(matchId);
+    async reopenResult(matchId: number, confirmControlRoomStop = false): Promise<void> {
+        let match = await this.store.loadOrFail(matchId);
+        if (match.isCompleted) {
+            await this.advancementRollbackGuard.assertMatchCanReopen(match);
+        }
+        await this.controlRoomGuard.prepareResultReopen(matchId, confirmControlRoomStop);
+        match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         if (match.isCompleted) await this.advancement.revertFromMatch(match);
 
         match.reopen();
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
@@ -283,11 +337,13 @@ export class MatchCommands {
         }
 
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.announce(match, before);
     }
 
     private async saveAndAnnounceMembership(match: MatchAggregate): Promise<void> {
         await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
         await this.publisher.emitMatchUpdate(match.address);
         await this.publisher.emitPhaseGroupUpdate(match.address);
     }

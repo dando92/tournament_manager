@@ -82,4 +82,20 @@ export class InternalController {
     this.tournaments.disconnectLobby(Number(id), lobbyId);
     return { ok: true };
   }
+  @Post(":tournamentId/lobbies/:lobbyId/select-song")
+  selectSong(
+    @Param("tournamentId") id: string,
+    @Param("lobbyId") lobbyId: string,
+    @Body() body: { songPath: string },
+  ) {
+    return this.tournaments.selectSong(Number(id), lobbyId, body.songPath);
+  }
+  @Post(":tournamentId/lobbies/:lobbyId/start")
+  startSong(
+    @Param("tournamentId") id: string,
+    @Param("lobbyId") lobbyId: string,
+    @Body() body: { songPath: string },
+  ) {
+    return this.tournaments.startSong(Number(id), lobbyId, body.songPath);
+  }
 }
