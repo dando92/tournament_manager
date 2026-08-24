@@ -83,6 +83,7 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - [Deferred functional questions](.ai/FunctionalQuestions.md)
 - [Frontend architecture and coding rules](.ai/Frontend.md)
 - [Design system and design decisions](.ai/Design.md)
+- [Advancement rule editor and deferred quick-rule mode](.ai/AdvancementRuleEditor.md)
 - [SyncStart protocol refactoring decisions](.ai/SyncStartRefactoring.md)
 - [Legacy ITGmania SyncStart bridge](.ai/LegacySyncStartBridge.md)
 - [Scoring model refactoring plan and decisions](.ai/ScoringRefactoring.md)

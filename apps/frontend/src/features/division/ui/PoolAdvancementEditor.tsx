@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import AdvancementRulesEditor from "@/features/match/ui/AdvancementRulesEditor";
+import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
 import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { Division, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/model/types";
 import { Match } from "@/features/match/model/types";
@@ -57,7 +57,8 @@ export default function PoolAdvancementEditor({
   };
 
   return (
-    <AdvancementRulesEditor
+    <AdvancementRulesModal
+      open
       sourceKind="phase_group"
       sourceId={phaseGroup.id}
       rules={rules}

@@ -10,7 +10,7 @@ import EditScoringSystemModal from "@/features/match/ui/EditScoringSystemModal";
 import MatchHeader from "@/features/match/ui/MatchHeader";
 import MatchEmptySlots from "@/features/match/ui/MatchEmptySlots";
 import MatchTable from "@/features/match/ui/MatchTable";
-import AdvancementRulesEditor from "@/features/match/ui/AdvancementRulesEditor";
+import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
 import { getMatchCommitState } from "@/features/match/model/matchStatus";
 import { entrantPlayers } from "@/features/participant/model/entrant";
 
@@ -120,6 +120,7 @@ export default function MatchCard({
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editScoringSystemModalOpen, setEditScoringSystemModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [savingAdvancementRules, setSavingAdvancementRules] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -138,7 +139,6 @@ export default function MatchCard({
   const showEmptySlots =
     controls &&
     !match.matchResult &&
-    !editMode &&
     match.rounds.length === 0 &&
     matchPlayers.length === 0 &&
     !hasIncomingRoutes;
@@ -173,13 +173,18 @@ export default function MatchCard({
   }
 
   async function saveEditMode() {
-    if (onUpdateMatchAdvancementRules) {
-      await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
+    setSavingAdvancementRules(true);
+    try {
+      if (onUpdateMatchAdvancementRules) {
+        await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
+      }
+      onMatchUpdated();
+      setEditMode(false);
+      setPendingAdvancementRules([]);
+      setAdvancementTargetMatches(null);
+    } finally {
+      setSavingAdvancementRules(false);
     }
-    onMatchUpdated();
-    setEditMode(false);
-    setPendingAdvancementRules([]);
-    setAdvancementTargetMatches(null);
   }
 
   function openAddSong() {
@@ -273,6 +278,18 @@ export default function MatchCard({
         onClose={() => setEditScoringSystemModalOpen(false)}
         onSave={onUpdateMatchScoringSystem}
       />
+      <AdvancementRulesModal
+        open={editMode}
+        sourceKind="match"
+        sourceId={match.id}
+        rules={pendingAdvancementRules}
+        division={division}
+        allMatches={advancementTargetMatches ?? allMatches}
+        saving={savingAdvancementRules}
+        onChange={setPendingAdvancementRules}
+        onSave={saveEditMode}
+        onCancel={cancelEditMode}
+      />
 
       <MatchHeader
         match={match}
@@ -295,19 +312,6 @@ export default function MatchCard({
         onReopenMatch={reopenMatch}
       />
 
-      {editMode && (
-        <AdvancementRulesEditor
-          sourceKind="match"
-          sourceId={match.id}
-          rules={pendingAdvancementRules}
-          division={division}
-          allMatches={advancementTargetMatches ?? allMatches}
-          onChange={setPendingAdvancementRules}
-          onSave={saveEditMode}
-          onCancel={cancelEditMode}
-        />
-      )}
-
       {showEmptySlots && (
         <MatchEmptySlots
           canAddSong={matchPlayers.length > 0}
@@ -316,7 +320,7 @@ export default function MatchCard({
         />
       )}
 
-      {!editMode && !showEmptySlots && (
+      {!showEmptySlots && (
         <MatchTable
           match={match}
           division={division}

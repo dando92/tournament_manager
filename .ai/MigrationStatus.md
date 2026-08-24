@@ -605,6 +605,25 @@ Requested by the user on 2026-08-23, outside the phase sequence.
   warnings.
 - Next action: run local-stack verification when a Docker checkpoint is wanted.
 
+### Advancement rule editor
+
+- Replaced the inline advancement-rule form with one focused modal shared by
+  match and pool sources. The underlying match page remains visible, while the
+  modal is centered, content-sized, and viewport-capped with an independently
+  scrolling rule list.
+- Rendered each draft as a compact editable sentence. Placement and target slot
+  use matching native number controls; destination combines target kind and
+  hierarchical path in one selector grouped by matches and pools.
+- Kept the sentence inline on desktop. Narrow screens move the slot control and
+  delete action onto a dedicated second line. Add, Save, and Cancel share the
+  modal footer without repeating outgoing rules below match tables.
+- Recorded the approved editor behavior and the deliberately deferred quick-
+  rule proposal in `AdvancementRuleEditor.md`.
+- Verification: frontend build passes; frontend unit tests pass (50 tests);
+  frontend lint passes with the five pre-existing warnings; architecture checks
+  pass.
+- Next action: run local-stack verification when a Docker checkpoint is wanted.
+
 ## Verification
 
 ```text

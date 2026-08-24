@@ -7,6 +7,7 @@ type BaseModalProps = {
   title?: string;
   footer?: ReactNode;
   maxWidth?: string;
+  fitViewport?: boolean;
 };
 
 export default function BaseModal({
@@ -15,16 +16,14 @@ export default function BaseModal({
   title,
   footer,
   maxWidth = "max-w-2xl",
+  fitViewport = false,
   children,
 }: PropsWithChildren<BaseModalProps>) {
   return (
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="fixed inset-0 z-[9999] overflow-y-auto" onClose={onClose}>
-        <div className="min-h-screen px-4 text-center">
+        <div className={`relative flex min-h-full items-center justify-center text-center ${fitViewport ? "p-2 sm:p-4" : "p-4"}`}>
           <Dialog.Overlay className="fixed inset-0 backdrop-blur-lg bg-ui-text bg-opacity-60" />
-          <span className="inline-block h-screen align-middle" aria-hidden="true">
-            &#8203;
-          </span>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -35,7 +34,11 @@ export default function BaseModal({
             leaveTo="opacity-0 scale-95"
           >
             <div
-              className={`inline-block w-full ${maxWidth} p-6 my-8 text-left align-middle transition-all transform bg-ui-surface shadow-xl`}
+              className={`relative w-full ${maxWidth} text-left transition-all transform bg-ui-surface shadow-xl ${
+                fitViewport
+                  ? "max-h-[calc(100dvh-1rem)] overflow-hidden rounded-lg p-4 sm:max-h-[calc(100dvh-2rem)] sm:p-6 flex flex-col"
+                  : "my-8 p-6"
+              }`}
             >
               {title && (
                 <div className="flex items-center justify-between mb-4">
@@ -50,7 +53,7 @@ export default function BaseModal({
                   </button>
                 </div>
               )}
-              {children}
+              {fitViewport ? <div className="min-h-0 overflow-x-hidden overflow-y-auto">{children}</div> : children}
               {footer && <div className="mt-4">{footer}</div>}
             </div>
           </Transition.Child>

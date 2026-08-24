@@ -27,19 +27,16 @@ export default function DivisionMatchesPage() {
   const page = useDivisionMatchesPage();
   const { division, controls, tournamentId, groups, highlight, selectedMatch, matchCreation } = page;
 
-  if (page.advancementEditorPool) {
-    return (
-      <PoolAdvancementEditor
-        division={division}
-        phaseGroup={page.advancementEditorPool}
-        allMatches={page.matches}
-        onClose={page.closeAdvancement}
-      />
-    );
-  }
-
   return (
     <div className="flex flex-col gap-3">
+      {page.advancementEditorPool && (
+        <PoolAdvancementEditor
+          division={division}
+          phaseGroup={page.advancementEditorPool}
+          allMatches={page.matches}
+          onClose={page.closeAdvancement}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded border border-ui-border bg-ui-canvas px-3 focus-within:border-ui-border-strong sm:max-w-xs">
           <FontAwesomeIcon icon={faMagnifyingGlass} className="shrink-0 text-xs text-ui-text-mute" />
