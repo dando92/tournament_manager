@@ -65,6 +65,7 @@ import { ControlRoomStore } from './competition/control-room/control-room.store'
 import { ControlRoomRunner } from './competition/control-room/control-room.runner';
 import { ControlRoomBootstrap } from './competition/control-room/control-room.bootstrap';
 import { ControlRoomMutationGuard } from './competition/control-room/control-room-mutation.guard';
+import { AdvancementRollbackGuard } from './structure/advancement/advancement-rollback.guard';
 
 @Module({
     imports: [
@@ -117,6 +118,7 @@ import { ControlRoomMutationGuard } from './competition/control-room/control-roo
         ControlRoomRunner,
         ControlRoomBootstrap,
         ControlRoomMutationGuard,
+        AdvancementRollbackGuard,
         TournamentAccessGuard,
         TournamentOpenGuard,
         AdminGuard,

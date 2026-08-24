@@ -30,6 +30,15 @@ export class ControlRoomFlow {
     @Column({ type: "jsonb", nullable: true })
     staleDetails: Record<string, unknown> | null;
 
+    @Column({ type: "varchar", nullable: true })
+    interruptionCode: string | null;
+
+    @Column({ type: "jsonb", nullable: true })
+    interruptionDetails: Record<string, unknown> | null;
+
+    @Column({ type: "timestamptz", nullable: true })
+    interruptedAt: Date | null;
+
     @Column({ type: "timestamptz", nullable: true })
     archivedAt: Date | null;
 

@@ -11,7 +11,7 @@ import { useMatches } from "@/features/match/model/useMatches";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import { getMatchCommitState } from "@/features/match/model/matchStatus";
 import LobbyControlCard from "@/features/control-room/ui/LobbyControlCard";
-import { controlRoomStaleMessage, controlRoomStatusLabel } from "@/features/control-room/model/controlRoomStatus";
+import { controlRoomInterruptionMessage, controlRoomStaleMessage, controlRoomStatusLabel } from "@/features/control-room/model/controlRoomStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
@@ -36,6 +36,7 @@ export default function ControlRoomFlowPanel(props: Props) {
     const { menu, openMenu, closeMenu } = useContextMenu();
     const current = flow.entries.find((entry) => entry.id === flow.currentEntryId) ?? null;
     const staleMessage = controlRoomStaleMessage(flow);
+    const interruptionMessage = controlRoomInterruptionMessage(flow);
     const status = flow.status === "completed" ? "done" : flow.staleCode ? "pending" : flow.status === "running" ? "running" : "idle";
 
     return (
@@ -52,6 +53,12 @@ export default function ControlRoomFlowPanel(props: Props) {
             {staleMessage && (
                 <div className="mt-4 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2 text-sm text-ui-text-soft">
                     <strong className="text-ui-text">Waiting:</strong> {staleMessage}
+                </div>
+            )}
+
+            {interruptionMessage && flow.status === "inactive" && (
+                <div className="mt-4 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2 text-sm text-ui-text-soft">
+                    <strong className="text-ui-text">Interrupted:</strong> {interruptionMessage}
                 </div>
             )}
 

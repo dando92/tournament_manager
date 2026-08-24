@@ -52,7 +52,9 @@ previous layout hard to follow.
   persisted match flows, their current or waiting match, queue, lifecycle
   actions, and an independent lobby-control card. Flow editing is available
   only while a flow is inactive; Unassigned exists only inside that editor.
-  Completed flows are immutable and may be archived from the control room. See
+  Completed flows are immutable and may be archived from the control room. A
+  confirmed result reopen returns the owning flow to inactive at that match and
+  shows the persisted interruption reason. See
   [ControlRoom.md](ControlRoom.md).
 - `TournamentUpdatesProvider` and `TournamentTreeProvider` are mounted in
   `MainLayout`, above both the sidebar and the page outlet. The tree draws state

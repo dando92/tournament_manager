@@ -92,6 +92,9 @@ export class ControlRoomQueries {
             currentEntryId: flow.currentEntryId,
             staleCode: flow.staleCode as ControlRoomStaleCode | null,
             staleDetails: flow.staleDetails ?? null,
+            interruptionCode: flow.interruptionCode as ControlRoomFlowDto["interruptionCode"],
+            interruptionDetails: flow.interruptionDetails ?? null,
+            interruptedAt: flow.interruptedAt?.toISOString() ?? null,
             archivedAt: flow.archivedAt?.toISOString() ?? null,
             version: flow.version,
             entries: (flow.entries ?? [])

@@ -2,6 +2,8 @@ import type { MatchDto } from "./match";
 
 export type ControlRoomFlowStatus = "inactive" | "running" | "paused" | "completed";
 
+export type ControlRoomInterruptionCode = "MATCH_RESULT_REOPENED" | "ROLLBACK_CONFIRMED" | "TOURNAMENT_CLOSED";
+
 export type ControlRoomStaleCode =
     | "NO_ENTRANTS"
     | "NOT_ENOUGH_ENTRANTS"
@@ -35,6 +37,9 @@ export type ControlRoomFlowDto = {
     currentEntryId: number | null;
     staleCode: ControlRoomStaleCode | null;
     staleDetails: ControlRoomStaleDetails | null;
+    interruptionCode: ControlRoomInterruptionCode | null;
+    interruptionDetails: Record<string, unknown> | null;
+    interruptedAt: string | null;
     archivedAt: string | null;
     version: number;
     entries: ControlRoomFlowEntryDto[];

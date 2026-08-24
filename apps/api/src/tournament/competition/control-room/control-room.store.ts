@@ -137,14 +137,4 @@ export class ControlRoomStore {
 
         return flows.map((flow) => flow.id);
     }
-
-    async assertResultCanReopen(matchId: number): Promise<void> {
-        const entry = await this.entries.findOne({
-            where: { match: { id: matchId } },
-            relations: { flow: true },
-        });
-        if (entry?.flow?.status === "completed") {
-            throw new ConflictException(`Match ${matchId} belongs to completed control room flow ${entry.flow.id} and cannot be reopened`);
-        }
-    }
 }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { DataSource, EntityManager, FindOptionsRelations, In } from "typeorm";
 import { AdvancementRule, ControlRoomFlow, ControlRoomFlowEntry, Match, Tournament } from "@tournament-manager/persistence";
+import type { ControlRoomInterruptionCode } from "@tournament-manager/contracts";
 
 import { MatchAddress } from "@match/match.aggregate";
 import { UiUpdatePublisher } from "@tournament/shared/ui-update.publisher";
@@ -48,15 +49,30 @@ export class ControlRoomRunner {
         await this.announce(transition);
     }
 
-    async stop(flowId: number): Promise<void> {
+    async stop(flowId: number, interruptionCode?: ControlRoomInterruptionCode, interruptionDetails?: Record<string, unknown>): Promise<void> {
         const transition = await this.dataSource.transaction(async (manager) => {
             const flow = await this.loadFlowForUpdate(manager, flowId);
             const aggregate = ControlRoomAggregate.of(flow);
-            aggregate.stop();
+            aggregate.stop(interruptionCode, interruptionDetails);
             const addresses = await this.deactivateCurrent(manager, flow);
             await manager.save(ControlRoomFlow, flow);
 
             return { tournamentId: flow.tournamentId, flowId, matchAddresses: addresses };
+        });
+        await this.announce(transition);
+    }
+
+    async interruptCompleted(flowId: number, entryId: number, matchId: number): Promise<void> {
+        const transition = await this.dataSource.transaction(async (manager) => {
+            const flow = await this.loadFlowForUpdate(manager, flowId);
+            const entry = await manager.findOne(ControlRoomFlowEntry, { where: { id: entryId, flow: { id: flowId }, match: { id: matchId } } });
+            if (!entry) {
+                throw new NotFoundException(`Control room flow entry ${entryId} not found`);
+            }
+            ControlRoomAggregate.of(flow).interruptCompletedRun(entryId, "MATCH_RESULT_REOPENED", { matchId });
+            await manager.save(ControlRoomFlow, flow);
+
+            return { tournamentId: flow.tournamentId, flowId, matchAddresses: [] };
         });
         await this.announce(transition);
     }
@@ -67,7 +83,7 @@ export class ControlRoomRunner {
             [tournamentId],
         );
         for (const { id } of ids) {
-            await this.stop(id);
+            await this.stop(id, "TOURNAMENT_CLOSED", { tournamentId });
         }
     }
 
@@ -87,7 +103,7 @@ export class ControlRoomRunner {
         flow.tournament = await manager.findOneByOrFail(Tournament, { id: flow.tournamentId });
         if (flow.tournament.status !== "open") {
             const addresses = await this.deactivateCurrent(manager, flow);
-            ControlRoomAggregate.of(flow).stop();
+            ControlRoomAggregate.of(flow).stop("TOURNAMENT_CLOSED", { tournamentId: flow.tournamentId });
             await manager.save(ControlRoomFlow, flow);
 
             return { tournamentId: flow.tournamentId, flowId, matchAddresses: addresses };

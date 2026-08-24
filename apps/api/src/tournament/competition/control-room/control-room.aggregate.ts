@@ -1,6 +1,6 @@
 import { ConflictException } from "@nestjs/common";
 import { ControlRoomFlow, ControlRoomFlowEntry, Tournament } from "@tournament-manager/persistence";
-import type { ControlRoomStaleCode, ControlRoomStaleDetails } from "@tournament-manager/contracts";
+import type { ControlRoomInterruptionCode, ControlRoomStaleCode, ControlRoomStaleDetails } from "@tournament-manager/contracts";
 
 export class ControlRoomAggregate {
     private constructor(private readonly flow: ControlRoomFlow) {}
@@ -16,6 +16,9 @@ export class ControlRoomAggregate {
         flow.currentEntryId = null;
         flow.staleCode = null;
         flow.staleDetails = null;
+        flow.interruptionCode = null;
+        flow.interruptionDetails = null;
+        flow.interruptedAt = null;
         flow.archivedAt = null;
         flow.tournament = tournament;
         flow.entries = [];
@@ -66,6 +69,7 @@ export class ControlRoomAggregate {
         this.flow.currentEntryId = entryId ?? this.flow.currentEntryId;
         this.flow.status = "running";
         this.clearStale();
+        this.clearInterruption();
     }
 
     pause(): void {
@@ -83,12 +87,28 @@ export class ControlRoomAggregate {
         this.clearStale();
     }
 
-    stop(): void {
+    stop(interruptionCode?: ControlRoomInterruptionCode, interruptionDetails?: Record<string, unknown>): void {
         if (this.flow.status !== "running" && this.flow.status !== "paused") {
             throw new ConflictException(`Control room flow ${this.flow.id} is not running or paused`);
         }
         this.flow.status = "inactive";
         this.clearStale();
+        if (interruptionCode) {
+            this.interrupt(interruptionCode, interruptionDetails);
+        } else {
+            this.clearInterruption();
+        }
+    }
+
+    interruptCompletedRun(entryId: number, interruptionCode: ControlRoomInterruptionCode, interruptionDetails?: Record<string, unknown>): void {
+        if (this.flow.status !== "completed") {
+            throw new ConflictException(`Control room flow ${this.flow.id} is not completed`);
+        }
+        this.flow.status = "inactive";
+        this.flow.currentEntryId = entryId;
+        this.flow.archivedAt = null;
+        this.clearStale();
+        this.interrupt(interruptionCode, interruptionDetails);
     }
 
     waitAt(entryId: number, code: ControlRoomStaleCode, details: ControlRoomStaleDetails): void {
@@ -133,5 +153,17 @@ export class ControlRoomAggregate {
     private clearStale(): void {
         this.flow.staleCode = null;
         this.flow.staleDetails = null;
+    }
+
+    private interrupt(code: ControlRoomInterruptionCode, details?: Record<string, unknown>): void {
+        this.flow.interruptionCode = code;
+        this.flow.interruptionDetails = details ?? null;
+        this.flow.interruptedAt = new Date();
+    }
+
+    private clearInterruption(): void {
+        this.flow.interruptionCode = null;
+        this.flow.interruptionDetails = null;
+        this.flow.interruptedAt = null;
     }
 }

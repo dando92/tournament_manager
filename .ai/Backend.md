@@ -61,7 +61,11 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
   PostgreSQL-authoritative aggregate and synchronous runner. Stale is a
   diagnosis on a running flow, not a lifecycle state. Match commands invoke a
   narrow recalculation collaborator after relevant persisted changes; Redis UI
-  invalidations do not drive progression. The complete model and delivery plan
+  invalidations do not drive progression. Confirmed completed-flow result
+  reopening returns the flow to inactive at that match. Before reopening,
+  `AdvancementRollbackGuard` refuses removal from any actually affected target
+  match or pool that already has score evidence or a committed result. The
+  complete model and delivery plan
   are defined in [ControlRoom.md](ControlRoom.md).
 - Keep API tests outside `src`. Unit tests mirror the source capability tree under `tests/unit`; complete HTTP tests live under `tests/e2e/<capability>`; infrastructure collaboration tests live under `tests/integration`; reusable test infrastructure remains under `tests/support`.
 

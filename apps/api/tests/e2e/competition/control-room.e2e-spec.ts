@@ -26,6 +26,7 @@ describe("Control Room (e2e)", () => {
     let accessToken: string;
     let tournamentId: number;
     let divisionId: number;
+    let phaseId: number;
     let poolId: number;
     let songId: number;
     const entrants: number[] = [];
@@ -72,6 +73,7 @@ describe("Control Room (e2e)", () => {
             entrants.push(await addEntrant(name));
         }
         const phase = await request(app.getHttpServer()).post("/phases").send({ name: "Phase", divisionId }).expect(201);
+        phaseId = phase.body.id;
         const pool = await request(app.getHttpServer()).post(`/phases/${phase.body.id}/phase-groups`).send({ name: "Pool" }).expect(201);
         poolId = pool.body.id;
         const song = await request(app.getHttpServer())
@@ -103,12 +105,12 @@ describe("Control Room (e2e)", () => {
         return entrant.body.id;
     }
 
-    async function createMatch(name: string, entrantIds: number[]): Promise<MatchBody> {
+    async function createMatch(name: string, entrantIds: number[], phaseGroupId = poolId): Promise<MatchBody> {
         const created = await request(app.getHttpServer())
             .post("/matches")
             .send({
                 name,
-                phaseGroupId: poolId,
+                phaseGroupId,
                 scoringSystem: "PlacementPointsWithFailZero",
                 entrantIds,
                 songIds: [songId],
@@ -199,5 +201,80 @@ describe("Control Room (e2e)", () => {
         await request(app.getHttpServer()).delete(`/rounds/${match.rounds[0].id}`).set("x-confirm-control-room-stop", "true").expect(204);
         expect((await request(app.getHttpServer()).get(`/control-room/flows/${flowId}`).expect(200)).body.status).toBe("inactive");
         expect((await readMatch(match.id)).active).toBe(false);
+    });
+
+    it("reopens a completed flow at a match after confirmation", async () => {
+        const match = await createMatch("Completed reopen", entrants.slice(2, 4));
+        const flowId = await createFlow("Completed reopen flow", [match.id]);
+        await request(app.getHttpServer()).post(`/control-room/flows/${flowId}/start`).expect(204);
+        await score(match);
+        await request(app.getHttpServer()).put(`/matches/${match.id}/result`).expect(200);
+        await request(app.getHttpServer()).post(`/control-room/flows/${flowId}/archive`).expect(204);
+
+        const confirmation = await request(app.getHttpServer()).delete(`/matches/${match.id}/result`).expect(409);
+        expect(confirmation.body).toMatchObject({
+            code: "CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED",
+            flowId,
+            matchId: match.id,
+        });
+
+        await request(app.getHttpServer()).delete(`/matches/${match.id}/result`).set("x-confirm-control-room-stop", "true").expect(204);
+        const flow = await request(app.getHttpServer()).get(`/control-room/flows/${flowId}`).expect(200);
+        expect(flow.body).toMatchObject({
+            status: "inactive",
+            currentEntryId: flow.body.entries[0].id,
+            archivedAt: null,
+            interruptionCode: "MATCH_RESULT_REOPENED",
+            interruptionDetails: { matchId: match.id },
+        });
+        expect(flow.body.interruptedAt).not.toBeNull();
+        expect((await readMatch(match.id)).matchResult).toBeNull();
+    });
+
+    it("refuses to reopen a result when an affected advancement target has scores", async () => {
+        const source = await createMatch("Guarded source", entrants.slice(0, 2));
+        const target = await createMatch("Progressed target", [entrants[2]]);
+        await request(app.getHttpServer())
+            .put(`/advancement-rules/sources/match/${source.id}`)
+            .send({ rules: [{ sourcePlacement: 1, targetKind: "match", targetId: target.id, targetSlot: 2 }] })
+            .expect(204);
+        await score(source);
+        await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(200);
+        await score(target);
+
+        const blocked = await request(app.getHttpServer()).delete(`/matches/${source.id}/result`).expect(409);
+        expect(blocked.body).toMatchObject({
+            code: "ADVANCEMENT_ROLLBACK_BLOCKED_BY_TARGET_PROGRESS",
+            sourceMatchId: source.id,
+            blockingTargets: [{ kind: "match", id: target.id, reason: "SCORES_RECORDED" }],
+        });
+        expect((await readMatch(source.id)).matchResult).not.toBeNull();
+        expect((await readMatch(target.id)).entrants).toHaveLength(2);
+    });
+
+    it("also protects progressed pools reached through advancement", async () => {
+        const targetPool = await request(app.getHttpServer()).post(`/phases/${phaseId}/phase-groups`).send({ name: "Progressed destination pool" }).expect(201);
+        const source = await createMatch("Pool advancing source", entrants.slice(0, 2));
+        const progressed = await createMatch("Progressed pool match", entrants.slice(2, 4), targetPool.body.id);
+        await request(app.getHttpServer())
+            .put(`/advancement-rules/sources/match/${source.id}`)
+            .send({ rules: [{ sourcePlacement: 1, targetKind: "phase_group", targetId: targetPool.body.id, targetSlot: 1 }] })
+            .expect(204);
+        await score(source);
+        await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(200);
+        await score(progressed);
+
+        const blocked = await request(app.getHttpServer()).delete(`/matches/${source.id}/result`).expect(409);
+        expect(blocked.body).toMatchObject({
+            code: "ADVANCEMENT_ROLLBACK_BLOCKED_BY_TARGET_PROGRESS",
+            blockingTargets: [
+                {
+                    kind: "phase_group",
+                    id: targetPool.body.id,
+                    reason: "SCORES_RECORDED",
+                    blockingMatchId: progressed.id,
+                },
+            ],
+        });
     });
 });

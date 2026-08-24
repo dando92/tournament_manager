@@ -14,6 +14,7 @@ import { AdvancementRuleStore } from '@tournament/structure/advancement/advancem
 import { ControlRoomMutationGuard } from '@tournament/competition/control-room/control-room-mutation.guard';
 import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
 import { ControlRoomStore } from '@tournament/competition/control-room/control-room.store';
+import { AdvancementRollbackGuard } from '@tournament/structure/advancement/advancement-rollback.guard';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
@@ -71,6 +72,7 @@ export class MatchCommands {
         private readonly controlRoom: ControlRoomRunner,
         private readonly controlRoomGuard: ControlRoomMutationGuard,
         private readonly controlRoomStore: ControlRoomStore,
+        private readonly advancementRollbackGuard: AdvancementRollbackGuard,
     ) {}
 
     /** Answers with the new match id: the bracket systems build structures out of them. */
@@ -293,9 +295,12 @@ export class MatchCommands {
     }
 
     async reopenResult(matchId: number, confirmControlRoomStop = false): Promise<void> {
-        await this.controlRoomGuard.assertResultCanReopen(matchId);
-        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
-        const match = await this.store.loadOrFail(matchId);
+        let match = await this.store.loadOrFail(matchId);
+        if (match.isCompleted) {
+            await this.advancementRollbackGuard.assertMatchCanReopen(match);
+        }
+        await this.controlRoomGuard.prepareResultReopen(matchId, confirmControlRoomStop);
+        match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         if (match.isCompleted) await this.advancement.revertFromMatch(match);
 

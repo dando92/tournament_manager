@@ -229,15 +229,18 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   match that cannot yet be played. Zero entrants and exactly one player are
   unambiguous, but generated matches may require more than two players and the
   match does not currently carry one authoritative expected-entrant count.
-  Separately, a completed flow is terminal and immutable, while its matches can
-  currently be reopened through the ordinary match command. Reopening one can
-  invalidate the historical sequence without any lifecycle transition the
-  completed flow is allowed to make.
+  A completed flow normally remains immutable, but operational corrections may
+  still require reopening one of its results. Reopening a source after an
+  affected advancement target has progressed would remove entrants from a
+  competition that already used them.
 - Decision: every match requires at least two player entrants, raised to the
   greatest target slot of its incoming advancement rules. Reopening a result in
-  a completed or archived flow is refused. Closing a tournament explicitly
-  stops running and paused flows and deactivates their current matches; reopening
-  does not restart them.
+  a completed or archived flow requires confirmation, disarchives the flow,
+  returns it to inactive at that match, and records the interruption. It is
+  refused when an actually affected advancement target already has a committed
+  result or score evidence; there is no force override. Closing a tournament
+  explicitly stops running and paused flows and deactivates their current
+  matches; reopening does not restart them.
 - Evidence: [ControlRoom.md](ControlRoom.md),
   `apps/api/src/tournament/competition/match/match.aggregate.ts`, and
   `apps/api/src/tournament/structure/advancement/advancement.runner.ts`.

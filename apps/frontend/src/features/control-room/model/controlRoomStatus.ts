@@ -20,3 +20,19 @@ const staleMessages: Record<ControlRoomStaleCode, (flow: ControlRoomFlowDto) => 
 export function controlRoomStaleMessage(flow: ControlRoomFlowDto): string | null {
     return flow.staleCode ? staleMessages[flow.staleCode](flow) : null;
 }
+
+export function controlRoomInterruptionMessage(flow: ControlRoomFlowDto): string | null {
+    if (flow.interruptionCode === "MATCH_RESULT_REOPENED") {
+        const matchId = Number(flow.interruptionDetails?.matchId);
+        const matchName = flow.entries.find((entry) => entry.match.id === matchId)?.match.name ?? "The interrupted match";
+        return `${matchName} was reopened. Its existing standings may still make it ready to commit; change them before restarting if the match must be replayed.`;
+    }
+    if (flow.interruptionCode === "ROLLBACK_CONFIRMED") {
+        return "The flow was stopped to apply a confirmed rollback.";
+    }
+    if (flow.interruptionCode === "TOURNAMENT_CLOSED") {
+        return "The flow was stopped because the tournament was closed.";
+    }
+
+    return null;
+}

@@ -3,14 +3,18 @@ import { Match, Score, CommitMatchResultResponse, CreateMatchRequest, RoundSourc
 
 const confirmationHeaders = { "x-confirm-control-room-stop": "true" };
 
-async function withControlRoomStopConfirmation(request: (confirmed: boolean) => Promise<void>): Promise<void> {
+export class AdvancementRollbackBlockedError extends Error {}
+
+async function withControlRoomStopConfirmation(request: (confirmed: boolean) => Promise<void>): Promise<boolean> {
   try {
     await request(false);
+    return true;
   } catch (error) {
     const response = (error as { response?: { data?: { code?: string; message?: string } } })?.response;
     if (response?.data?.code !== "CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED") throw error;
-    if (!window.confirm(`${response.data.message ?? "This change will stop a running control room flow."} Continue?`)) return;
+    if (!window.confirm(`${response.data.message ?? "This change will stop a running control room flow."} Continue?`)) return false;
     await request(true);
+    return true;
   }
 }
 
@@ -236,14 +240,18 @@ export async function commitMatchResult(matchId: number): Promise<CommitMatchRes
   }
 }
 
-export async function reopenMatchResult(matchId: number): Promise<void> {
+export async function reopenMatchResult(matchId: number): Promise<boolean> {
   try {
-    await withControlRoomStopConfirmation((confirmed) => axios.delete(
+    return await withControlRoomStopConfirmation((confirmed) => axios.delete(
       `matches/${matchId}/result`,
       confirmed ? { headers: confirmationHeaders } : undefined,
     ).then(() => undefined));
   } catch (error) {
     console.error("Error re-opening match result:", error);
+    const response = (error as { response?: { data?: { code?: string; message?: string } } })?.response;
+    if (response?.data?.code === "ADVANCEMENT_ROLLBACK_BLOCKED_BY_TARGET_PROGRESS") {
+      throw new AdvancementRollbackBlockedError(response.data.message ?? "An affected advancement target already has scores or a committed result.");
+    }
     throw new Error("Unable to re-open match result.");
   }
 }

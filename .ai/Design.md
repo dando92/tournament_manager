@@ -303,6 +303,8 @@ match card and its blocking reason while waiting, beside an independent lobby
 control. It never implies that a lobby is assigned to a flow or match.
 
 Only inactive flows expose Edit and Start from here. Completed flows expose
-Archive and stay immutable; archived flows are hidden until **Show archived**
-is enabled. The detailed interaction and lifecycle rules are defined in
+Archive and stay immutable until a confirmed result reopen returns them to
+inactive at that match. Archived flows are hidden until **Show archived** is
+enabled. An interrupted inactive flow explains why it stopped and warns when
+the reopened match may still be ready to commit. The detailed interaction and lifecycle rules are defined in
 [ControlRoom.md](ControlRoom.md).

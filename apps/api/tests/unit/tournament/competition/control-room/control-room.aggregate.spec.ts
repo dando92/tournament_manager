@@ -45,6 +45,24 @@ describe("ControlRoomAggregate", () => {
         expect(() => aggregate.start()).toThrow("not editable");
         expect(() => aggregate.rename("Changed")).toThrow("not editable");
     });
+
+    it("reopens a completed run at the interrupted match", () => {
+        const aggregate = flow();
+        aggregate.start();
+        aggregate.complete();
+        aggregate.archive();
+
+        aggregate.interruptCompletedRun(11, "MATCH_RESULT_REOPENED", { matchId: 20 });
+
+        expect(aggregate.entity).toMatchObject({
+            status: "inactive",
+            currentEntryId: 11,
+            archivedAt: null,
+            interruptionCode: "MATCH_RESULT_REOPENED",
+            interruptionDetails: { matchId: 20 },
+        });
+        expect(aggregate.entity.interruptedAt).toBeInstanceOf(Date);
+    });
 });
 
 describe("evaluateControlRoomMatch", () => {

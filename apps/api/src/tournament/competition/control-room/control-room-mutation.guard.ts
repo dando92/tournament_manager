@@ -12,6 +12,12 @@ type RollbackFlow = {
     currentPosition: number;
 };
 
+type CompletedFlow = {
+    flowId: number;
+    flowName: string;
+    entryId: number;
+};
+
 @Injectable()
 export class ControlRoomMutationGuard {
     constructor(
@@ -46,11 +52,26 @@ export class ControlRoomMutationGuard {
             });
         }
 
-        await this.runner.stop(affected.flowId);
+        await this.runner.stop(affected.flowId, "ROLLBACK_CONFIRMED", { matchId });
     }
 
-    async assertResultCanReopen(matchId: number): Promise<void> {
-        await this.store.assertResultCanReopen(matchId);
+    async prepareResultReopen(matchId: number, confirmed: boolean): Promise<void> {
+        const completed = await this.completedFlow(matchId);
+        if (completed) {
+            if (!confirmed) {
+                throw new ConflictException({
+                    code: "CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED",
+                    message: `Reopening this result will reopen completed control room flow "${completed.flowName}" at this match`,
+                    flowId: completed.flowId,
+                    flowName: completed.flowName,
+                    matchId,
+                });
+            }
+            await this.runner.interruptCompleted(completed.flowId, completed.entryId, matchId);
+            return;
+        }
+
+        await this.protectRollback(matchId, confirmed);
     }
 
     private async rollbackFlow(matchId: number): Promise<RollbackFlow | null> {
@@ -62,6 +83,18 @@ export class ControlRoomMutationGuard {
              LEFT JOIN "control_room_flow_entry" current ON current.id = flow."currentEntryId"
              WHERE target."matchId" = $1 AND flow.status IN ('running', 'paused')
                AND (current.position IS NULL OR target.position <= current.position)`,
+            [matchId],
+        );
+
+        return rows[0] ?? null;
+    }
+
+    private async completedFlow(matchId: number): Promise<CompletedFlow | null> {
+        const rows: CompletedFlow[] = await this.dataSource.query(
+            `SELECT flow.id AS "flowId", flow.name AS "flowName", entry.id AS "entryId"
+             FROM "control_room_flow_entry" entry
+             JOIN "control_room_flow" flow ON flow.id = entry."flowId"
+             WHERE entry."matchId" = $1 AND flow.status = 'completed'`,
             [matchId],
         );
 

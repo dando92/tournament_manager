@@ -28,7 +28,8 @@ to select the lobby and an available song explicitly.
 - The flow editor is available only while the flow is `inactive`.
 - Renaming, deleting, assigning, and reordering a flow are editor operations and
   are therefore allowed only while it is `inactive`.
-- A completed flow is terminal and immutable.
+- A completed flow is immutable until a confirmed result reopen explicitly
+  interrupts that completed run and returns it to `inactive`.
 - A completed flow may be archived to hide it from the default control-room
   view. Archiving does not change its entries or match assignments.
 - Manual match activation and deactivation are unavailable while any flow in
@@ -59,8 +60,9 @@ The allowed states are:
 - `running`: automatic advancement is armed.
 - `paused`: the current match remains active, but automatic advancement is
   suppressed.
-- `completed`: the queue has been exhausted; the flow is immutable and cannot
-  be restarted or used as the target of `Start from here`.
+- `completed`: the queue has been exhausted; the flow cannot be edited,
+  restarted, or used as the target of `Start from here`. A confirmed result
+  reopen may interrupt it and return it to `inactive` at that match.
 
 `stale` is not a lifecycle state. It is a diagnostic condition carried by a
 running flow. A stale flow remains armed and retries automatically when a
@@ -110,12 +112,13 @@ not reopen completed matches.
 
 A flow becomes completed automatically when recalculation finds no remaining
 entry. Completed flows cannot be edited, restarted, or used with `Start from
-here`.
+here` unless a confirmed result reopen interrupts the completed run.
 
 An explicit Archive action is available only on a completed flow. Archived
 flows are hidden by default and remain immutable. `Show archived` reveals them,
-and Unarchive makes them visible in the ordinary completed list without
-changing their terminal state.
+and Unarchive makes them visible in the ordinary completed list. A confirmed
+result reopen also unarchives the flow and returns it to `inactive` at the
+reopened match.
 
 ## Recalculation
 
@@ -227,6 +230,22 @@ The confirmed operation:
 4. leaves the flow inactive at the preserved cursor;
 5. reports why the flow was interrupted in the confirmation response and UI notification.
 
+Reopening a result in a completed or archived flow uses the same confirmation
+boundary. Confirmation disarchives the flow, changes it to `inactive`, places
+its cursor on the reopened match, and persists `MATCH_RESULT_REOPENED` as the
+interruption reason. It activates nothing. Existing standings may still make
+the match ready to commit, so an operator who intends a replay must change the
+standings or rounds before restarting the flow.
+
+Before either the flow or the result changes, the API calculates the
+advancement placements that reopening would remove. It refuses the reopen with
+`409 ADVANCEMENT_ROLLBACK_BLOCKED_BY_TARGET_PROGRESS` when an actually affected
+target match has a committed result or played score/positive hand-scored point,
+or when an affected target pool contains such a match. The check includes both
+rules leaving the match and rules leaving its completed pool. There is no force
+override; downstream results must be reopened safely from the end of the chain
+first. A rule whose affected target has not progressed remains reversible.
+
 The frontend is not the authority for this protection: direct API callers must
 receive the same requirement.
 
@@ -239,6 +258,7 @@ receive the same requirement.
 - lifecycle status;
 - nullable current-entry foreign key;
 - nullable stale code and structured JSON details;
+- nullable interruption code, structured details, and timestamp;
 - nullable archive timestamp;
 - optimistic concurrency version.
 
@@ -423,8 +443,10 @@ when implementation begins.
 
 - A match requires at least two player entrants. Incoming advancement rules
   raise that requirement to their greatest target slot.
-- Reopening a result that belongs to a completed or archived flow is refused.
-  Completed flow history remains terminal and immutable.
+- Reopening a result in a completed or archived flow requires confirmation. It
+  disarchives the flow, returns it to `inactive`, positions the cursor at that
+  match, and records the interruption. The reopen is refused when an affected
+  advancement target already has scores or a committed result.
 - Closing a tournament stops its running and paused flows and deactivates their
   current matches. Reopening the tournament does not restart them.
 
