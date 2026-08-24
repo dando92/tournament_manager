@@ -6,9 +6,9 @@ import {
   faLayerGroup,
   faMagnifyingGlass,
   faPlus,
+  faGear,
   faRightFromBracket,
   faRightToBracket,
-  faShield,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import Logo from "@/assets/icon.png";
@@ -27,9 +27,15 @@ import { rememberTournament } from "@/shared/lib/recentTournaments";
  * purpose. The magnifier here finds a *tournament*; the one in the page header
  * searches *inside* the destination that is open.
  */
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export default function Sidebar({
+  onNavigate,
+  showFooter = true,
+}: {
+  onNavigate?: () => void;
+  showFooter?: boolean;
+}) {
   const { state, actions } = useAuthContext();
-  const { isAdmin, canCreateTournament } = usePermissions();
+  const { canCreateTournament } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const tree = useTournamentTree();
@@ -70,6 +76,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex shrink-0 items-center gap-1 border-b border-ui-border px-3 py-2">
         <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">Tournaments</span>
         <HeaderButton icon={faLayerGroup} title="Collapse all" onClick={tree.collapseAll} />
+        <HeaderButton icon={faGear} title="Tournament Manager configuration" onClick={() => go("/configuration")} />
         {canCreateTournament && (
           <HeaderButton
             icon={faPlus}
@@ -84,46 +91,38 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <TournamentTree onNavigate={onNavigate} />
       </div>
 
-      <div className="flex shrink-0 flex-col gap-0.5 border-t border-ui-border p-2">
-        {isAdmin && (
-          <SidebarLink
-            to="/admin/roles"
-            icon={faShield}
-            active={location.pathname === "/admin/roles"}
-            onClick={onNavigate}
-          >
-            Manage roles
-          </SidebarLink>
-        )}
-        {state.account ? (
-          <>
-            <SidebarLink to="/account" icon={faUser} active={location.pathname === "/account"} onClick={onNavigate}>
-              Account
-            </SidebarLink>
-            <button
-              type="button"
-              onClick={() => {
-                actions.logout();
-                go("/");
-              }}
-              className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+      {showFooter && (
+        <div className="flex shrink-0 flex-col gap-0.5 border-t border-ui-border p-2">
+          {state.account ? (
+            <>
+              <SidebarLink to="/account" icon={faUser} active={location.pathname === "/account"} onClick={onNavigate}>
+                Account
+              </SidebarLink>
+              <button
+                type="button"
+                onClick={() => {
+                  actions.logout();
+                  go("/");
+                }}
+                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
+                <span>Logout</span>
+              </button>
+            </>
+          ) : (
+            <SidebarLink
+              to="/login"
+              state={{ from: location.pathname }}
+              icon={faRightToBracket}
+              active={location.pathname === "/login" || location.pathname === "/register"}
+              onClick={onNavigate}
             >
-              <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
-              <span>Logout</span>
-            </button>
-          </>
-        ) : (
-          <SidebarLink
-            to="/login"
-            state={{ from: location.pathname }}
-            icon={faRightToBracket}
-            active={location.pathname === "/login" || location.pathname === "/register"}
-            onClick={onNavigate}
-          >
-            Login / Register
-          </SidebarLink>
-        )}
-      </div>
+              Login / Register
+            </SidebarLink>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

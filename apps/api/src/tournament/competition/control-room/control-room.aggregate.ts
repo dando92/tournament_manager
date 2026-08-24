@@ -66,7 +66,7 @@ export class ControlRoomAggregate {
         if (entryId !== undefined && !this.entries.some((entry) => entry.id === entryId)) {
             throw new ConflictException(`Entry ${entryId} does not belong to control room flow ${this.flow.id}`);
         }
-        this.flow.currentEntryId = entryId ?? this.flow.currentEntryId;
+        this.flow.currentEntryId = entryId ?? null;
         this.flow.status = "running";
         this.clearStale();
         this.clearInterruption();

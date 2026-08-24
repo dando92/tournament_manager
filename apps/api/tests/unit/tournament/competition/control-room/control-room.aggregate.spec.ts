@@ -34,6 +34,23 @@ describe("ControlRoomAggregate", () => {
         expect(aggregate.entity.staleCode).toBeNull();
     });
 
+    it("restarts an ordinary run from the beginning while preserving an explicit start entry", () => {
+        const aggregate = flow();
+        const second = new ControlRoomFlowEntry();
+        second.id = 12;
+        second.position = 1;
+        aggregate.entity.entries.push(second);
+
+        aggregate.start(12);
+        aggregate.stop();
+        aggregate.start();
+        expect(aggregate.currentEntryId).toBeNull();
+
+        aggregate.stop();
+        aggregate.start(12);
+        expect(aggregate.currentEntryId).toBe(12);
+    });
+
     it("makes completed flows terminal and archivable", () => {
         const aggregate = flow();
         aggregate.start();

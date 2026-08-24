@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faListUl, faMagnifyingGlass, faRightToBracket, faUser } from "@fortawesome/free-solid-svg-icons";
+import {
+  faListUl,
+  faMagnifyingGlass,
+  faRightFromBracket,
+  faRightToBracket,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 import SearchTournamentModal from "@/features/tournament/ui/SearchTournamentModal";
 import { useAuthContext } from "@/features/auth/model/AuthContext";
 
@@ -14,7 +20,7 @@ import { useAuthContext } from "@/features/auth/model/AuthContext";
  * surface you move around in, and it earns the whole screen.
  */
 export function MobileBottomNav() {
-  const { state } = useAuthContext();
+  const { state, actions } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -34,7 +40,18 @@ export function MobileBottomNav() {
         />
         <NavButton icon={faMagnifyingGlass} label="Search" active={false} onClick={() => setSearchOpen(true)} />
         {state.account ? (
-          <NavButton icon={faUser} label="Account" active={onAccount} onClick={() => navigate("/account")} />
+          <>
+            <NavButton icon={faUser} label="Account" active={onAccount} onClick={() => navigate("/account")} />
+            <NavButton
+              icon={faRightFromBracket}
+              label="Logout"
+              active={false}
+              onClick={() => {
+                actions.logout();
+                navigate("/");
+              }}
+            />
+          </>
         ) : (
           <NavButton
             icon={faRightToBracket}

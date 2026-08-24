@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
 import type { ControlRoomFlowDto } from "@tournament-manager/contracts";
+import { toast } from "react-toastify";
 
 import { getDivisionSummary } from "@/features/division/api/division.api";
 import { divisionKeys } from "@/features/division/api/division.keys";
@@ -9,11 +11,12 @@ import { useDivisionEntrantsQuery } from "@/features/division/model/useDivisionE
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { useMatches } from "@/features/match/model/useMatches";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
-import { getMatchCommitState } from "@/features/match/model/matchStatus";
-import LobbyControlCard from "@/features/control-room/ui/LobbyControlCard";
+import MatchListRow from "@/features/match/ui/MatchListRow";
+import * as MatchesApi from "@/features/match/api/match.api";
 import { controlRoomInterruptionMessage, controlRoomStaleMessage, controlRoomStatusLabel } from "@/features/control-room/model/controlRoomStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
+import { useLongPress } from "@/shared/hooks/useLongPress";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
 type Props = {
@@ -34,13 +37,38 @@ type Props = {
 export default function ControlRoomFlowPanel(props: Props) {
     const { flow } = props;
     const { menu, openMenu, closeMenu } = useContextMenu();
-    const current = flow.entries.find((entry) => entry.id === flow.currentEntryId) ?? null;
+    const [selectedEntryId, setSelectedEntryId] = useState<number | null>(() => flow.currentEntryId ?? flow.entries[0]?.id ?? null);
+    const [committingMatchId, setCommittingMatchId] = useState<number | null>(null);
+    const selected = flow.entries.find((entry) => entry.id === selectedEntryId) ?? null;
     const staleMessage = controlRoomStaleMessage(flow);
     const interruptionMessage = controlRoomInterruptionMessage(flow);
     const status = flow.status === "completed" ? "done" : flow.staleCode ? "pending" : flow.status === "running" ? "running" : "idle";
 
+    useEffect(() => {
+        setSelectedEntryId((current) => flow.entries.some((entry) => entry.id === current) ? current : flow.currentEntryId ?? flow.entries[0]?.id ?? null);
+    }, [flow.currentEntryId, flow.entries]);
+
+    async function commitMatch(matchId: number) {
+        setCommittingMatchId(matchId);
+        try {
+            const { startggReport } = await MatchesApi.commitMatchResult(matchId);
+            if (startggReport === "failed") {
+                toast.warn("Match completed, but reporting the result to start.gg failed.");
+            } else if (startggReport === "reported") {
+                toast.success("Match completed and reported to start.gg.");
+            } else {
+                toast.success("Match completed.");
+            }
+        } catch (error) {
+            console.error("Error committing match result.", error);
+            toast.error("Error committing match result.");
+        } finally {
+            setCommittingMatchId(null);
+        }
+    }
+
     return (
-        <section className="rounded-xl border border-ui-border bg-ui-surface p-4 shadow-sm">
+        <section className="min-w-0 w-full bg-ui-surface p-4">
             <div className="flex flex-wrap items-center gap-3">
                 <StatusIcon status={status} />
                 <div className="min-w-0 flex-1">
@@ -62,50 +90,89 @@ export default function ControlRoomFlowPanel(props: Props) {
                 </div>
             )}
 
-            {current ? (
-                <CurrentMatch flow={flow} tournamentId={props.tournamentId} divisions={props.divisions} />
+            {selected ? (
+                <SelectedMatch entry={selected} tournamentId={props.tournamentId} divisions={props.divisions} />
             ) : (
                 <p className="mt-4 rounded border border-dashed border-ui-border-strong py-8 text-center text-sm text-ui-text-mute">
-                    {flow.status === "completed" ? "Flow completed." : "No current match."}
+                    {flow.status === "completed" ? "Flow completed." : "No match selected."}
                 </p>
-            )}
-
-            {flow.status !== "completed" && (
-                <div className="mt-4">
-                    <LobbyControlCard tournamentId={props.tournamentId} />
-                </div>
             )}
 
             <div className="mt-4">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ui-text-mute">Queue</h3>
                 <div className="flex flex-col gap-1">
                     {flow.entries.map((entry) => (
-                        <button
+                        <QueueEntryRow
                             key={entry.id}
-                            type="button"
-                            onContextMenu={(event) => {
-                                event.preventDefault();
-                                openMenu(event.clientX, event.clientY, entry.match.name, [
-                                    {
-                                        key: "start-here",
-                                        label: "Start from here",
-                                        icon: faPlay,
-                                        disabled: flow.status !== "inactive",
-                                        onSelect: () => props.onStartFrom(entry.id),
-                                    },
-                                ]);
-                            }}
-                            className={`flex items-center gap-2 rounded px-3 py-2 text-left text-sm ${entry.id === flow.currentEntryId ? "bg-ui-selected font-semibold text-ui-text" : "text-ui-text-soft hover:bg-ui-raised"}`}
-                        >
-                            <span className="w-6 text-right tabular-nums text-ui-text-mute">{entry.position + 1}</span>
-                            <span className="truncate">{entry.match.name}</span>
-                        </button>
+                            entry={entry}
+                            current={entry.id === flow.currentEntryId}
+                            selected={entry.id === selectedEntryId}
+                            canStartFrom={flow.status === "inactive"}
+                            committing={committingMatchId === entry.match.id}
+                            onSelect={() => setSelectedEntryId(entry.id)}
+                            onCommit={() => void commitMatch(entry.match.id)}
+                            onStartFrom={() => props.onStartFrom(entry.id)}
+                            onOpenMenu={openMenu}
+                        />
                     ))}
                     {flow.entries.length === 0 && <p className="text-sm text-ui-text-mute">No matches assigned.</p>}
                 </div>
             </div>
-            <ContextMenu state={menu} onClose={closeMenu} />
+            {createPortal(<ContextMenu state={menu} onClose={closeMenu} />, document.body)}
         </section>
+    );
+}
+
+function QueueEntryRow({
+    entry,
+    current,
+    selected,
+    canStartFrom,
+    committing,
+    onSelect,
+    onCommit,
+    onStartFrom,
+    onOpenMenu,
+}: {
+    entry: ControlRoomFlowDto["entries"][number];
+    current: boolean;
+    selected: boolean;
+    canStartFrom: boolean;
+    committing: boolean;
+    onSelect: () => void;
+    onCommit: () => void;
+    onStartFrom: () => Promise<void>;
+    onOpenMenu: ReturnType<typeof useContextMenu>["openMenu"];
+}) {
+    const openActions = (x: number, y: number) => onOpenMenu(x, y, entry.match.name, [
+        {
+            key: "start-here",
+            label: "Start from here",
+            icon: faPlay,
+            disabled: !canStartFrom,
+            onSelect: onStartFrom,
+        },
+    ]);
+    const longPress = useLongPress(openActions);
+
+    return (
+        <div
+            {...longPress}
+            className={longPress.className}
+            onContextMenu={(event) => {
+                event.preventDefault();
+                openActions(event.clientX, event.clientY);
+            }}
+        >
+            <MatchListRow
+                match={{ ...entry.match, active: current }}
+                selected={selected}
+                routed={false}
+                controls={!committing}
+                onSelect={onSelect}
+                onCommit={onCommit}
+            />
+        </div>
     );
 }
 
@@ -157,34 +224,26 @@ function FlowActions(props: Props) {
     );
 }
 
-function CurrentMatch({ flow, tournamentId, divisions }: { flow: ControlRoomFlowDto; tournamentId: number; divisions: TournamentDivisionOption[] }) {
-    const entry = flow.entries.find((candidate) => candidate.id === flow.currentEntryId);
-    const divisionId = entry ? divisionIdOf(divisions, entry.match.phaseGroupId) : null;
-    if (!entry || !divisionId) {
-        return <p className="mt-4 text-sm text-state-failed">Unable to locate the current match division.</p>;
+function SelectedMatch({ entry, tournamentId, divisions }: { entry: ControlRoomFlowDto["entries"][number]; tournamentId: number; divisions: TournamentDivisionOption[] }) {
+    const divisionId = divisionIdOf(divisions, entry.match.phaseGroupId);
+    if (!divisionId) {
+        return <p className="mt-4 text-sm text-state-failed">Unable to locate the selected match division.</p>;
     }
 
-    return <ConnectedCurrentMatch matchId={entry.match.id} divisionId={divisionId} tournamentId={tournamentId} />;
+    return <ConnectedSelectedMatch matchId={entry.match.id} divisionId={divisionId} tournamentId={tournamentId} />;
 }
 
-function ConnectedCurrentMatch({ matchId, divisionId, tournamentId }: { matchId: number; divisionId: number; tournamentId: number }) {
+function ConnectedSelectedMatch({ matchId, divisionId, tournamentId }: { matchId: number; divisionId: number; tournamentId: number }) {
     const division = useQuery({ queryKey: divisionKeys.summary(divisionId), queryFn: () => getDivisionSummary(divisionId) });
     const entrants = useDivisionEntrantsQuery(divisionId);
     const matches = useMatches(divisionId);
     const [highlight, setHighlight] = useState({ matchId: null as number | null, phaseGroupId: null as number | null });
     const match = matches.matches.find((candidate) => candidate.id === matchId);
 
-    if (!division.data || !match) return <p className="mt-4 text-sm text-ui-text-mute">Loading current match…</p>;
+    if (!division.data || !match) return <p className="mt-4 text-sm text-ui-text-mute">Loading selected match…</p>;
 
     return (
         <div className="mt-4">
-            {getMatchCommitState(match) === "Pending" && (
-                <div className="flex justify-end">
-                    <button type="button" className={btnPrimary} onClick={() => matches.actions.commitMatchResult(match.id)}>
-                        Commit result
-                    </button>
-                </div>
-            )}
             <ConnectedMatchCard
                 match={match}
                 division={division.data}

@@ -23,7 +23,9 @@ const ConfigurationPage = lazy(() => import("@/pages/tournament/ConfigurationPag
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
 const AccountInfoPage = lazy(() => import("@/pages/account/AccountInfoPage"));
-const ManageRolesPage = lazy(() => import("@/pages/admin/ManageRolesPage"));
+const TournamentManagerConfigurationPage = lazy(
+  () => import("@/pages/configuration/TournamentManagerConfigurationPage"),
+);
 const OBSPage = lazy(() => import("@/pages/OBSPage"));
 
 function KeyedTournamentPage() {
@@ -74,13 +76,14 @@ export default function AppRouter() {
 
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/configuration" element={<TournamentManagerConfigurationPage />} />
 
             <Route element={<ProtectedRoute require="auth" />}>
               <Route path="/account" element={<AccountInfoPage />} />
             </Route>
 
             <Route element={<ProtectedRoute require="admin" />}>
-              <Route path="/admin/roles" element={<ManageRolesPage />} />
+              <Route path="/admin/roles" element={<Navigate to="/configuration" replace />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

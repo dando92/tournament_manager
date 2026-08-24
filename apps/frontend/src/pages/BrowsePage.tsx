@@ -11,7 +11,7 @@ import Sidebar from "@/shared/components/layout/Sidebar";
 export default function BrowsePage() {
   return (
     <div className="-m-4 flex h-[calc(100vh-3.5rem)] flex-col md:hidden">
-      <Sidebar />
+      <Sidebar showFooter={false} />
     </div>
   );
 }

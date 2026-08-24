@@ -3,7 +3,9 @@ import { useState } from "react";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import { useControlRoom } from "@/features/control-room/model/useControlRoom";
 import ControlRoomFlowPanel from "@/features/control-room/ui/ControlRoomFlowPanel";
+import ControlRoomFlowCarousel from "@/features/control-room/ui/ControlRoomFlowCarousel";
 import ControlRoomEditor from "@/features/control-room/ui/ControlRoomEditor";
+import LobbyControlCard from "@/features/control-room/ui/LobbyControlCard";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 
 export default function ControlRoomPage() {
@@ -45,7 +47,7 @@ export default function ControlRoomPage() {
             ) : visible.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-ui-border-strong py-12 text-center text-sm text-ui-text-mute">No flows yet.</p>
             ) : (
-                <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                <ControlRoomFlowCarousel>
                     {visible.map((flow) => (
                         <ControlRoomFlowPanel
                             key={flow.id}
@@ -63,8 +65,10 @@ export default function ControlRoomPage() {
                             onStartFrom={(entryId) => room.startFrom(flow.id, entryId)}
                         />
                     ))}
-                </div>
+                </ControlRoomFlowCarousel>
             )}
+
+            <LobbyControlCard tournamentId={tournamentId} />
 
             <ControlRoomEditor
                 flowId={editingFlowId}

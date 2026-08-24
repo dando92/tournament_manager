@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "react-beautiful-dnd";
 import { useQuery } from "@tanstack/react-query";
 import type { MatchDto } from "@tournament-manager/contracts";
@@ -52,14 +53,6 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
         destination.splice(result.destination.index, 0, match);
         setters[sourceKey](source);
         setters[destinationKey](destination);
-    }
-
-    function nudge(index: number, direction: -1 | 1) {
-        const destination = index + direction;
-        if (destination < 0 || destination >= assigned.length) return;
-        const next = [...assigned];
-        [next[index], next[destination]] = [next[destination], next[index]];
-        setAssigned(next);
     }
 
     async function save() {
@@ -131,7 +124,6 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
                                     setAssigned((current) => current.filter((candidate) => candidate.id !== match.id));
                                     setUnassigned((current) => [...current, match]);
                                 }}
-                                onNudge={nudge}
                             />
                             <MatchColumn
                                 id="unassigned"
@@ -155,66 +147,41 @@ function MatchColumn({
     title,
     matches,
     onAddOrRemove,
-    onNudge,
 }: {
     id: "assigned" | "unassigned";
     title: string;
     matches: MatchDto[];
     onAddOrRemove: (match: MatchDto) => void;
-    onNudge?: (index: number, direction: -1 | 1) => void;
 }) {
     return (
         <Droppable droppableId={id}>
             {(provided) => (
-                <section ref={provided.innerRef} {...provided.droppableProps} className="min-h-48 rounded-lg border border-ui-border bg-ui-raised p-3">
+                <section className="rounded-lg border border-ui-border bg-ui-raised p-3">
                     <h3 className="mb-2 font-semibold text-ui-text">
                         {title} <span className="text-xs font-normal text-ui-text-mute">({matches.length})</span>
                     </h3>
-                    <div className="flex flex-col gap-2">
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex min-h-40 flex-col gap-2">
                         {matches.map((match, index) => (
-                            <Draggable key={match.id} draggableId={`${id}-${match.id}`} index={index}>
-                                {(drag) => (
-                                    <div
-                                        ref={drag.innerRef}
-                                        {...drag.draggableProps}
-                                        className="flex items-center gap-2 rounded border border-ui-border bg-ui-surface px-3 py-2"
-                                    >
-                                        <button
-                                            type="button"
+                            <Draggable key={match.id} draggableId={`match-${match.id}`} index={index}>
+                                {(drag, snapshot) => {
+                                    const row = (
+                                        <div
+                                            ref={drag.innerRef}
+                                            {...drag.draggableProps}
                                             {...drag.dragHandleProps}
+                                            className={`flex cursor-grab items-center gap-2 rounded border border-ui-border bg-ui-surface px-3 py-2 active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg" : ""}`}
                                             aria-label={`Drag ${match.name}`}
-                                            className="cursor-grab text-ui-text-mute"
                                         >
-                                            ⋮⋮
-                                        </button>
-                                        <span className="min-w-0 flex-1 truncate text-sm text-ui-text">{match.name}</span>
-                                        {onNudge && (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    aria-label="Move up"
-                                                    disabled={index === 0}
-                                                    onClick={() => onNudge(index, -1)}
-                                                    className="text-ui-text-mute disabled:opacity-30"
-                                                >
-                                                    ↑
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    aria-label="Move down"
-                                                    disabled={index === matches.length - 1}
-                                                    onClick={() => onNudge(index, 1)}
-                                                    className="text-ui-text-mute disabled:opacity-30"
-                                                >
-                                                    ↓
-                                                </button>
-                                            </>
-                                        )}
-                                        <button type="button" onClick={() => onAddOrRemove(match)} className="text-xs text-ui-text-soft">
-                                            {id === "assigned" ? "Remove" : "Add"}
-                                        </button>
-                                    </div>
-                                )}
+                                            <span aria-hidden="true" className="text-ui-text-mute">⋮⋮</span>
+                                            <span className="min-w-0 flex-1 truncate text-sm text-ui-text">{match.name}</span>
+                                            <button type="button" onClick={() => onAddOrRemove(match)} className="text-xs text-ui-text-soft">
+                                                {id === "assigned" ? "Remove" : "Add"}
+                                            </button>
+                                        </div>
+                                    );
+
+                                    return snapshot.isDragging ? createPortal(row, document.body) : row;
+                                }}
                             </Draggable>
                         ))}
                         {provided.placeholder}

@@ -253,7 +253,7 @@ names a theme. The choice is a device preference — it depends on where you are
 a laptop in the venue or a projector, not on who you are — and lives in
 `shared/services/themePreference.ts` alongside the pool view mode.
 
-Three settings, offered in the account page:
+Three settings, offered to every user in Tournament Manager Configuration:
 
 | Setting | What it does |
 | --- | --- |
@@ -307,12 +307,23 @@ and cabinets together without binding a lobby to a flow or match.
 
 ## Match control room
 
-Control Room presents each non-archived flow as one operational panel. The
+Control Room presents one tournament-level lobby control followed by each
+non-archived flow as an operational panel. The
 lifecycle state and a stale diagnosis are separate: a stale flow is labelled
 **Running — Waiting**, while **Paused** always means an operator deliberately
-suppressed advancement. The panel shows the active match card, or the pending
-match card and its blocking reason while waiting, beside an independent lobby
-control. It never implies that a lobby is assigned to a flow or match.
+suppressed advancement. Clicking a queue row shows that match in the detail
+card above the queue. Each queue row reuses the match-list progress chip and
+Commit action, and the current step carries the same violet indicator used for
+an active match. Holding a queue row on touch opens its context menu without
+competing with scrolling. Flow panels form a one-card horizontal carousel with
+arrow controls and touch swiping; swiping beyond either end gives resisted
+movement and returns to the current card. The separate lobby control never
+implies that a lobby is assigned to a flow or match. Carousel arrows are not
+shown: up to five dots sit below the card, the selected centre dot is slightly
+larger and raised, and hovering the rail allows mouse-wheel or trackpad
+navigation. Flow cards have no outer border or elevation and fill the available
+control-room viewport width. Lobby control follows the carousel rather than
+preceding it.
 
 Only inactive flows expose Edit and Start from here. Completed flows expose
 Archive and stay immutable until a confirmed result reopen returns them to

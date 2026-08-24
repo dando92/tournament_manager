@@ -2,15 +2,37 @@
 
 ## Current Position
 
-- Last updated: 2026-08-24.
+- Last updated: 2026-08-25.
 - Completed plans: [Simplified Architecture Migration Plan](MigrationPlan.md), [API and Frontend Structure Refactoring](ApiRefactoring.md), and [Control Room](ControlRoom.md).
 - Active plan: none.
 - State: Architecture migration and Control Room delivery complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
-- Next action: manually exercise the Control Room with real lobby and cabinet sessions, including two concurrent flows.
+- Next action: manually exercise the responsive Control Room carousel, queue long-press menu, flow editor drag-and-drop, and real lobby/cabinet sessions with two concurrent flows.
 - Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints
+
+### Control Room interaction and application configuration follow-up
+
+- Ordinary Control Room Start now reevaluates from the queue head, while the
+  explicit Start from here action retains its selected entry.
+- Reworked the Control Room into a borderless full-width flow carousel with
+  touch swipe, resisted edge movement, and up to five centred navigation dots
+  supporting click, hover, wheel, and trackpad interaction. Queue rows select
+  the detail card, reuse match progress and Commit controls, mark the current
+  step, and expose their context menu through touch long press.
+- Moved the independent lobby control below the carousel. Reworked the inactive
+  flow editor so whole rows drag within and between Flow order and Unassigned,
+  including reliable dragging across the modal boundary.
+- Added a Tournament Manager configuration destination for device theme and
+  administrator role management, redirected the former role-management route,
+  and aligned desktop and mobile navigation/account actions with it.
+- Verification: the frontend build passes, all 51 frontend unit tests pass,
+  frontend lint has the five existing warnings and no errors, the focused
+  Control Room aggregate suite passes all six tests, and `git diff --check`
+  reports no whitespace errors.
+- Next action: manually verify the responsive gestures and configuration page
+  with authenticated staff and administrator sessions.
 
 ### Tournament Control Room
 

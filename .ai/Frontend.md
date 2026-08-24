@@ -50,8 +50,14 @@ previous layout hard to follow.
   match display.
 - Control Room is a tournament-level destination for staff. It presents
   persisted match flows, their current or waiting match, queue, lifecycle
-  actions, and an independent lobby-control card. Flow editing is available
-  only while a flow is inactive; Unassigned exists only inside that editor.
+  actions, and one independent tournament-level lobby-control card. Queue rows
+  select the detail card, reuse the match-list state/Commit treatment, and open
+  their context menu by touch long press. Flow panels use a horizontally
+  animated, touch-swipeable carousel with up to five centred navigation dots
+  below the active card. The dot rail accepts pointer selection and wheel or
+  trackpad navigation. Lobby control follows the carousel. Flow editing is
+  available only while a flow is inactive; Unassigned exists only inside that
+  editor.
   Completed flows are immutable and may be archived from the control room. A
   confirmed result reopen returns the owning flow to inactive at that match and
   shows the persisted interruption reason. See
@@ -79,6 +85,11 @@ previous layout hard to follow.
   navigation begins at the destinations inside that structure.
 - The sidebar's new-tournament action opens its modal in place. Only successful
   creation navigates, landing on the new tournament overview.
+- The tree header exposes application configuration beside Collapse all. The
+  configuration page is public because theme preference is device-local; its
+  role-management section is rendered only for administrators. On mobile the
+  full-screen tree has no account-action footer, and Logout lives in the fixed
+  bottom navigation beside Account.
 
 ## Song Import
 

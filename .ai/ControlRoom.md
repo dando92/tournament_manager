@@ -11,10 +11,11 @@ ready to commit.
 Control Room does not commit results. An operator remains responsible for
 reviewing and committing every result.
 
-The lobby-control card is displayed beside a flow's current match as an
-independent operator tool. There is deliberately no persisted or inferred
-binding between a flow, a match, and a SyncStart lobby. The operator continues
-to select the lobby and an available song explicitly.
+The lobby-control card is displayed once at tournament-page level, outside the
+individual flow panels, as an independent operator tool. There is deliberately
+no persisted or inferred binding between a flow, a match, and a SyncStart
+lobby. The operator continues to select the lobby and an available song
+explicitly.
 
 ## Scope and invariants
 
@@ -74,8 +75,9 @@ would otherwise make the flow progress.
 
 ### Start
 
-Starting an inactive flow arms it and recalculates from its current entry or
-from the first entry when it has no cursor. The runner:
+Starting an inactive flow arms it and always recalculates from the first entry.
+An earlier cursor retained by Stop or an interruption does not change ordinary
+Start behavior. The runner:
 
 1. moves past committed matches;
 2. deactivates and moves past matches that are already ready to commit;
@@ -98,8 +100,9 @@ attempts the next entry.
 ### Stop
 
 Stopping a running or paused flow deactivates its current match, preserves its
-cursor, clears the active stale diagnosis, and returns it to `inactive`. The
-flow may then be edited, started again, or started from another entry.
+cursor for diagnosis and display, clears the active stale diagnosis, and
+returns it to `inactive`. The flow may then be edited, started again from the
+queue head, or started explicitly from another entry.
 
 ### Start from here
 
@@ -144,6 +147,27 @@ application event bus.
 
 The runner may pass several settled entries in one recalculation. It never
 passes an unplayable entry.
+
+## Control-room interaction
+
+- The tournament-level lobby control appears once above the flow panels.
+- Selecting any queue row opens that match in the detail card above the queue.
+- Queue rows reuse the match-list state row, including the violet current-step
+  indicator, progress badge, and inline Commit action.
+- Queue-row actions open from a pointer context menu or a touch long press. A
+  long press is cancelled as soon as the finger moves, so scrolling the queue
+  does not open it accidentally.
+- Flow panels are presented one at a time in a horizontal carousel. Up to five
+  flow dots appear below the card with the selected flow raised in the centre;
+  the dot rail accepts clicks and mouse-wheel or trackpad scrolling. On touch
+  screens a horizontal swipe advances the carousel, while an outward swipe at
+  either end moves with resistance and springs back without changing the
+  selected flow.
+- The tournament-level lobby control follows the complete flow carousel.
+- Each flow card is borderless and fills the available control-room viewport
+  width.
+- Flow order and assignment are changed by dragging a match within or between
+  the Flow order and Unassigned columns. Arrow-based ordering is not exposed.
 
 ## Eligibility and stale reasons
 
