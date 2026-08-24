@@ -1385,13 +1385,20 @@ What the aggregate phases cannot carry, because it belongs to no aggregate.
   guards the final tree, request-barrel removal, frontend axios locations, and
   the single declaration of the Realtime gateway DTO. No behaviour changed.
 
-### Phase 9 — Freeze (partial)
+### Phase 9 — Freeze (done)
 
 - Added the tree, barrel, frontend axios, and realtime-DTO checks to the
   architecture check already run by CI.
 - Folded the permanent rules into [Backend.md](Backend.md) and
-  [Frontend.md](Frontend.md). This document remains the historical record until
-  the intentionally deferred query-cache work below is complete.
+  [Frontend.md](Frontend.md).
+- Completed the intentionally deferred query-cache conversion for tournament
+  configuration, participants, the player catalogue and songs. Realtime
+  invalidation is the sole update path for those readers, and the architecture,
+  build, contract, unit and end-to-end suites pass on the frozen structure.
+
+This document is now the completed historical record of the refactoring. The
+permanent rules live in the project architecture documents and their automated
+checks.
 
 ### Account and authentication follow-up (done)
 

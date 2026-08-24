@@ -626,6 +626,22 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 
 ## Verification
 
+### API and frontend structure refactoring complete
+
+- Closed phase 9 of [ApiRefactoring.md](ApiRefactoring.md). All aggregate,
+  catalogue, file-tree, shared-contract and query-cache checkpoints are complete;
+  the lasting boundaries are recorded in Backend.md and Frontend.md and enforced
+  by `npm run check:architecture`.
+- Aligned the match-write event contract with the progress projection introduced
+  by the tournament status rollup: the first played score changes the pool's
+  progressed-match count and therefore announces `ui.phase-group-changed`;
+  subsequent score edits that do not move a pool projection still announce only
+  the match.
+- Verification: `npm run verify` passes with 99 API e2e tests. Lint reports the
+  one existing API warning and five existing frontend warnings, with no errors.
+- Next action: no work remains in the API and frontend structure refactoring
+  plan. Future changes follow the permanent architecture rules.
+
 ```text
 npm run verify
 PASS: architecture boundaries, all workspace builds, lint (warnings only), contracts, unit tests, API e2e tests, and migration-runner e2e test

@@ -499,10 +499,11 @@ describe('Match writes (e2e)', () => {
    * What a write announces decides what every open page re-reads, so the events
    * are part of the contract rather than a detail of the transport.
    *
-   * A score that leaves a match still waiting on somebody changes that match and
-   * nothing the tree draws. The score that settles it changes the pool's pending
-   * count too, and says so. Without the second event the tree would go stale;
-   * without the first rule, typing a percentage would re-read the tournament.
+   * The first played score changes the match and the pool's progress count. The
+   * score that settles it changes the pool's pending count too. Further edits
+   * that leave both projections unchanged announce only the match. Without the
+   * pool events the tree would go stale; publishing them for every score would
+   * re-read it unnecessarily.
    */
   it('announces the pool only when the pool it draws has moved', async () => {
     const match = await createMatch('Announcing Match', [firstEntrantId, secondEntrantId], [songId]);
@@ -514,7 +515,7 @@ describe('Match writes (e2e)', () => {
         .send({ percentage: 91, isFailed: false })
         .expect(204);
 
-    expect(await announcedBy(partial)).toEqual(['ui.match-changed']);
+    expect(await announcedBy(partial)).toEqual(['ui.match-changed', 'ui.phase-group-changed']);
 
     expect(
       await announcedBy(() =>
