@@ -5,7 +5,7 @@ export class ControlRoomFlows1788000000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `CREATE TABLE "control_room_flow" ("id" SERIAL NOT NULL, "name" character varying NOT NULL, "status" character varying NOT NULL DEFAULT 'inactive', "currentEntryId" integer, "staleCode" character varying, "staleDetails" jsonb, "interruptionCode" character varying, "interruptionDetails" jsonb, "interruptedAt" TIMESTAMP WITH TIME ZONE, "archivedAt" TIMESTAMP WITH TIME ZONE, "version" integer NOT NULL, "tournamentId" integer, CONSTRAINT "CHK_control_room_flow_status" CHECK ("status" IN ('inactive', 'running', 'paused', 'completed')), CONSTRAINT "PK_control_room_flow" PRIMARY KEY ("id"))`,
+            `CREATE TABLE "control_room_flow" ("id" SERIAL NOT NULL, "name" character varying NOT NULL, "status" character varying NOT NULL DEFAULT 'inactive', "currentEntryId" integer, "staleCode" character varying, "staleDetails" jsonb, "archivedAt" TIMESTAMP WITH TIME ZONE, "version" integer NOT NULL, "tournamentId" integer, CONSTRAINT "CHK_control_room_flow_status" CHECK ("status" IN ('inactive', 'running', 'paused', 'completed')), CONSTRAINT "PK_control_room_flow" PRIMARY KEY ("id"))`,
         );
         await queryRunner.query(
             `CREATE TABLE "control_room_flow_entry" ("id" SERIAL NOT NULL, "position" integer NOT NULL, "flowId" integer, "matchId" integer, CONSTRAINT "PK_control_room_flow_entry" PRIMARY KEY ("id"))`,
