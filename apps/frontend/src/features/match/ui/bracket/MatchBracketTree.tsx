@@ -4,8 +4,8 @@ import { Entrant } from "@/features/participant/model/types";
 import { entrantPlayer } from "@/features/participant/model/entrant";
 import { AdvancementRule, Match } from "@/features/match/model/types";
 import { toOrdinal } from "@/shared/utils";
-import { commitBadgeClass, getActiveLabel, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
-import StatusIcon from "@/shared/components/ui/StatusIcon";
+import { getActiveLabel, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import StatusDot from "@/shared/components/ui/StatusDot";
 
 type MatchBracketTreeProps = {
@@ -217,19 +217,18 @@ function MatchBracketCard({
           onSelect();
         }
       }}
-      className={`relative block w-[220px] rounded-md border bg-ui-surface text-left shadow-sm transition-colors ${
+      className={`relative block w-[220px] rounded-md border-l-[3px] border-y border-r bg-ui-surface text-left shadow-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent ${
         selected
-          ? "border-ui-border-strong ring-2 ring-ui-border-strong"
-          : "border-ui-border hover:border-ui-border hover:bg-ui-raised"
+          ? "border-ui-accent bg-ui-selected font-semibold"
+          : "border-ui-border hover:border-ui-border-strong hover:bg-ui-raised"
       }`}
     >
       <div className="border-b border-ui-border px-2.5 py-1.5">
         <div className="flex items-center gap-2">
           <StatusDot on={match.active} label={getActiveLabel(match.active)} />
           <span className="truncate text-xs font-semibold text-ui-text">{match.name}</span>
-          <span className={`ml-auto shrink-0 ${commitBadgeClass}`}>
-            <StatusIcon status={getMatchProgressStatus(progress)} className="h-3 w-3" />
-            {getMatchProgressLabel(progress)}
+          <span className="ml-auto shrink-0">
+            <StatusBadge status={getMatchProgressStatus(progress)} label={getMatchProgressLabel(progress)} />
           </span>
         </div>
       </div>

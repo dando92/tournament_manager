@@ -20,11 +20,15 @@ export default {
          */
         ui: {
           canvas: "rgb(var(--ui-canvas) / <alpha-value>)",
+          sidebar: "rgb(var(--ui-sidebar) / <alpha-value>)",
           surface: "rgb(var(--ui-surface) / <alpha-value>)",
           raised: "rgb(var(--ui-raised) / <alpha-value>)",
+          row: "rgb(var(--ui-row) / <alpha-value>)",
           selected: "rgb(var(--ui-selected) / <alpha-value>)",
           border: "rgb(var(--ui-border) / <alpha-value>)",
+          separator: "rgb(var(--ui-separator) / <alpha-value>)",
           "border-strong": "rgb(var(--ui-border-strong) / <alpha-value>)",
+          accent: "rgb(var(--ui-accent) / <alpha-value>)",
           text: "rgb(var(--ui-text) / <alpha-value>)",
           "text-soft": "rgb(var(--ui-text-soft) / <alpha-value>)",
           "text-mute": "rgb(var(--ui-text-mute) / <alpha-value>)",
@@ -122,6 +126,14 @@ export default {
         md: "0 4px 6px -1px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 2px 4px -2px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
         lg: "0 10px 15px -3px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 4px 6px -4px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
         xl: "0 20px 25px -5px rgb(var(--ui-shadow) / var(--ui-shadow-alpha)), 0 8px 10px -6px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        card: "0 2px 6px rgb(var(--ui-shadow) / var(--ui-shadow-alpha))",
+        live: "0 6px 16px -6px rgb(var(--ui-shadow) / calc(var(--ui-shadow-alpha) * 2.5)), 0 2px 6px rgb(var(--ui-accent) / 0.14)",
+      },
+      borderRadius: {
+        DEFAULT: "0.625rem",
+        md: "0.625rem",
+        lg: "0.625rem",
+        xl: "0.75rem",
       },
       zIndex: {
         dropdown: "20",

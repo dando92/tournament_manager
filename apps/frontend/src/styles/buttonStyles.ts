@@ -14,7 +14,7 @@
  * control the keyboard can reach uses this one so the ring never varies.
  */
 export const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-running focus-visible:ring-offset-2 focus-visible:ring-offset-ui-canvas";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ui-canvas";
 
 /** Primary — main CTA */
 export const btnPrimary = `rounded border border-ui-border-strong bg-ui-raised px-3 py-2 font-semibold text-ui-text transition-colors hover:bg-ui-selected disabled:opacity-50 ${focusRing}`;

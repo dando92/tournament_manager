@@ -6,9 +6,9 @@
  * colour. A list of matches stays readable in greyscale, and for a viewer who
  * cannot separate the hues nothing is lost.
  *
- * This is the only place in the interface where colour reports state, which is
- * why the state scale is defined for a 3:1 graphical threshold rather than the
- * 4.5:1 that text needs. See .ai/Design.md.
+ * This is the only place in the interface where colour reports state. The
+ * badge may repeat it as a translucent border and tint, while its readable
+ * label remains neutral. See .ai/Design.md.
  *
  * `pending` breathes, and it is the only state that does. It is the one state
  * that is stuck until somebody acts, so motion belongs to it rather than to a
@@ -30,6 +30,14 @@ const TONE: Record<Status, string> = {
   pending: "text-state-pending",
   done: "text-state-done",
   failed: "text-state-failed",
+};
+
+const BADGE_TONE: Record<Status, string> = {
+  idle: "border-state-idle/35 bg-state-idle/10",
+  running: "border-state-running/35 bg-state-running/10",
+  pending: "border-state-pending/35 bg-state-pending/10",
+  done: "border-state-done/35 bg-state-done/10",
+  failed: "border-state-failed/35 bg-state-failed/10",
 };
 
 /** How much of the ring is filled, for the states drawn as a progress ring. */
@@ -106,12 +114,12 @@ export default function StatusIcon({ status, label, className = "" }: StatusIcon
 /**
  * The badge that repeats a status in words.
  *
- * The surface and the text are neutral: the glyph is the only thing carrying
- * colour, so a row of badges never turns into a row of coloured pills.
+ * The shell repeats the glyph colour as a restrained tint. Shape, icon and
+ * label remain present, so colour reinforces the state without carrying it.
  */
 export function StatusBadge({ status, label }: { status: Status; label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-ui-border bg-ui-raised py-0.5 pl-1.5 pr-2.5 text-[11px] font-medium text-ui-text-soft">
+    <span className={`inline-flex h-6 items-center gap-1.5 rounded-full border pl-2 pr-2.5 text-[11px] font-medium text-ui-text-soft ${BADGE_TONE[status]}`}>
       <StatusIcon status={status} className="h-3 w-3" />
       {label ?? STATUS_LABEL[status]}
     </span>

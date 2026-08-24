@@ -38,7 +38,7 @@ export default function DivisionMatchesPage() {
         />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded border border-ui-border bg-ui-canvas px-3 focus-within:border-ui-border-strong sm:max-w-xs">
+        <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded border border-ui-border-strong bg-ui-surface px-3 focus-within:border-ui-accent focus-within:ring-2 focus-within:ring-ui-accent/20 sm:max-w-xs">
           <FontAwesomeIcon icon={faMagnifyingGlass} className="shrink-0 text-xs text-ui-text-mute" />
           <input
             type="search"
@@ -84,20 +84,20 @@ export default function DivisionMatchesPage() {
           onCreate={matchCreation.openCreateMatch}
         />
       ) : (
-        <div className={`flex flex-col overflow-hidden rounded-lg border border-ui-border ${LIST_MAX_HEIGHT}`}>
+        <div className={`flex flex-col overflow-hidden rounded-lg border border-ui-border bg-ui-row ${LIST_MAX_HEIGHT}`}>
           {/* min-h-0 is what lets a flex child actually scroll instead of growing. */}
           <div className="min-h-0 flex-1 overflow-y-auto">
             {groups
               .filter((group) => group.matches.length > 0)
               .map((group) => (
-                <section key={group.pool.id}>
-                  <header className="sticky top-0 z-10 border-b border-ui-border bg-ui-raised text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">
+                <section key={group.pool.id} className="border-t border-ui-separator first:border-t-0">
+                  <header className="sticky top-0 z-10 border-b border-ui-separator bg-ui-row text-[11px] font-semibold uppercase tracking-wider text-ui-text-mute">
                     <button
                       type="button"
                       aria-pressed={page.selectedPhaseGroupId === group.pool.id}
                       onClick={() => page.selectPhaseGroup(group.pool.id)}
-                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-ui-selected focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-border-strong ${
-                        page.selectedPhaseGroupId === group.pool.id ? "bg-ui-selected text-ui-text-soft" : ""
+                      className={`flex w-full items-center gap-2 border-l-[3px] px-3 py-1.5 text-left transition-colors hover:bg-ui-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent ${
+                        page.selectedPhaseGroupId === group.pool.id ? "border-ui-accent text-ui-text" : "border-transparent"
                       }`}
                     >
                       <StatusIcon status={poolStatus(group.pool)} className="h-3 w-3" />

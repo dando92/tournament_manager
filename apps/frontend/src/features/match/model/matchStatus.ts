@@ -126,7 +126,3 @@ export function getCommitBlocker(match: Match): string | null {
 export function getActiveLabel(active: boolean): string {
   return active ? "Match active" : "Match not active";
 }
-
-/** Neutral badge shell. The glyph inside it carries the state. */
-export const commitBadgeClass =
-  "inline-flex items-center gap-1.5 rounded-full border border-ui-border bg-ui-raised py-0.5 pl-1.5 pr-2.5 text-[11px] font-medium text-ui-text-soft";

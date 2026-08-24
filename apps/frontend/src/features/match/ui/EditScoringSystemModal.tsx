@@ -55,7 +55,7 @@ export default function EditScoringSystemModal({ open, match, onClose, onSave }:
             <label className="flex flex-col gap-2 font-medium text-ui-text-soft">
                 Scoring system
                 <select
-                    className="rounded-lg border border-ui-border-strong bg-ui-surface px-3 py-2 text-ui-text outline-none focus:ring-2 focus:ring-state-running"
+                    className="rounded-lg border border-ui-border-strong bg-ui-surface px-3 py-2 text-ui-text outline-none focus:ring-2 focus:ring-ui-accent"
                     value={scoringSystem}
                     onChange={(event) => setScoringSystem(event.target.value)}
                     disabled={saving || systemsQuery.isLoading}

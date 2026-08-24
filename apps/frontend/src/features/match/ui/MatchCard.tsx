@@ -233,10 +233,12 @@ export default function MatchCard({
   return (
     <div
       ref={cardRef}
-      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-ui-surface shadow-sm transition-shadow ${
+      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-ui-surface transition-shadow ${
         isHighlighted
-          ? "border-state-done/40 ring-2 ring-state-done/40 shadow-state-done/20 shadow-lg"
-          : "border-ui-border"
+          ? "border-ui-accent border-l-[3px] bg-ui-selected shadow-live"
+          : match.active
+            ? "border-ui-border-strong shadow-live"
+            : "border-ui-border shadow-card"
       }`}
     >
       <AddEditSongToMatchModal

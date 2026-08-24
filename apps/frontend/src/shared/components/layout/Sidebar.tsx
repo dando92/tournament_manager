@@ -42,7 +42,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <aside className="flex h-full min-w-0 flex-col bg-ui-canvas">
+    <aside className="flex h-full min-w-0 flex-col bg-ui-sidebar">
       <SearchTournamentModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <CreateTournamentModal
         open={createOpen}
@@ -106,7 +106,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 actions.logout();
                 go("/");
               }}
-              className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text"
+              className="flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm text-ui-text-soft transition-colors hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
             >
               <FontAwesomeIcon icon={faRightFromBracket} className="w-4 shrink-0" />
               <span>Logout</span>
@@ -135,7 +135,7 @@ function HeaderButton({ icon, title, onClick }: { icon: IconDefinition; title: s
       title={title}
       aria-label={title}
       onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded text-xs text-ui-text-mute transition-colors hover:bg-ui-raised hover:text-ui-text"
+      className="flex h-7 w-7 items-center justify-center rounded text-xs text-ui-text-mute transition-colors hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
     >
       <FontAwesomeIcon icon={icon} />
     </button>
@@ -162,10 +162,10 @@ function SidebarLink({
       to={to}
       state={state}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded px-3 py-2 text-sm transition-colors ${
+      className={`flex items-center gap-3 rounded border-l-[3px] px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent ${
         active
-          ? "bg-ui-selected font-semibold text-ui-text"
-          : "text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
+          ? "border-ui-accent bg-ui-selected font-semibold text-ui-text"
+          : "border-transparent text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
       }`}
     >
       <FontAwesomeIcon icon={icon} className="w-4 shrink-0" />

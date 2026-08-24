@@ -18,7 +18,7 @@ export default function PlayersSearchBar({ value, onChange }: PlayersSearchBarPr
         placeholder="Search by name..."
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full border border-ui-border-strong rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+        className="w-full border border-ui-border-strong rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
       />
     </div>
   );

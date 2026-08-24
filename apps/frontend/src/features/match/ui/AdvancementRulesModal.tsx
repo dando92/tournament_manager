@@ -25,7 +25,7 @@ type TargetOption = {
 };
 
 const inlineFieldClassName = "inline-flex min-h-7 items-center rounded bg-ui-raised px-1.5 py-0.5 font-medium text-ui-text transition-colors hover:bg-ui-selected focus-within:ring-2 focus-within:ring-state-running";
-const numberInputClassName = "min-h-8 w-14 rounded border border-ui-border-strong bg-ui-raised px-2 py-1 text-sm font-medium text-ui-text outline-none focus:ring-2 focus:ring-state-running";
+const numberInputClassName = "min-h-8 w-14 rounded border border-ui-border-strong bg-ui-raised px-2 py-1 text-sm font-medium text-ui-text outline-none focus:ring-2 focus:ring-ui-accent";
 
 export default function AdvancementRulesModal({
     open,

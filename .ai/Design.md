@@ -7,11 +7,12 @@ live in `apps/frontend/src/styles/`.
 
 ## The rule that governs colour
 
-**The interface has no colour. State does.**
+**The interface is neutral; state and interaction use colour sparingly.**
 
-Surfaces, borders, selection, text, buttons and navigation are all steps of one
-neutral scale. Colour appears only where it reports what something is *doing* —
-and even there it appears inside a glyph, never as a fill behind text.
+Surfaces, borders, text, buttons and navigation are steps of a restrained cool
+neutral scale. Semantic colour still reports what something is doing. A single
+desaturated teal accent is reserved for selection bars and keyboard focus, so
+persistent selection cannot be confused with focus or status.
 
 Three consequences follow, and they are the whole system.
 
@@ -21,28 +22,31 @@ Three consequences follow, and they are the whole system.
 - **Shape carries state alongside colour.** The status ring fills as a match
   moves forward — dashed, half, three quarters, solid. The list reads in
   greyscale; the colour confirms rather than informs.
-- **Colour used only as a glyph answers to a 3:1 threshold**, not the 4.5:1 that
-  text needs. This is what lets `state-running` be the brand colour `#1F8DDE` at
-  full strength in the light theme instead of a darkened substitute. Put that
-  colour behind text instead and the headroom disappears.
+- **State colour belongs to glyphs and translucent badge shells.** Labels stay
+  neutral and retain normal-text contrast; colour reinforces the icon and
+  border but never becomes the only way to read the state.
 
 ## Neutral scale
 
-Hue 215, saturation held between 4% and 9%. A faint cool cast is what makes a
-grey read as chosen rather than as the browser default; anything more saturated
-reads as blue-grey. The dark values are Linear's published surfaces.
+The scale keeps a restrained cool cast, but adjacent planes use deliberate
+lightness steps. The dark theme never uses pure black for page, sidebar, card or
+row surfaces.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `ui-canvas` | `#FAFBFC` | `#08090A` | page ground, sidebar |
-| `ui-surface` | `#FFFFFF` | `#0F1011` | panels, cards, top bar |
-| `ui-raised` | `#F5F6F8` | `#161718` | panel headers, table headers, badges |
-| `ui-selected` | `#E9EBEF` | `#23252A` | selected row, active nav item |
-| `ui-border` | `#E2E5E9` | `#1C1E21` | borders and dividers |
-| `ui-border-strong` | `#C6CBD2` | `#2F3237` | selection edge, primary button border |
-| `ui-text` | `#181B21` | `#F7F8F8` | primary text |
-| `ui-text-soft` | `#4F555F` | `#A7ACB4` | secondary text, links, actions |
-| `ui-text-mute` | `#666F7A` | `#7B838E` | muted text, chrome icons, column headers |
+| `ui-canvas` | `#F1F2F4` | `#07090B` | page ground |
+| `ui-sidebar` | `#F9F9FA` | `#0C0F11` | navigation surface |
+| `ui-surface` | `#FFFFFF` | `#121518` | panels and cards |
+| `ui-raised` | `#EAEBED` | `#1A1E22` | section and table headers |
+| `ui-row` | `#FFFFFF` | `#0F1215` | uniform table and list rows |
+| `ui-selected` | `#E7EAEB` | `#1E2327` | selected row, active nav item |
+| `ui-border` | `#CDD1D6` | `#2B3137` | card borders |
+| `ui-separator` | `#DCDEE1` | `#24292E` | internal row separators |
+| `ui-border-strong` | `#A8ADB4` | `#434B54` | interactive control borders |
+| `ui-accent` | `#5F858E` | `#5F858E` | selection bar and focus ring |
+| `ui-text` | `#20262C` | `#EFF0F2` | primary text |
+| `ui-text-soft` | `#5F6974` | `#A9ADB3` | secondary text, links, actions |
+| `ui-text-mute` | `#5F6974` | `#8F959C` | chrome icons and column headers |
 
 `ui-text-mute` is the lightest text allowed. Nothing below it ever carries words
 a user has to read.
@@ -58,9 +62,9 @@ a user has to read.
 | `state-done` | `#0E8A5F` | `#3CC98D` | solid with a check | completed, advanced |
 | `state-failed` | `#D33A34` | `#EE6B63` | solid with a cross | failed, disconnected, destructive |
 
-Drawn by `shared/components/ui/StatusIcon.tsx`. The badge that repeats a status
-in words keeps a neutral surface and neutral text: the glyph inside it is the
-only coloured thing, so a list of matches never becomes a row of coloured pills.
+Drawn by `shared/components/ui/StatusIcon.tsx`. A status badge repeats its
+state with a low-opacity background and matching border. The icon and text stay
+present, and the label remains neutral for accessible contrast.
 
 `state-failed` is the one state that also works as text — it clears 4.5:1 — which
 is why error messages and destructive actions may use it directly. The other
@@ -167,21 +171,29 @@ the row on a touch device moves it far enough to reveal the hidden end. A
 hand-scored round is always headed `By hand`, including on mobile, because it is
 a different scoring mode rather than an abbreviated song title.
 
-## Selection is greyscale
+The grouped match list is intentionally monochromatic. Pool headers and match
+rows share `ui-row`; thin separators, typography and indentation express the
+hierarchy. Only the current selection receives `ui-selected` and an accent bar.
+State colour stays confined to the status glyphs and their compact badges, so
+several pools on screen do not create alternating coloured bands.
 
-Selected rows and the active navigation item are `ui-selected` with a
-`ui-border-strong` edge and heavier text. No brand tint.
+## Selection, focus and elevation
 
-An advancement-route highlight is not ordinary selection: it identifies the
-source or destination of completed progression. Its row tint and card ring use
-`state-done`, matching the route cells that triggered it.
+Selected rows and active navigation items use `ui-selected`, a 3px
+`ui-accent` bar on the left, and semibold text. Hover changes only the surface;
+keyboard focus uses an external `ui-accent` ring. A persistent selection never
+uses a full outline.
 
-This is the weakest point of the system in the light theme, and it is structural
-rather than a tuning problem. Contrast is a ratio, so the same lightness step is
-worth far more at the bottom of the scale: surface to selected is 1.24 in the
-dark theme and 1.19 in the light one, and the light theme has to fit rest, hover
-and selected into that. Selection in the light theme therefore always needs a
-second signal — an edge, or text weight — and never leans on the grey alone.
+Cards use a 1px border, a 10–12px radius and a compact `shadow-card`. Components
+that represent current activity—active match cards, spectated lobbies and live
+score cards—use the stronger `shadow-live`. In the dark theme this remains an
+ambient edge rather than a large opaque black shadow. Rows never receive an
+individual shadow.
+
+An advancement-route highlight follows the same selection grammar rather than
+borrowing the completed-state colour: selected surface, accent edge and text
+weight. The route's status glyph remains semantic where completion itself is
+being reported.
 
 ## Creation is not a hue
 

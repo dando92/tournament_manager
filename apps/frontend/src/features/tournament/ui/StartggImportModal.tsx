@@ -136,7 +136,7 @@ export default function StartggImportModal({
               onChange={(event) => setEventSlug(event.target.value)}
               placeholder="tournament/example/event/singles"
               autoFocus
-              className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+              className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
             />
           </div>
 

@@ -102,12 +102,12 @@ export default function MatchListRow({
 
   return (
     <div
-      className={`relative flex w-full items-center overflow-hidden border-b border-ui-border transition-colors last:border-b-0 ${
+      className={`relative flex w-full items-center overflow-hidden border-b border-ui-separator bg-ui-row transition-colors last:border-b-0 ${
         routed
-          ? "bg-state-done/10 shadow-[inset_2px_0_0_rgb(var(--state-done))]"
+          ? "bg-ui-selected shadow-[inset_3px_0_0_rgb(var(--ui-accent))]"
           : selected
-            ? "bg-ui-selected shadow-[inset_2px_0_0_rgb(var(--ui-border-strong))]"
-            : "bg-ui-surface hover:bg-ui-raised"
+            ? "bg-ui-selected shadow-[inset_3px_0_0_rgb(var(--ui-accent))]"
+            : "hover:bg-ui-raised/50"
       }`}
     >
       <button

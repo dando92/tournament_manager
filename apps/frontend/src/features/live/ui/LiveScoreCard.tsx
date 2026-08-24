@@ -27,7 +27,7 @@ export default function LiveScoreCard({
 
   return (
     <div
-      className={`flex flex-col items-start p-2 rounded-md shadow-md transition-transform transform ${cardClass} ${
+      className={`flex flex-col items-start p-2 rounded-lg border border-white/10 shadow-live transition-transform transform ${cardClass} ${
         rank === 1 ? "animate-first-place" : ""
       }`}
     >
