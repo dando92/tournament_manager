@@ -58,7 +58,7 @@ export default function ParticipantsPage() {
           value={participantSearch}
           onChange={(event) => setParticipantSearch(event.target.value)}
           placeholder="Search participants by name..."
-          className="w-full rounded-lg border border-ui-border-strong py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+          className="w-full rounded-lg border border-ui-border-strong py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
         />
       </div>
 
@@ -146,7 +146,7 @@ export default function ParticipantsPage() {
           onChange={(event) => setName(event.target.value)}
           placeholder="Enter gamer tag"
           autoFocus
-          className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+          className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
         />
       </BaseModal>
 
@@ -209,7 +209,7 @@ export default function ParticipantsPage() {
             onChange={(event) => setBulkText(event.target.value)}
             placeholder={"Alice\nBob\nCharlie"}
             rows={8}
-            className="w-full resize-none rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+            className="w-full resize-none rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
           />
 
           {preview.length > 0 && (

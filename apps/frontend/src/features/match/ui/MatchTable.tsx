@@ -137,7 +137,7 @@ export default function MatchTable({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-ui-border shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-ui-border bg-ui-row">
         <table className="w-full text-sm border-collapse">
           {match.rounds.length === 0 && (
             <thead>

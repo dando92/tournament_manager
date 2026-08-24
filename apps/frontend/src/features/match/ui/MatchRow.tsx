@@ -122,11 +122,11 @@ export default function MatchRow({
 
   return (
     <tr
-      className={`border-t transition-colors ${
+      className={`border-t bg-ui-row transition-colors ${
         isRouteSelected
-          ? "border-state-done/30 bg-state-done/10"
-          : "border-ui-border odd:bg-ui-surface even:bg-ui-raised"
-      } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-state-done/10" : ""}`}
+          ? "border-ui-accent bg-ui-selected"
+          : "border-ui-separator"
+      } ${canClickCompletedRow ? "cursor-pointer sm:hover:bg-ui-selected" : ""}`}
       onClick={() => {
         if (canToggleRoute && routeTargetMatchId) {
           onToggleRouteHighlight?.();

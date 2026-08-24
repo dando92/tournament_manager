@@ -32,7 +32,7 @@ export default function LobbyCard({
   const songName = lobbyState?.songTitle || lobbyState?.songPath || "No song selected";
 
   return (
-    <article className="rounded-xl border border-ui-border bg-ui-raised p-4">
+    <article className={`rounded-xl border bg-ui-surface p-4 ${isSpectated ? "border-ui-border-strong shadow-live" : "border-ui-border shadow-card"}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-ui-text">{lobbyName}</h3>

@@ -11,9 +11,9 @@ export default function PathRow({ ordinalLabel, sourceMatchName, colSpan, isSele
 
   return (
     <tr
-      className={`border-t border-ui-border transition-colors ${
+      className={`border-t border-ui-separator bg-ui-row transition-colors ${
         isSelected
-          ? "bg-state-done/10"
+          ? "bg-ui-selected"
           : canToggle
             ? "cursor-pointer hover:bg-ui-raised"
             : ""

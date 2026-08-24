@@ -83,12 +83,12 @@ export default function TreeNode({
       }}
       {...longPress}
       style={{ paddingLeft: BASE_PADDING_PX + depth * INDENT_PX }}
-      className={`group flex w-full cursor-pointer items-center gap-2 rounded py-1.5 pr-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-state-running ${
+      className={`group flex w-full cursor-pointer items-center gap-2 rounded border-l-[3px] py-1.5 pr-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ui-accent ${
         longPress.className
       } ${
         selected
-          ? "bg-ui-selected font-semibold text-ui-text ring-1 ring-inset ring-ui-border-strong"
-          : "text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
+          ? "border-ui-accent bg-ui-selected font-semibold text-ui-text"
+          : "border-transparent text-ui-text-soft hover:bg-ui-raised hover:text-ui-text"
       }`}
     >
       <FontAwesomeIcon

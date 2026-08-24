@@ -10,18 +10,21 @@
  */
 
 :root {
-  /* Neutral scale. Hue 215, saturation held between 5% and 9%: a faint cool
-     cast, which is what makes a grey read as chosen rather than as the browser
-     default. Anything more saturated reads as blue-grey. */
-  --ui-canvas: 250 251 252;
+  /* Surface hierarchy. Adjacent planes deliberately use visibly different
+     values so cards, section headers, rows and the sidebar remain legible. */
+  --ui-canvas: 241 242 244;
+  --ui-sidebar: 249 249 250;
   --ui-surface: 255 255 255;
-  --ui-raised: 245 246 248;
-  --ui-selected: 233 235 239;
-  --ui-border: 226 229 233;
-  --ui-border-strong: 198 203 210;
-  --ui-text: 24 27 33;
-  --ui-text-soft: 79 85 95;
-  --ui-text-mute: 102 111 122;
+  --ui-raised: 234 235 237;
+  --ui-row: 255 255 255;
+  --ui-selected: 231 234 235;
+  --ui-border: 205 209 214;
+  --ui-separator: 220 222 225;
+  --ui-border-strong: 168 173 180;
+  --ui-accent: 95 133 142;
+  --ui-text: 32 38 44;
+  --ui-text-soft: 95 105 116;
+  --ui-text-mute: 95 105 116;
 
   /* State colours. These are only ever a glyph or a badge dot, never text and
      never a surface, so the threshold that applies is the 3:1 for graphical
@@ -48,7 +51,7 @@
      in both: a soft cool shadow on light, a deep black one on dark where the
      borders do most of the separating anyway. */
   --ui-shadow: 15 23 42;
-  --ui-shadow-alpha: 0.07;
+  --ui-shadow-alpha: 0.08;
 
   /* Tells the browser which way its own widgets go: radios, checkboxes,
      scrollbars and date pickers are drawn by the user agent, not by us. */
@@ -58,8 +61,7 @@
 /*
  * Dark theme.
  *
- * The surfaces are Linear's published values; the neutral scale keeps the same
- * 4-9% saturation on the way down.
+ * Dark surfaces stay above pure black and retain a restrained cool cast.
  *
  * Two blocks apply it, and both are needed. The media query serves the "System"
  * setting, which stores no attribute — it is guarded on `:not([data-theme="light"])`
@@ -69,15 +71,19 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ui-canvas: 8 9 10;
-    --ui-surface: 15 16 17;
-    --ui-raised: 22 23 24;
-    --ui-selected: 35 37 42;
-    --ui-border: 28 30 33;
-    --ui-border-strong: 47 50 55;
-    --ui-text: 247 248 248;
-    --ui-text-soft: 167 172 180;
-    --ui-text-mute: 123 131 142;
+    --ui-canvas: 7 9 11;
+    --ui-sidebar: 12 15 17;
+    --ui-surface: 18 21 24;
+    --ui-raised: 26 30 34;
+    --ui-row: 15 18 21;
+    --ui-selected: 30 35 39;
+    --ui-border: 43 49 55;
+    --ui-separator: 36 41 46;
+    --ui-border-strong: 67 75 84;
+    --ui-accent: 95 133 142;
+    --ui-text: 239 240 242;
+    --ui-text-soft: 169 173 179;
+    --ui-text-mute: 143 149 156;
 
     --state-idle: 123 131 142;
     --state-running: 61 165 232;
@@ -93,23 +99,27 @@
     --score-4: 185 140 236;
     --score-failed: 238 107 99;
 
-    --ui-shadow: 0 0 0;
-    --ui-shadow-alpha: 0.5;
+    --ui-shadow: 6 11 14;
+    --ui-shadow-alpha: 0.22;
 
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --ui-canvas: 8 9 10;
-  --ui-surface: 15 16 17;
-  --ui-raised: 22 23 24;
-  --ui-selected: 35 37 42;
-  --ui-border: 28 30 33;
-  --ui-border-strong: 47 50 55;
-  --ui-text: 247 248 248;
-  --ui-text-soft: 167 172 180;
-  --ui-text-mute: 123 131 142;
+  --ui-canvas: 7 9 11;
+  --ui-sidebar: 12 15 17;
+  --ui-surface: 18 21 24;
+  --ui-raised: 26 30 34;
+  --ui-row: 15 18 21;
+  --ui-selected: 30 35 39;
+  --ui-border: 43 49 55;
+  --ui-separator: 36 41 46;
+  --ui-border-strong: 67 75 84;
+  --ui-accent: 95 133 142;
+  --ui-text: 239 240 242;
+  --ui-text-soft: 169 173 179;
+  --ui-text-mute: 143 149 156;
 
   --state-idle: 123 131 142;
   --state-running: 61 165 232;
@@ -125,8 +135,8 @@
   --score-4: 185 140 236;
   --score-failed: 238 107 99;
 
-  --ui-shadow: 0 0 0;
-  --ui-shadow-alpha: 0.5;
+  --ui-shadow: 6 11 14;
+  --ui-shadow-alpha: 0.22;
 
   color-scheme: dark;
 }

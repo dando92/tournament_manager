@@ -49,7 +49,7 @@ export default function ResizableSidebar({ children }: { children: ReactNode }) 
           if (event.key === "ArrowLeft") setWidth((current) => Math.max(MIN_WIDTH_PX, current - 16));
           if (event.key === "ArrowRight") setWidth((current) => Math.min(MAX_WIDTH_PX, current + 16));
         }}
-        className={`w-1 shrink-0 cursor-col-resize transition-colors focus-visible:outline-none focus-visible:bg-state-running ${
+        className={`w-1 shrink-0 cursor-col-resize transition-colors focus-visible:outline-none focus-visible:bg-ui-accent ${
           dragging ? "bg-ui-border-strong" : "bg-transparent hover:bg-ui-border-strong"
         }`}
       />

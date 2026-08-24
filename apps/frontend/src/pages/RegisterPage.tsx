@@ -59,7 +59,7 @@ export default function RegisterPage() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
             autoComplete="username"
             minLength={3}
             required
@@ -72,7 +72,7 @@ export default function RegisterPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
             required
           />
           {emailError && <p className="text-state-failed text-sm mt-1">{emailError}</p>}
@@ -83,7 +83,7 @@ export default function RegisterPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
             autoComplete="new-password"
             minLength={6}
             required
@@ -98,7 +98,7 @@ export default function RegisterPage() {
             type="text"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
           />
         </div>
         {apiError && <p className="text-state-failed text-sm">{apiError}</p>}

@@ -45,7 +45,7 @@ export default function RenameModal({ open, noun, currentName, onClose, onRename
           onKeyDown={(event) => {
             if (event.key === "Enter") submit();
           }}
-          className="w-full rounded border border-ui-border-strong bg-ui-surface px-3 py-2 text-sm text-ui-text focus:outline-none focus:ring-2 focus:ring-state-running"
+          className="w-full rounded border border-ui-border-strong bg-ui-surface px-3 py-2 text-sm text-ui-text focus:outline-none focus:ring-2 focus:ring-ui-accent"
           placeholder={`${noun.charAt(0).toUpperCase()}${noun.slice(1)} name`}
         />
       </div>

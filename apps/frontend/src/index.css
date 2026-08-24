@@ -18,9 +18,7 @@
  * with scrollbars and date pickers, from the root.
  */
 @layer base {
-  input:not([type="radio"]):not([type="checkbox"]),
-  textarea,
-  select {
+  :where(input:not([type="radio"]):not([type="checkbox"]), textarea, select) {
     background-color: rgb(var(--ui-surface));
     color: rgb(var(--ui-text));
   }

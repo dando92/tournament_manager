@@ -22,7 +22,7 @@ export default function SongsToolbar({
         <select
           value={packFilter}
           onChange={(event) => onPackFilterChange(event.target.value)}
-          className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm bg-ui-surface appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-state-running"
+          className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm bg-ui-surface appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ui-accent"
         >
           <option value="">All packs</option>
           {packOptions.map((group) => (
@@ -44,7 +44,7 @@ export default function SongsToolbar({
           placeholder="Search by title or artist..."
           value={songSearch}
           onChange={(event) => onSongSearchChange(event.target.value)}
-          className="w-full border border-ui-border-strong rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running"
+          className="w-full border border-ui-border-strong rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
         />
       </div>
     </div>

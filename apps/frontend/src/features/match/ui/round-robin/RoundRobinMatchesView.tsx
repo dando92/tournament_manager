@@ -2,8 +2,8 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { entrantPlayer } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
 import { Player } from "@/features/participant/model/types";
-import { commitBadgeClass, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
-import StatusIcon from "@/shared/components/ui/StatusIcon";
+import { getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import { ActiveIndicator } from "@/shared/components/ui/StatusDot";
 
 type RoundRobinMatchesViewProps = {
@@ -173,7 +173,7 @@ export default function RoundRobinMatchesView({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-md bg-ui-surface">
+      <div className="overflow-x-auto rounded-md border border-ui-border bg-ui-row">
         <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr>
@@ -226,12 +226,18 @@ export default function RoundRobinMatchesView({
                           onClick={() =>
                             setSelectedMatchId((current) => current === cell.match?.id ? null : cell.match?.id ?? null)
                           }
-                          className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded border px-1 py-1 text-center transition-colors sm:gap-2 sm:px-2 sm:py-2 ${getCellResultClass(cell)} ${
-                            isSelected ? "border-ui-border-strong ring-2 ring-ui-border-strong" : "hover:border-ui-border"
+                          className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded border-l-[3px] border-y border-r px-1 py-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent sm:gap-2 sm:px-2 sm:py-2 ${getCellResultClass(cell)} ${
+                            isSelected ? "border-ui-accent bg-ui-selected font-semibold" : "hover:border-ui-border-strong"
                           }`}
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
-                            <span className={commitBadgeClass}>
+                            <span
+                              className={`inline-flex h-6 items-center gap-1.5 rounded-full border pl-2 pr-2.5 text-[11px] font-medium text-ui-text-soft ${
+                                cell.match.active
+                                  ? "border-state-live/35 bg-state-live/10"
+                                  : "border-state-idle/35 bg-state-idle/10"
+                              }`}
+                            >
                               <ActiveIndicator
                                 on={cell.match.active}
                                 label={cell.match.active ? "Match active" : "Match not active"}
@@ -239,10 +245,10 @@ export default function RoundRobinMatchesView({
                               />
                               {cell.match.active ? "Active" : "Not active"}
                             </span>
-                            <span className={commitBadgeClass}>
-                              <StatusIcon status={getMatchProgressStatus(progress)} className="h-3 w-3" />
-                              {getMatchProgressLabel(progress)}
-                            </span>
+                            <StatusBadge
+                              status={getMatchProgressStatus(progress)}
+                              label={getMatchProgressLabel(progress)}
+                            />
                           </div>
                           <span className="text-sm font-bold sm:text-base">
                             {cell.rowPoints} - {cell.columnPoints}

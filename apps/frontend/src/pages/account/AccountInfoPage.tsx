@@ -165,7 +165,7 @@ export default function AccountInfoPage() {
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
                   placeholder="Player name..."
-                  className="border rounded px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-state-running"
+                  className="border rounded px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ui-accent"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -173,7 +173,7 @@ export default function AccountInfoPage() {
                 <select
                   value={nationality}
                   onChange={(e) => setNationality(e.target.value)}
-                  className="border rounded px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-state-running bg-ui-surface"
+                  className="border rounded px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ui-accent bg-ui-surface"
                 >
                   <option value="">— Select nationality —</option>
                   {NATIONALITIES.map((n) => (
@@ -188,7 +188,7 @@ export default function AccountInfoPage() {
                   value={grooveStatsApi}
                   onChange={(e) => setGrooveStatsApi(e.target.value)}
                   placeholder="Enter GrooveStats API key..."
-                  className="border rounded px-3 py-1.5 text-sm font-mono w-full focus:outline-none focus:ring-2 focus:ring-state-running"
+                  className="border rounded px-3 py-1.5 text-sm font-mono w-full focus:outline-none focus:ring-2 focus:ring-ui-accent"
                 />
               </div>
               <div className="flex flex-row gap-2 mt-1">

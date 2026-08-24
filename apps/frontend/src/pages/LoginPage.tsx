@@ -54,7 +54,7 @@ export default function LoginPage() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
             autoComplete="username"
             minLength={3}
             required
@@ -67,7 +67,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-state-running focus:border-transparent"
+            className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent focus:border-transparent"
             autoComplete="current-password"
             minLength={6}
             required
