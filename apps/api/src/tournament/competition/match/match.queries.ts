@@ -8,6 +8,7 @@ import {
     EntrantDto,
     MatchResultEntryDto,
     MatchRoundDto,
+    SongRefDto,
 } from '@tournament-manager/contracts';
 
 /**
@@ -200,6 +201,27 @@ const LIVE_TARGETS_FOR_SONG = `
     ORDER BY pa."playerId", m."id", r."id"
 `;
 
+const ACTIVE_TOURNAMENT_SONGS_BASE = `
+    SELECT
+            so."id"    AS "id",
+            so."title" AS "title"
+    FROM        "round" r
+    JOIN        "song" so       ON so."id" = r."songId"
+    JOIN        "match" m       ON m."id" = r."matchId" AND m."active" = TRUE
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+    JOIN        "division" d     ON d."id" = ph."divisionId"
+    WHERE       d."tournamentId" = $1
+`;
+
+const ACTIVE_TOURNAMENT_SONGS = `
+    SELECT DISTINCT ON (active_song."title")
+            active_song."id",
+            active_song."title"
+    FROM (${ACTIVE_TOURNAMENT_SONGS_BASE}) active_song
+    ORDER BY active_song."title", active_song."id"
+`;
+
 /**
  * Every read of a match, in the one shape the interface consumes.
  *
@@ -237,6 +259,20 @@ export class MatchQueries {
         if (playerIds.length === 0) return [];
 
         return await this.dataSource.query(LIVE_TARGETS_FOR_SONG, [tournamentId, songId, playerIds]);
+    }
+
+    /** Every distinct song assigned to a match currently accepting lobby results. */
+    async activeSongsForTournament(tournamentId: number): Promise<SongRefDto[]> {
+        return await this.dataSource.query(ACTIVE_TOURNAMENT_SONGS, [tournamentId]);
+    }
+
+    async activeSongForTournament(tournamentId: number, songId: number): Promise<SongRefDto | null> {
+        const songs = await this.dataSource.query<SongRefDto[]>(
+            `${ACTIVE_TOURNAMENT_SONGS_BASE}
+             AND so."id" = $2`,
+            [tournamentId, songId],
+        );
+        return songs[0] ?? null;
     }
 
     /** Whether a match exists, for the callers that only need to refuse when it does not. */

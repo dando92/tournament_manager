@@ -4,6 +4,7 @@ import { divisionKeys } from "@/features/division/api/division.keys";
 import { participantKeys } from "@/features/participant/api/participant.keys";
 import { songKeys } from "@/features/song/api/song.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
+import { lobbyControlKeys } from "@/features/tournament/api/lobbies.api";
 
 type TournamentUpdateMessage = {
   tournamentId: number;
@@ -89,11 +90,13 @@ export function staleAfterUpdate(message: TournamentSocketMessage): QueryKey[] {
         divisionKeys.summary(message.data.divisionId),
         matchKeys.byPhaseGroup(message.data.phaseGroupId),
         matchKeys.byDivision(message.data.divisionId),
+        lobbyControlKeys.options(message.data.tournamentId),
       ];
     case "MatchUpdate":
       return [
         matchKeys.byPhaseGroup(message.data.phaseGroupId),
         matchKeys.byDivision(message.data.divisionId),
+        lobbyControlKeys.options(message.data.tournamentId),
       ];
     default:
       return [];

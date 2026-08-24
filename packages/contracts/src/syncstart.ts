@@ -55,6 +55,26 @@ export interface SyncStartLobbiesDto {
   lobbies: SyncStartLobbyStatusDto[];
 }
 
+export interface LobbyControlSongDto {
+  id: number;
+  title: string;
+}
+
+export interface LobbyControlOptionsDto {
+  lobbies: SyncStartLobbyStatusDto[];
+  songs: LobbyControlSongDto[];
+}
+
+export interface LobbyControlCommandRequest {
+  songId: number;
+}
+
+export interface SyncStartLobbySongCommandRequest {
+  tournamentId: number;
+  lobbyId: string;
+  songPath: string;
+}
+
 export interface ConnectedSyncStartLobbyDto {
   id: string;
 }

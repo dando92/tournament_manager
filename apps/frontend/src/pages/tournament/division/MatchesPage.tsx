@@ -10,6 +10,7 @@ import StatusIcon from "@/shared/components/ui/StatusIcon";
 import CreateCard from "@/shared/components/ui/CreateCard";
 import { poolStatus } from "@/features/tournament/model/treeStatus";
 import LiveNowPanel from "@/features/live/ui/LiveNowPanel";
+import LobbyControlCard from "@/features/tournament/ui/lobbies/LobbyControlCard";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 /**
@@ -147,7 +148,11 @@ export default function DivisionMatchesPage() {
         ))}
       </div>
 
-      {tournamentId !== undefined && <LiveNowPanel tournamentId={tournamentId} controls={controls} />}
+      {tournamentId !== undefined && (
+        controls
+          ? <LobbyControlCard tournamentId={tournamentId} />
+          : <LiveNowPanel tournamentId={tournamentId} controls={controls} />
+      )}
 
       <CreateMatchModal
         open={matchCreation.createMatchOpen}

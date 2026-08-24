@@ -1,9 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type {
   CreatedSyncStartLobbyDto,
   SyncStartServerStatusDto,
   SyncStartLobbiesDto,
+  LobbyControlOptionsDto,
 } from '@tournament-manager/contracts';
+import { MatchQueries } from '@match/match.queries';
 import {
   SYNCSTART_CLIENT,
   type SyncStartClient,
@@ -14,6 +16,7 @@ export class TournamentSyncStartService {
   constructor(
     @Inject(SYNCSTART_CLIENT)
     private readonly client: SyncStartClient,
+    private readonly matches: MatchQueries,
   ) {}
 
   configureTournament(
@@ -68,6 +71,32 @@ export class TournamentSyncStartService {
 
   disconnectLobby(tournamentId: number, lobbyId: string): Promise<void> {
     return this.client.disconnectLobby(tournamentId, lobbyId);
+  }
+
+  async controlOptions(tournamentId: number): Promise<LobbyControlOptionsDto> {
+    const [lobbies, songs] = await Promise.all([
+      this.client.listLobbies(tournamentId),
+      this.matches.activeSongsForTournament(tournamentId),
+    ]);
+    return { lobbies: lobbies.lobbies, songs };
+  }
+
+  async selectSong(tournamentId: number, lobbyId: string, songId: number): Promise<void> {
+    const songPath = await this.activeSongPath(tournamentId, songId);
+    await this.client.selectSong({ tournamentId, lobbyId, songPath });
+  }
+
+  async startSong(tournamentId: number, lobbyId: string, songId: number): Promise<void> {
+    const songPath = await this.activeSongPath(tournamentId, songId);
+    await this.client.startSong({ tournamentId, lobbyId, songPath });
+  }
+
+  private async activeSongPath(tournamentId: number, songId: number): Promise<string> {
+    const song = await this.matches.activeSongForTournament(tournamentId, songId);
+    if (!song) {
+      throw new BadRequestException(`Song ${songId} is not assigned to an active match in tournament ${tournamentId}`);
+    }
+    return song.title;
   }
 }
 

@@ -60,8 +60,12 @@ export class SyncStartClient implements LobbySessionOwner {
     return this.connectLobbySession(session);
   }
 
-  async ChangeSong(): Promise<void> {
-    throw new Error("ChangeSong is not implemented");
+  ChangeSong(lobbyCode: string, songPath: string): Promise<void> {
+    return this.lobbySession(lobbyCode).changeSong(songPath);
+  }
+
+  StartSong(lobbyCode: string, songPath: string): Promise<void> {
+    return this.lobbySession(lobbyCode).startSong(songPath);
   }
 
   ConnectToServer() {
@@ -157,6 +161,12 @@ export class SyncStartClient implements LobbySessionOwner {
     for (const [lobbyCode, registered] of this.lobbySessionsByCode) {
       if (registered === session) this.lobbySessionsByCode.delete(lobbyCode);
     }
+  }
+
+  private lobbySession(lobbyCode: string): LobbySession {
+    const session = this.lobbySessionsByCode.get(lobbyCode.toUpperCase());
+    if (!session) throw new Error(`Lobby ${lobbyCode} is not connected`);
+    return session;
   }
 }
 

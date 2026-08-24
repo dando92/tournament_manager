@@ -84,6 +84,14 @@ export class TournamentSyncStartRegistry implements OnApplicationShutdown {
     this.runtime(tournamentId).disconnectLobby(lobbyId);
   }
 
+  selectSong(tournamentId: number, lobbyId: string, songPath: string): Promise<void> {
+    return this.runtime(tournamentId).selectSong(lobbyId, songPath);
+  }
+
+  startSong(tournamentId: number, lobbyId: string, songPath: string): Promise<void> {
+    return this.runtime(tournamentId).startSong(lobbyId, songPath);
+  }
+
   onApplicationShutdown(): void {
     for (const runtime of this.runtimes.values()) runtime.close();
     this.runtimes.clear();

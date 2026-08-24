@@ -11,6 +11,8 @@ describe("TournamentSyncStartRegistry", () => {
     SpectateLobby: jest.fn().mockResolvedValue({ lobbyId: "ABCD", lobbyCode: "ABCD" }),
     CreateLobby: jest.fn().mockResolvedValue({ lobbyId: "ABCD", lobbyCode: "ABCD" }),
     LeaveLobby: jest.fn(),
+    ChangeSong: jest.fn().mockResolvedValue(undefined),
+    StartSong: jest.fn().mockResolvedValue(undefined),
   });
 
   it("creates an isolated runtime per tournament and delegates operations", async () => {
@@ -48,6 +50,8 @@ describe("TournamentSyncStartRegistry", () => {
       lobbyName: "Finals",
     })).resolves.toEqual({ lobbyId: "ABCD", lobbyCode: "ABCD" });
     registry.disconnectLobby(7, "ABCD");
+    await registry.selectSong(7, "ABCD", "Pack/Song");
+    await registry.startSong(7, "ABCD", "Pack/Song");
 
     expect(created.SpectateLobby).toHaveBeenCalledWith(
       expect.objectContaining({ lobbyCode: "ABCD", password: "" }),
@@ -56,6 +60,8 @@ describe("TournamentSyncStartRegistry", () => {
       expect.objectContaining({ password: "" }),
     );
     expect(created.LeaveLobby).toHaveBeenCalledWith("ABCD");
+    expect(created.ChangeSong).toHaveBeenCalledWith("ABCD", "Pack/Song");
+    expect(created.StartSong).toHaveBeenCalledWith("ABCD", "Pack/Song");
   });
 
   it("keeps unconfigured tournaments independent", async () => {

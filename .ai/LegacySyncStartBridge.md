@@ -10,8 +10,9 @@ Tournament Manager as if it were a SyncStart server, so a tournament can be run
 on legacy cabinets without the application knowing that the game is legacy.
 
 It is a compatibility adapter and not a second SyncStart implementation. It
-reproduces the behaviour Tournament Manager observes and nothing else: no lobby
-manager, no machine-to-machine song selection, no synchronized start.
+reproduces the behaviour Tournament Manager observes and the two operator
+commands Tournament Manager needs: selecting a song and releasing synchronized
+gameplay start.
 
 Reference sources for the two ends it joins:
 
@@ -30,10 +31,10 @@ Reference sources for the two ends it joins:
   This is a deliberate limitation of the current scope: with two cabinets
   playing at once, the second one's `P1` overwrites the first one's. Splitting
   lobbies by source address is the change to make if a venue needs it.
-- Nothing is sent back to the cabinets. Tournament Manager never asks a lobby to
-  change song — `SyncStartClient.ChangeSong` throws — so the bridge is a
-  listener, and the legacy `SONG` and `START` opcodes it could broadcast are out
-  of scope.
+- Tournament Manager may send `changeSong` and `startSong` over the attached
+  lobby WebSocket. The bridge broadcasts the corresponding legacy datagram to
+  every cabinet on the local segment and acknowledges only after the UDP send
+  completes.
 
 ## Legacy UDP protocol
 
@@ -48,6 +49,11 @@ The first byte of a datagram is the opcode and the rest is UTF-8.
 | `0x04` | Marathon song ready     | Logged at debug and ignored.                                                                                    |
 | `0x05` | Final song score        | Records that player's final state and arms the completion.                                                      |
 | `0x06` | Final course score      | The same, with the course identifier the cabinet sent.                                                          |
+
+Outbound commands use the same framing: the first byte is the opcode and the
+remaining UTF-8 payload is the `Pack/SongFolder` identifier. `SONG` is `0x01`.
+`START` is `0x00` and must carry the same identifier as the song the cabinet is
+waiting to start; ITGmania ignores a start for another song.
 
 A score payload has exactly 26 `|`-separated fields — `ALL_ITEMS_LENGTH` on the
 cabinet — in this order:
@@ -154,6 +160,8 @@ Snapshots are published only when they differ from the last one sent.
 | `searchLobby`   | Answers `lobbySearched` with the one virtual lobby, so it can be picked from the lobby list.              |
 | `lobbyState`    | Answers with the current snapshot.                                                                        |
 | `leaveLobby`    | Detaches and answers `lobbyLeft`.                                                                         |
+| `changeSong`    | For an attached client, broadcasts `SONG + songPath` over UDP and answers `responseStatus`.              |
+| `startSong`     | For an attached client, broadcasts `START + songPath` over UDP and answers `responseStatus`.             |
 | anything else   | Answers `responseStatus` with `success: false`.                                                           |
 
 Outgoing events are `lobbyState`, `lobbySearched`, `lobbyLeft` and
@@ -184,7 +192,7 @@ ITGmania sends to `INADDR_BROADCAST`, which is delivered on the local link and
 never routed. The bridge must therefore run on the same network segment as the
 cabinets, and the container must actually receive link-local broadcast:
 
-- **Published port** (the checked-in default): the Docker host's forwarder binds
+- **Published port**: the Docker host's forwarder binds
   `53000/udp` and hands datagrams to the container. This is the only mode that
   also keeps the bridge on the Compose network, where the SyncStart service
   reaches it as `ws://legacy-syncstart-bridge:1337`. Whether a given host
@@ -195,18 +203,22 @@ cabinets, and the container must actually receive link-local broadcast:
 - **Host networking**: on a Linux Docker host, replacing the `ports` section
   with `network_mode: host` is the reliable mode. The bridge is then reachable
   at the host address instead of the service name.
-- **On the host**: `npm run local_sync:bridge` runs the same bridge as a plain
-  Node process outside Docker, and the tournament points at
-  `ws://host.docker.internal:1337`. This is the fallback when neither container
-  mode delivers broadcast.
+- **On the host** (the checked-in local default): `npm run local_sync:up` starts
+  the detached Compose stack and then runs the bridge as a plain Node process.
+  The tournament points at `ws://host.docker.internal:1337`. The bridge remains
+  in the foreground until interrupted, while `npm run local:down` stops the
+  detached application stack. Run `npm run local_sync:bridge` directly when the
+  stack is already running.
 
-The mode in use must be verified against a real cabinet: opcodes `0x01`, `0x02`
-and `0x05` have to reach the service without manual forwarding.
+The mode in use must be verified against a real cabinet: incoming opcodes
+`0x01`, `0x02` and `0x05` have to reach the service without manual forwarding,
+and outbound `0x01` and `0x00` have to reach every intended cabinet.
 
 ## Testing
 
 `npm run test --workspace=@tournament-manager/legacy-syncstart-bridge` covers the
-parser, the score and judgment mapping, the session state machine and the
-WebSocket contract, including the snapshot order a completed song depends on.
-What unit tests cannot cover is delivery: a real cabinet on the venue LAN, and a
-complete two-player song recorded as two standings.
+parser, the score and judgment mapping, the session state machine, command
+datagram framing and the WebSocket contract, including the snapshot order a
+completed song depends on. What unit tests cannot cover is LAN delivery: a real
+cabinet must move its wheel, receive synchronized start, and complete a
+two-player song recorded as two standings.

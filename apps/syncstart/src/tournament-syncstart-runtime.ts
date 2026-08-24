@@ -73,6 +73,14 @@ export class TournamentSyncStartRuntime {
     this.client.LeaveLobby(lobbyId);
   }
 
+  selectSong(lobbyId: string, songPath: string): Promise<void> {
+    return this.client.ChangeSong(lobbyId, songPath);
+  }
+
+  startSong(lobbyId: string, songPath: string): Promise<void> {
+    return this.client.StartSong(lobbyId, songPath);
+  }
+
   close(): void {
     this.client.DisconnectAll();
     this.catalog.clear();

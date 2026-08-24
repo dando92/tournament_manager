@@ -48,6 +48,7 @@ export class LegacyUdpServer {
       this.socket.once("error", reject);
       this.socket.bind(this.config.udpPort, () => {
         this.socket.off("error", reject);
+        this.socket.setBroadcast(true);
         this.logger.info("Listening for legacy SyncStart broadcasts", {
           port: this.config.udpPort,
           allowedSources: this.config.udpAllowedSources,
@@ -59,6 +60,24 @@ export class LegacyUdpServer {
 
   close(): Promise<void> {
     return new Promise((resolve) => this.socket.close(() => resolve()));
+  }
+
+  selectSong(songPath: string): Promise<void> {
+    return this.broadcast(LEGACY_OPCODE.song, songPath);
+  }
+
+  startSong(songPath: string): Promise<void> {
+    return this.broadcast(LEGACY_OPCODE.start, songPath);
+  }
+
+  private broadcast(opcode: number, songPath: string): Promise<void> {
+    const datagram = legacyDatagram(opcode, songPath);
+    return new Promise((resolve, reject) => {
+      this.socket.send(datagram, this.config.udpPort, "255.255.255.255", (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
   }
 
   private handleDatagram(buffer: Buffer, remote: RemoteInfo): void {
@@ -130,4 +149,11 @@ export class LegacyUdpServer {
       this.config.udpAllowedSources.includes(source)
     );
   }
+}
+
+export function legacyDatagram(opcode: number, payload: string): Buffer {
+  const encoded = Buffer.from(payload, "utf8");
+  if (encoded.length === 0) throw new Error("Song path is required");
+  if (encoded.length > 1023) throw new Error("Song path exceeds the legacy datagram limit");
+  return Buffer.concat([Buffer.from([opcode]), encoded]);
 }

@@ -1,0 +1,431 @@
+# Match Control
+
+## Purpose
+
+Match Control is the tournament-level operational page that defines and runs
+ordered match flows. A tournament may run several flows concurrently, for
+example on separate cabinets or stages. Each flow owns an ordered queue and
+automatically moves its active match forward when the current match becomes
+ready to commit.
+
+Match Control does not commit results. An operator remains responsible for
+reviewing and committing every result.
+
+The lobby-control card is displayed beside a flow's current match as an
+independent operator tool. There is deliberately no persisted or inferred
+binding between a flow, a match, and a SyncStart lobby. The operator continues
+to select the lobby and an available song explicitly.
+
+## Scope and invariants
+
+- Flows belong to a tournament.
+- A tournament may have multiple flows in progress concurrently.
+- A match may belong to at most one flow.
+- Match order is authoritative and persisted in PostgreSQL.
+- A flow never skips a blocked match to start a later one.
+- `Unassigned` is a derived collection of tournament matches that belong to no
+  flow. It is visible only while editing an inactive flow.
+- The flow editor is available only while the flow is `inactive`.
+- Renaming, deleting, assigning, and reordering a flow are editor operations and
+  are therefore allowed only while it is `inactive`.
+- A completed flow is terminal and immutable.
+- A completed flow may be archived to hide it from the default control-room
+  view. Archiving does not change its entries or match assignments.
+- Manual match activation and deactivation are unavailable while any flow in
+  the tournament is running or paused. This is enforced by the API as well as
+  hidden or disabled in the interface.
+- Before a flow activates a match, no player in that match may be present in
+  another active match in the tournament.
+
+## Lifecycle
+
+The persisted lifecycle state is:
+
+```text
+inactive --start--------------------> running
+    ^                                   |  |
+    |                                   |  +-- stale: remains running
+    |                                   |
+    |                                   +--pause--> paused
+    |                                                |
+    +----------------stop-----------------------------+
+
+running --no remaining entries--------> completed
+```
+
+The allowed states are:
+
+- `inactive`: editable and startable; no automatic advancement is armed.
+- `running`: automatic advancement is armed.
+- `paused`: the current match remains active, but automatic advancement is
+  suppressed.
+- `completed`: the queue has been exhausted; the flow is immutable and cannot
+  be restarted or used as the target of `Start from here`.
+
+`stale` is not a lifecycle state. It is a diagnostic condition carried by a
+running flow. A stale flow remains armed and retries automatically when a
+relevant persisted change triggers recalculation. Pausing is deliberate and
+prevents automatic advancement even when an event resolves the condition that
+would otherwise make the flow progress.
+
+## Commands
+
+### Start
+
+Starting an inactive flow arms it and recalculates from its current entry or
+from the first entry when it has no cursor. The runner:
+
+1. moves past committed matches;
+2. deactivates and moves past matches that are already ready to commit;
+3. activates the first playable match;
+4. remains running and records a stale reason when that match is not playable;
+5. completes the flow when no entries remain.
+
+Starting does not commit, reopen, or edit a match.
+
+### Pause and resume
+
+Pausing a running flow preserves its current active match and suppresses all
+automatic advancement. Events may invalidate the UI projection, but they do
+not move the cursor while the flow is paused.
+
+Resuming changes the flow back to running and immediately recalculates it. If
+the current match became ready to commit while paused, resume deactivates it and
+attempts the next entry.
+
+### Stop
+
+Stopping a running or paused flow deactivates its current match, preserves its
+cursor, clears the active stale diagnosis, and returns it to `inactive`. The
+flow may then be edited, started again, or started from another entry.
+
+### Start from here
+
+`Start from here` is available from a row's context menu or actions menu only
+while the flow is inactive. It moves the cursor to the selected entry and then
+applies the ordinary Start algorithm. It does not change queue order and does
+not reopen completed matches.
+
+### Complete and archive
+
+A flow becomes completed automatically when recalculation finds no remaining
+entry. Completed flows cannot be edited, restarted, or used with `Start from
+here`.
+
+An explicit Archive action is available only on a completed flow. Archived
+flows are hidden by default and remain immutable. `Show archived` reveals them,
+and Unarchive makes them visible in the ordinary completed list without
+changing their terminal state.
+
+## Recalculation
+
+Recalculation is synchronous application behavior owned by the API. Redis
+Pub/Sub events are replaceable UI invalidations and must not drive the runner.
+
+For a running flow, one recalculation:
+
+1. locks the authoritative flow row;
+2. starts at the current entry, or the first entry when the cursor is empty;
+3. moves past committed matches;
+4. deactivates and moves past matches that are ready to commit;
+5. evaluates the first match that still needs to be played;
+6. activates it and clears stale details when it is playable;
+7. otherwise keeps the flow running at that entry and persists the stale code
+   and structured details;
+8. changes the flow to completed when no entries remain.
+
+The runner must be idempotent. Repeated or concurrent recalculations must not
+activate two successors. PostgreSQL row locking on the flow is sufficient; the
+feature does not justify a distributed lock, durable queue, outbox, or generic
+application event bus.
+
+The runner may pass several settled entries in one recalculation. It never
+passes an unplayable entry.
+
+## Eligibility and stale reasons
+
+Eligibility is one pure backend rule consumed by the runner. Its result is one
+of:
+
+- `eligible`: the match can be activated;
+- `passed`: the match is committed or ready to commit and the cursor may move;
+- `stale`: the runner must remain on the match and persist the reason.
+
+Initial stable stale codes are:
+
+| Code | Meaning |
+| --- | --- |
+| `NO_ENTRANTS` | The match has no player entrant. |
+| `NOT_ENOUGH_ENTRANTS` | The match has exactly one player entrant. |
+| `UNRESOLVED_ENTRANTS` | Expected entrant slots are not resolved. The exact derivation remains open. |
+| `NO_ROUNDS` | The match has no playable or hand-scored round. |
+| `MATCH_ALREADY_ACTIVE` | The queued match is already active outside the transition the runner owns. |
+| `ENTRANTS_ALREADY_ACTIVE` | At least one player is present in another active match. |
+| `MATCH_REMOVED` | The current entry no longer resolves to a match. |
+| `MATCH_OUTSIDE_TOURNAMENT` | The match no longer belongs to the flow's tournament. |
+| `TOURNAMENT_CLOSED` | The tournament lifecycle prevents activation. The close/reopen behavior remains open. |
+| `CURRENT_MATCH_CHANGED_EXTERNALLY` | A protected current-match invariant changed outside flow commands. |
+
+The database stores the stable code and structured details such as match id,
+match name, entrant counts, blocking match ids, and blocking player ids. The UI
+renders an operator-facing explanation from them. The diagnosis is cleared as
+soon as recalculation can advance or activate the current entry.
+
+## Recalculation triggers
+
+The application recalculates the affected flow after a persisted change that
+can alter readiness or eligibility:
+
+- a standing is added, updated, or removed;
+- a played score or hand-scored point is written;
+- a round or song is added, replaced, or removed;
+- match entrants are added, removed, replaced, or advanced;
+- an advancement is applied or reverted;
+- a result is committed or reopened;
+- a match is moved or deleted;
+- a match is activated or deactivated through an allowed application command;
+- an advancement rule changes;
+- flow entries are assigned, removed, or reordered;
+- the tournament is closed or reopened.
+
+Commit recalculation occurs after advancement has populated its targets, so the
+runner evaluates the resulting match graph rather than the graph before the
+commit.
+
+The API calls a narrow synchronous recalculation collaborator from the commands
+that own these writes. The runner does not call `MatchCommands`, avoiding a
+dependency cycle. It owns the cross-aggregate transaction that updates the flow
+and the `active` flags selected by the flow transition.
+
+There is a small crash window between an existing match command's transaction
+and its subsequent flow recalculation. Startup reconciliation of all running
+flows and the next relevant command repair it. Do not add durable messaging
+unless reliability requirements change.
+
+## Manual activation
+
+`PUT /matches/:matchId/active` refuses both activation and deactivation while
+the tournament has a running or paused flow. Stale flows are running and
+therefore enforce the same rule. The response is `409` with a stable code and
+the flow ids responsible for the restriction.
+
+Operators use Pause, Resume, or Stop rather than changing a flow-owned active
+match behind the runner.
+
+## Rollback confirmation
+
+A mutation that can invalidate the current progress of a running or paused
+flow requires backend-enforced confirmation. Without confirmation the API
+answers `409 MATCH_FLOW_STOP_CONFIRMATION_REQUIRED`, naming the affected flow
+and match. The client explains that continuing will stop the flow and repeats
+the command only after explicit confirmation.
+
+The confirmed operation:
+
+1. stops the flow;
+2. deactivates its current match;
+3. applies the requested match mutation;
+4. leaves the flow inactive at the preserved cursor;
+5. records the interruption reason for the response and UI notification.
+
+The frontend is not the authority for this protection: direct API callers must
+receive the same requirement.
+
+## Persistence model
+
+`match_flow` stores:
+
+- id and tournament foreign key;
+- name;
+- lifecycle status;
+- nullable current-entry foreign key;
+- nullable stale code and structured JSON details;
+- nullable archive timestamp;
+- optimistic concurrency version.
+
+`match_flow_entry` stores:
+
+- id and flow foreign key;
+- match foreign key;
+- dense integer position.
+
+Database constraints enforce one flow per match and one entry per position in a
+flow. Replacing an order is one transaction and includes the version the editor
+read; a stale version answers `409` instead of silently overwriting another
+operator's edit.
+
+## API surface
+
+The planned HTTP surface is:
+
+```text
+GET    /tournaments/:tournamentId/match-flows
+GET    /match-flows/:flowId
+GET    /match-flows/:flowId/editor
+POST   /tournaments/:tournamentId/match-flows
+PATCH  /match-flows/:flowId
+DELETE /match-flows/:flowId
+
+PUT    /match-flows/:flowId/entries
+POST   /match-flows/:flowId/start
+POST   /match-flows/:flowId/pause
+POST   /match-flows/:flowId/resume
+POST   /match-flows/:flowId/stop
+POST   /match-flows/:flowId/start-from/:entryId
+POST   /match-flows/:flowId/archive
+DELETE /match-flows/:flowId/archive
+```
+
+Creation answers `201 { id }`; other successful commands answer `204`. Query
+DTOs include lifecycle state, current entry, queue, archive state, stale code,
+stale details, and the projected match data required by the control room. The
+editor query additionally includes unassigned matches.
+
+Writes publish `ui.match-flow-changed` addressed by tournament and flow. Any
+automatic active-state change also publishes the existing match invalidation.
+
+## Frontend behavior
+
+Match Control is a tournament-level tree destination. It shows one operational
+panel per non-archived flow. A panel contains:
+
+- flow name and lifecycle status;
+- a separate `Waiting` diagnosis when a running flow is stale;
+- the current active match card, or the pending match card while stale;
+- the independent lobby-control card;
+- the next queued matches;
+- Start, Pause, Resume, Stop, Edit, Archive, and context actions allowed by the
+  current state.
+
+The word `Waiting` is used for the operator-facing stale condition. `Paused`
+remains visibly distinct because it was chosen by an operator and cannot
+advance from an event.
+
+The editor is reachable only for an inactive flow. It displays flow entries and
+an Unassigned collection, supports drag-and-drop within the flow and between
+the flow and Unassigned, and also supplies keyboard-accessible move actions.
+Moving a match directly between two flows requires both flows to be inactive.
+
+Completed flows expose Archive. The page hides archived flows by default and
+provides `Show archived`; unarchiving changes visibility only.
+
+## Code organization
+
+The API capability belongs under:
+
+```text
+apps/api/src/tournament/competition/match-flow/
+    match-flow.aggregate.ts
+    match-flow.commands.ts
+    match-flow.controller.ts
+    match-flow.requests.ts
+    match-flow.store.ts
+    match-flow.queries.ts
+    match-flow.runner.ts
+    match-flow.eligibility.ts
+    match-flow.bootstrap.ts
+```
+
+Shared DTOs belong in `packages/contracts/src/match-flow.ts`; TypeORM metadata
+belongs in `packages/persistence/src/entities/`; executable schema changes
+belong in `apps/migrations`.
+
+The frontend capability belongs under `apps/frontend/src/features/match-flow/`
+with `api`, `model`, and `ui` roles. The route page is
+`apps/frontend/src/pages/tournament/MatchControlPage.tsx`.
+
+## Implementation plan
+
+Each phase is a coherent checkpoint. Relevant unit and end-to-end tests pass
+before proceeding, and the migration status records the completed checkpoint
+when implementation begins.
+
+### Phase 1: schema and contracts
+
+- Add `match_flow` and `match_flow_entry` entities and the clean-baseline
+  migration.
+- Add lifecycle, stale-code, stale-detail, control-room, editor, and command
+  contracts.
+- Register persistence metadata and enforce unique match assignment, entry
+  position, archive, and optimistic-version constraints.
+- Add migration coverage.
+
+### Phase 2: aggregate, eligibility, store, and queries
+
+- Implement and unit-test lifecycle transitions, editability, terminal
+  completion, archive rules, cursor behavior, and stale diagnosis ownership.
+- Implement the pure eligibility result without persistence or transport.
+- Implement the aggregate store and transaction-safe order replacement.
+- Implement control-room and editor projections, including derived Unassigned
+  matches.
+- Resolve the expected-entrant rule before closing this phase.
+
+### Phase 3: transactional runner
+
+- Implement row-locked, idempotent recalculation.
+- Apply active-state transitions and cursor/stale changes in one transaction.
+- Detect player overlap with other active matches.
+- Add concurrent recalculation and multi-entry progression tests.
+- Add startup reconciliation for running flows; paused flows remain paused.
+
+### Phase 4: commands, API, and manual-activation guard
+
+- Add CRUD, ordering, Start, Pause, Resume, Stop, Start from here, Archive, and
+  Unarchive commands and routes.
+- Restrict editing to inactive flows and make completed flows terminal.
+- Reject manual activation and deactivation while any flow is running or
+  paused.
+- Publish flow and affected-match invalidations.
+- Add authorization, open-tournament, lifecycle, conflict, and archive API
+  tests.
+
+### Phase 5: match and advancement triggers
+
+- Invoke the narrow recalculator after every readiness and eligibility change.
+- Ensure commit recalculates after advancement and reopen recalculates after
+  revert.
+- Handle match deletion by locating the affected flow before cascade removal.
+- Implement and test backend-enforced rollback confirmation.
+- Resolve and implement the completed-flow rollback policy before closing this
+  phase.
+
+### Phase 6: control-room frontend
+
+- Add the tournament tree destination and route.
+- Build flow panels, lifecycle actions, current/pending match presentation,
+  queue preview, and stale explanations.
+- Reuse the lobby-control card without adding any flow or match binding.
+- Disable manual activation consistently with the API guard.
+- Add Archive, Show archived, and Unarchive behavior.
+
+### Phase 7: flow editor
+
+- Build create, rename, delete, assignment, and persisted ordering workflows.
+- Show Unassigned only inside the inactive-flow editor.
+- Add drag-and-drop and equivalent keyboard move controls.
+- Handle optimistic conflicts with an explicit reload path.
+- Keep completed and paused flows outside the editor.
+
+### Phase 8: integration and operational verification
+
+- Cover parallel running flows, stale recovery, pause/resume, stop/restart,
+  commit-driven entrant resolution, player conflicts, archive visibility, and
+  API restart reconciliation in end-to-end tests.
+- Verify completed-song ingestion advances exactly one eligible flow transition
+  and never commits a result.
+- Verify duplicate recalculation is harmless under multiple API replicas.
+- Update local fixtures and operational documentation with a representative
+  multi-flow tournament.
+
+## Open decisions
+
+Implementation must not silently decide these questions:
+
+- How is the expected entrant count derived for matches that may require more
+  than two players?
+- What happens when an operator attempts to reopen or otherwise roll back a
+  match that belongs to a completed or archived flow?
+- Does closing a tournament leave running flows armed and stale until reopen,
+  or explicitly stop them?
+
+These questions are also tracked in [FunctionalQuestions.md](FunctionalQuestions.md).

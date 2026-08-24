@@ -62,6 +62,24 @@ describe('HttpSyncStartClient', () => {
     );
   });
 
+  it('sends song commands to the encoded lobby route', async () => {
+    http.request.mockReturnValue(of({ status: 204, data: undefined }));
+
+    await client.selectSong({ tournamentId: 7, lobbyId: 'lobby/one', songPath: 'Pack/Song' });
+    await client.startSong({ tournamentId: 7, lobbyId: 'lobby/one', songPath: 'Pack/Song' });
+
+    expect(http.request).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      method: 'POST',
+      url: 'http://syncstart:3002/internal/tournaments/7/lobbies/lobby%2Fone/select-song',
+      data: { songPath: 'Pack/Song' },
+    }));
+    expect(http.request).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      method: 'POST',
+      url: 'http://syncstart:3002/internal/tournaments/7/lobbies/lobby%2Fone/start',
+      data: { songPath: 'Pack/Song' },
+    }));
+  });
+
   it('maps unsuccessful responses to a gateway error', async () => {
     http.request.mockReturnValue(of({ status: 503, data: undefined }));
 

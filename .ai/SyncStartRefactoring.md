@@ -22,6 +22,9 @@ The package must preserve the existing protocol connection topology: one server 
 - `SyncStartClient` is the protocol-level coordinator for one tournament and SyncStart server URL. It creates, indexes, removes, and shuts down server and lobby session objects without mutating their internal state.
 - `SyncStartServerSession` owns the server WebSocket connection, connection-status lifecycle, pending lobby-search correlation, timeout, and protocol response parsing.
 - `LobbySession` owns exactly one lobby: its create/spectate mode, credentials, identity, initial connection correlation, per-lobby WebSocket connection, connection lifecycle, protocol message handling, and volatile lobby state.
+- `LobbySession` also owns command correlation for that lobby. Song-selection
+  and synchronized-start commands wait for a matching `responseStatus`, reject
+  concurrent commands of the same kind, and fail when the session disconnects.
 - `LobbyStateInterpreter` receives `lobbyState` snapshots for one session and turns state transitions into normalized events. It owns detection of selected songs, player readiness, gameplay updates, completed songs, and duplicate-completion suppression.
 - `LobbyConnection` owns the low-level WebSocket lifecycle, serialized message delivery, timeout, and optional reconnect behavior.
 - `LobbyEventDispatcher` forwards normalized protocol events to supplied observers. It does not know application services.

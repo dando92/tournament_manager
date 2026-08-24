@@ -221,3 +221,26 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 - Question: should the judgment model keep roll fields it never receives from a legacy cabinet and never displays, or should the legacy payload be extended to send the two counts apart? Extending the cabinet is the only lossless answer and requires a game build.
 - Evidence: `tools/legacy-syncstart-bridge/src/domain/judgment-mapper.ts`, `packages/contracts/src/syncstart.ts` (`LobbyJudgmentsDto`).
 - Rule: do not present the combined total as a hold-only count anywhere it could be read as exact.
+
+### FQ-027 — Expected entrants and rollback after a match flow completes
+
+- Status: Open. Raised while specifying tournament Match Control.
+- Observed behavior: a running flow must remain stale rather than activate a
+  match that cannot yet be played. Zero entrants and exactly one player are
+  unambiguous, but generated matches may require more than two players and the
+  match does not currently carry one authoritative expected-entrant count.
+  Separately, a completed flow is terminal and immutable, while its matches can
+  currently be reopened through the ordinary match command. Reopening one can
+  invalidate the historical sequence without any lifecycle transition the
+  completed flow is allowed to make.
+- Questions: How is the expected entrant count derived for matches with more
+  than two slots? Should reopening or otherwise rolling back a match in a
+  completed or archived flow be refused, confirmed while leaving the historical
+  flow unchanged, or represented by a new flow-level action? When a tournament
+  closes, do running flows remain armed and stale until reopen, or are they
+  explicitly stopped?
+- Evidence: [MatchControl.md](MatchControl.md),
+  `apps/api/src/tournament/competition/match/match.aggregate.ts`, and
+  `apps/api/src/tournament/structure/advancement/advancement.runner.ts`.
+- Rule: do not implement expected-slot inference, completed-flow rollback, or
+  tournament-close flow behavior until the user selects the intended rules.

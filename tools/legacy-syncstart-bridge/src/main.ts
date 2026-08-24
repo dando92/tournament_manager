@@ -15,17 +15,20 @@ async function main(): Promise<void> {
   const config = readConfig();
   const logger = new Logger(config.logLevel);
 
+  let server: SyncStartCompatibilityServer;
   const lobby = new LegacyBridgeLobby(config, logger, (state) =>
     server.broadcast(state),
   );
-  const server = new SyncStartCompatibilityServer(config, logger, lobby);
-
   const udp = new LegacyUdpServer(config, logger, {
     onSong: (song) => lobby.handleSong(song),
     onStart: (song) => lobby.handleStart(song),
     onScore: (message) => lobby.handleScore(message),
     onFinalScore: (message, payload) =>
       lobby.handleFinalScore(message, payload),
+  });
+  server = new SyncStartCompatibilityServer(config, logger, lobby, {
+    selectSong: (songPath) => udp.selectSong(songPath),
+    startSong: (songPath) => udp.startSong(songPath),
   });
 
   await udp.listen();

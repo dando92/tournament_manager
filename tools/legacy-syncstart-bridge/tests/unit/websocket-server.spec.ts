@@ -93,12 +93,17 @@ describe("SyncStartCompatibilityServer", () => {
   let server: SyncStartCompatibilityServer;
   let port: number;
   const clients: Client[] = [];
+  const commands = {
+    selectSong: jest.fn().mockResolvedValue(undefined),
+    startSong: jest.fn().mockResolvedValue(undefined),
+  };
 
   async function start(password = ""): Promise<void> {
     server = new SyncStartCompatibilityServer(
       { ...baseConfig, lobbyPassword: password },
       new Logger("error"),
       lobbyView(password),
+      commands,
     );
     port = await server.listening();
   }
@@ -112,6 +117,7 @@ describe("SyncStartCompatibilityServer", () => {
   afterEach(async () => {
     for (const connected of clients.splice(0)) connected.close();
     await server.close();
+    jest.clearAllMocks();
   });
 
   it("answers createLobby with the state of the virtual lobby", async () => {
@@ -237,5 +243,26 @@ describe("SyncStartCompatibilityServer", () => {
       event: "responseStatus",
       data: { event: "selectSong", success: false },
     });
+  });
+
+  it("acknowledges song selection and start after dispatching the legacy commands", async () => {
+    await start();
+    const connected = await client();
+    connected.send({ event: "createLobby", data: { machine: {}, password: "" } });
+    await connected.next();
+
+    connected.send({ event: "changeSong", data: { songPath: "Pack/Song" } });
+    await expect(connected.next()).resolves.toEqual({
+      event: "responseStatus",
+      data: { event: "changeSong", success: true },
+    });
+    connected.send({ event: "startSong", data: { songPath: "Pack/Song" } });
+    await expect(connected.next()).resolves.toEqual({
+      event: "responseStatus",
+      data: { event: "startSong", success: true },
+    });
+
+    expect(commands.selectSong).toHaveBeenCalledWith("Pack/Song");
+    expect(commands.startSong).toHaveBeenCalledWith("Pack/Song");
   });
 });
