@@ -5,7 +5,7 @@ import { Score } from '@tournament-manager/persistence';
 import { ScoreDto } from '@tournament-manager/contracts';
 
 /**
- * What a player has already run on a song.
+ * What a player has already run on a song and can still assign.
  *
  * Its one caller is the standing dialog, which offers those runs instead of
  * asking for a percentage that has been entered before. It knows the song and
@@ -19,13 +19,15 @@ export class ScoreQueries {
         private readonly scoreRepository: Repository<Score>,
     ) {}
 
-    /** Newest first, which is the order the dialog offers them in. */
+    /** Newest first, excluding evidence already consumed by another standing. */
     async history(songId: number, playerId: number): Promise<ScoreDto[]> {
-        const scores = await this.scoreRepository.find({
-            where: { song: { id: songId }, player: { id: playerId } },
-            select: { id: true, percentage: true, isFailed: true },
-            order: { id: 'DESC' },
-        });
+        const scores = await this.scoreRepository.createQueryBuilder('score')
+            .select(['score.id', 'score.percentage', 'score.isFailed'])
+            .where('score.songId = :songId', { songId })
+            .andWhere('score.playerId = :playerId', { playerId })
+            .andWhere('NOT EXISTS (SELECT 1 FROM "standing" standing WHERE standing."scoreId" = score.id)')
+            .orderBy('score.id', 'DESC')
+            .getMany();
 
         return scores.map((score) => ({
             id: score.id,

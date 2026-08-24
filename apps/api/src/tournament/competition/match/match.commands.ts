@@ -226,7 +226,7 @@ export class MatchCommands {
 
         const player = await this.store.loadPlayer(playerId);
         const score = input.scoreId
-            ? await this.store.loadScore(input.scoreId)
+            ? await this.store.loadAssignableScore(input.scoreId, roundId, playerId)
             : this.draftScore(player, match.songOf(roundId), input);
 
         match.upsertScore(roundId, player, score, this.scoringSystems);

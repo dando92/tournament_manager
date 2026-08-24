@@ -32,6 +32,8 @@ describe('Score and match-result persistence (e2e)', () => {
   let playerRepository: Repository<Player>;
   let songRepository: Repository<Song>;
   let scoreRepository: Repository<Score>;
+  let roundRepository: Repository<Round>;
+  let standingRepository: Repository<Standing>;
   let matchRepository: Repository<Match>;
   let matchResultRepository: Repository<MatchResult>;
   let participantRepository: Repository<Participant>;
@@ -67,6 +69,8 @@ describe('Score and match-result persistence (e2e)', () => {
     playerRepository = moduleFixture.get(getRepositoryToken(Player));
     songRepository = moduleFixture.get(getRepositoryToken(Song));
     scoreRepository = moduleFixture.get(getRepositoryToken(Score));
+    roundRepository = moduleFixture.get(getRepositoryToken(Round));
+    standingRepository = moduleFixture.get(getRepositoryToken(Standing));
     matchRepository = moduleFixture.get(getRepositoryToken(Match));
     matchResultRepository = moduleFixture.get(getRepositoryToken(MatchResult));
     participantRepository = moduleFixture.get(getRepositoryToken(Participant));
@@ -78,7 +82,7 @@ describe('Score and match-result persistence (e2e)', () => {
     await dropTestDatabase(database);
   });
 
-  it('offers the runs one player already has on one song, newest first', async () => {
+  it('offers the unassigned runs one player already has on one song, newest first', async () => {
     const player = await playerRepository.save(
       playerRepository.create({ playerName: 'Persistence Player' }),
     );
@@ -112,9 +116,14 @@ describe('Score and match-result persistence (e2e)', () => {
       scoreRepository.create({ player, song: otherSong, percentage: 50, isFailed: false }),
     );
 
+    const match = await matchRepository.save(
+      matchRepository.create({ name: 'Score Owner', scoringSystem: 'PlacementPointsWithFailZero' }),
+    );
+    const round = await roundRepository.save(roundRepository.create({ match, song }));
+    await standingRepository.save(standingRepository.create({ round, player, score: first, points: 0 }));
+
     await expect(scoreQueries.history(song.id, player.id)).resolves.toEqual([
       { id: second.id, percentage: 75, isFailed: true },
-      { id: first.id, percentage: 98.5, isFailed: false },
     ]);
   });
 

@@ -287,6 +287,39 @@ describe('Match writes (e2e)', () => {
     expect(removed.rounds[0].standings[0].points).toBe(0);
   });
 
+  it('offers only unassigned scores and reports reuse as a conflict', async () => {
+    const source = await createMatch('Score Source Match', [firstEntrantId], [songId]);
+    const target = await createMatch('Score Target Match', [firstEntrantId], [songId]);
+    const playerId = source.entrants[0].participants[0].player.id;
+
+    await request(app.getHttpServer())
+      .put(`/rounds/${source.rounds[0].id}/scores/${playerId}`)
+      .send({ percentage: 99, isFailed: false })
+      .expect(204);
+
+    const scoreId = (await readMatch(source.id)).rounds[0].standings[0].score.id;
+    const available = await request(app.getHttpServer())
+      .get('/scores')
+      .query({ songId, playerId })
+      .expect(200);
+    expect(available.body).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: scoreId })]));
+
+    await request(app.getHttpServer())
+      .put(`/rounds/${source.rounds[0].id}/scores/${playerId}`)
+      .send({ percentage: 99, isFailed: false, scoreId })
+      .expect(204);
+
+    const conflict = await request(app.getHttpServer())
+      .put(`/rounds/${target.rounds[0].id}/scores/${playerId}`)
+      .send({ percentage: 99, isFailed: false, scoreId })
+      .expect(409);
+    expect(conflict.body).toMatchObject({
+      code: 'SCORE_ALREADY_ASSIGNED',
+      scoreId,
+      roundId: source.rounds[0].id,
+    });
+  });
+
   it('persists a scoring-system change and recalculates completed rounds', async () => {
     const match = await createMatch('Scoring Strategy Match', [firstEntrantId, secondEntrantId], [songId]);
     const roundId = match.rounds[0].id;
