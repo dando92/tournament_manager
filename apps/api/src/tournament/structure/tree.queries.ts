@@ -79,6 +79,37 @@ type PendingCountRow = {
     pendingMatchCount: number;
 };
 
+type ProgressedCountRow = {
+    phaseGroupId: number;
+    progressedMatchCount: number;
+};
+
+/**
+ * How many matches carry evidence that competition has started.
+ *
+ * Players, songs and bracket slots are preparation. A played score or positive
+ * hand-scored standing is progress, as is a committed result.
+ */
+const progressedMatchesInScope = (scope: TreeScope): string => `
+    SELECT m."phaseGroupId" AS "phaseGroupId", COUNT(*)::int AS "progressedMatchCount"
+    FROM "match" m
+    JOIN "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN "phase" ph ON ph."id" = pg."phaseId"
+    JOIN "division" d ON d."id" = ph."divisionId"
+    WHERE ${SCOPE_PREDICATE[scope]}
+      AND (
+          m."matchResultId" IS NOT NULL
+          OR EXISTS (
+              SELECT 1
+              FROM "round" r
+              JOIN "standing" s ON s."roundId" = r."id"
+              WHERE r."matchId" = m."id"
+                AND (s."scoreId" IS NOT NULL OR s."points" > 0)
+          )
+      )
+    GROUP BY m."phaseGroupId"
+`;
+
 /**
  * How many matches in each pool are waiting on a person.
  *
@@ -174,9 +205,9 @@ const ADVANCEMENT_RULES_FROM_PHASE_GROUPS = `
  * The read that spans division, phase and pool.
  *
  * Three routes ask the same question of different amounts of the tree, so one
- * projection answers all three and each read costs three queries whatever its
- * scope holds: the structure, the pending counts of every pool in it, and the
- * advancement rules of all of them together.
+ * projection answers all three and each read costs four queries whatever its
+ * scope holds: the structure, progressed and pending match counts for every
+ * pool in it, and the advancement rules of all of them together.
  *
  * It projects and nothing else: it does not write, does not publish, and does
  * not call a service.
@@ -217,7 +248,8 @@ export class TreeQueries {
         const rows: StructureRow[] = await this.dataSource.query(structureInScope(scope), [id]);
         if (rows.length === 0) return [];
 
-        const [pending, rules] = await Promise.all([
+        const [progressed, pending, rules] = await Promise.all([
+            this.progressedCounts(scope, id),
             this.pendingCounts(scope, id),
             this.advancementRulesOf(rows.map((row) => row.phaseGroupId).filter((value): value is number => value !== null)),
         ]);
@@ -239,6 +271,7 @@ export class TreeQueries {
                 bracketType: row.bracketType,
                 state: row.state!,
                 matchCount: row.matchCount,
+                progressedMatchCount: progressed.get(row.phaseGroupId) ?? 0,
                 pendingMatchCount: pending.get(row.phaseGroupId) ?? 0,
                 advancementRules: rules.get(row.phaseGroupId) ?? [],
             });
@@ -290,6 +323,12 @@ export class TreeQueries {
         const rows: PendingCountRow[] = await this.dataSource.query(pendingMatchesInScope(scope), [id]);
 
         return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.pendingMatchCount)]));
+    }
+
+    private async progressedCounts(scope: TreeScope, id: number): Promise<Map<number, number>> {
+        const rows: ProgressedCountRow[] = await this.dataSource.query(progressedMatchesInScope(scope), [id]);
+
+        return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.progressedMatchCount)]));
     }
 
     private async advancementRulesOf(phaseGroupIds: number[]): Promise<Map<number, AdvancementRuleDto[]>> {

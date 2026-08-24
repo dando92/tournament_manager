@@ -29,6 +29,7 @@
      instead of a darkened version of it. */
   --state-idle: 138 146 158;
   --state-running: 31 141 222;
+  --state-live: 124 58 237;
   --state-pending: 194 118 26;
   --state-done: 14 138 95;
   --state-failed: 211 58 52;
@@ -80,6 +81,7 @@
 
     --state-idle: 123 131 142;
     --state-running: 61 165 232;
+    --state-live: 167 139 250;
     --state-pending: 224 163 60;
     --state-done: 60 201 141;
     --state-failed: 238 107 99;
@@ -111,6 +113,7 @@
 
   --state-idle: 123 131 142;
   --state-running: 61 165 232;
+  --state-live: 167 139 250;
   --state-pending: 224 163 60;
   --state-done: 60 201 141;
   --state-failed: 238 107 99;

@@ -55,6 +55,34 @@ function scoringSystems(recalc: jest.Mock): ScoringSystemProvider {
 }
 
 describe('MatchAggregate', () => {
+  describe('pool projection state', () => {
+    it('counts played scores and positive hand-scored points as progress', () => {
+      const scoredPlayer = player(101);
+      const played = match(
+        [entrant(1, 101)],
+        [playedRound([standing(200, scoredPlayer, score(100, scoredPlayer, 0))])],
+      );
+      const stated = match(
+        [entrant(1, 101)],
+        [handScoredRound([standing(201, scoredPlayer, undefined, 1)])],
+      );
+
+      expect(played.poolState.progressed).toBe(true);
+      expect(stated.poolState.progressed).toBe(true);
+    });
+
+    it('does not count configured rounds or zero hand-scored points as progress', () => {
+      const configured = match([entrant(1, 101)], [playedRound()]);
+      const zero = match(
+        [entrant(1, 101)],
+        [handScoredRound([standing(200, player(101), undefined, 0)])],
+      );
+
+      expect(configured.poolState.progressed).toBe(false);
+      expect(zero.poolState.progressed).toBe(false);
+    });
+  });
+
   describe('editing', () => {
     it('refuses to change a match that already holds a result', () => {
       const completed = match([entrant(1, 101)], [], { id: 5, playerPoints: [] } as MatchResult);

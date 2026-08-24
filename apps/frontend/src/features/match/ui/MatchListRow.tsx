@@ -1,5 +1,6 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import StatusIcon, { StatusBadge } from "@/shared/components/ui/StatusIcon";
+import { StatusBadge } from "@/shared/components/ui/StatusIcon";
+import { ActiveIndicator } from "@/shared/components/ui/StatusDot";
 import {
   getActiveLabel,
   getCommitBlocker,
@@ -120,7 +121,7 @@ export default function MatchListRow({
         title={getActiveLabel(match.active)}
         className="group/name flex min-w-0 flex-1 items-center gap-3 overflow-hidden px-3 py-2.5 text-left"
       >
-        <StatusIcon status={match.active ? "running" : "idle"} label={getActiveLabel(match.active)} />
+        <ActiveIndicator on={match.active} label={getActiveLabel(match.active)} />
 
         <span
           ref={nameViewportRef}

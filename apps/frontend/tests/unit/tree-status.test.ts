@@ -17,6 +17,7 @@ function pool(overrides: Record<string, unknown> = {}) {
     state: 'active',
     entrants: [],
     matchCount: 2,
+    progressedMatchCount: 0,
     pendingMatchCount: 0,
     ...overrides,
   } as never;
@@ -24,7 +25,8 @@ function pool(overrides: Record<string, unknown> = {}) {
 
 test('a pool with a match waiting on a person reports pending', () => {
   assert.equal(poolStatus(pool({ pendingMatchCount: 1 })), 'pending');
-  assert.equal(poolStatus(pool()), 'running');
+  assert.equal(poolStatus(pool()), 'idle');
+  assert.equal(poolStatus(pool({ progressedMatchCount: 1 })), 'running');
   assert.equal(poolStatus(pool({ state: 'completed' })), 'done');
   assert.equal(poolStatus(pool({ matchCount: 0, state: 'pending' })), 'idle');
 });
@@ -32,6 +34,7 @@ test('a pool with a match waiting on a person reports pending', () => {
 test('pending outranks running on the way up', () => {
   assert.equal(rollUpStatus(['running', 'pending']), 'pending');
   assert.equal(rollUpStatus(['idle', 'running']), 'running');
+  assert.equal(rollUpStatus(['idle', 'done']), 'running');
   assert.equal(rollUpStatus(['done', 'done']), 'done');
   assert.equal(rollUpStatus([]), 'idle');
 });

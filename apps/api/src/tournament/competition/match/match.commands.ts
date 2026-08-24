@@ -305,7 +305,10 @@ export class MatchCommands {
         await this.publisher.emitMatchUpdate(match.address);
 
         const after = match.poolState;
-        const poolChanged = after.completed !== before.completed || after.awaitingCommit !== before.awaitingCommit;
+        const poolChanged =
+            after.completed !== before.completed ||
+            after.awaitingCommit !== before.awaitingCommit ||
+            after.progressed !== before.progressed;
         if (poolChanged) await this.publisher.emitPhaseGroupUpdate(match.address);
     }
 

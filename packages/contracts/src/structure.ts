@@ -40,6 +40,8 @@ export type PhaseGroupDto = {
     bracketType: string | null;
     state: PhaseGroupState;
     matchCount: number;
+    /** Matches with a played score, stated points, or a committed result. */
+    progressedMatchCount: number;
     /** Matches waiting on a person: every score in, no result committed. */
     pendingMatchCount: number;
     /** Where the pool sends its finishers. Empty until somebody says. */

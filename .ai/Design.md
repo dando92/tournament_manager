@@ -53,6 +53,7 @@ a user has to read.
 | --- | --- | --- | --- | --- |
 | `state-idle` | `#8A929E` | `#7B838E` | dashed ring | not started, not active |
 | `state-running` | `#1F8DDE` | `#3DA5E8` | ring half filled | in progress, active, connected |
+| `state-live` | `#7C3AED` | `#A78BFA` | solid dot | match active now |
 | `state-pending` | `#C2761A` | `#E0A33C` | ring three quarters filled, breathing | waiting on a person |
 | `state-done` | `#0E8A5F` | `#3CC98D` | solid with a check | completed, advanced |
 | `state-failed` | `#D33A34` | `#EE6B63` | solid with a cross | failed, disconnected, destructive |
@@ -79,8 +80,7 @@ four do not, and must stay inside a glyph or behind a tint.
 The **`pending`** glyph breathes — a slow opacity fade, nothing else. It is the
 one state that is stuck until a person acts, and motion is the only channel that
 reaches an eye which is not already pointed at it. A match being played asks
-nothing of anybody, so `running` does not move; the blue half-filled ring says
-active on its own.
+nothing of anybody, so its violet live dot does not move.
 
 Nothing else animates state. The moment a second thing pulses, neither one means
 anything. The animation lives inside `StatusIcon`, on the state rather than on
@@ -101,7 +101,7 @@ Progress fills the ring in four steps, which is what the ring was drawn for:
 | Progress | Glyph | Means |
 | --- | --- | --- |
 | `Empty` | dashed ring | no songs, no scores, no points |
-| `In progress` | ring half filled | songs added, or some scores in |
+| `In progress` | ring half filled | some played scores or positive hand-scored points in |
 | `Ready to commit` | ring three quarters filled | everything filled, waiting on a person |
 | `Completed` | solid with a check | result committed |
 
@@ -110,6 +110,11 @@ the badge a viewer reads and the button they press cannot disagree. The API
 repeats the `Ready to commit` rule in one aggregate query
 (`MatchService.countPendingByPhaseGroup`) so the sidebar can count without
 loading matches; the two definitions have to be changed together.
+
+Adding players, songs, bracket slots, or advancement rules is preparation and
+does not move progress out of `Empty`. A played standing, including a failed
+score, is progress; a hand-scored standing is progress only when it states
+positive points.
 
 Both read one rule — every round of the match is settled — and a match scored
 by hand moves through the same four steps. In the table its round is a column
@@ -127,10 +132,15 @@ soon as somebody has a point, and empty again if every point goes back to zero
 
 ## The tree inherits the state of what it contains
 
-A branch of the sidebar shows the strongest state below it, pool to phase to
-division to tournament. The pool is the bottom rung and the only node that can
-see matches, so a match waiting on a person enters there and every node above
-inherits it unchanged.
+A branch of the sidebar shows one progress state, pool to phase to division to
+tournament. The pool is the bottom rung and the only node that can see matches,
+so match progress enters there and every node above inherits it. Match activity
+does not enter this roll-up: violet stays on match views so a compact tree never
+has to carry two adjacent state marks.
+
+A non-empty branch is `done` only when every child is done. If any child has
+started or completed while the whole branch is not complete, the branch is
+`running`; this includes a mixture such as one completed pool and one idle pool.
 
 `pending` outranks `running` in that roll-up. During a tournament the sidebar's
 job is not to say what is busy but to say what is stuck: a live match will
@@ -270,7 +280,7 @@ Lifecycle actions are shown in tournament configuration. Closed state uses a war
 
 Advancement rules use a focused modal because a rule is a relationship between dependent values rather than an inline table-cell edit. The source path remains in the modal title. Each rule is one editable sentence whose values use a compact neutral raised surface instead of boxed form fields; target kind and hierarchical destination are one selection. Placement and slot use matching native number controls with increment and decrement arrows, and placement is cardinal with `place` outside its control. Desktop keeps the sentence inline; on narrow screens the `in slot` clause and delete action share a dedicated second line. Match cards do not repeat outgoing rules below their table because the future match tree will visualize those relationships. The modal is centered and sized by its content on desktop and mobile; when its content exceeds the viewport, only the rule list scrolls while the title and actions remain visible. `Add advancement` is in the footer, to the left of Cancel and Save on desktop and immediately above Save on narrow screens. Validation errors sit outside the rule list. The detailed behavior and deferred quick-rule proposal are recorded in [AdvancementRuleEditor.md](AdvancementRuleEditor.md).
 
-Match cards separate state from action. The active state is shown by an informative status glyph to the left of the match name, never by a button, and it carries a tooltip that touch devices reveal by tapping it. Forward actions stay visible: the compact commit button sits in the match header next to the actions menu and is enabled only once every score is filled in. Reverse and rare actions, such as re-opening a committed match or toggling the active state, live in the match actions menu. Below the small breakpoint, controls that are visually compact keep a full touch target through a transparent expansion that does not affect layout.
+Match cards separate state from action. The active state is shown by an informative violet dot to the left of the match name, never by a button, and it carries a tooltip that touch devices reveal by tapping it. The dot stays in match views and is deliberately absent from the structural tree. Forward actions stay visible: the compact commit button sits in the match header next to the actions menu and is enabled only once every score is filled in. Reverse and rare actions, such as re-opening a committed match or toggling the active state, live in the match actions menu. Below the small breakpoint, controls that are visually compact keep a full touch target through a transparent expansion that does not affect layout.
 
 ## Match scoring editor
 

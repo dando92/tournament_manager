@@ -1,5 +1,5 @@
 import type { Status } from "@/shared/components/ui/status";
-import type { PhaseGroup, PhaseGroupState } from "@/features/division/model/types";
+import type { PhaseGroup } from "@/features/division/model/types";
 import type { TournamentDivisionOption, TournamentDivisionOptionPhase } from "@/features/tournament/model/types";
 
 /**
@@ -11,39 +11,34 @@ import type { TournamentDivisionOption, TournamentDivisionOptionPhase } from "@/
  * anything. See .ai/Design.md.
  */
 
-const POOL_STATUS: Record<PhaseGroupState, Status> = {
-  pending: "idle",
-  active: "running",
-  completed: "done",
-};
-
 /**
  * How states combine on the way up the tree.
  *
- * `pending` outranks `running` because a live match asks nothing of anybody
- * while it is being played, and a match with every score in is stuck until a
- * person commits it. The sidebar's first job is therefore to point at the
- * branch that is waiting, not at the branch that is busy. A branch counts as
- * `done` only when every child is done, which is why that case is handled
- * apart from the ranking.
+ * `pending` outranks `running` because a match with every score in is stuck
+ * until a person commits it. A branch counts as `done` only when every child is
+ * done; one done child in an unfinished branch is evidence of partial progress
+ * and therefore rolls up as `running`.
  */
-const RANK: Record<Status, number> = { idle: 0, done: 1, running: 2, pending: 3, failed: 4 };
-
 export function rollUpStatus(children: Status[]): Status {
   if (children.length === 0) return "idle";
   if (children.every((status) => status === "done")) return "done";
-  return children.reduce((strongest, status) => (RANK[status] > RANK[strongest] ? status : strongest), "idle" as Status);
+  if (children.some((status) => status === "failed")) return "failed";
+  if (children.some((status) => status === "pending")) return "pending";
+  if (children.some((status) => status === "running" || status === "done")) return "running";
+  return "idle";
 }
 
 /**
  * The pool is the bottom rung of the tree and the only node that can see its
- * matches, so this is where a match waiting on a person enters the roll-up.
- * Everything above inherits it unchanged.
+ * matches, so this is where competition evidence and a match waiting on a
+ * person enter the roll-up. Configuration alone leaves it idle.
  */
 export function poolStatus(phaseGroup: PhaseGroup): Status {
   if ((phaseGroup.pendingMatchCount ?? 0) > 0) return "pending";
+  if (phaseGroup.state === "completed" && phaseGroup.matchCount > 0) return "done";
+  if ((phaseGroup.progressedMatchCount ?? 0) > 0) return "running";
   if (phaseGroup.matchCount === 0) return "idle";
-  return POOL_STATUS[phaseGroup.state] ?? "idle";
+  return "idle";
 }
 
 export function phaseStatus(phase: TournamentDivisionOptionPhase): Status {

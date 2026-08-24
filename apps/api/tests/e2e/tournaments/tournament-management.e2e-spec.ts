@@ -198,11 +198,12 @@ describe('Tournament management (e2e)', () => {
         expect(pools.map((pool) => pool.id)).toEqual([...pools.map((pool) => pool.id)].sort((a, b) => a - b));
         expect(pools.find((pool) => pool.id === phaseGroupId)).toMatchObject({
           matchCount: 1,
+          progressedMatchCount: 0,
           pendingMatchCount: 0,
           advancementRules: [],
         });
         expect(pools.filter((pool) => pool.id !== phaseGroupId)).toEqual([
-          expect.objectContaining({ matchCount: 0, pendingMatchCount: 0 }),
+          expect.objectContaining({ matchCount: 0, progressedMatchCount: 0, pendingMatchCount: 0 }),
         ]);
       });
   });

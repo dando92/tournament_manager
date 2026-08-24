@@ -304,6 +304,7 @@ describe('Division reads (e2e)', () => {
           displayIdentifier: 'A',
           state: 'pending',
           matchCount: 2,
+          progressedMatchCount: 2,
           pendingMatchCount: 2,
         });
         expect(pool.advancementRules).toEqual([
@@ -328,6 +329,7 @@ describe('Division reads (e2e)', () => {
           'matchCount',
           'name',
           'pendingMatchCount',
+          'progressedMatchCount',
           'state',
         ]);
       });
@@ -349,6 +351,7 @@ describe('Division reads (e2e)', () => {
           id: poolId,
           name: 'Pool A renamed',
           matchCount: 2,
+          progressedMatchCount: 2,
           pendingMatchCount: 2,
         });
         expect(pool.advancementRules).toHaveLength(1);

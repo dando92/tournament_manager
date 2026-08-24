@@ -4,6 +4,7 @@ import { Match } from "@/features/match/model/types";
 import { Player } from "@/features/participant/model/types";
 import { commitBadgeClass, getMatchProgress, getMatchProgressLabel, getMatchProgressStatus } from "@/features/match/model/matchStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
+import { ActiveIndicator } from "@/shared/components/ui/StatusDot";
 
 type RoundRobinMatchesViewProps = {
   matches: Match[];
@@ -231,7 +232,11 @@ export default function RoundRobinMatchesView({
                         >
                           <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
                             <span className={commitBadgeClass}>
-                              <StatusIcon status={cell.match.active ? "running" : "idle"} className="h-3 w-3" />
+                              <ActiveIndicator
+                                on={cell.match.active}
+                                label={cell.match.active ? "Match active" : "Match not active"}
+                                className="h-3 w-3"
+                              />
                               {cell.match.active ? "Active" : "Not active"}
                             </span>
                             <span className={commitBadgeClass}>

@@ -39,6 +39,7 @@ export type MatchRemovals = {
 export type MatchPoolState = {
     completed: boolean;
     awaitingCommit: boolean;
+    progressed: boolean;
 };
 
 /** The fields of a match a person edits directly. */
@@ -124,6 +125,11 @@ export class MatchAggregate {
         return {
             completed: this.isCompleted,
             awaitingCommit: !this.isCompleted && this.resultEntries() !== null,
+            progressed:
+                this.isCompleted ||
+                this.rounds.some((round) =>
+                    (round.standings ?? []).some((standing) => Boolean(standing.score) || standing.points > 0),
+                ),
         };
     }
 

@@ -37,6 +37,7 @@ export default {
         state: {
           idle: "rgb(var(--state-idle) / <alpha-value>)",
           running: "rgb(var(--state-running) / <alpha-value>)",
+          live: "rgb(var(--state-live) / <alpha-value>)",
           pending: "rgb(var(--state-pending) / <alpha-value>)",
           done: "rgb(var(--state-done) / <alpha-value>)",
           failed: "rgb(var(--state-failed) / <alpha-value>)",

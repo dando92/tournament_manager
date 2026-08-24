@@ -65,6 +65,7 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - Obtain every repository used inside a transaction from its `EntityManager`.
 - Do not create a persistence class solely to wrap one transaction or move a query out of a service.
 - Direct SQL is allowed when PostgreSQL-specific behavior is clearer than a TypeORM equivalent; keep it localized and named.
+- Structure projections count match progress from competition evidence: a played score, positive hand-scored points, or a committed result. Players, songs, bracket slots, and advancement rules are configuration and do not count as progress.
 - TypeORM schema synchronization is disabled in every environment.
 - Versioned PostgreSQL migrations are the only schema mechanism.
 - The current pre-production database is disposable and may be reset to a clean baseline.
