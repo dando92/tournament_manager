@@ -62,6 +62,12 @@ previous layout hard to follow.
   confirmed result reopen returns the owning flow to inactive at that match and
   shows the persisted interruption reason. See
   [ControlRoom.md](ControlRoom.md).
+- Tournament Overview renders every non-archived flow as a read-only timeline
+  and synchronized match-card track. A vertical selector changes flows through
+  contained wheel or touch navigation without scrolling the document. Current
+  flow position and the match selected for inspection remain separate, and
+  permissions never enable card editing. See
+  [TournamentTimeline.md](TournamentTimeline.md).
 - `TournamentUpdatesProvider` and `TournamentTreeProvider` are mounted in
   `MainLayout`, above both the sidebar and the page outlet. The tree draws state
   derived from the same data the pages show, so it has to sit beside them, not

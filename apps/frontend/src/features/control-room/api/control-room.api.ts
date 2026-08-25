@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ControlRoomEditorDto, ControlRoomFlowDto } from "@tournament-manager/contracts";
+import type { ControlRoomCreationDto, ControlRoomEditorDto, ControlRoomFlowDto, ControlRoomFlowEntryInputDto } from "@tournament-manager/contracts";
 
 export async function listFlows(tournamentId: number): Promise<ControlRoomFlowDto[]> {
     const response = await axios.get<ControlRoomFlowDto[]>(`tournaments/${tournamentId}/control-room/flows`);
@@ -11,21 +11,33 @@ export async function getEditor(flowId: number): Promise<ControlRoomEditorDto> {
     return response.data;
 }
 
-export async function createFlow(tournamentId: number, name: string): Promise<number> {
-    const response = await axios.post<{ id: number }>(`tournaments/${tournamentId}/control-room/flows`, { name });
+export async function getCreationData(tournamentId: number): Promise<ControlRoomCreationDto> {
+    const response = await axios.get<ControlRoomCreationDto>(`tournaments/${tournamentId}/control-room/creation`);
+    return response.data;
+}
+
+export async function createFlow(
+    tournamentId: number,
+    input: { name: string; willStartAt: string; defaultExpectedDurationMinutes: number; matchIds: number[] },
+): Promise<number> {
+    const response = await axios.post<{ id: number }>(`tournaments/${tournamentId}/control-room/flows`, input);
     return response.data.id;
 }
 
-export async function renameFlow(flowId: number, name: string): Promise<void> {
-    await axios.patch(`control-room/flows/${flowId}`, { name });
+export async function updateFlow(flowId: number, name: string, willStartAt: string): Promise<void> {
+    await axios.patch(`control-room/flows/${flowId}`, { name, willStartAt });
 }
 
 export async function deleteFlow(flowId: number): Promise<void> {
     await axios.delete(`control-room/flows/${flowId}`);
 }
 
-export async function replaceEntries(flowId: number, version: number, matchIds: number[]): Promise<void> {
-    await axios.put(`control-room/flows/${flowId}/entries`, { version, matchIds });
+export async function replaceEntries(flowId: number, version: number, entries: ControlRoomFlowEntryInputDto[]): Promise<void> {
+    await axios.put(`control-room/flows/${flowId}/entries`, { version, entries });
+}
+
+export async function updateEntryTime(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<void> {
+    await axios.patch(`control-room/flows/${flowId}/entries/${entryId}/time`, { expectedDurationMinutes });
 }
 
 async function command(flowId: number, action: string): Promise<void> {

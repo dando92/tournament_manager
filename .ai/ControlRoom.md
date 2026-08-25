@@ -279,6 +279,7 @@ receive the same requirement.
 
 - id and tournament foreign key;
 - name;
+- planned flow start time (`willStartAt`);
 - lifecycle status;
 - nullable current-entry foreign key;
 - nullable stale code and structured JSON details;
@@ -291,6 +292,8 @@ receive the same requirement.
 - id and flow foreign key;
 - match foreign key;
 - dense integer position.
+- expected duration in minutes;
+- nullable actual start and completion timestamps.
 
 Database constraints enforce one flow per match and one entry per position in a
 flow. Replacing an order is one transaction and includes the version the editor
@@ -303,6 +306,7 @@ The HTTP surface is:
 
 ```text
 GET    /tournaments/:tournamentId/control-room/flows
+GET    /tournaments/:tournamentId/control-room/creation
 GET    /control-room/flows/:flowId
 GET    /control-room/flows/:flowId/editor
 POST   /tournaments/:tournamentId/control-room/flows
@@ -317,15 +321,20 @@ POST   /control-room/flows/:flowId/stop
 POST   /control-room/flows/:flowId/start-from/:entryId
 POST   /control-room/flows/:flowId/archive
 DELETE /control-room/flows/:flowId/archive
+PATCH  /control-room/flows/:flowId/entries/:entryId/time
 ```
 
-Creation answers `201 { id }`; other successful commands answer `204`. Query
+Creation accepts the flow properties, default expected duration, and initial
+match order and writes the flow and entries atomically. It answers `201 { id }`;
+other successful commands answer `204`. Query
 DTOs include lifecycle state, current entry, queue, archive state, stale code,
 stale details, and the projected match data required by the control room. The
 editor query additionally includes unassigned matches.
 
 Writes publish `ui.control-room-flow-changed` addressed by tournament and flow. Any
 automatic active-state change also publishes the existing match invalidation.
+The focused expected-duration edit is the exception: it updates the initiating
+client locally and deliberately publishes no realtime invalidation.
 
 ## Frontend behavior
 

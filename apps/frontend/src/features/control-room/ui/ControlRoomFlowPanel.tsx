@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { faPlay } from "@fortawesome/free-solid-svg-icons";
+import { faClock, faPlay } from "@fortawesome/free-solid-svg-icons";
 import type { ControlRoomFlowDto } from "@tournament-manager/contracts";
 import { toast } from "react-toastify";
 
@@ -16,8 +16,9 @@ import * as MatchesApi from "@/features/match/api/match.api";
 import { controlRoomInterruptionMessage, controlRoomStaleMessage, controlRoomStatusLabel } from "@/features/control-room/model/controlRoomStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
+import BaseModal from "@/shared/components/ui/BaseModal";
 import { useLongPress } from "@/shared/hooks/useLongPress";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 
 type Props = {
     flow: ControlRoomFlowDto;
@@ -32,6 +33,7 @@ type Props = {
     onArchive: () => Promise<void>;
     onUnarchive: () => Promise<void>;
     onStartFrom: (entryId: number) => Promise<void>;
+    onUpdateEntryTime: (entryId: number, expectedDurationMinutes: number) => Promise<void>;
 };
 
 export default function ControlRoomFlowPanel(props: Props) {
@@ -39,6 +41,7 @@ export default function ControlRoomFlowPanel(props: Props) {
     const { menu, openMenu, closeMenu } = useContextMenu();
     const [selectedEntryId, setSelectedEntryId] = useState<number | null>(() => flow.currentEntryId ?? flow.entries[0]?.id ?? null);
     const [committingMatchId, setCommittingMatchId] = useState<number | null>(null);
+    const [timingEntry, setTimingEntry] = useState<ControlRoomFlowDto["entries"][number] | null>(null);
     const selected = flow.entries.find((entry) => entry.id === selectedEntryId) ?? null;
     const staleMessage = controlRoomStaleMessage(flow);
     const interruptionMessage = controlRoomInterruptionMessage(flow);
@@ -112,6 +115,8 @@ export default function ControlRoomFlowPanel(props: Props) {
                             onSelect={() => setSelectedEntryId(entry.id)}
                             onCommit={() => void commitMatch(entry.match.id)}
                             onStartFrom={() => props.onStartFrom(entry.id)}
+                            canEditTime={flow.status !== "completed" && !flow.archivedAt}
+                            onEditTime={() => setTimingEntry(entry)}
                             onOpenMenu={openMenu}
                         />
                     ))}
@@ -119,6 +124,15 @@ export default function ControlRoomFlowPanel(props: Props) {
                 </div>
             </div>
             {createPortal(<ContextMenu state={menu} onClose={closeMenu} />, document.body)}
+            <EditEntryTimeModal
+                entry={timingEntry}
+                onClose={() => setTimingEntry(null)}
+                onSave={async (minutes) => {
+                    if (!timingEntry) return;
+                    await props.onUpdateEntryTime(timingEntry.id, minutes);
+                    setTimingEntry(null);
+                }}
+            />
         </section>
     );
 }
@@ -132,6 +146,8 @@ function QueueEntryRow({
     onSelect,
     onCommit,
     onStartFrom,
+    canEditTime,
+    onEditTime,
     onOpenMenu,
 }: {
     entry: ControlRoomFlowDto["entries"][number];
@@ -142,9 +158,18 @@ function QueueEntryRow({
     onSelect: () => void;
     onCommit: () => void;
     onStartFrom: () => Promise<void>;
+    canEditTime: boolean;
+    onEditTime: () => void;
     onOpenMenu: ReturnType<typeof useContextMenu>["openMenu"];
 }) {
     const openActions = (x: number, y: number) => onOpenMenu(x, y, entry.match.name, [
+        {
+            key: "edit-time",
+            label: "Edit time",
+            icon: faClock,
+            disabled: !canEditTime,
+            onSelect: onEditTime,
+        },
         {
             key: "start-here",
             label: "Start from here",
@@ -173,6 +198,60 @@ function QueueEntryRow({
                 onCommit={onCommit}
             />
         </div>
+    );
+}
+
+function EditEntryTimeModal({
+    entry,
+    onClose,
+    onSave,
+}: {
+    entry: ControlRoomFlowDto["entries"][number] | null;
+    onClose: () => void;
+    onSave: (minutes: number) => Promise<void>;
+}) {
+    const [minutes, setMinutes] = useState(entry?.expectedDurationMinutes ?? 30);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (entry) setMinutes(entry.expectedDurationMinutes);
+    }, [entry]);
+
+    return (
+        <BaseModal
+            open={entry !== null}
+            onClose={onClose}
+            title="Edit expected duration"
+            footer={
+                <div className="flex justify-end gap-2">
+                    <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
+                    <button
+                        type="button"
+                        className={btnPrimary}
+                        disabled={saving || minutes < 1 || minutes > 1440}
+                        onClick={async () => {
+                            setSaving(true);
+                            try {
+                                await onSave(minutes);
+                            } finally {
+                                setSaving(false);
+                            }
+                        }}
+                    >
+                        {saving ? "Saving…" : "Save time"}
+                    </button>
+                </div>
+            }
+        >
+            <label className="text-sm font-semibold text-ui-text">
+                {entry?.match.name}
+                <span className="mt-2 flex items-center gap-2">
+                    <input type="number" min={1} max={1440} value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} className={`w-28 rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
+                    <span className="font-normal text-ui-text-mute">minutes</span>
+                </span>
+            </label>
+            <p className="mt-3 text-sm text-ui-text-mute">Later expected start times are recalculated automatically. The planned schedule is not overwritten by live delay.</p>
+        </BaseModal>
     );
 }
 

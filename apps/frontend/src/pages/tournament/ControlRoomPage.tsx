@@ -5,14 +5,15 @@ import { useControlRoom } from "@/features/control-room/model/useControlRoom";
 import ControlRoomFlowPanel from "@/features/control-room/ui/ControlRoomFlowPanel";
 import ControlRoomFlowCarousel from "@/features/control-room/ui/ControlRoomFlowCarousel";
 import ControlRoomEditor from "@/features/control-room/ui/ControlRoomEditor";
+import CreateControlRoomFlowModal from "@/features/control-room/ui/CreateControlRoomFlowModal";
 import LobbyControlCard from "@/features/control-room/ui/LobbyControlCard";
-import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 
 export default function ControlRoomPage() {
     const { tournamentId, divisions, controls } = useTournamentPageContext();
     const room = useControlRoom(tournamentId);
     const [showArchived, setShowArchived] = useState(false);
-    const [newName, setNewName] = useState("");
+    const [creating, setCreating] = useState(false);
     const [editingFlowId, setEditingFlowId] = useState<number | null>(null);
     const visible = room.flows.filter((flow) => showArchived || !flow.archivedAt);
 
@@ -21,18 +22,7 @@ export default function ControlRoomPage() {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-                <input
-                    value={newName}
-                    onChange={(event) => setNewName(event.target.value)}
-                    placeholder="New flow name"
-                    className={`min-w-0 flex-1 rounded border border-ui-border bg-ui-canvas px-3 py-2 text-sm sm:max-w-xs ${focusRing}`}
-                />
-                <button
-                    type="button"
-                    className={btnPrimary}
-                    disabled={!newName.trim() || room.pending}
-                    onClick={() => room.create(newName.trim()).then(() => setNewName(""))}
-                >
+                <button type="button" className={btnPrimary} disabled={room.pending} onClick={() => setCreating(true)}>
                     New flow
                 </button>
                 <button type="button" className={`${btnSecondary} ml-auto`} onClick={() => setShowArchived((value) => !value)}>
@@ -63,6 +53,7 @@ export default function ControlRoomPage() {
                             onArchive={() => room.archive(flow.id)}
                             onUnarchive={() => room.unarchive(flow.id)}
                             onStartFrom={(entryId) => room.startFrom(flow.id, entryId)}
+                            onUpdateEntryTime={(entryId, minutes) => room.updateEntryTime(flow.id, entryId, minutes)}
                         />
                     ))}
                 </ControlRoomFlowCarousel>
@@ -73,11 +64,17 @@ export default function ControlRoomPage() {
             <ControlRoomEditor
                 flowId={editingFlowId}
                 onClose={() => setEditingFlowId(null)}
-                onSave={async (flowId, version, matchIds, name, originalName) => {
-                    await room.replaceEntries(flowId, version, matchIds);
-                    if (name !== originalName) await room.rename(flowId, name);
+                onSave={async (flowId, version, entries, name, willStartAt, original) => {
+                    await room.replaceEntries(flowId, version, entries);
+                    if (name !== original.name || willStartAt !== original.willStartAt) await room.update(flowId, name, willStartAt);
                 }}
                 onDelete={room.remove}
+            />
+            <CreateControlRoomFlowModal
+                tournamentId={tournamentId}
+                open={creating}
+                onClose={() => setCreating(false)}
+                onCreate={room.create}
             />
         </div>
     );

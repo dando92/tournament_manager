@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
 import { UiUpdatePublisher } from "@tournament/shared/ui-update.publisher";
-import { ControlRoomAggregate } from "./control-room.aggregate";
 import { ControlRoomRunner } from "./control-room.runner";
 import { ControlRoomStore } from "./control-room.store";
 
@@ -13,17 +12,16 @@ export class ControlRoomCommands {
         private readonly publisher: UiUpdatePublisher,
     ) {}
 
-    async create(tournamentId: number, name: string): Promise<number> {
-        const flow = ControlRoomAggregate.create(name, await this.store.loadTournament(tournamentId));
-        await this.store.save(flow);
-        await this.publisher.emitControlRoomFlowUpdate(tournamentId, flow.id);
+    async create(tournamentId: number, name: string, willStartAt: Date, defaultExpectedDurationMinutes: number, matchIds: number[]): Promise<number> {
+        const flowId = await this.store.create(tournamentId, name, willStartAt, defaultExpectedDurationMinutes, matchIds);
+        await this.publisher.emitControlRoomFlowUpdate(tournamentId, flowId);
 
-        return flow.id;
+        return flowId;
     }
 
-    async rename(flowId: number, name: string): Promise<void> {
+    async updateDetails(flowId: number, name: string, willStartAt: Date): Promise<void> {
         const flow = await this.store.loadOrFail(flowId);
-        flow.rename(name);
+        flow.updateDetails(name, willStartAt);
         await this.store.save(flow);
         await this.publisher.emitControlRoomFlowUpdate(flow.tournamentId, flow.id);
     }
@@ -35,10 +33,14 @@ export class ControlRoomCommands {
         await this.publisher.emitControlRoomFlowUpdate(tournamentId, flowId);
     }
 
-    async replaceEntries(flowId: number, version: number, matchIds: number[]): Promise<void> {
+    async replaceEntries(flowId: number, version: number, entries: Array<{ matchId: number; expectedDurationMinutes: number }>): Promise<void> {
         const flow = await this.store.loadOrFail(flowId);
-        await this.store.replaceEntries(flowId, version, matchIds);
+        await this.store.replaceEntries(flowId, version, entries);
         await this.publisher.emitControlRoomFlowUpdate(flow.tournamentId, flowId);
+    }
+
+    async updateExpectedDuration(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<void> {
+        await this.store.updateExpectedDuration(flowId, entryId, expectedDurationMinutes);
     }
 
     async start(flowId: number, entryId?: number): Promise<void> {

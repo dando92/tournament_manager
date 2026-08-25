@@ -5,6 +5,8 @@ import { ControlRoomFlow, ControlRoomFlowEntry, Match, Tournament } from "@tourn
 
 import { ControlRoomAggregate } from "./control-room.aggregate";
 
+export type ControlRoomEntryInput = { matchId: number; expectedDurationMinutes: number };
+
 @Injectable()
 export class ControlRoomStore {
     constructor(
@@ -47,12 +49,46 @@ export class ControlRoomStore {
         await this.flows.save(flow.entity);
     }
 
+    async create(tournamentId: number, name: string, willStartAt: Date, defaultExpectedDurationMinutes: number, matchIds: number[]): Promise<number> {
+        return this.dataSource.transaction(async (manager) => {
+            const tournament = await manager.findOneBy(Tournament, { id: tournamentId });
+            if (!tournament) {
+                throw new NotFoundException(`Tournament ${tournamentId} not found`);
+            }
+            const matches = await this.validatedMatches(manager, tournamentId, matchIds);
+            const assignedCount = matchIds.length > 0
+                ? await manager.count(ControlRoomFlowEntry, { where: { match: { id: In(matchIds) } } })
+                : 0;
+            if (assignedCount > 0) {
+                throw new ConflictException("One or more matches already belong to a control room flow");
+            }
+            const aggregate = ControlRoomAggregate.create(name, willStartAt, tournament);
+            await manager.save(ControlRoomFlow, aggregate.entity);
+            const entries = matches.map((match, position) => {
+                const entry = new ControlRoomFlowEntry();
+                entry.flow = aggregate.entity;
+                entry.match = match;
+                entry.position = position;
+                entry.expectedDurationMinutes = defaultExpectedDurationMinutes;
+                entry.startedAt = null;
+                entry.completedAt = null;
+                return entry;
+            });
+            if (entries.length > 0) {
+                await manager.save(ControlRoomFlowEntry, entries);
+            }
+
+            return aggregate.id;
+        });
+    }
+
     async remove(flow: ControlRoomAggregate): Promise<void> {
         flow.assertEditable();
         await this.flows.remove(flow.entity);
     }
 
-    async replaceEntries(flowId: number, version: number, matchIds: number[]): Promise<void> {
+    async replaceEntries(flowId: number, version: number, inputs: ControlRoomEntryInput[]): Promise<void> {
+        const matchIds = inputs.map((input) => input.matchId);
         if (new Set(matchIds).size !== matchIds.length) {
             throw new ConflictException("A match can appear only once in a control room flow");
         }
@@ -73,22 +109,8 @@ export class ControlRoomStore {
 
             flow.tournament = await manager.findOneByOrFail(Tournament, { id: flow.tournamentId });
 
-            const matches =
-                matchIds.length > 0
-                    ? await manager.find(Match, {
-                          where: { id: In(matchIds) },
-                          relations: { phaseGroup: { phase: { division: { tournament: true } } } },
-                      })
-                    : [];
-            if (matches.length !== matchIds.length) {
-                throw new NotFoundException("One or more matches no longer exist");
-            }
+            const matches = await this.validatedMatches(manager, flow.tournament.id, matchIds);
             const matchById = new Map(matches.map((match) => [match.id, match]));
-            for (const match of matches) {
-                if (match.phaseGroup?.phase?.division?.tournament?.id !== flow.tournament.id) {
-                    throw new ConflictException(`Match ${match.id} belongs to another tournament`);
-                }
-            }
 
             const assignments =
                 matchIds.length > 0
@@ -106,12 +128,23 @@ export class ControlRoomStore {
                 await manager.delete(ControlRoomFlowEntry, { flow: { id: In(foreignFlowIds) }, match: { id: In(matchIds) } });
             }
 
-            await manager.delete(ControlRoomFlowEntry, { flow: { id: flowId } });
-            const replacement = matchIds.map((matchId, index) => {
-                const entry = new ControlRoomFlowEntry();
+            const existing = await manager.find(ControlRoomFlowEntry, { where: { flow: { id: flowId } }, relations: { match: true } });
+            const existingByMatchId = new Map(existing.map((entry) => [entry.match.id, entry]));
+            const removed = existing.filter((entry) => !matchIds.includes(entry.match.id));
+            if (removed.length > 0) {
+                await manager.remove(ControlRoomFlowEntry, removed);
+            }
+            if (existing.length > 0) {
+                await manager.query(`UPDATE "control_room_flow_entry" SET position = position + 1000000 WHERE "flowId" = $1`, [flowId]);
+            }
+            const replacement = inputs.map((input, index) => {
+                const entry = existingByMatchId.get(input.matchId) ?? new ControlRoomFlowEntry();
                 entry.flow = flow;
-                entry.match = matchById.get(matchId);
+                entry.match = matchById.get(input.matchId);
                 entry.position = index;
+                entry.expectedDurationMinutes = input.expectedDurationMinutes;
+                entry.startedAt ??= null;
+                entry.completedAt ??= null;
 
                 return entry;
             });
@@ -120,6 +153,24 @@ export class ControlRoomStore {
             }
             flow.currentEntryId = null;
             await manager.save(ControlRoomFlow, flow);
+        });
+    }
+
+    async updateExpectedDuration(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<void> {
+        await this.dataSource.transaction(async (manager) => {
+            const flow = await manager.findOneBy(ControlRoomFlow, { id: flowId });
+            if (!flow) {
+                throw new NotFoundException(`Control room flow ${flowId} not found`);
+            }
+            if (flow.status === "completed" || flow.archivedAt) {
+                throw new ConflictException(`Control room flow ${flowId} no longer accepts timing changes`);
+            }
+            const entry = await manager.findOne(ControlRoomFlowEntry, { where: { id: entryId, flow: { id: flowId } } });
+            if (!entry) {
+                throw new NotFoundException(`Control room flow entry ${entryId} not found`);
+            }
+            entry.expectedDurationMinutes = expectedDurationMinutes;
+            await manager.save(ControlRoomFlowEntry, entry);
         });
     }
 
@@ -136,5 +187,28 @@ export class ControlRoomStore {
         });
 
         return flows.map((flow) => flow.id);
+    }
+
+    private async validatedMatches(manager: DataSource["manager"], tournamentId: number, matchIds: number[]): Promise<Match[]> {
+        if (new Set(matchIds).size !== matchIds.length) {
+            throw new ConflictException("A match can appear only once in a control room flow");
+        }
+        const matches = matchIds.length > 0
+            ? await manager.find(Match, {
+                  where: { id: In(matchIds) },
+                  relations: { phaseGroup: { phase: { division: { tournament: true } } } },
+              })
+            : [];
+        if (matches.length !== matchIds.length) {
+            throw new NotFoundException("One or more matches no longer exist");
+        }
+        const matchById = new Map(matches.map((match) => [match.id, match]));
+        for (const match of matches) {
+            if (match.phaseGroup?.phase?.division?.tournament?.id !== tournamentId) {
+                throw new ConflictException(`Match ${match.id} belongs to another tournament`);
+            }
+        }
+
+        return matchIds.map((matchId) => matchById.get(matchId));
     }
 }

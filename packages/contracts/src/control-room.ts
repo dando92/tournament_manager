@@ -27,12 +27,16 @@ export type ControlRoomStaleDetails = {
 export type ControlRoomFlowEntryDto = {
     id: number;
     position: number;
+    expectedDurationMinutes: number;
+    startedAt: string | null;
+    completedAt: string | null;
     match: MatchDto;
 };
 
 export type ControlRoomFlowDto = {
     id: number;
     name: string;
+    willStartAt: string;
     status: ControlRoomFlowStatus;
     currentEntryId: number | null;
     staleCode: ControlRoomStaleCode | null;
@@ -43,6 +47,15 @@ export type ControlRoomFlowDto = {
     archivedAt: string | null;
     version: number;
     entries: ControlRoomFlowEntryDto[];
+};
+
+export type ControlRoomCreationDto = {
+    unassignedMatches: MatchDto[];
+};
+
+export type ControlRoomFlowEntryInputDto = {
+    matchId: number;
+    expectedDurationMinutes: number;
 };
 
 export type ControlRoomEditorDto = {

@@ -151,6 +151,10 @@ export class ControlRoomRunner {
             const snapshot = await this.snapshot(manager, flow, entry, match, required.get(match.id) ?? 2);
             const eligibility = evaluateControlRoomMatch(snapshot);
             if (eligibility.kind === "passed") {
+                if (!entry.completedAt) {
+                    entry.completedAt = new Date();
+                    await manager.save(ControlRoomFlowEntry, entry);
+                }
                 if (match.active) {
                     match.active = false;
                     changed.push(match);
@@ -171,6 +175,12 @@ export class ControlRoomRunner {
             if (!match.active) {
                 match.active = true;
                 changed.push(match);
+                entry.startedAt = new Date();
+                entry.completedAt = null;
+                await manager.save(ControlRoomFlowEntry, entry);
+            } else if (!entry.startedAt) {
+                entry.startedAt = new Date();
+                await manager.save(ControlRoomFlowEntry, entry);
             }
             ControlRoomAggregate.of(flow).activate(entry.id);
             if (changed.length > 0) {

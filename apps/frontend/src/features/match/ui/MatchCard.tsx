@@ -233,7 +233,7 @@ export default function MatchCard({
   return (
     <div
       ref={cardRef}
-      className={`group/match flex flex-col w-full p-4 my-3 border rounded-xl bg-ui-surface transition-shadow ${
+      className={`group/match my-1 flex w-full flex-col rounded-xl border bg-ui-surface p-2.5 transition-shadow max-sm:[&_.match-score-percentage]:!text-[11px] max-sm:[&_h3]:text-sm max-sm:[&_p]:text-[10px] max-sm:[&_table]:text-xs max-sm:[&_td]:px-1.5 max-sm:[&_td]:py-2 max-sm:[&_th]:px-1.5 max-sm:[&_th]:py-2 sm:my-3 sm:p-4 ${
         isHighlighted
           ? "border-ui-accent border-l-[3px] bg-ui-selected shadow-live"
           : match.active

@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 
 import * as api from "@/features/control-room/api/control-room.api";
 import { controlRoomKeys } from "@/features/control-room/api/control-room.keys";
+import type { ControlRoomEditorDto, ControlRoomFlowDto, ControlRoomFlowEntryInputDto } from "@tournament-manager/contracts";
 
 export function useControlRoom(tournamentId: number) {
     const queryClient = useQueryClient();
@@ -27,13 +28,34 @@ export function useControlRoom(tournamentId: number) {
         query: flows,
         flows: flows.data ?? [],
         pending: mutate.isPending,
-        create: async (name: string) => {
-            await api.createFlow(tournamentId, name);
-            await invalidate();
+        create: async (input: { name: string; willStartAt: string; defaultExpectedDurationMinutes: number; matchIds: number[] }) => {
+            await api.createFlow(tournamentId, input);
+            await Promise.all([
+                invalidate(),
+                queryClient.invalidateQueries({ queryKey: controlRoomKeys.creation(tournamentId) }),
+            ]);
         },
-        rename: (flowId: number, name: string) => run(() => api.renameFlow(flowId, name)),
+        update: (flowId: number, name: string, willStartAt: string) => run(() => api.updateFlow(flowId, name, willStartAt)),
         remove: (flowId: number) => run(() => api.deleteFlow(flowId)),
-        replaceEntries: (flowId: number, version: number, matchIds: number[]) => run(() => api.replaceEntries(flowId, version, matchIds)),
+        replaceEntries: (flowId: number, version: number, entries: ControlRoomFlowEntryInputDto[]) => run(() => api.replaceEntries(flowId, version, entries)),
+        updateEntryTime: async (flowId: number, entryId: number, expectedDurationMinutes: number) => {
+            try {
+                await api.updateEntryTime(flowId, entryId, expectedDurationMinutes);
+                queryClient.setQueryData<ControlRoomFlowDto[]>(controlRoomKeys.all(tournamentId), (current) =>
+                    current?.map((flow) => flow.id === flowId
+                        ? { ...flow, entries: flow.entries.map((entry) => entry.id === entryId ? { ...entry, expectedDurationMinutes } : entry) }
+                        : flow),
+                );
+                queryClient.setQueryData<ControlRoomEditorDto>(controlRoomKeys.editor(flowId), (current) => current
+                    ? { ...current, flow: { ...current.flow, entries: current.flow.entries.map((entry) => entry.id === entryId ? { ...entry, expectedDurationMinutes } : entry) } }
+                    : current,
+                );
+            } catch (error) {
+                console.error("Control room timing update failed", error);
+                toast.error("Unable to update the expected duration.");
+                throw error;
+            }
+        },
         start: (flowId: number) => run(() => api.startFlow(flowId)),
         pause: (flowId: number) => run(() => api.pauseFlow(flowId)),
         resume: (flowId: number) => run(() => api.resumeFlow(flowId)),

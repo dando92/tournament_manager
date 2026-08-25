@@ -13,6 +13,15 @@ export class ControlRoomFlowEntry {
     @Column()
     position: number;
 
+    @Column({ type: "integer" })
+    expectedDurationMinutes: number;
+
+    @Column({ type: "timestamptz", nullable: true })
+    startedAt: Date | null;
+
+    @Column({ type: "timestamptz", nullable: true })
+    completedAt: Date | null;
+
     @ManyToOne(() => ControlRoomFlow, (flow) => flow.entries, { onDelete: "CASCADE" })
     @JoinColumn({ name: "flowId", foreignKeyConstraintName: "FK_control_room_flow_entry_flow" })
     flow: ControlRoomFlow;

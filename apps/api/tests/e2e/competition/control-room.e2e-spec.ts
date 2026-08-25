@@ -125,9 +125,15 @@ describe("Control Room (e2e)", () => {
     }
 
     async function createFlow(name: string, matchIds: number[]): Promise<number> {
-        const created = await request(app.getHttpServer()).post(`/tournaments/${tournamentId}/control-room/flows`).send({ name }).expect(201);
-        const flow = await request(app.getHttpServer()).get(`/control-room/flows/${created.body.id}`).expect(200);
-        await request(app.getHttpServer()).put(`/control-room/flows/${created.body.id}/entries`).send({ version: flow.body.version, matchIds }).expect(204);
+        const created = await request(app.getHttpServer())
+            .post(`/tournaments/${tournamentId}/control-room/flows`)
+            .send({
+                name,
+                willStartAt: "2026-08-25T18:00:00.000Z",
+                defaultExpectedDurationMinutes: 30,
+                matchIds,
+            })
+            .expect(201);
 
         return created.body.id;
     }
@@ -150,12 +156,23 @@ describe("Control Room (e2e)", () => {
 
         await request(app.getHttpServer()).post(`/control-room/flows/${flowId}/start`).expect(204);
         expect((await readMatch(first.id)).active).toBe(true);
+        const startedFlow = await request(app.getHttpServer()).get(`/control-room/flows/${flowId}`).expect(200);
+        expect(startedFlow.body).toMatchObject({
+            willStartAt: "2026-08-25T18:00:00.000Z",
+            entries: [
+                { expectedDurationMinutes: 30, completedAt: null },
+                { expectedDurationMinutes: 30, startedAt: null, completedAt: null },
+            ],
+        });
+        expect(startedFlow.body.entries[0].startedAt).not.toBeNull();
         await request(app.getHttpServer()).put(`/matches/${second.id}/active`).send({ active: true }).expect(409);
 
         await score(first);
         const flow = await request(app.getHttpServer()).get(`/control-room/flows/${flowId}`).expect(200);
         expect(flow.body.status).toBe("running");
         expect(flow.body.currentEntryId).toBe(flow.body.entries[1].id);
+        expect(flow.body.entries[0].completedAt).not.toBeNull();
+        expect(flow.body.entries[1].startedAt).not.toBeNull();
         expect(await readMatch(first.id)).toMatchObject({ active: false, matchResult: null });
         expect((await readMatch(second.id)).active).toBe(true);
     });

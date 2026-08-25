@@ -9,9 +9,10 @@ export class ControlRoomAggregate {
         return new ControlRoomAggregate(flow);
     }
 
-    static create(name: string, tournament: Tournament): ControlRoomAggregate {
+    static create(name: string, willStartAt: Date, tournament: Tournament): ControlRoomAggregate {
         const flow = new ControlRoomFlow();
         flow.name = name.trim();
+        flow.willStartAt = willStartAt;
         flow.status = "inactive";
         flow.currentEntryId = null;
         flow.staleCode = null;
@@ -59,6 +60,12 @@ export class ControlRoomAggregate {
     rename(name: string): void {
         this.assertEditable();
         this.flow.name = name.trim();
+    }
+
+    updateDetails(name: string, willStartAt: Date): void {
+        this.assertEditable();
+        this.flow.name = name.trim();
+        this.flow.willStartAt = willStartAt;
     }
 
     start(entryId?: number): void {

@@ -8,6 +8,28 @@
 - State: Architecture migration and Control Room delivery complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: manually exercise the responsive Control Room carousel, queue long-press menu, flow editor drag-and-drop, and real lobby/cabinet sessions with two concurrent flows.
+
+### Tournament overview timeline
+
+- Added atomic flow creation through a modal that captures the name, planned
+  start, default duration, initial match assignment, and order. The inactive
+  editor remains available and now preserves per-entry timing data on reorder.
+- Added persisted expected durations and actual entry start/completion times;
+  planned and estimated starts and the global live offset remain derived.
+- Populated Tournament Overview with read-only match cards, synchronized
+  timeline/card dragging, distinct current and selected states, responsive
+  neighboring-card previews, and an internal vertical multi-flow selector.
+- Added the focused Control Room `Edit time` action without realtime broadcast.
+- Added a forward timing migration for databases that already ran the original
+  Control Room migrations. Existing flows are preserved with a migration-time
+  planned start and 30-minute entry durations; fresh databases run the same
+  sequence and require no special reset.
+- Verification: contracts, persistence, API, migrations, and frontend builds
+  pass; 137 API unit tests and 53 frontend unit tests pass. Both migration
+  end-to-end cases pass, including an upgrade from the previous Control Room
+  schema, and all six Control Room API end-to-end scenarios pass. The forward
+  migration was applied to the local database and the flow endpoint returned
+  HTTP 200 with the preserved flows and backfilled timing fields.
 - Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints
@@ -23,7 +45,8 @@
   step, and expose their context menu through touch long press.
 - Moved the independent lobby control below the carousel. Reworked the inactive
   flow editor so whole rows drag within and between Flow order and Unassigned,
-  including reliable dragging across the modal boundary.
+  including reliable dragging across the modal boundary and a drag preview that
+  remains visible above the modal overlay.
 - Added a Tournament Manager configuration destination for device theme and
   administrator role management, redirected the former role-management route,
   and aligned desktop and mobile navigation/account actions with it.

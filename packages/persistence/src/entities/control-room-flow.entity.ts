@@ -14,6 +14,9 @@ export class ControlRoomFlow {
     @Column()
     name: string;
 
+    @Column({ type: "timestamptz" })
+    willStartAt: Date;
+
     @Column({ type: "varchar", default: "inactive" })
     status: ControlRoomFlowStatus;
 

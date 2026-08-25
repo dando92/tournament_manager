@@ -79,6 +79,10 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 - TypeORM schema synchronization is disabled in every environment.
 - Versioned PostgreSQL migrations are the only schema mechanism.
 - The current pre-production database is disposable and may be reset to a clean baseline.
+- Control Room scheduling persists one absolute flow start, per-entry expected
+  durations, and actual start/completion events. Planned starts, estimates, and
+  delay are projections and are never written back. Flow creation writes its
+  initial ordered entries atomically; reordering preserves entry timing data.
 
 `PostgresTournamentPersistence` is superseded. Tournament creation and its required transaction belong directly in `TournamentCommands`.
 

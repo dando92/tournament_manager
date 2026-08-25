@@ -236,7 +236,7 @@ export default function MatchRow({
               }}
             >
               <div className="flex min-h-7 items-center justify-center gap-1.5">
-                <span className={`font-bold text-base ${scoreData.isFailed ? "text-state-failed" : "text-ui-text"}`}>
+                <span className={`match-score-percentage font-bold text-base ${scoreData.isFailed ? "text-state-failed" : "text-ui-text"}`}>
                   {scoreData.percentage.toFixed(2)}%
                 </span>
                 {scoreData.isFailed && (
@@ -268,7 +268,7 @@ export default function MatchRow({
                   </button>
                 )}
               </div>
-              <div className="flex min-h-6 items-center justify-center gap-1.5">
+              <div className="-mt-1 flex min-h-4 items-center justify-center gap-1.5 sm:mt-0 sm:min-h-6">
                 <span className="text-xs text-ui-text-mute">{scoreData.score} pts</span>
                 {controls && (
                   <DeleteConfirmButton

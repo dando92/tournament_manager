@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import type { ControlRoomEditorDto, ControlRoomFlowDto, ControlRoomStaleCode, MatchDto } from "@tournament-manager/contracts";
+import type { ControlRoomCreationDto, ControlRoomEditorDto, ControlRoomFlowDto, ControlRoomStaleCode, MatchDto } from "@tournament-manager/contracts";
 import { ControlRoomFlow } from "@tournament-manager/persistence";
 
 import { MatchQueries } from "@match/match.queries";
@@ -33,6 +33,20 @@ export class ControlRoomQueries {
         const matches = await this.matches.byTournament(tournamentId);
 
         return this.toDto(flow, new Map(matches.map((match) => [match.id, match])));
+    }
+
+    async creation(tournamentId: number): Promise<ControlRoomCreationDto> {
+        const [allMatches, assigned] = await Promise.all([
+            this.matches.byTournament(tournamentId),
+            this.flows.manager.query<Array<{ matchId: number }>>(
+                `SELECT entry."matchId" AS "matchId" FROM "control_room_flow_entry" entry
+                 JOIN "control_room_flow" flow ON flow.id = entry."flowId"
+                 WHERE flow."tournamentId" = $1`,
+                [tournamentId],
+            ),
+        ]);
+        const assignedIds = new Set(assigned.map((entry) => entry.matchId));
+        return { unassignedMatches: allMatches.filter((match) => !assignedIds.has(match.id)) };
     }
 
     async editor(flowId: number): Promise<ControlRoomEditorDto> {
@@ -88,6 +102,7 @@ export class ControlRoomQueries {
         return {
             id: flow.id,
             name: flow.name,
+            willStartAt: flow.willStartAt.toISOString(),
             status: flow.status,
             currentEntryId: flow.currentEntryId,
             staleCode: flow.staleCode as ControlRoomStaleCode | null,
@@ -99,8 +114,15 @@ export class ControlRoomQueries {
             version: flow.version,
             entries: (flow.entries ?? [])
                 .sort((left, right) => left.position - right.position)
-                .map((entry) => ({ id: entry.id, position: entry.position, match: matchById.get(entry.match.id) }))
-                .filter((entry): entry is { id: number; position: number; match: MatchDto } => Boolean(entry.match)),
+                .map((entry) => ({
+                    id: entry.id,
+                    position: entry.position,
+                    expectedDurationMinutes: entry.expectedDurationMinutes,
+                    startedAt: entry.startedAt?.toISOString() ?? null,
+                    completedAt: entry.completedAt?.toISOString() ?? null,
+                    match: matchById.get(entry.match.id),
+                }))
+                .filter((entry): entry is ControlRoomFlowDto["entries"][number] => Boolean(entry.match)),
         };
     }
 }

@@ -1,15 +1,42 @@
-import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsString, Min } from "class-validator";
+import { ArrayUnique, IsArray, IsDateString, IsInt, IsNotEmpty, IsString, Max, Min, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+
+export class ControlRoomFlowEntryInputDto {
+    @IsInt()
+    @Min(1)
+    matchId: number;
+
+    @IsInt()
+    @Min(1)
+    @Max(1440)
+    expectedDurationMinutes: number;
+}
 
 export class CreateControlRoomFlowDto {
     @IsString()
     @IsNotEmpty()
     name: string;
+
+    @IsDateString()
+    willStartAt: string;
+
+    @IsInt()
+    @Min(1)
+    @Max(1440)
+    defaultExpectedDurationMinutes: number;
+
+    @IsArray()
+    @ArrayUnique()
+    matchIds: number[];
 }
 
-export class RenameControlRoomFlowDto {
+export class UpdateControlRoomFlowDto {
     @IsString()
     @IsNotEmpty()
     name: string;
+
+    @IsDateString()
+    willStartAt: string;
 }
 
 export class ReplaceControlRoomEntriesDto {
@@ -18,6 +45,14 @@ export class ReplaceControlRoomEntriesDto {
     version: number;
 
     @IsArray()
-    @ArrayUnique()
-    matchIds: number[];
+    @ValidateNested({ each: true })
+    @Type(() => ControlRoomFlowEntryInputDto)
+    entries: ControlRoomFlowEntryInputDto[];
+}
+
+export class UpdateControlRoomEntryTimeDto {
+    @IsInt()
+    @Min(1)
+    @Max(1440)
+    expectedDurationMinutes: number;
 }

@@ -1,21 +1,20 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTableColumns } from "@fortawesome/free-solid-svg-icons";
+import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
+import { useControlRoom } from "@/features/control-room/model/useControlRoom";
+import TournamentTimelineOverview from "@/features/control-room/ui/TournamentTimelineOverview";
 
 /**
- * Deliberately empty, for now.
- *
- * Overview did two jobs and has lost both: its workspace totals moved to Stats,
- * and its grid of division cards was a second way to navigate the structure
- * that the tree now owns. What it becomes instead is still open.
+ * The public tournament flow. It deliberately reads the same projection as
+ * Control Room but exposes no operation or editing surface.
  */
 export default function OverviewPage() {
+  const { tournamentId, divisions } = useTournamentPageContext();
+  const room = useControlRoom(tournamentId);
+  const visibleFlows = room.flows.filter((flow) => !flow.archivedAt);
+
+  if (room.query.isLoading) return <p className="py-12 text-center text-sm text-ui-text-mute">Loading tournament timeline…</p>;
+  if (room.query.isError) return <p className="py-12 text-center text-sm text-state-failed">Unable to load the tournament timeline.</p>;
+
   return (
-    <div className="flex flex-col items-center gap-3 py-20 text-center">
-      <FontAwesomeIcon icon={faTableColumns} className="text-2xl text-ui-border-strong" />
-      <p className="max-w-sm text-sm text-ui-text-mute">
-        Pick a destination in the tree on the left. Totals moved to Stats; divisions, phases and pools live in the
-        tree, and right-clicking any of them creates what goes inside it.
-      </p>
-    </div>
+    <TournamentTimelineOverview flows={visibleFlows} divisions={divisions} />
   );
 }

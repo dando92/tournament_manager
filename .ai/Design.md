@@ -331,3 +331,26 @@ inactive at that match. Archived flows are hidden until **Show archived** is
 enabled. An interrupted inactive flow explains why it stopped and warns when
 the reopened match may still be ready to commit. The detailed interaction and lifecycle rules are defined in
 [ControlRoom.md](ControlRoom.md).
+
+## Tournament overview timeline
+
+The overview uses time markers as navigation rather than adding generic
+carousel dots. The selected marker and time label scale continuously with the
+horizontal drag; the actual current marker keeps a separate live-state ring.
+The match-card track follows the same selection and uses restrained scale and
+opacity depth, leaving neighboring cards visible; non-selected cards reduce to
+roughly seventy percent at the adjacent position. Desktop flow selection is a
+standalone vertical rail rather than part of an enclosing card. The timeline
+line is drawn as separate segments ending before each centered marker, and
+match arrow controls live above the card track rather than covering adjacent
+cards. On smartphones the vertical flow selector is hidden while a compact
+horizontal timeline rail remains visible. A gesture hint below the card track
+explains vertical flow swipes and horizontal match swipes, and typography and
+card spacing step down at the same breakpoint. Overview cards are always read-only.
+All smartphone match cards share the same compact typography, cell padding,
+card spacing, percentage sizing, and tightly stacked points line. Read-only
+cards differ only by the absence of editing controls, not by visual density.
+On desktop the flow selector forms a right sidebar using the same background
+token as the primary navigation; the timeline occupies and is centered within
+the content area between the two sidebars, and the right sidebar extends from
+the overview content boundary to the bottom of the viewport.

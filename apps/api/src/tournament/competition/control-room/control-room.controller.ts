@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards, ValidationPipe } from "@nestjs/common";
-import type { ControlRoomEditorDto, ControlRoomFlowDto, CreatedResourceDto } from "@tournament-manager/contracts";
+import type { ControlRoomCreationDto, ControlRoomEditorDto, ControlRoomFlowDto, CreatedResourceDto } from "@tournament-manager/contracts";
 
 import { RequireOpenTournament, TournamentOpenGuard } from "@tournament/shared/tournament-open.guard";
 import { ControlRoomCommands } from "./control-room.commands";
 import { ControlRoomQueries } from "./control-room.queries";
-import { CreateControlRoomFlowDto, RenameControlRoomFlowDto, ReplaceControlRoomEntriesDto } from "./control-room.requests";
+import { CreateControlRoomFlowDto, ReplaceControlRoomEntriesDto, UpdateControlRoomEntryTimeDto, UpdateControlRoomFlowDto } from "./control-room.requests";
 
 @UseGuards(TournamentOpenGuard)
 @Controller()
@@ -19,10 +19,23 @@ export class ControlRoomController {
         return this.queries.forTournament(Number(tournamentId));
     }
 
+    @Get("tournaments/:tournamentId/control-room/creation")
+    creation(@Param("tournamentId") tournamentId: number): Promise<ControlRoomCreationDto> {
+        return this.queries.creation(Number(tournamentId));
+    }
+
     @Post("tournaments/:tournamentId/control-room/flows")
     @RequireOpenTournament({ entity: "tournament", location: "params", field: "tournamentId" })
     async create(@Param("tournamentId") tournamentId: number, @Body(new ValidationPipe()) dto: CreateControlRoomFlowDto): Promise<CreatedResourceDto> {
-        return { id: await this.commands.create(Number(tournamentId), dto.name) };
+        return {
+            id: await this.commands.create(
+                Number(tournamentId),
+                dto.name,
+                new Date(dto.willStartAt),
+                dto.defaultExpectedDurationMinutes,
+                dto.matchIds,
+            ),
+        };
     }
 
     @Get("control-room/flows/:flowId")
@@ -38,8 +51,8 @@ export class ControlRoomController {
     @Patch("control-room/flows/:flowId")
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: "control-room-flow", location: "params", field: "flowId" })
-    rename(@Param("flowId") flowId: number, @Body(new ValidationPipe()) dto: RenameControlRoomFlowDto): Promise<void> {
-        return this.commands.rename(Number(flowId), dto.name);
+    updateDetails(@Param("flowId") flowId: number, @Body(new ValidationPipe()) dto: UpdateControlRoomFlowDto): Promise<void> {
+        return this.commands.updateDetails(Number(flowId), dto.name, new Date(dto.willStartAt));
     }
 
     @Delete("control-room/flows/:flowId")
@@ -53,7 +66,18 @@ export class ControlRoomController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: "control-room-flow", location: "params", field: "flowId" })
     replaceEntries(@Param("flowId") flowId: number, @Body(new ValidationPipe()) dto: ReplaceControlRoomEntriesDto): Promise<void> {
-        return this.commands.replaceEntries(Number(flowId), dto.version, dto.matchIds);
+        return this.commands.replaceEntries(Number(flowId), dto.version, dto.entries);
+    }
+
+    @Patch("control-room/flows/:flowId/entries/:entryId/time")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @RequireOpenTournament({ entity: "control-room-flow", location: "params", field: "flowId" })
+    updateEntryTime(
+        @Param("flowId") flowId: number,
+        @Param("entryId") entryId: number,
+        @Body(new ValidationPipe()) dto: UpdateControlRoomEntryTimeDto,
+    ): Promise<void> {
+        return this.commands.updateExpectedDuration(Number(flowId), Number(entryId), dto.expectedDurationMinutes);
     }
 
     @Post("control-room/flows/:flowId/start")

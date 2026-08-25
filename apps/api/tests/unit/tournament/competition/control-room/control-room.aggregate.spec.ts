@@ -7,7 +7,7 @@ describe("ControlRoomAggregate", () => {
     function flow() {
         const tournament = new Tournament();
         tournament.id = 3;
-        const aggregate = ControlRoomAggregate.create("Cabinet 1", tournament);
+        const aggregate = ControlRoomAggregate.create("Cabinet 1", new Date("2026-08-25T10:00:00.000Z"), tournament);
         aggregate.entity.id = 7;
         aggregate.entity.version = 1;
 
