@@ -20,12 +20,19 @@ the planned schedule without exposing Control Room operations.
 - Activating an entry again records the start of the new run and clears its
   prior completion timestamp.
 
-The global live offset is derived without changing planned data. The current
-entry's actual start is preferred. Otherwise the latest actual completion is
-compared with its planned completion. A running entry that has not started can
-accumulate delay against the current clock. The precise offset remains in
-milliseconds; only its label is rounded to ten-minute increments. Differences
-below five minutes display as `ON TIME`.
+The global live offset is derived without changing planned data. While an
+entry is current, its projected completion is the later of its expected
+completion from the actual start and the current clock. The offset compares
+that projection with its planned completion. If no entry is current, the
+latest actual completion is compared with its planned completion. The precise
+offset remains in milliseconds; only its label is rounded to ten-minute
+increments. Differences below five minutes display as `ON TIME`.
+
+Timeline labels represent fixed lifecycle events rather than a moving clock:
+a completed entry shows its actual completion, the current entry shows its
+actual start (or its planned start until activation), and future entries show
+their offset-adjusted expected starts. Only future expected starts move as the
+live completion offset changes.
 
 ## Flow creation and editing
 

@@ -120,6 +120,24 @@ the API validates that payload and writes it in one transaction.
 - The `chart-*` colours are the cabinet's, like `judgment`. They are data:
   never realign one to the semantic palette.
 
+## ITGmania Profile Export
+
+The division entrants page exposes a tournament-wide ITGmania profile export
+to users who can edit the tournament. The browser reads every division roster,
+including withdrawn and dropped entrants, deduplicates players across divisions
+and team entrants, and creates the archive without a backend export endpoint.
+
+- The ZIP is named after the tournament and contains
+  `LocalProfiles/<player>/Editable.ini` for every player who has belonged to a
+  tournament division.
+- `Editable.ini` is a small source constant. Every profile preserves it and
+  changes only `DisplayName` to the player's original name.
+- Only filesystem path segments are sanitized. The display name inside the INI
+  is never rewritten, and colliding sanitized folder names receive a stable
+  numeric suffix.
+- Lobby score ingestion matches cabinet names to tournament players using the
+  same trimmed, lowercase representation on both sides.
+
 ## Cascading Path Picker
 
 A hierarchical destination is chosen as one path, not as one dropdown per level.

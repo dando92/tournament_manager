@@ -179,10 +179,13 @@ function FlowTimeline({
 
     if (model.entries.length === 0) {
         return (
-            <div className="flex min-w-0 flex-col p-5 sm:p-7">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-text-mute">Tournament timeline</p>
-                <h1 className="mt-1 text-xl font-bold text-ui-text">{flow.name}</h1>
-                <p className="my-auto rounded-xl border border-dashed border-ui-border-strong py-16 text-center text-sm text-ui-text-mute">This flow has no matches.</p>
+            <div className="flex min-w-0 flex-col py-2 sm:p-7">
+                <div className="px-1 sm:px-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-text-mute">Tournament timeline</p>
+                    <h1 className="mt-1 text-xl font-bold text-ui-text">{flow.name}</h1>
+                </div>
+                <p className="my-8 rounded-xl border border-dashed border-ui-border-strong py-16 text-center text-sm text-ui-text-mute sm:my-auto">This flow has no matches.</p>
+                <MobileFlowSelector flow={flow} flowIndex={flowIndex} flowCount={flowCount} onMoveFlow={onMoveFlow} />
             </div>
         );
     }
@@ -249,20 +252,36 @@ function FlowTimeline({
                     </div>
                 </div>
             </div>
-            <nav aria-label="Tournament flows" className="mt-3 flex items-center justify-center gap-3 px-2 sm:hidden">
-                <button type="button" aria-label="Previous flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === 0} onClick={() => onMoveFlow(-1)}>
-                    <FontAwesomeIcon icon={faChevronLeft} />
-                </button>
-                <span className="min-w-0 text-center">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute">Flow {flowIndex + 1} / {flowCount}</span>
-                    <span className="block max-w-40 truncate text-xs font-bold text-ui-text">{flow.name}</span>
-                </span>
-                <button type="button" aria-label="Next flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === flowCount - 1} onClick={() => onMoveFlow(1)}>
-                    <FontAwesomeIcon icon={faChevronRight} />
-                </button>
-            </nav>
+            <MobileFlowSelector flow={flow} flowIndex={flowIndex} flowCount={flowCount} onMoveFlow={onMoveFlow} />
             <p className="mt-2 px-2 text-center text-[11px] leading-4 text-ui-text-mute sm:hidden">Swipe left or right to browse matches</p>
         </div>
+    );
+}
+
+function MobileFlowSelector({
+    flow,
+    flowIndex,
+    flowCount,
+    onMoveFlow,
+}: {
+    flow: ControlRoomFlowDto;
+    flowIndex: number;
+    flowCount: number;
+    onMoveFlow: (direction: -1 | 1) => void;
+}) {
+    return (
+        <nav aria-label="Tournament flows" className="mt-3 flex items-center justify-center gap-3 px-2 sm:hidden">
+            <button type="button" aria-label="Previous flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === 0} onClick={() => onMoveFlow(-1)}>
+                <FontAwesomeIcon icon={faChevronLeft} />
+            </button>
+            <span className="min-w-0 text-center">
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute">Flow {flowIndex + 1} / {flowCount}</span>
+                <span className="block max-w-40 truncate text-xs font-bold text-ui-text">{flow.name}</span>
+            </span>
+            <button type="button" aria-label="Next flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === flowCount - 1} onClick={() => onMoveFlow(1)}>
+                <FontAwesomeIcon icon={faChevronRight} />
+            </button>
+        </nav>
     );
 }
 

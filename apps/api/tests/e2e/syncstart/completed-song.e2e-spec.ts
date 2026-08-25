@@ -232,6 +232,21 @@ describe('Completed songs (e2e)', () => {
     expect(events[0].payload).toEqual({ tournamentId, divisionId, phaseId: expect.any(Number), phaseGroupId: poolId, matchId });
   });
 
+  it('matches lobby player names to entrants without case sensitivity', async () => {
+    const songId = await addSong('Case Insensitive');
+    const matchId = await liveMatchOn(songId, ['Ann']);
+
+    await report(lobbyReport('Case Insensitive', [{ playerName: 'ANN', exScore: 88 }]));
+
+    const standings = await standingsOf(matchId);
+    expect(standings).toEqual([
+      expect.objectContaining({
+        player: expect.objectContaining({ playerName: 'Ann' }),
+        score: expect.objectContaining({ percentage: 88 }),
+      }),
+    ]);
+  });
+
   /**
    * The cost of a lobby is the lobby, not the tournament around it. The
    * previous ingestion loaded every active match of the tournament — with its

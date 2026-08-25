@@ -27,27 +27,36 @@ export function buildTournamentTimeline(flow: ControlRoomFlowDto, now = new Date
     let offsetMs = 0;
 
     const currentEntry = currentIndex >= 0 ? flow.entries[currentIndex] : null;
-    if (currentEntry?.startedAt) {
-        offsetMs = new Date(currentEntry.startedAt).getTime() - plannedStarts[currentIndex];
+    if (currentEntry) {
+        const durationMs = currentEntry.expectedDurationMinutes * 60_000;
+        const plannedCompletion = plannedStarts[currentIndex] + durationMs;
+        const expectedCompletion = currentEntry.startedAt
+            ? new Date(currentEntry.startedAt).getTime() + durationMs
+            : now.getTime() + durationMs;
+        const projectedCompletion = flow.status === "running" || flow.status === "paused"
+            ? Math.max(expectedCompletion, now.getTime())
+            : expectedCompletion;
+        offsetMs = projectedCompletion - plannedCompletion;
     } else if (latestCompletedIndex >= 0) {
         const entry = flow.entries[latestCompletedIndex];
         if (entry.completedAt) {
             const plannedCompletion = plannedStarts[latestCompletedIndex] + entry.expectedDurationMinutes * 60_000;
             offsetMs = new Date(entry.completedAt).getTime() - plannedCompletion;
         }
-    } else if ((flow.status === "running" || flow.status === "paused") && currentIndex >= 0) {
-        offsetMs = Math.max(0, now.getTime() - plannedStarts[currentIndex]);
     }
 
-    const estimateFromIndex = currentIndex >= 0 ? currentIndex : latestCompletedIndex + 1;
+    const estimateFromIndex = currentIndex >= 0 ? currentIndex + 1 : latestCompletedIndex + 1;
     const entries = flow.entries.map((entry, index) => {
         const plannedStartAt = new Date(plannedStarts[index]).toISOString();
         const estimatedStartAt = new Date(plannedStarts[index] + (index >= estimateFromIndex ? offsetMs : 0)).toISOString();
+        const displayedStartAt = index === currentIndex
+            ? entry.startedAt ?? plannedStartAt
+            : entry.completedAt ?? entry.startedAt ?? estimatedStartAt;
         return {
             ...entry,
             plannedStartAt,
             estimatedStartAt,
-            displayedStartAt: entry.startedAt ?? estimatedStartAt,
+            displayedStartAt,
         };
     });
     const timingStatus = Math.abs(offsetMs) < ON_TIME_THRESHOLD_MS ? "on-time" : offsetMs > 0 ? "delayed" : "ahead";

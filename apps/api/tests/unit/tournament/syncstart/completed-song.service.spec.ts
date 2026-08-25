@@ -81,6 +81,13 @@ describe('CompletedSongService', () => {
         expect(applyCompletedSong).not.toHaveBeenCalled();
     });
 
+    it('matches a lobby player name without case sensitivity', async () => {
+        await service().submit(request([{ ...played, playerName: 'ANN' }]));
+
+        expect(playerIdsByNames).toHaveBeenCalledWith(7, ['ANN']);
+        expect(record).toHaveBeenCalledWith([{ playerId: 21, songId: 11, percentage: 98.5, isFailed: false }]);
+    });
+
     it('warns instead of saving when the cabinet reported no EX score', async () => {
         await service().submit(request([{ ...played, exScore: undefined }]));
 

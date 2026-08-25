@@ -28,7 +28,7 @@ function flow(overrides: Partial<ControlRoomFlowDto> = {}): ControlRoomFlowDto {
 }
 
 test("derives planned starts without persisting or propagating them", () => {
-    const model = buildTournamentTimeline(flow());
+    const model = buildTournamentTimeline(flow(), new Date("2026-08-25T10:45:00.000Z"));
 
     assert.deepEqual(model.entries.map((entry) => entry.plannedStartAt), [
         "2026-08-25T10:00:00.000Z",
@@ -41,10 +41,36 @@ test("derives planned starts without persisting or propagating them", () => {
 });
 
 test("treats small offsets as on time and reports ahead timing", () => {
-    const onTime = buildTournamentTimeline(flow({ entries: flow().entries.map((entry, index) => index === 1 ? { ...entry, startedAt: "2026-08-25T10:33:00.000Z" } : entry) }));
+    const now = new Date("2026-08-25T10:40:00.000Z");
+    const onTime = buildTournamentTimeline(flow({ entries: flow().entries.map((entry, index) => index === 1 ? { ...entry, startedAt: "2026-08-25T10:33:00.000Z" } : entry) }), now);
     assert.equal(onTime.timingStatus, "on-time");
 
-    const ahead = buildTournamentTimeline(flow({ entries: flow().entries.map((entry, index) => index === 1 ? { ...entry, startedAt: "2026-08-25T10:20:00.000Z" } : entry) }));
+    const ahead = buildTournamentTimeline(flow({ entries: flow().entries.map((entry, index) => index === 1 ? { ...entry, startedAt: "2026-08-25T10:20:00.000Z" } : entry) }), now);
     assert.equal(ahead.timingStatus, "ahead");
     assert.equal(timingStatusLabel(ahead), "10 MIN AHEAD");
+});
+
+test("keeps actual timeline events fixed and applies the live offset only to future starts", () => {
+    const model = buildTournamentTimeline(flow(), new Date("2026-08-25T10:45:00.000Z"));
+
+    assert.equal(model.entries[0].displayedStartAt, "2026-08-25T10:40:00.000Z");
+    assert.equal(model.entries[1].displayedStartAt, "2026-08-25T10:40:00.000Z");
+    assert.equal(model.entries[2].displayedStartAt, "2026-08-25T11:00:00.000Z");
+});
+
+test("increases delay when the current match runs beyond its expected completion", () => {
+    const model = buildTournamentTimeline(flow(), new Date("2026-08-25T11:15:00.000Z"));
+
+    assert.equal(model.offsetMs, 25 * 60_000);
+    assert.equal(model.entries[1].displayedStartAt, "2026-08-25T10:40:00.000Z");
+    assert.equal(model.entries[2].estimatedStartAt, "2026-08-25T11:15:00.000Z");
+    assert.equal(timingStatusLabel(model), "+30 MIN DELAY");
+});
+
+test("does not move an unstarted current match time with the clock", () => {
+    const entries = flow().entries.map((entry, index) => index === 1 ? { ...entry, startedAt: null } : entry);
+    const model = buildTournamentTimeline(flow({ entries }), new Date("2026-08-25T10:45:00.000Z"));
+
+    assert.equal(model.entries[1].displayedStartAt, "2026-08-25T10:30:00.000Z");
+    assert.equal(model.entries[2].displayedStartAt, "2026-08-25T11:05:00.000Z");
 });
