@@ -20,8 +20,6 @@ type Props = {
 export default function TournamentTimelineOverview({ flows, divisions }: Props) {
     const [flowIndex, setFlowIndex] = useState(() => initialFlowIndex(flows));
     const wheelLocked = useRef(false);
-    const touchStartY = useRef(0);
-    const touchStartX = useRef(0);
     const selectorListRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -50,19 +48,8 @@ export default function TournamentTimelineOverview({ flows, divisions }: Props) 
     return (
         <section
             className="min-w-0 sm:grid sm:h-[calc(100dvh-4rem)] sm:min-h-[32rem] sm:grid-cols-[minmax(0,1fr)_10rem]"
-            onTouchStart={(event) => {
-                touchStartX.current = event.touches[0].clientX;
-                touchStartY.current = event.touches[0].clientY;
-            }}
-            onTouchEnd={(event) => {
-                const movementX = event.changedTouches[0].clientX - touchStartX.current;
-                const movementY = event.changedTouches[0].clientY - touchStartY.current;
-                if (Math.abs(movementY) > 48 && Math.abs(movementY) > Math.abs(movementX) * 1.25) {
-                    moveFlow(movementY > 0 ? -1 : 1);
-                }
-            }}
         >
-            <FlowTimeline key={flow.id} flow={flow} divisions={divisions} flowIndex={flowIndex} flowCount={flows.length} />
+            <FlowTimeline key={flow.id} flow={flow} divisions={divisions} flowIndex={flowIndex} flowCount={flows.length} onMoveFlow={moveFlow} />
             <nav
                 aria-label="Tournament flows"
                 className="hidden h-full min-h-0 flex-col border-l border-ui-border bg-ui-sidebar overscroll-contain sm:flex"
@@ -113,11 +100,13 @@ function FlowTimeline({
     divisions,
     flowIndex,
     flowCount,
+    onMoveFlow,
 }: {
     flow: ControlRoomFlowDto;
     divisions: TournamentDivisionOption[];
     flowIndex: number;
     flowCount: number;
+    onMoveFlow: (direction: -1 | 1) => void;
 }) {
     const [now, setNow] = useState(() => new Date());
     const model = useMemo(() => buildTournamentTimeline(flow, now), [flow, now]);
@@ -199,7 +188,7 @@ function FlowTimeline({
     }
 
     return (
-        <div className="min-w-0 overflow-hidden py-2 [touch-action:none] sm:py-7 sm:[touch-action:auto]">
+        <div className="min-w-0 overflow-hidden py-2 sm:py-7">
             <header className="flex flex-wrap items-start justify-between gap-2 px-1 sm:gap-3 sm:px-7">
                 <div>
                     <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-ui-text-mute sm:text-xs sm:tracking-[0.18em]">Tournament timeline</p>
@@ -260,10 +249,19 @@ function FlowTimeline({
                     </div>
                 </div>
             </div>
-            <p className="mt-3 px-2 text-center text-[11px] leading-4 text-ui-text-mute sm:hidden">
-                <span className="block">Swipe left or right to browse matches</span>
-                <span className="block">Swipe up or down to change flow ({flowIndex + 1}/{flowCount})</span>
-            </p>
+            <nav aria-label="Tournament flows" className="mt-3 flex items-center justify-center gap-3 px-2 sm:hidden">
+                <button type="button" aria-label="Previous flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === 0} onClick={() => onMoveFlow(-1)}>
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
+                <span className="min-w-0 text-center">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute">Flow {flowIndex + 1} / {flowCount}</span>
+                    <span className="block max-w-40 truncate text-xs font-bold text-ui-text">{flow.name}</span>
+                </span>
+                <button type="button" aria-label="Next flow" className={`rounded-full border border-ui-border bg-ui-sidebar p-2 ${focusRing}`} disabled={flowIndex === flowCount - 1} onClick={() => onMoveFlow(1)}>
+                    <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+            </nav>
+            <p className="mt-2 px-2 text-center text-[11px] leading-4 text-ui-text-mute sm:hidden">Swipe left or right to browse matches</p>
         </div>
     );
 }

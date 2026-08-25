@@ -26,6 +26,7 @@ type MatchCardProps = {
   highlight?: MatchHighlight;
   onHighlight?: (highlight: MatchHighlight) => void;
   enablePathRowHighlight?: boolean;
+  allowMobileTableScroll?: boolean;
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
@@ -96,6 +97,7 @@ export default function MatchCard({
   highlight = { matchId: null, phaseGroupId: null },
   onHighlight = () => {},
   enablePathRowHighlight = false,
+  allowMobileTableScroll = true,
   onMatchUpdated,
   onDeleteMatch,
   onAddPlayersToMatch,
@@ -334,6 +336,7 @@ export default function MatchCard({
           highlight={highlight}
           onHighlight={onHighlight}
           enablePathRowHighlight={enablePathRowHighlight}
+          allowMobileTableScroll={allowMobileTableScroll}
           onDeleteRound={onDeleteRound}
           onDeletePlayer={(entrantId) =>
             onAddPlayersToMatch(

@@ -344,9 +344,11 @@ standalone vertical rail rather than part of an enclosing card. The timeline
 line is drawn as separate segments ending before each centered marker, and
 match arrow controls live above the card track rather than covering adjacent
 cards. On smartphones the vertical flow selector is hidden while a compact
-horizontal timeline rail remains visible. A gesture hint below the card track
-explains vertical flow swipes and horizontal match swipes, and typography and
-card spacing step down at the same breakpoint. Overview cards are always read-only.
+horizontal timeline rail remains visible. A previous/next flow selector sits
+below the card track, while horizontal swipes are reserved for match navigation.
+The overview table does not create a nested horizontal scroll surface on mobile,
+so its header and body drag the carousel consistently. Typography and card
+spacing step down at the same breakpoint. Overview cards are always read-only.
 All smartphone match cards share the same compact typography, cell padding,
 card spacing, percentage sizing, and tightly stacked points line. Read-only
 cards differ only by the absence of editing controls, not by visual density.

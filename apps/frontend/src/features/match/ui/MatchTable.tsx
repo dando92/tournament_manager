@@ -18,6 +18,7 @@ type MatchTableProps = {
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
   enablePathRowHighlight?: boolean;
+  allowMobileTableScroll?: boolean;
   onDeleteRound: (roundId: number) => void;
   onDeletePlayer: (entrantId: number) => void;
   onOpenAddStanding: (playerId: number, roundId: number, playerName: string, songTitle: string) => void;
@@ -44,6 +45,7 @@ export default function MatchTable({
   highlight,
   onHighlight,
   enablePathRowHighlight = false,
+  allowMobileTableScroll = true,
   onDeleteRound,
   onDeletePlayer,
   onOpenAddStanding,
@@ -137,7 +139,7 @@ export default function MatchTable({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-ui-border bg-ui-row">
+      <div className={`${allowMobileTableScroll ? "overflow-x-auto" : "overflow-x-hidden sm:overflow-x-auto"} rounded-lg border border-ui-border bg-ui-row`}>
         <table className="w-full text-sm border-collapse">
           {match.rounds.length === 0 && (
             <thead>

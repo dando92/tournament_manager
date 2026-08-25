@@ -49,8 +49,8 @@ changes retain their normal realtime invalidation.
   while the timeline remains centered in the content area between the primary
   navigation and the flow sidebar. The flow sidebar fills the available
   viewport height below the tournament breadcrumb.
-- Wheel and vertical touch gestures over that selector change the selected
-  flow without scrolling the document.
+- Wheel gestures over that selector change the selected flow without scrolling
+  the document.
 - Opening a flow selects its current entry, or its first entry when it has no
   current cursor.
 - Current and selected are separate states. The current marker remains visible
@@ -58,16 +58,17 @@ changes retain their normal realtime invalidation.
 - One selected index drives both the timeline rail and the match-card track.
 - Markers can be selected directly; arrow keys, buttons, and horizontal
   pointer/touch dragging navigate the cards.
-- Smartphone dragging locks to the initially dominant axis so horizontal match
-  navigation and vertical flow navigation do not interfere with one another.
+- Smartphone match dragging locks to the horizontal axis. The overview disables
+  its table's nested mobile horizontal scroll so dragging the header or body has
+  the same carousel behavior.
 - Marker, time-label, card scale, and opacity follow drag progress continuously.
 - The selected card is centered and adjacent cards remain partially visible.
 - Adjacent cards shrink substantially, and arrow controls sit above the card
   track so they never cover a neighboring match.
 - Smartphone layouts hide the vertical flow selector but retain a compact
-  horizontal timeline rail, reduce typography and spacing, and place a larger
-  gesture hint below the card track: vertical swipes change flow and horizontal
-  swipes change match.
+  horizontal timeline rail, reduce typography and spacing, and place an
+  explicit previous/next flow selector below the card track. Horizontal swipes
+  change match; flow changes do not depend on a competing vertical gesture.
 - Every overview match card is rendered through the dedicated
   `ReadOnlyMatchCard` adapter with `controls={false}`. Permissions never enable
   editing from the overview.

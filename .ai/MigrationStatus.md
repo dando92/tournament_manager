@@ -18,7 +18,9 @@
   planned and estimated starts and the global live offset remain derived.
 - Populated Tournament Overview with read-only match cards, synchronized
   timeline/card dragging, distinct current and selected states, responsive
-  neighboring-card previews, and an internal vertical multi-flow selector.
+  neighboring-card previews, a full-height right flow sidebar on desktop, and
+  explicit mobile flow controls below the horizontal match carousel. The mobile
+  overview removes nested table scrolling so the whole card drags consistently.
 - Added the focused Control Room `Edit time` action without realtime broadcast.
 - Added a forward timing migration for databases that already ran the original
   Control Room migrations. Existing flows are preserved with a migration-time
@@ -30,6 +32,9 @@
   schema, and all six Control Room API end-to-end scenarios pass. The forward
   migration was applied to the local database and the flow endpoint returned
   HTTP 200 with the preserved flows and backfilled timing fields.
+- Latest responsive follow-up verification: frontend build and lint pass with
+  the five existing warnings and no errors; `git diff --check` reports no
+  whitespace errors.
 - Manual UI check: the user confirmed the division entrants page on 2026-08-23, after the withdrawn-entrant fix. That covers `fix/withdrawn-entrants` and the division half of `feature/division-pages` and `refactor/5-tree`. Not yet confirmed by hand: the home page and the search dialog on the two-field public list, the participants page and the start.gg import preview, the song list, the new song import dialog, and the rebuilt create-match modal.
 
 ## Completed Checkpoints

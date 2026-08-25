@@ -19,6 +19,7 @@ export default function ReadOnlyMatchCard({ division, match, allMatches }: Props
             match={match}
             allMatches={allMatches}
             controls={false}
+            allowMobileTableScroll={false}
             onMatchUpdated={noop}
             onDeleteMatch={noop}
             onAddPlayersToMatch={noopAsync}
