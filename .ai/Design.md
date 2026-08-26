@@ -301,9 +301,11 @@ It opens a focused modal with one select field and a warning when the match has
 played scores, because saving immediately recalculates completed song rounds.
 Completed matches hide the action until they are reopened.
 
-The match page keeps the live panel below the match cards for every permission
-level. The lobby-control card lives in Control Room, where staff operate flows
-and cabinets together without binding a lobby to a flow or match.
+The division match page does not include the live panel. Live state is presented
+only on the tournament Live page, keeping division management focused on its
+match list and match cards. The lobby-control card lives in Control Room, where
+staff operate flows and cabinets together without binding a lobby to a flow or
+match.
 
 ### Tiebreak results and responsive tables
 

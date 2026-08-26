@@ -2,12 +2,21 @@
 
 ## Current Position
 
-- Last updated: 2026-08-25.
+- Last updated: 2026-08-26.
 - Completed plans: [Simplified Architecture Migration Plan](MigrationPlan.md), [API and Frontend Structure Refactoring](ApiRefactoring.md), and [Control Room](ControlRoom.md).
 - Active plan: none.
 - State: Architecture migration and Control Room delivery complete.
 - Current runtime: API, migrations, local fixtures, SyncStart, Realtime, frontend, PostgreSQL, and Redis run without processor or durable-event infrastructure.
 - Next action: manually exercise the responsive Control Room carousel, queue long-press menu, flow editor drag-and-drop, and real lobby/cabinet sessions with two concurrent flows.
+
+### Division page live view separation
+
+- Removed the duplicated live panel from the division match page. Tournament
+  live state is now presented only on the dedicated Live page, keeping division
+  management focused on matches.
+- Removed the unused division-specific `LiveNowPanel` component.
+- Verification: frontend build, targeted lint, and all 68 frontend unit tests
+  pass. The user manually confirmed the behavior.
 
 ### Tournament overview timeline
 
