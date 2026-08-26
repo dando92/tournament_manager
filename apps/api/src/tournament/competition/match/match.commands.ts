@@ -270,6 +270,69 @@ export class MatchCommands {
         await this.announce(match, before);
     }
 
+    async addTiebreak(matchId: number, playerIds: number[], songId?: number): Promise<number> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        match.assertEditable();
+        const players = await this.store.loadPlayers(playerIds);
+        const song = songId ? (await this.store.loadSongs([songId]))[0] : null;
+        const tiebreak = match.addTiebreak(song, playerIds.map((playerId) => players.get(playerId)));
+
+        await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
+        await this.announce(match, before);
+
+        return tiebreak.id;
+    }
+
+    async removeTiebreak(matchId: number, tiebreakId: number): Promise<void> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        match.assertEditable();
+        match.removeTiebreak(tiebreakId);
+
+        await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
+        await this.announce(match, before);
+    }
+
+    async upsertTiebreakScore(matchId: number, tiebreakId: number, playerId: number, input: ScoreInput): Promise<void> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        match.assertEditable();
+        const player = await this.store.loadPlayer(playerId);
+        const score = input.scoreId
+            ? await this.store.loadAssignableTiebreakScore(input.scoreId, tiebreakId, playerId)
+            : this.draftScore(player, match.tiebreakSongOf(tiebreakId), input);
+        match.upsertTiebreakScore(tiebreakId, player, score);
+
+        await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
+        await this.announce(match, before);
+    }
+
+    async upsertTiebreakPoints(matchId: number, tiebreakId: number, playerId: number, points: number): Promise<void> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        match.assertEditable();
+        match.upsertTiebreakPoints(tiebreakId, playerId, points);
+
+        await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
+        await this.announce(match, before);
+    }
+
+    async clearTiebreakStanding(matchId: number, tiebreakId: number, playerId: number): Promise<void> {
+        const match = await this.store.loadOrFail(matchId);
+        const before = match.poolState;
+        match.assertEditable();
+        match.clearTiebreakStanding(tiebreakId, playerId);
+
+        await this.store.save(match);
+        await this.controlRoom.recalculateForMatch(match.id);
+        await this.announce(match, before);
+    }
+
     /**
      * Closing a match: it stops being editable, its entrants move on through the
      * advancement rules that leave it, and start.gg is told if it is linked.

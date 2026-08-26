@@ -1,0 +1,34 @@
+import { Column, Entity, Index, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+
+import { Match } from "./match.entity";
+import { MatchTiebreakStanding } from "./match-tiebreak-standing.entity";
+import { Song } from "./song.entity";
+
+/**
+ * One attempt to split a tied placement group without changing match points.
+ *
+ * A song means the attempt is ranked by played percentages. No song means the
+ * operator states ordering values by hand. Several attempts may follow one
+ * another when an earlier attempt leaves part of its field tied.
+ */
+@Entity()
+@Index(["match", "sequence"], { unique: true })
+export class MatchTiebreak {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    sequence: number;
+
+    @Column({ default: false })
+    invalidated: boolean;
+
+    @ManyToOne(() => Match, (match) => match.tiebreaks, { onDelete: "CASCADE" })
+    match: Match;
+
+    @ManyToOne(() => Song, { onDelete: "CASCADE", nullable: true })
+    song?: Song | null;
+
+    @OneToMany(() => MatchTiebreakStanding, (standing) => standing.tiebreak, { cascade: true })
+    standings: MatchTiebreakStanding[];
+}

@@ -31,6 +31,34 @@ export type MatchRoundDto = {
 export type MatchResultEntryDto = {
     playerId: number;
     points: number;
+    placement: number;
+};
+
+export type MatchTiebreakStandingDto = {
+    id: number;
+    player: PlayerRefDto;
+    score: ScoreDto | null;
+    manualPoints: number | null;
+};
+
+export type MatchTiebreakDto = {
+    id: number;
+    sequence: number;
+    invalidated: boolean;
+    song: SongRefDto | null;
+    standings: MatchTiebreakStandingDto[];
+};
+
+export type MatchPlacementTieDto = {
+    playerIds: number[];
+    fromPlacement: number;
+    toPlacement: number;
+};
+
+export type MatchResultStateDto = {
+    status: 'incomplete' | 'tiebreak_required' | 'ready' | 'completed';
+    entries: MatchResultEntryDto[];
+    ambiguousTies: MatchPlacementTieDto[];
 };
 
 export type MatchResultDto = {
@@ -58,7 +86,9 @@ export type MatchDto = {
     active: boolean;
     entrants: EntrantDto[];
     rounds: MatchRoundDto[];
+    tiebreaks: MatchTiebreakDto[];
     advancementRules: AdvancementRuleDto[];
+    resultState: MatchResultStateDto;
     matchResult?: MatchResultDto | null;
     phaseGroupId: number;
 };

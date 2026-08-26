@@ -90,6 +90,7 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - [API and frontend structure refactoring plan and decisions](.ai/ApiRefactoring.md)
 - [Tournament Control Room flows and implementation plan](.ai/ControlRoom.md)
 - [Tournament overview timeline and timing model](.ai/TournamentTimeline.md)
+- [Match tiebreak calculation, placement resolution, and responsive presentation](.ai/Tiebreaks.md)
 
 ## Repository Architecture
 

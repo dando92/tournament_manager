@@ -1,9 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
+    AdvancementRule,
     Entrant,
     Match,
     MatchResult,
-    MatchResultEntry,
+    MatchTiebreak,
+    MatchTiebreakStanding,
     PhaseGroup,
     Player,
     Round,
@@ -11,7 +13,9 @@ import {
     Song,
     Standing,
 } from '@tournament-manager/persistence';
+import type { MatchResultStateDto } from '@tournament-manager/contracts';
 import type { ScoringSystemProvider, ScoringSystemType } from '@tournament-manager/scoring';
+import { resolvePlacements, TiebreakPlacementInput } from '@match/placement.resolver';
 
 /** Where a match sits, and therefore where the events it produces are routed. */
 export type MatchAddress = {
@@ -29,6 +33,7 @@ export type MatchAddress = {
 export type MatchRemovals = {
     roundIds: number[];
     standingIds: number[];
+    tiebreakIds: number[];
     matchResultId: number | null;
 };
 
@@ -56,6 +61,10 @@ function isPlayed(standing: Standing): standing is PlayedStanding {
     return Boolean(standing.score);
 }
 
+function sameIds(left: number[], right: number[]): boolean {
+    return left.length === right.length && [...left].sort((a, b) => a - b).every((id, index) => id === right[index]);
+}
+
 /**
  * A match and the rules that govern changing it.
  *
@@ -68,13 +77,17 @@ function isPlayed(standing: Standing): standing is PlayedStanding {
 export class MatchAggregate {
     private readonly removedRoundIds = new Set<number>();
     private readonly removedStandingIds = new Set<number>();
+    private readonly removedTiebreakIds = new Set<number>();
     private removedMatchResultId: number | null = null;
 
-    private constructor(private readonly match: Match) {}
+    private constructor(
+        private readonly match: Match,
+        private readonly advancementRules: AdvancementRule[] = [],
+    ) {}
 
     /** Wraps a match the store has loaded. */
-    static of(match: Match): MatchAggregate {
-        return new MatchAggregate(match);
+    static of(match: Match, advancementRules: AdvancementRule[] = []): MatchAggregate {
+        return new MatchAggregate(match, advancementRules);
     }
 
     /** A match that does not exist yet. Saving it gives it an id. */
@@ -88,6 +101,7 @@ export class MatchAggregate {
         match.phaseGroup = phaseGroup;
         match.entrants = entrants;
         match.rounds = [];
+        match.tiebreaks = [];
         match.matchResult = null;
 
         return new MatchAggregate(match);
@@ -110,6 +124,26 @@ export class MatchAggregate {
         return Boolean(this.match.matchResult);
     }
 
+    /** The current preview the UI reads and the commit freezes. */
+    get resultState(): MatchResultStateDto {
+        if (this.match.matchResult) {
+            return { status: 'completed', entries: this.match.matchResult.playerPoints ?? [], ambiguousTies: [] };
+        }
+
+        return this.calculatedResultState();
+    }
+
+    private calculatedResultState(): MatchResultStateDto {
+        const points = this.calculatePoints();
+        if (!points) return { status: 'incomplete', entries: [], ambiguousTies: [] };
+
+        const resolution = resolvePlacements(points, this.tiebreakPlacementInputs(), this.outgoingAdvancementRules());
+        return {
+            status: resolution.ambiguousTies.length > 0 ? 'tiebreak_required' : 'ready',
+            ...resolution,
+        };
+    }
+
     /**
      * What the tree draws about the pool this match sits in: how many of its
      * matches are waiting on a person, and how many are done.
@@ -124,7 +158,7 @@ export class MatchAggregate {
     get poolState(): MatchPoolState {
         return {
             completed: this.isCompleted,
-            awaitingCommit: !this.isCompleted && this.resultEntries() !== null,
+            awaitingCommit: this.resultState.status === 'ready',
             progressed:
                 this.isCompleted ||
                 this.rounds.some((round) =>
@@ -139,6 +173,10 @@ export class MatchAggregate {
 
     get rounds(): Round[] {
         return this.match.rounds ?? [];
+    }
+
+    get tiebreaks(): MatchTiebreak[] {
+        return this.match.tiebreaks ?? [];
     }
 
     /**
@@ -165,6 +203,7 @@ export class MatchAggregate {
         return {
             roundIds: [...this.removedRoundIds],
             standingIds: [...this.removedStandingIds],
+            tiebreakIds: [...this.removedTiebreakIds],
             matchResultId: this.removedMatchResultId,
         };
     }
@@ -173,6 +212,7 @@ export class MatchAggregate {
     settle(): void {
         this.removedRoundIds.clear();
         this.removedStandingIds.clear();
+        this.removedTiebreakIds.clear();
         this.removedMatchResultId = null;
     }
 
@@ -288,6 +328,7 @@ export class MatchAggregate {
      * unnoticed.
      */
     addRound(song: Song | null): Round {
+        this.invalidateTiebreaks();
         const round = new Round();
         round.song = song;
         round.standings = [];
@@ -317,6 +358,7 @@ export class MatchAggregate {
 
         this.match.rounds = this.rounds.filter((candidate) => candidate.id !== roundId);
         this.removedRoundIds.add(roundId);
+        this.invalidateTiebreaks();
     }
 
     /** The song a round was played on, which is what a score has to match. */
@@ -340,6 +382,7 @@ export class MatchAggregate {
 
         this.writeStanding(round, player, score, 0);
         this.rankIfComplete(round, scoringSystems);
+        this.invalidateTiebreaks();
     }
 
     /** A stated result: points a person assigned, with nothing played behind them. */
@@ -352,6 +395,7 @@ export class MatchAggregate {
         }
 
         this.writeStanding(round, player, null, points);
+        this.invalidateTiebreaks();
     }
 
     removeStanding(roundId: number, playerId: number): void {
@@ -365,6 +409,77 @@ export class MatchAggregate {
         /* The round is incomplete again, so the ranking it produced no longer
            means anything and must not be left behind. */
         if (round.song) round.standings.forEach((candidate) => (candidate.points = 0));
+        this.invalidateTiebreaks();
+    }
+
+    /** Adds one attempt for exactly one currently ambiguous tied group. */
+    addTiebreak(song: Song | null, players: Player[]): MatchTiebreak {
+        this.assertEditable();
+        const requested = [...players].map((player) => player.id).sort((left, right) => left - right);
+        const tie = this.resultState.ambiguousTies.find((candidate) =>
+            sameIds(candidate.playerIds, requested),
+        );
+        if (!tie) {
+            throw new BadRequestException('A tiebreak must contain exactly one currently ambiguous tied group');
+        }
+        if (this.tiebreaks.some((candidate) => !candidate.invalidated && !this.isTiebreakComplete(candidate))) {
+            throw new BadRequestException('Complete or remove the current tiebreak before adding another');
+        }
+
+        const tiebreak = new MatchTiebreak();
+        tiebreak.sequence = this.tiebreaks.reduce((maximum, candidate) => Math.max(maximum, candidate.sequence), 0) + 1;
+        tiebreak.invalidated = false;
+        tiebreak.song = song;
+        tiebreak.standings = players.map((player) => {
+            const standing = new MatchTiebreakStanding();
+            standing.player = player;
+            standing.score = null;
+            standing.manualPoints = null;
+
+            return standing;
+        });
+        this.match.tiebreaks = [...this.tiebreaks, tiebreak];
+
+        return tiebreak;
+    }
+
+    removeTiebreak(tiebreakId: number): void {
+        const tiebreak = this.tiebreakOf(tiebreakId);
+        this.match.tiebreaks = this.tiebreaks.filter((candidate) => candidate !== tiebreak);
+        if (tiebreak.id) this.removedTiebreakIds.add(tiebreak.id);
+    }
+
+    tiebreakSongOf(tiebreakId: number): Song | null {
+        return this.tiebreakOf(tiebreakId).song ?? null;
+    }
+
+    upsertTiebreakScore(tiebreakId: number, player: Player, score: Score): void {
+        const tiebreak = this.tiebreakOf(tiebreakId);
+        if (tiebreak.invalidated) throw new BadRequestException(`Tiebreak ${tiebreakId} is invalidated`);
+        if (!tiebreak.song) throw new BadRequestException(`Tiebreak ${tiebreakId} is scored by hand`);
+        if (score.player?.id !== player.id || score.song?.id !== tiebreak.song.id) {
+            throw new BadRequestException(`Score ${score.id} does not match the selected player and tiebreak song`);
+        }
+
+        const standing = this.tiebreakStandingOf(tiebreak, player.id);
+        standing.score = score;
+        standing.manualPoints = null;
+    }
+
+    upsertTiebreakPoints(tiebreakId: number, playerId: number, points: number): void {
+        const tiebreak = this.tiebreakOf(tiebreakId);
+        if (tiebreak.invalidated) throw new BadRequestException(`Tiebreak ${tiebreakId} is invalidated`);
+        if (tiebreak.song) throw new BadRequestException(`Tiebreak ${tiebreakId} is scored from a song`);
+
+        const standing = this.tiebreakStandingOf(tiebreak, playerId);
+        standing.score = null;
+        standing.manualPoints = points;
+    }
+
+    clearTiebreakStanding(tiebreakId: number, playerId: number): void {
+        const standing = this.tiebreakStandingOf(this.tiebreakOf(tiebreakId), playerId);
+        standing.score = null;
+        standing.manualPoints = null;
     }
 
     /**
@@ -376,13 +491,20 @@ export class MatchAggregate {
      * hand.
      */
     commit(): void {
-        const playerPoints = this.resultEntries();
-        if (!playerPoints) {
+        const state = this.calculatedResultState();
+        if (state.status === 'incomplete') {
             throw new BadRequestException(`Match ${this.match.id} cannot be completed because not all standings are populated`);
+        }
+        if (state.status === 'tiebreak_required') {
+            throw new BadRequestException({
+                code: 'MATCH_TIEBREAK_REQUIRED',
+                message: `Match ${this.match.id} cannot be completed because an advancement placement is tied`,
+                ties: state.ambiguousTies,
+            });
         }
 
         const result = this.match.matchResult ?? new MatchResult();
-        result.playerPoints = playerPoints;
+        result.playerPoints = state.entries;
         this.match.matchResult = result;
         this.match.active = false;
     }
@@ -397,16 +519,14 @@ export class MatchAggregate {
 
     /** The entrants in the order the committed result placed them. */
     entrantsByPlacement(): Entrant[] {
-        const points = new Map(
-            (this.match.matchResult?.playerPoints ?? []).map((entry) => [entry.playerId, entry.points]),
+        const order = new Map(
+            (this.match.matchResult?.playerPoints ?? []).map((entry, index) => [entry.playerId, index]),
         );
 
-        return [...this.entrants].sort((left, right) => {
-            const leftPlayerId = left.participants?.[0]?.player?.id;
-            const rightPlayerId = right.participants?.[0]?.player?.id;
-
-            return (points.get(rightPlayerId) ?? 0) - (points.get(leftPlayerId) ?? 0);
-        });
+        return [...this.entrants].sort((left, right) =>
+            (order.get(left.participants?.[0]?.player?.id) ?? Number.MAX_SAFE_INTEGER) -
+            (order.get(right.participants?.[0]?.player?.id) ?? Number.MAX_SAFE_INTEGER),
+        );
     }
 
     /**
@@ -418,7 +538,7 @@ export class MatchAggregate {
      * particular: the points are stated, one to nothing is a result, and a
      * player nobody gave points to scored none.
      */
-    private resultEntries(): MatchResultEntry[] | null {
+    private calculatePoints(): Array<{ playerId: number; points: number }> | null {
         const playerIds = this.singlesPlayerIds();
         if (playerIds.length === 0 || this.rounds.length === 0) return null;
 
@@ -440,7 +560,54 @@ export class MatchAggregate {
             }, 0),
         }));
 
-        return playerPoints.sort((left, right) => right.points - left.points || left.playerId - right.playerId);
+        return playerPoints;
+    }
+
+    private tiebreakPlacementInputs(): TiebreakPlacementInput[] {
+        return this.tiebreaks.map((tiebreak) => ({
+            id: tiebreak.id ?? 0,
+            sequence: tiebreak.sequence,
+            invalidated: tiebreak.invalidated,
+            complete: this.isTiebreakComplete(tiebreak),
+            entries: (tiebreak.standings ?? []).map((standing) => ({
+                playerId: standing.player.id,
+                value: tiebreak.song ? Number(standing.score?.percentage ?? 0) : standing.manualPoints ?? null,
+                isFailed: tiebreak.song ? standing.score?.isFailed ?? null : null,
+            })),
+        }));
+    }
+
+    private outgoingAdvancementRules(): AdvancementRule[] {
+        return this.advancementRules.filter((rule) => rule.sourceKind === 'match' && rule.sourceId === this.match.id);
+    }
+
+    private isTiebreakComplete(tiebreak: MatchTiebreak): boolean {
+        const standings = tiebreak.standings ?? [];
+        if (standings.length < 2) return false;
+
+        return tiebreak.song
+            ? standings.every((standing) => Boolean(standing.score))
+            : standings.every((standing) => standing.manualPoints !== null && standing.manualPoints !== undefined);
+    }
+
+    private tiebreakOf(tiebreakId: number): MatchTiebreak {
+        const tiebreak = this.tiebreaks.find((candidate) => candidate.id === tiebreakId);
+        if (!tiebreak) throw new NotFoundException(`Tiebreak with id ${tiebreakId} not found in match ${this.match.id}`);
+
+        return tiebreak;
+    }
+
+    private tiebreakStandingOf(tiebreak: MatchTiebreak, playerId: number): MatchTiebreakStanding {
+        const standing = (tiebreak.standings ?? []).find((candidate) => candidate.player?.id === playerId);
+        if (!standing) throw new BadRequestException(`Player ${playerId} does not participate in tiebreak ${tiebreak.id}`);
+
+        return standing;
+    }
+
+    private invalidateTiebreaks(): void {
+        this.tiebreaks.forEach((tiebreak) => {
+            tiebreak.invalidated = true;
+        });
     }
 
     private roundOf(roundId: number): Round {
@@ -475,6 +642,7 @@ export class MatchAggregate {
      * them is remove the ones nobody owns.
      */
     private resettle(scoringSystems: ScoringSystemProvider): void {
+        this.invalidateTiebreaks();
         const playerIds = new Set(this.singlesPlayerIds());
 
         this.rounds.forEach((round) => {

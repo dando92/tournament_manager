@@ -20,6 +20,8 @@ import { PhaseGroup } from './entities/phase-group.entity';
 import { PhaseGroupEntrant } from './entities/phase-group-entrant.entity';
 import { ControlRoomFlow } from './entities/control-room-flow.entity';
 import { ControlRoomFlowEntry } from './entities/control-room-flow-entry.entity';
+import { MatchTiebreak } from './entities/match-tiebreak.entity';
+import { MatchTiebreakStanding } from './entities/match-tiebreak-standing.entity';
 export type { ParticipantRole, ParticipantStatus } from './entities/participant.entity';
 export type { EntrantType, EntrantStatus } from './entities/entrant.entity';
 export type { MatchResultEntry } from './entities/match_result.entity';
@@ -57,6 +59,8 @@ export { PhaseGroup }
 export { PhaseGroupEntrant }
 export { ControlRoomFlow }
 export { ControlRoomFlowEntry }
+export { MatchTiebreak }
+export { MatchTiebreakStanding }
 
 export const Entities = [
     Division,
@@ -81,4 +85,6 @@ export const Entities = [
     ,PhaseGroupEntrant
     ,ControlRoomFlow
     ,ControlRoomFlowEntry
+    ,MatchTiebreak
+    ,MatchTiebreakStanding
 ];

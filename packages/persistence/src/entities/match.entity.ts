@@ -14,6 +14,7 @@ import { Round } from './round.entity'
 import { Entrant } from './entrant.entity'
 import { MatchResult } from './match_result.entity'
 import { PhaseGroup } from './phase-group.entity'
+import { MatchTiebreak } from './match-tiebreak.entity'
 
 @Entity()
 export class Match {
@@ -41,6 +42,9 @@ export class Match {
 
   @OneToMany(() => Round, (round) => round.match, { cascade: true  })
   rounds: Round[];
+
+  @OneToMany(() => MatchTiebreak, (tiebreak) => tiebreak.match, { cascade: true })
+  tiebreaks: MatchTiebreak[];
 
   @OneToOne(() => MatchResult, (matchResult) => matchResult.match, {
     cascade: true,

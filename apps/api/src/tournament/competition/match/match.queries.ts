@@ -7,9 +7,12 @@ import {
     MatchDto,
     EntrantDto,
     MatchResultEntryDto,
+    MatchResultStateDto,
     MatchRoundDto,
+    MatchTiebreakDto,
     SongRefDto,
 } from '@tournament-manager/contracts';
+import { resolvePlacements } from '@match/placement.resolver';
 
 /**
  * Which matches a projection covers. The three read routes differ in this and
@@ -56,6 +59,7 @@ type MatchRow = {
     matchResultPlayerPoints: MatchResultEntryDto[] | null;
     entrants: EntrantDto[];
     rounds: MatchRoundDto[];
+    tiebreaks: MatchTiebreakDto[];
 };
 
 const matchesInScope = (scope: MatchScope): string => `
@@ -69,7 +73,8 @@ const matchesInScope = (scope: MatchScope): string => `
             mr."id"                     AS "matchResultId",
             mr."playerPoints"::json     AS "matchResultPlayerPoints",
             COALESCE(entrants."json", '[]'::json) AS "entrants",
-            COALESCE(rounds."json", '[]'::json)   AS "rounds"
+            COALESCE(rounds."json", '[]'::json)   AS "rounds",
+            COALESCE(tiebreaks."json", '[]'::json) AS "tiebreaks"
     FROM        "match" m
     LEFT JOIN   "match_result" mr ON mr."id" = m."matchResultId"
     LEFT JOIN LATERAL (
@@ -139,6 +144,44 @@ const matchesInScope = (scope: MatchScope): string => `
         ) standings ON TRUE
         WHERE   r."matchId" = m."id"
     ) rounds ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT  json_agg(
+                    json_build_object(
+                        'id', mt."id",
+                        'sequence', mt."sequence",
+                        'invalidated', mt."invalidated",
+                        'song', CASE
+                            WHEN ts."id" IS NULL THEN NULL
+                            ELSE json_build_object('id', ts."id", 'title', ts."title")
+                        END,
+                        'standings', COALESCE(tiebreak_standings."json", '[]'::json)
+                    ) ORDER BY mt."sequence", mt."id"
+                ) AS "json"
+        FROM        "match_tiebreak" mt
+        LEFT JOIN   "song" ts ON ts."id" = mt."songId"
+        LEFT JOIN LATERAL (
+            SELECT  json_agg(
+                        json_build_object(
+                            'id', mts."id",
+                            'manualPoints', mts."manualPoints",
+                            'player', json_build_object('id', tp."id", 'playerName', tp."playerName"),
+                            'score', CASE
+                                WHEN tsc."id" IS NULL THEN NULL
+                                ELSE json_build_object(
+                                    'id', tsc."id",
+                                    'percentage', tsc."percentage",
+                                    'isFailed', tsc."isFailed"
+                                )
+                            END
+                        ) ORDER BY mts."id"
+                    ) AS "json"
+            FROM        "match_tiebreak_standing" mts
+            JOIN        "player" tp ON tp."id" = mts."playerId"
+            LEFT JOIN   "score" tsc ON tsc."id" = mts."scoreId"
+            WHERE       mts."tiebreakId" = mt."id"
+        ) tiebreak_standings ON TRUE
+        WHERE mt."matchId" = m."id"
+    ) tiebreaks ON TRUE
     WHERE   ${SCOPE_PREDICATE[scope]}
     ORDER BY m."id"
 `;
@@ -229,6 +272,54 @@ const ACTIVE_TOURNAMENT_SONGS = `
     ORDER BY active_song."title", active_song."id"
 `;
 
+function projectedResultState(row: MatchRow, rules: AdvancementRuleDto[]): MatchResultStateDto {
+    if (row.matchResultId !== null) {
+        return { status: 'completed', entries: row.matchResultPlayerPoints ?? [], ambiguousTies: [] };
+    }
+
+    const playerIds = row.entrants
+        .filter((entrant) => entrant.type === 'player')
+        .map((entrant) => entrant.participants?.[0]?.player?.id)
+        .filter((playerId): playerId is number => Boolean(playerId));
+    if (playerIds.length === 0 || row.rounds.length === 0) {
+        return { status: 'incomplete', entries: [], ambiguousTies: [] };
+    }
+
+    const settled = row.rounds.every((round) => round.song
+        ? playerIds.every((playerId) => round.standings.some((standing) => standing.player.id === playerId))
+        : round.standings.some((standing) => standing.points > 0));
+    if (!settled) return { status: 'incomplete', entries: [], ambiguousTies: [] };
+
+    const points = playerIds.map((playerId) => ({
+        playerId,
+        points: row.rounds.reduce((total, round) =>
+            total + (round.standings.find((standing) => standing.player.id === playerId)?.points ?? 0), 0),
+    }));
+    const tiebreaks = row.tiebreaks.map((tiebreak) => ({
+        id: tiebreak.id,
+        sequence: tiebreak.sequence,
+        invalidated: tiebreak.invalidated,
+        complete: tiebreak.standings.length >= 2 && (tiebreak.song
+            ? tiebreak.standings.every((standing) => Boolean(standing.score))
+            : tiebreak.standings.every((standing) => standing.manualPoints !== null)),
+        entries: tiebreak.standings.map((standing) => ({
+            playerId: standing.player.id,
+            value: tiebreak.song ? Number(standing.score?.percentage ?? 0) : standing.manualPoints,
+            isFailed: tiebreak.song ? standing.score?.isFailed ?? null : null,
+        })),
+    }));
+    const resolution = resolvePlacements(
+        points,
+        tiebreaks,
+        rules.filter((rule) => rule.sourceKind === 'match' && rule.sourceId === row.id),
+    );
+
+    return {
+        status: resolution.ambiguousTies.length > 0 ? 'tiebreak_required' : 'ready',
+        ...resolution,
+    };
+}
+
 /**
  * Every read of a match, in the one shape the interface consumes.
  *
@@ -299,7 +390,9 @@ export class MatchQueries {
 
         const rules = await this.advancementRulesOf(rows.map((row) => row.id));
 
-        return rows.map((row) => ({
+        return rows.map((row) => {
+            const matchRules = rules.get(row.id) ?? [];
+            return {
             id: row.id,
             name: row.name,
             subtitle: row.subtitle,
@@ -308,12 +401,15 @@ export class MatchQueries {
             active: row.active,
             entrants: row.entrants,
             rounds: row.rounds,
-            advancementRules: rules.get(row.id) ?? [],
+            tiebreaks: row.tiebreaks,
+            advancementRules: matchRules,
+            resultState: projectedResultState(row, matchRules),
             matchResult: row.matchResultId === null
                 ? null
                 : { id: row.matchResultId, playerPoints: row.matchResultPlayerPoints ?? [] },
             phaseGroupId: row.phaseGroupId,
-        }));
+            };
+        });
     }
 
     private async advancementRulesOf(matchIds: number[]): Promise<Map<number, AdvancementRuleDto[]>> {

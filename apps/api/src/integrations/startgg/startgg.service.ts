@@ -1110,7 +1110,7 @@ export class StartggService {
     private buildImportedPlayerPoints(
         set: StartggSetNode,
         entrantByExternalId: Map<string, Entrant>,
-    ): Array<{ playerId: number; points: number }> {
+    ): Array<{ playerId: number; points: number; placement: number }> {
         return (set.slots ?? [])
             .filter((slot) => slot.entrant?.id)
             .map((slot) => {
@@ -1127,8 +1127,7 @@ export class StartggService {
                 };
             })
             .filter((entry): entry is { playerId: number; points: number; placement: number } => Boolean(entry))
-            .sort((left, right) => left.placement - right.placement || right.points - left.points || left.playerId - right.playerId)
-            .map(({ playerId, points }) => ({ playerId, points }));
+            .sort((left, right) => left.placement - right.placement || right.points - left.points || left.playerId - right.playerId);
     }
 
     private isStartggSetCompleted(set: StartggSetNode): boolean {

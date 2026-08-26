@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Entrant, Match, MatchResult, Player, Round, Score, Song, Standing } from '@tournament-manager/persistence';
+import { AdvancementRule, Entrant, Match, MatchResult, Player, Round, Score, Song, Standing } from '@tournament-manager/persistence';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 
 import { MatchAggregate } from '@match/match.aggregate';
@@ -37,7 +37,7 @@ function handScoredRound(standings: Standing[] = []): Round {
   return { id: HAND_SCORED_ROUND_ID, song: null, standings } as Round;
 }
 
-function match(entrants: Entrant[], rounds: Round[], result: MatchResult | null = null): MatchAggregate {
+function match(entrants: Entrant[], rounds: Round[], result: MatchResult | null = null, rules: AdvancementRule[] = []): MatchAggregate {
   return MatchAggregate.of({
     id: 20,
     name: 'Test Match',
@@ -45,8 +45,21 @@ function match(entrants: Entrant[], rounds: Round[], result: MatchResult | null 
     scoringSystem: 'PlacementPointsWithFailZero',
     entrants,
     rounds,
+    tiebreaks: [],
     matchResult: result,
-  } as Match);
+  } as Match, rules);
+}
+
+function advancementRule(sourcePlacement: number, targetId: number): AdvancementRule {
+  return {
+    id: sourcePlacement,
+    sourceKind: 'match',
+    sourceId: 20,
+    sourcePlacement,
+    targetKind: 'match',
+    targetId,
+    targetSlot: 1,
+  } as AdvancementRule;
 }
 
 /** The scoring system is handed in rather than injected, so a stub is enough. */
@@ -289,8 +302,8 @@ describe('MatchAggregate', () => {
       committed.commit();
 
       expect(committed.entity.matchResult.playerPoints).toEqual([
-        { playerId: 101, points: 3 },
-        { playerId: 102, points: 3 },
+        { playerId: 101, points: 3, placement: 1 },
+        { playerId: 102, points: 3, placement: 1 },
       ]);
       expect(committed.entity.active).toBe(false);
     });
@@ -312,8 +325,8 @@ describe('MatchAggregate', () => {
       stated.commit();
 
       expect(stated.entity.matchResult.playerPoints).toEqual([
-        { playerId: 101, points: 3 },
-        { playerId: 102, points: 1 },
+        { playerId: 101, points: 3, placement: 1 },
+        { playerId: 102, points: 1, placement: 2 },
       ]);
     });
 
@@ -325,8 +338,8 @@ describe('MatchAggregate', () => {
       /* One to nothing is a result: the player nobody gave points to scored
          none, and is not something the match is still waiting for. */
       expect(stated.entity.matchResult.playerPoints).toEqual([
-        { playerId: 101, points: 1 },
-        { playerId: 102, points: 0 },
+        { playerId: 101, points: 1, placement: 1 },
+        { playerId: 102, points: 0, placement: 2 },
       ]);
     });
 
@@ -343,6 +356,56 @@ describe('MatchAggregate', () => {
       expect(() => match([entrant(1, 101)], []).commit()).toThrow(BadRequestException);
     });
 
+    it('requires a tiebreak when equal points feed different advancement destinations', () => {
+      const tied = match(
+        [entrant(1, 101), entrant(2, 102)],
+        [handScoredRound([standing(200, player(101), undefined, 1), standing(201, player(102), undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+
+      expect(tied.resultState.status).toBe('tiebreak_required');
+      expect(() => tied.commit()).toThrow(BadRequestException);
+    });
+
+    it('uses manual tiebreak values to build placements without changing points', () => {
+      const first = player(101);
+      const second = player(102);
+      const tied = match(
+        [entrant(1, first.id), entrant(2, second.id)],
+        [handScoredRound([standing(200, first, undefined, 1), standing(201, second, undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+      const tiebreak = tied.addTiebreak(null, [first, second]);
+      tiebreak.id = 50;
+      tied.upsertTiebreakPoints(50, first.id, 2);
+      tied.upsertTiebreakPoints(50, second.id, 3);
+
+      tied.commit();
+
+      expect(tied.entity.matchResult.playerPoints).toEqual([
+        { playerId: 102, points: 1, placement: 1 },
+        { playerId: 101, points: 1, placement: 2 },
+      ]);
+    });
+
+    it('invalidates tiebreak evidence when ordinary scoring changes', () => {
+      const first = player(101);
+      const second = player(102);
+      const tied = match(
+        [entrant(1, first.id), entrant(2, second.id)],
+        [handScoredRound([standing(200, first, undefined, 1), standing(201, second, undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+      const tiebreak = tied.addTiebreak(null, [first, second]);
+
+      tied.upsertPoints(HAND_SCORED_ROUND_ID, first, 2);
+
+      expect(tiebreak.invalidated).toBe(true);
+    });
+
     it('keeps the same result row when a completed match is committed again', () => {
       const existing = { id: 5, playerPoints: [{ playerId: 101, points: 1 }] } as MatchResult;
       const recommitted = match([entrant(1, 101)], [handScoredRound([standing(200, player(101), undefined, 2)])], existing);
@@ -350,7 +413,7 @@ describe('MatchAggregate', () => {
       recommitted.commit();
 
       expect(recommitted.entity.matchResult).toBe(existing);
-      expect(existing.playerPoints).toEqual([{ playerId: 101, points: 2 }]);
+      expect(existing.playerPoints).toEqual([{ playerId: 101, points: 2, placement: 1 }]);
       expect(recommitted.removals.matchResultId).toBeNull();
     });
 

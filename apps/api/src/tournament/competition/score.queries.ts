@@ -26,6 +26,7 @@ export class ScoreQueries {
             .where('score.songId = :songId', { songId })
             .andWhere('score.playerId = :playerId', { playerId })
             .andWhere('NOT EXISTS (SELECT 1 FROM "standing" standing WHERE standing."scoreId" = score.id)')
+            .andWhere('NOT EXISTS (SELECT 1 FROM "match_tiebreak_standing" standing WHERE standing."scoreId" = score.id)')
             .orderBy('score.id', 'DESC')
             .getMany();
 

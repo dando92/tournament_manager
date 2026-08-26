@@ -2,9 +2,12 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsRelations, In, QueryFailedError, Repository } from 'typeorm';
 import {
+    AdvancementRule,
     Entrant,
     Match,
     MatchResult,
+    MatchTiebreak,
+    MatchTiebreakStanding,
     PhaseGroup,
     Player,
     Round,
@@ -33,6 +36,13 @@ const MATCH_GRAPH: FindOptionsRelations<Match> = {
         },
     },
     matchResult: true,
+    tiebreaks: {
+        song: true,
+        standings: {
+            player: true,
+            score: { player: true, song: true },
+        },
+    },
 };
 
 /**
@@ -64,12 +74,21 @@ export class MatchStore {
         private readonly scores: Repository<Score>,
         @InjectRepository(Standing)
         private readonly standings: Repository<Standing>,
+        @InjectRepository(MatchTiebreak)
+        private readonly tiebreaks: Repository<MatchTiebreak>,
+        @InjectRepository(MatchTiebreakStanding)
+        private readonly tiebreakStandings: Repository<MatchTiebreakStanding>,
+        @InjectRepository(AdvancementRule)
+        private readonly advancementRules: Repository<AdvancementRule>,
     ) {}
 
     async load(id: number): Promise<MatchAggregate | null> {
         const match = await this.matches.findOne({ where: { id }, relations: MATCH_GRAPH });
+        const rules = match
+            ? await this.advancementRules.find({ where: { sourceKind: 'match', sourceId: id } })
+            : [];
 
-        return match ? MatchAggregate.of(match) : null;
+        return match ? MatchAggregate.of(match, rules) : null;
     }
 
     async loadOrFail(id: number): Promise<MatchAggregate> {
@@ -85,6 +104,14 @@ export class MatchStore {
         if (!round?.match) throw new NotFoundException(`Round with id ${roundId} not found`);
 
         return round.match.id;
+    }
+
+    /** Which match a tiebreak belongs to. Tiebreak routes are addressed by attempt. */
+    async locateTiebreak(tiebreakId: number): Promise<number> {
+        const tiebreak = await this.tiebreaks.findOne({ where: { id: tiebreakId }, relations: { match: true } });
+        if (!tiebreak?.match) throw new NotFoundException(`Tiebreak with id ${tiebreakId} not found`);
+
+        return tiebreak.match.id;
     }
 
     /** Loaded with its phase, division and tournament, so a new match has an address. */
@@ -165,6 +192,44 @@ export class MatchStore {
                 roundId: assignment.round.id,
             });
         }
+        const tiebreakAssignment = await this.tiebreakStandings.findOne({
+            where: { score: { id } },
+            relations: { tiebreak: true, player: true },
+        });
+        if (tiebreakAssignment) {
+            throw new ConflictException({
+                code: 'SCORE_ALREADY_ASSIGNED',
+                message: `Score ${id} is already assigned to a tiebreak`,
+                scoreId: id,
+                tiebreakId: tiebreakAssignment.tiebreak.id,
+            });
+        }
+
+        return score;
+    }
+
+    async loadAssignableTiebreakScore(id: number, tiebreakId: number, playerId: number): Promise<Score> {
+        const score = await this.loadScore(id);
+        const roundAssignment = await this.standings.findOne({ where: { score: { id } } });
+        if (roundAssignment) {
+            throw new ConflictException({
+                code: 'SCORE_ALREADY_ASSIGNED',
+                message: `Score ${id} is already assigned to a match round`,
+                scoreId: id,
+            });
+        }
+        const assignment = await this.tiebreakStandings.findOne({
+            where: { score: { id } },
+            relations: { tiebreak: true, player: true },
+        });
+        if (assignment && (assignment.tiebreak.id !== tiebreakId || assignment.player.id !== playerId)) {
+            throw new ConflictException({
+                code: 'SCORE_ALREADY_ASSIGNED',
+                message: `Score ${id} is already assigned to another tiebreak standing`,
+                scoreId: id,
+                tiebreakId: assignment.tiebreak.id,
+            });
+        }
 
         return score;
     }
@@ -186,6 +251,7 @@ export class MatchStore {
         try {
             await this.dataSource.transaction(async (manager) => {
                 if (removals.standingIds.length > 0) await manager.delete(Standing, removals.standingIds);
+                if (removals.tiebreakIds.length > 0) await manager.delete(MatchTiebreak, removals.tiebreakIds);
                 if (removals.roundIds.length > 0) await manager.delete(Round, removals.roundIds);
 
                 /* A standing points at its score, so the score exists first. The
@@ -220,9 +286,15 @@ export class MatchStore {
     }
 
     private unsavedScoresOf(match: MatchAggregate): Score[] {
-        return match.rounds
+        const roundScores = match.rounds
             .flatMap((round) => round.standings ?? [])
             .map((standing) => standing.score)
             .filter((score): score is Score => Boolean(score) && !score.id);
+        const tiebreakScores = match.tiebreaks
+            .flatMap((tiebreak) => tiebreak.standings ?? [])
+            .map((standing) => standing.score)
+            .filter((score): score is Score => Boolean(score) && !score.id);
+
+        return [...roundScores, ...tiebreakScores];
     }
 }

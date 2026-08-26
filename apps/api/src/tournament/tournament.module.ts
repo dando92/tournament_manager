@@ -66,6 +66,7 @@ import { ControlRoomRunner } from './competition/control-room/control-room.runne
 import { ControlRoomBootstrap } from './competition/control-room/control-room.bootstrap';
 import { ControlRoomMutationGuard } from './competition/control-room/control-room-mutation.guard';
 import { AdvancementRollbackGuard } from './structure/advancement/advancement-rollback.guard';
+import { TiebreakController } from './competition/match/tiebreak.controller';
 
 @Module({
     imports: [
@@ -139,6 +140,7 @@ import { AdvancementRollbackGuard } from './structure/advancement/advancement-ro
         SongsController,
         ScoresController,
         RoundsController,
+        TiebreakController,
         BracketController,
         ControlRoomController,
     ],
