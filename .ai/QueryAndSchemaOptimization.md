@@ -382,3 +382,9 @@ arriving with more precision is rounded rather than refused.
 - No read loads an aggregate inside a loop, and no read projects a whole
   tournament to answer a question about one flow.
 - Slow queries are visible rather than inferred.
+
+Every one of them holds as of batch F. What is left of this plan is item 17,
+deferred until automatic bracket generation comes back into use, and the two
+places the convention could not reach: an expression index and a GIN index,
+which TypeORM's decorator cannot declare and which the migration therefore owns
+alone.
