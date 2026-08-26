@@ -165,6 +165,15 @@ depth-agnostic so they can be read as a table of paths in
 
 Additional frontend architectural and coding rules remain intentionally minimal.
 
+## Deployment Cache Recovery
+
+- Nginx must not cache the SPA document or runtime configuration. Local static
+  assets are revalidated because the application is rebuilt and replaced in
+  place frequently.
+- The application listens for Vite's `vite:preloadError` event and reloads the
+  document. This recovers an open browser tab whose previous deployment refers
+  to a lazy chunk that no longer exists.
+
 ## API Modules and Shared Contracts
 
 - Import `axios` only from a feature's `api/` module. `app/providers.tsx` is the sole bootstrap exception because it configures the shared client.

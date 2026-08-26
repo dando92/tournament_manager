@@ -727,6 +727,23 @@ Requested by the user on 2026-08-23, outside the phase sequence.
 
 ## Verification
 
+### Frontend deployment cache regression
+
+- Diagnosed a blank tournament overview served through the local Nginx image:
+  API responses and the production bundle were valid, and the same bundle
+  rendered through Vite preview, isolating the failure to stale browser module
+  caching across local deployments.
+- The SPA document and runtime configuration are no-store, static assets are
+  revalidated, and Vite preload failures reload the current document so an open
+  tab adopts the latest module graph.
+- Verification: frontend build and all 65 unit tests pass; lint completes with
+  the five existing warnings. The rebuilt frontend container is healthy, Nginx
+  serves HTML with `no-store` and assets with `no-cache`, and repeated browser
+  loads of `/tournament/5/overview` render the timeline and match tables at a
+  390 px mobile viewport.
+- Next action: review this deployment-cache regression checkpoint together with
+  the tiebreak implementation commits.
+
 ### API and frontend structure refactoring complete
 
 - Closed phase 9 of [ApiRefactoring.md](ApiRefactoring.md). All aggregate,
