@@ -210,7 +210,12 @@ const ADVANCEMENT_RULES_FOR_MATCHES = `
 `;
 
 /** The rows `LIVE_TARGETS_FOR_SONG` produces. */
-type LiveTargetRow = { matchId: number; roundId: number; playerId: number };
+type LiveTargetRow = {
+    matchId: number;
+    targetKind: 'round' | 'tiebreak';
+    targetId: number;
+    playerId: number;
+};
 
 /**
  * Where a run reported by a lobby belongs: the round of a live match that is
@@ -227,41 +232,81 @@ type LiveTargetRow = { matchId: number; roundId: number; playerId: number };
  * which is the order the previous load happened to produce.
  */
 const LIVE_TARGETS_FOR_SONG = `
-    SELECT DISTINCT ON (pa."playerId")
-            pa."playerId" AS "playerId",
-            r."matchId"   AS "matchId",
-            r."id"        AS "roundId"
-    FROM        "round" r
-    JOIN        "match" m        ON m."id"  = r."matchId" AND m."active" = TRUE
-    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
-    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
-    JOIN        "division" d     ON d."id"  = ph."divisionId"
-    JOIN        "match_entrants_entrant" me ON me."matchId" = m."id"
-    JOIN        "entrant" e      ON e."id"  = me."entrantId" AND e."type" = 'player'
-    JOIN        "entrant_participants_participant" ep ON ep."entrantId" = e."id"
-    JOIN        "participant" pa ON pa."id" = ep."participantId"
-    WHERE       d."tournamentId" = $1
-        AND     r."songId" = $2
-        AND     pa."playerId" = ANY($3::int[])
-        AND     NOT EXISTS (
-            SELECT  1
-            FROM    "standing" s
-            WHERE   s."roundId" = r."id" AND s."playerId" = pa."playerId"
-        )
-    ORDER BY pa."playerId", m."id", r."id"
+    SELECT DISTINCT ON (target."playerId")
+            target."playerId",
+            target."matchId",
+            target."targetKind",
+            target."targetId"
+    FROM (
+        SELECT  pa."playerId" AS "playerId",
+                r."matchId" AS "matchId",
+                'round'::varchar AS "targetKind",
+                r."id" AS "targetId",
+                1 AS priority
+        FROM        "round" r
+        JOIN        "match" m        ON m."id"  = r."matchId" AND m."active" = TRUE
+        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+        JOIN        "division" d     ON d."id"  = ph."divisionId"
+        JOIN        "match_entrants_entrant" me ON me."matchId" = m."id"
+        JOIN        "entrant" e      ON e."id"  = me."entrantId" AND e."type" = 'player'
+        JOIN        "entrant_participants_participant" ep ON ep."entrantId" = e."id"
+        JOIN        "participant" pa ON pa."id" = ep."participantId"
+        WHERE       d."tournamentId" = $1
+            AND     r."songId" = $2
+            AND     pa."playerId" = ANY($3::int[])
+            AND     NOT EXISTS (
+                SELECT 1 FROM "standing" s
+                WHERE s."roundId" = r."id" AND s."playerId" = pa."playerId"
+            )
+
+        UNION ALL
+
+        SELECT  mts."playerId" AS "playerId",
+                mt."matchId" AS "matchId",
+                'tiebreak'::varchar AS "targetKind",
+                mt."id" AS "targetId",
+                0 AS priority
+        FROM        "match_tiebreak" mt
+        JOIN        "match" m        ON m."id" = mt."matchId" AND m."active" = TRUE
+        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+        JOIN        "division" d     ON d."id" = ph."divisionId"
+        JOIN        "match_tiebreak_standing" mts ON mts."tiebreakId" = mt."id"
+        WHERE       d."tournamentId" = $1
+            AND     mt."songId" = $2
+            AND     mt."invalidated" = FALSE
+            AND     mts."playerId" = ANY($3::int[])
+            AND     mts."scoreId" IS NULL
+    ) target
+    ORDER BY target."playerId", target.priority, target."matchId", target."targetId"
 `;
 
 const ACTIVE_TOURNAMENT_SONGS_BASE = `
     SELECT
-            so."id"    AS "id",
-            so."title" AS "title"
-    FROM        "round" r
-    JOIN        "song" so       ON so."id" = r."songId"
-    JOIN        "match" m       ON m."id" = r."matchId" AND m."active" = TRUE
-    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
-    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
-    JOIN        "division" d     ON d."id" = ph."divisionId"
-    WHERE       d."tournamentId" = $1
+            active_song."id",
+            active_song."title"
+    FROM (
+        SELECT so."id", so."title", d."tournamentId"
+        FROM        "round" r
+        JOIN        "song" so        ON so."id" = r."songId"
+        JOIN        "match" m        ON m."id" = r."matchId" AND m."active" = TRUE
+        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+        JOIN        "division" d     ON d."id" = ph."divisionId"
+
+        UNION ALL
+
+        SELECT so."id", so."title", d."tournamentId"
+        FROM        "match_tiebreak" mt
+        JOIN        "song" so        ON so."id" = mt."songId"
+        JOIN        "match" m        ON m."id" = mt."matchId" AND m."active" = TRUE
+        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+        JOIN        "division" d     ON d."id" = ph."divisionId"
+        WHERE mt."invalidated" = FALSE
+    ) active_song
+    WHERE active_song."tournamentId" = $1
 `;
 
 const ACTIVE_TOURNAMENT_SONGS = `
@@ -371,7 +416,7 @@ export class MatchQueries {
     async activeSongForTournament(tournamentId: number, songId: number): Promise<SongRefDto | null> {
         const songs = await this.dataSource.query<SongRefDto[]>(
             `${ACTIVE_TOURNAMENT_SONGS_BASE}
-             AND so."id" = $2`,
+             AND active_song."id" = $2`,
             [tournamentId, songId],
         );
         return songs[0] ?? null;

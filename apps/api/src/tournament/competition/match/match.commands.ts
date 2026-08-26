@@ -37,7 +37,8 @@ export type ScoreInput = {
 
 /** A run a lobby reported, and the round of this match that was waiting for it. */
 export type CompletedRun = {
-    roundId: number;
+    targetKind: 'round' | 'tiebreak';
+    targetId: number;
     playerId: number;
     scoreId: number;
 };
@@ -396,7 +397,11 @@ export class MatchCommands {
         const scores = await this.store.loadScores(runs.map((run) => run.scoreId));
 
         for (const run of runs) {
-            match.upsertScore(run.roundId, players.get(run.playerId), scores.get(run.scoreId), this.scoringSystems);
+            if (run.targetKind === 'round') {
+                match.upsertScore(run.targetId, players.get(run.playerId), scores.get(run.scoreId), this.scoringSystems);
+            } else {
+                match.upsertTiebreakScore(run.targetId, players.get(run.playerId), scores.get(run.scoreId));
+            }
         }
 
         await this.store.save(match);
@@ -427,6 +432,7 @@ export class MatchCommands {
         const poolChanged =
             after.completed !== before.completed ||
             after.awaitingCommit !== before.awaitingCommit ||
+            after.awaitingResolution !== before.awaitingResolution ||
             after.progressed !== before.progressed;
         if (poolChanged) await this.publisher.emitPhaseGroupUpdate(match.address);
     }

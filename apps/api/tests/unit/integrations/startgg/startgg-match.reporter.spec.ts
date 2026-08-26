@@ -49,7 +49,10 @@ describe('StartggMatchReporter', () => {
           ],
         },
       ],
-      matchResult: { playerPoints: [{ playerId: 101, points: 5 }, { playerId: 102, points: 3 }] },
+      matchResult: { playerPoints: [
+        { playerId: 101, points: 5, placement: 1 },
+        { playerId: 102, points: 3, placement: 2 },
+      ] },
     } as Match;
   }
 
@@ -114,5 +117,19 @@ describe('StartggMatchReporter', () => {
     await reporter.reportCompletedMatch(match);
 
     expect(reportBracketSet).toHaveBeenCalledWith('set-1', 'external-11', 'key', undefined);
+  });
+
+  it('reports the tiebreak placement rather than choosing from equal points', async () => {
+    findOne.mockResolvedValue(mapping('match', '5', 'set-1'));
+    find.mockResolvedValue([mapping('entrant', '11', 'external-11'), mapping('entrant', '12', 'external-12')]);
+    const match = completedMatch();
+    match.matchResult.playerPoints = [
+      { playerId: 102, points: 5, placement: 1 },
+      { playerId: 101, points: 5, placement: 2 },
+    ];
+
+    await reporter.reportCompletedMatch(match);
+
+    expect(reportBracketSet).toHaveBeenCalledWith('set-1', 'external-12', 'key', expect.any(Array));
   });
 });

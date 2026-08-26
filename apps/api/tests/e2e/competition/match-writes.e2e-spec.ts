@@ -33,7 +33,19 @@ type MatchBody = {
     song: { id: number; title: string } | null;
     standings: Array<{ id: number; points: number; player: { id: number }; score: { id: number; percentage: number } | null }>;
   }>;
-  matchResult: { id: number; playerPoints: Array<{ playerId: number; points: number }> } | null;
+  tiebreaks: Array<{
+    id: number;
+    sequence: number;
+    invalidated: boolean;
+    song: { id: number; title: string } | null;
+    standings: Array<{ player: { id: number }; manualPoints: number | null; score: { percentage: number } | null }>;
+  }>;
+  resultState: {
+    status: 'incomplete' | 'tiebreak_required' | 'ready' | 'completed';
+    entries: Array<{ playerId: number; points: number; placement: number }>;
+    ambiguousTies: Array<{ playerIds: number[]; fromPlacement: number; toPlacement: number }>;
+  };
+  matchResult: { id: number; playerPoints: Array<{ playerId: number; points: number; placement: number }> } | null;
 };
 
 /**
@@ -423,8 +435,8 @@ describe('Match writes (e2e)', () => {
     const committed = await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(200);
     expect(committed.body).toEqual({ startggReport: 'skipped' });
     expect((await readMatch(source.id)).matchResult.playerPoints).toEqual([
-      { playerId: firstPlayerId, points: 3 },
-      { playerId: secondPlayerId, points: 1 },
+      { playerId: firstPlayerId, points: 3, placement: 1 },
+      { playerId: secondPlayerId, points: 1, placement: 2 },
     ]);
     expect((await readMatch(target.id)).entrants.map((entrant) => entrant.id)).toEqual([firstEntrantId]);
 
@@ -441,6 +453,52 @@ describe('Match writes (e2e)', () => {
     expect((await readMatch(source.id)).matchResult).toBeNull();
     expect((await readMatch(target.id)).entrants).toHaveLength(0);
     await expect(dataSource.query('SELECT COUNT(*)::int AS "count" FROM "match_result"')).resolves.toEqual([{ count: 0 }]);
+  });
+
+  it('blocks an ambiguous tie, resolves it by hand, and advances the frozen placements', async () => {
+    const source = await createMatch('Tied Source', [firstEntrantId, secondEntrantId]);
+    const firstTarget = await createMatch('First Tie Target', []);
+    const secondTarget = await createMatch('Second Tie Target', []);
+    await request(app.getHttpServer())
+      .put(`/advancement-rules/sources/match/${source.id}`)
+      .send({ rules: [
+        { sourcePlacement: 1, targetKind: 'match', targetId: firstTarget.id, targetSlot: 1 },
+        { sourcePlacement: 2, targetKind: 'match', targetId: secondTarget.id, targetSlot: 1 },
+      ] })
+      .expect(204);
+    await request(app.getHttpServer()).post(`/matches/${source.id}/rounds`).send({}).expect(204);
+    const roundId = (await readMatch(source.id)).rounds[0].id;
+    await request(app.getHttpServer()).put(`/rounds/${roundId}/points/${firstPlayerId}`).send({ points: 1 }).expect(204);
+    await request(app.getHttpServer()).put(`/rounds/${roundId}/points/${secondPlayerId}`).send({ points: 1 }).expect(204);
+
+    const tied = await readMatch(source.id);
+    expect(tied.resultState).toMatchObject({
+      status: 'tiebreak_required',
+      ambiguousTies: [{ playerIds: [firstPlayerId, secondPlayerId], fromPlacement: 1, toPlacement: 2 }],
+    });
+    await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(400);
+
+    const created = await request(app.getHttpServer())
+      .post(`/matches/${source.id}/tiebreaks`)
+      .send({ playerIds: [firstPlayerId, secondPlayerId] })
+      .expect(201);
+    await request(app.getHttpServer())
+      .put(`/matches/${source.id}/tiebreaks/${created.body.id}/points/${firstPlayerId}`)
+      .send({ points: 2 })
+      .expect(204);
+    await request(app.getHttpServer())
+      .put(`/matches/${source.id}/tiebreaks/${created.body.id}/points/${secondPlayerId}`)
+      .send({ points: 3 })
+      .expect(204);
+
+    expect((await readMatch(source.id)).resultState.status).toBe('ready');
+    await request(app.getHttpServer()).put(`/matches/${source.id}/result`).expect(200);
+    expect((await readMatch(source.id)).matchResult.playerPoints).toEqual([
+      { playerId: secondPlayerId, points: 1, placement: 1 },
+      { playerId: firstPlayerId, points: 1, placement: 2 },
+    ]);
+    expect((await readMatch(firstTarget.id)).entrants.map((entrant) => entrant.id)).toEqual([secondEntrantId]);
+    expect((await readMatch(secondTarget.id)).entrants.map((entrant) => entrant.id)).toEqual([firstEntrantId]);
   });
 
   it('activates a match and deletes it with the rounds it held', async () => {

@@ -3,7 +3,7 @@ import { DataSource, EntityManager, FindOptionsRelations, In } from "typeorm";
 import { AdvancementRule, ControlRoomFlow, ControlRoomFlowEntry, Match, Tournament } from "@tournament-manager/persistence";
 import type { ControlRoomInterruptionCode } from "@tournament-manager/contracts";
 
-import { MatchAddress } from "@match/match.aggregate";
+import { MatchAddress, MatchAggregate } from "@match/match.aggregate";
 import { UiUpdatePublisher } from "@tournament/shared/ui-update.publisher";
 import { ControlRoomAggregate } from "./control-room.aggregate";
 import { ControlRoomMatchSnapshot, evaluateControlRoomMatch } from "./control-room.eligibility";
@@ -12,6 +12,7 @@ const RUNNER_MATCH_GRAPH: FindOptionsRelations<Match> = {
     entrants: { participants: { player: true } },
     phaseGroup: { phase: { division: { tournament: true } } },
     rounds: { song: true, standings: { player: true } },
+    tiebreaks: { song: true, standings: { player: true, score: true } },
     matchResult: true,
 };
 
@@ -211,7 +212,10 @@ export class ControlRoomRunner {
             .filter((entrant) => entrant.type === "player")
             .map((entrant) => entrant.participants?.[0]?.player?.id)
             .filter((id): id is number => Number.isFinite(id));
-        const readyToCommit = this.isReadyToCommit(match, playerIds);
+        const rules = await manager.find(AdvancementRule, {
+            where: { sourceKind: "match", sourceId: match.id },
+        });
+        const readyToCommit = MatchAggregate.of(match, rules).poolState.awaitingCommit;
         const conflicts = await this.activeConflicts(manager, flow.tournament.id, match.id, playerIds);
 
         return {
@@ -227,18 +231,6 @@ export class ControlRoomRunner {
             blockingPlayerIds: [...new Set(conflicts.map((row) => row.playerId))],
             isCurrentEntry: flow.currentEntryId === entry.id,
         };
-    }
-
-    private isReadyToCommit(match: Match, playerIds: number[]): boolean {
-        if (playerIds.length === 0 || (match.rounds ?? []).length === 0) {
-            return false;
-        }
-
-        return match.rounds.every((round) =>
-            round.song
-                ? playerIds.every((playerId) => (round.standings ?? []).some((standing) => standing.player?.id === playerId))
-                : (round.standings ?? []).some((standing) => standing.points > 0),
-        );
     }
 
     private async requiredEntrants(manager: EntityManager, matchIds: number[]): Promise<Map<number, number>> {

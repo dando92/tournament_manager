@@ -59,8 +59,8 @@ describe('CompletedSongService', () => {
     it('writes each match once, with every run of the lobby that was waiting in it', async () => {
         playerIdsByNames.mockResolvedValue(new Map([['ann', 21], ['bob', 22]]));
         liveTargetsForSong.mockResolvedValue([
-            { matchId: 5, roundId: 51, playerId: 21 },
-            { matchId: 5, roundId: 51, playerId: 22 },
+            { matchId: 5, targetKind: 'round', targetId: 51, playerId: 21 },
+            { matchId: 5, targetKind: 'tiebreak', targetId: 61, playerId: 22 },
         ]);
 
         await service().submit(request([played, { ...played, playerId: 'p2', playerName: 'Bob', exScore: 97 }]));
@@ -69,8 +69,8 @@ describe('CompletedSongService', () => {
         expect(liveTargetsForSong).toHaveBeenCalledWith(7, 11, [21, 22]);
         expect(applyCompletedSong).toHaveBeenCalledTimes(1);
         expect(applyCompletedSong).toHaveBeenCalledWith(5, [
-            { roundId: 51, playerId: 21, scoreId: 100 },
-            { roundId: 51, playerId: 22, scoreId: 101 },
+            { targetKind: 'round', targetId: 51, playerId: 21, scoreId: 100 },
+            { targetKind: 'tiebreak', targetId: 61, playerId: 22, scoreId: 101 },
         ]);
     });
 

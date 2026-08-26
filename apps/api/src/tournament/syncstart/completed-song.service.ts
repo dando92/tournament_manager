@@ -108,7 +108,12 @@ export class CompletedSongService {
     const byMatch = new Map<number, CompletedRun[]>();
 
     for (const round of rounds) {
-      const run = { roundId: round.roundId, playerId: round.playerId, scoreId: scoreIdByPlayer.get(round.playerId) };
+      const run = {
+        targetKind: round.targetKind,
+        targetId: round.targetId,
+        playerId: round.playerId,
+        scoreId: scoreIdByPlayer.get(round.playerId),
+      };
       byMatch.set(round.matchId, [...(byMatch.get(round.matchId) ?? []), run]);
     }
 

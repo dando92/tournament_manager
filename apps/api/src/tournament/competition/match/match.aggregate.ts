@@ -44,6 +44,7 @@ export type MatchRemovals = {
 export type MatchPoolState = {
     completed: boolean;
     awaitingCommit: boolean;
+    awaitingResolution: boolean;
     progressed: boolean;
 };
 
@@ -159,6 +160,7 @@ export class MatchAggregate {
         return {
             completed: this.isCompleted,
             awaitingCommit: this.resultState.status === 'ready',
+            awaitingResolution: this.resultState.status === 'ready' || this.resultState.status === 'tiebreak_required',
             progressed:
                 this.isCompleted ||
                 this.rounds.some((round) =>

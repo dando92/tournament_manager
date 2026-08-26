@@ -85,7 +85,7 @@ export class StartggMatchReporter {
 
     private resolveWinnerPlayerId(match: Match): number {
         const winner = [...(match.matchResult?.playerPoints ?? [])]
-            .sort((left, right) => right.points - left.points || left.playerId - right.playerId)[0];
+            .sort((left, right) => left.placement - right.placement || left.playerId - right.playerId)[0];
         if (!winner?.playerId) {
             throw new BadRequestException(`Match ${match.id} result does not contain a winner`);
         }

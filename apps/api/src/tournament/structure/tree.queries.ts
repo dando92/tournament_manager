@@ -111,7 +111,7 @@ const progressedMatchesInScope = (scope: TreeScope): string => `
 `;
 
 /**
- * How many matches in each pool are waiting on a person.
+ * How many matches in each pool are waiting on a result action.
  *
  * A match is waiting when it has players, has rounds, has no committed result,
  * and every one of its rounds is settled. A round played on a song is settled
@@ -119,9 +119,8 @@ const progressedMatchesInScope = (scope: TreeScope): string => `
  * soon as somebody has been given a point, because one to nothing is a result
  * and nobody owes a zero.
  *
- * That is the same rule the match card draws as "Ready to commit"
- * (`getMatchProgress` in the frontend) and the one the commit enforces
- * (`MatchAggregate.commit`); the three must be changed together.
+ * A settled match may be ready to commit or may require a tiebreak first. Both
+ * are pending operator work and therefore keep the pool's pending count.
  *
  * It counts rather than loading the matches, because its caller wants a number
  * per pool and nothing else.
