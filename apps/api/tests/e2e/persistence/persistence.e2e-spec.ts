@@ -4,8 +4,11 @@ import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import {
+  AdvancementRule,
   Entrant,
   Match,
+  MatchTiebreak,
+  MatchTiebreakStanding,
   MatchResult,
   Participant,
   Player,
@@ -47,10 +50,13 @@ describe('Score and match-result persistence (e2e)', () => {
       imports: [
         TypeOrmModule.forRoot(getTestDataSourceOptions(database)),
         TypeOrmModule.forFeature([
+          AdvancementRule,
           Player,
           Song,
           Score,
           Match,
+          MatchTiebreak,
+          MatchTiebreakStanding,
           MatchResult,
           Round,
           Standing,
@@ -78,7 +84,7 @@ describe('Score and match-result persistence (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
     await dropTestDatabase(database);
   });
 
@@ -165,7 +171,7 @@ describe('Score and match-result persistence (e2e)', () => {
 
     const committed = await matchStore.loadOrFail(stored.id);
     expect(committed.entity.active).toBe(false);
-    expect(committed.entity.matchResult.playerPoints).toEqual([{ playerId: player.id, points: 3 }]);
+    expect(committed.entity.matchResult.playerPoints).toEqual([{ playerId: player.id, points: 3, placement: 1 }]);
     expect(committed.rounds[0].standings[0].points).toBe(3);
     await expect(matchResultRepository.count()).resolves.toBe(1);
 

@@ -195,6 +195,8 @@ describe('Match reads (e2e)', () => {
       active: false,
       phaseGroupId: poolId,
       matchResult: null,
+      resultState: { status: 'incomplete', entries: [], ambiguousTies: [] },
+      tiebreaks: [],
       entrants: [
         {
           id: firstEntrantId,

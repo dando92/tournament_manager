@@ -35,6 +35,7 @@ describe('Division reads (e2e)', () => {
   let tournamentId: number;
   let divisionId: number;
   let poolId: number;
+  let advancementTargetPoolId: number;
 
   const entrantIdByName = new Map<string, number>();
   const participantIdByName = new Map<string, number>();
@@ -102,6 +103,9 @@ describe('Division reads (e2e)', () => {
       .post('/phases')
       .send({ name: 'Qualifiers', divisionId })
       .expect(201);
+
+    const phaseSummary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+    advancementTargetPoolId = phaseSummary.body.phases[0].phaseGroups[0].id;
 
     const pool = await request(app.getHttpServer())
       .post(`/phases/${phase.body.id}/phase-groups`)
@@ -277,7 +281,7 @@ describe('Division reads (e2e)', () => {
   it('summarizes the division as one node of the tree, with the pending count and rules of each pool', async () => {
     /* Creating the phase gave it a default pool, so the phase holds two. The
        one this suite named carries both matches. */
-    const rules = [{ sourcePlacement: 1, targetKind: 'phase_group', targetId: poolId, targetSlot: 1 }];
+    const rules = [{ sourcePlacement: 1, targetKind: 'phase_group', targetId: advancementTargetPoolId, targetSlot: 1 }];
     await request(app.getHttpServer())
       .put(`/advancement-rules/sources/phase_group/${poolId}`)
       .send({ rules })
@@ -314,7 +318,7 @@ describe('Division reads (e2e)', () => {
             sourceId: poolId,
             sourcePlacement: 1,
             targetKind: 'phase_group',
-            targetId: poolId,
+            targetId: advancementTargetPoolId,
             targetSlot: 1,
           },
         ]);
