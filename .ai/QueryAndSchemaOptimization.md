@@ -310,7 +310,7 @@ upgrade compatibility, per the policy in `AGENTS.md`.
 | 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | Resolved by 23, plus a GIN index on `roles` | Open |
 | 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Resolved by 28: the unique expression index serves both lookups | Open |
 | 26 | Nothing enforces one participant per person per tournament, a rule `TournamentStore` applies in memory | Unique index on `participant(tournamentId, playerId)` | Open |
-| 27 | `score."percentage"` is unbounded `numeric` | Needs a decision — see FQ-028 | Blocked |
+| 27 | `score."percentage"` is unbounded `numeric` | `numeric(5, 2)`, declared on the entity and migrated — see FQ-028 | Open |
 | 28 | Nothing prevents two players whose names normalize to the same value, which `IMPORT_PREVIEW_OF_NAMES` itself calls a defect in the catalogue | Unique expression index on `player (LOWER(TRIM("playerName")))`, and the two lookups stop picking the older of two matches — see FQ-029 | Open |
 
 Items 25 and 28 are the same index, and FQ-029 is now answered: a normalized
@@ -321,7 +321,10 @@ and both lookups stop resolving a duplicate they should never see. The
 constraint cannot be added over a catalogue that already holds one, which the
 pre-production reset policy covers.
 
-Item 27 is still blocked on FQ-028.
+FQ-028 is answered too: a percentage carries two decimal places, so the column
+becomes `numeric(5, 2)` — five digits, because `100.00` needs them — and a
+value arriving with more precision is rounded rather than refused. Nothing in
+this batch is blocked any more.
 
 ## Deferred
 

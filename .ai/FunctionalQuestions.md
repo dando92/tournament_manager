@@ -249,7 +249,7 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
 
 ### FQ-028 — What precision a score percentage carries
 
-- Status: Deferred.
+- Status: Resolved. A score percentage carries two decimal places.
 - Observed behavior: `Score.percentage` is declared `decimal` with no precision
   or scale, so the column is an unbounded PostgreSQL `numeric`. The entity
   transformer converts it back with `Number(value)`, and the raw JSON
@@ -265,9 +265,15 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   `percentage` fields aggregated in
   `apps/api/src/tournament/competition/match/match.queries.ts`, and the
   comparisons in `apps/api/src/tournament/competition/match/placement.resolver.ts`.
-- Rule: preserve the unbounded column until the reported precision is
-  established. Item 27 of
-  [QueryAndSchemaOptimization.md](QueryAndSchemaOptimization.md) is blocked on
+- Decision: two decimal places are authoritative. The column becomes
+  `numeric(5, 2)`, which holds every EX score percentage exactly — `100.00`
+  needs five digits — and rounds anything more precise on the way in, so the
+  stored value and the compared value are the same number.
+- Consequence: a percentage arriving from the cabinet with more decimals is
+  rounded rather than refused. The comparisons in `placement.resolver.ts` then
+  rank values that are exact rather than binary approximations of them.
+- Rule: item 27 of
+  [QueryAndSchemaOptimization.md](QueryAndSchemaOptimization.md) is unblocked by
   this answer.
 
 ### FQ-029 — Two players whose names normalize to the same value
