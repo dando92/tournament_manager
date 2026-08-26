@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { BracketSystem } from "@bracket/systems/bracket-system";
 import { Entrant, Phase } from "@tournament-manager/persistence";
 
@@ -7,6 +9,8 @@ type PlayerInfo = {
 };
 
 export class SingleElimination extends BracketSystem {
+    private readonly logger = new Logger(SingleElimination.name);
+
     getName(): string {
         return "SingleElimination";
     }
@@ -25,7 +29,7 @@ export class SingleElimination extends BracketSystem {
         const byes = nextEffN - playerCount;
 
         if (byes > 0) {
-            console.log(`SingleElimination: adding ${byes} bye(s) (effective bracket size: ${nextEffN})`);
+            this.logger.debug(`Adding ${byes} bye(s) (effective bracket size: ${nextEffN})`);
         }
 
         let count = nextEffN;
@@ -36,7 +40,6 @@ export class SingleElimination extends BracketSystem {
         let roundIndex = 1;
 
         while (matchCount >= 1) {
-            console.log("Creating matches: " + matchCount);
             const nextMatches = await this.CreateMatchesInPhase("Round_" + roundIndex++, phase, matchCount, phaseGroupId);
 
             if (firstRound === null) {
@@ -68,7 +71,6 @@ export class SingleElimination extends BracketSystem {
         }
 
         if (playerPerMatch > 2) {
-            console.log("Creating finals");
             const finals = await this.CreateMatchesInPhase("Finals", phase, 2, phaseGroupId);
 
             // Top half of placements go to the first final, bottom half to the second.
@@ -93,7 +95,6 @@ export class SingleElimination extends BracketSystem {
     }
 
     private leastRematchIndexes(playerCount: number, playerPerMatch: number): PlayerInfo[][] {
-        console.log("Generating indexes for playerCount " + playerCount + " playerPerMatch " + playerPerMatch);
         const final: PlayerInfo[][] = [];
         const matchCount = playerCount / playerPerMatch;
         const passingPlayers = playerPerMatch / 2;
@@ -119,7 +120,6 @@ export class SingleElimination extends BracketSystem {
     }
 
     private directMatchIndexes(playerCount: number, playerPerMatch: number): PlayerInfo[][] {
-        console.log("Generating indexes for playerCount " + playerCount + " playerPerMatch " + playerPerMatch);
         const final: PlayerInfo[][] = [];
         const matchCount = playerCount / playerPerMatch;
 

@@ -1,7 +1,11 @@
+import { Logger } from "@nestjs/common";
+
 import { BracketSystem } from "@bracket/systems/bracket-system";
 import { Entrant, Phase } from "@tournament-manager/persistence";
 
 export class DoubleElimination extends BracketSystem {
+    private readonly logger = new Logger(DoubleElimination.name);
+
     getName(): string {
         return "DoubleElimination";
     }
@@ -26,7 +30,7 @@ export class DoubleElimination extends BracketSystem {
         const byes = nextEffN - playerCount;
 
         if (byes > 0) {
-            console.log(`DoubleElimination: adding ${byes} bye(s) (effective bracket size: ${nextEffN})`);
+            this.logger.debug(`Adding ${byes} bye(s) (effective bracket size: ${nextEffN})`);
         }
 
         const wbRoundCount = Math.log2(r1MatchCount) + 1;

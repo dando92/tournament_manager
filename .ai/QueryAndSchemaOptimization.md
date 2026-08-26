@@ -95,12 +95,24 @@ only.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 1 | Six `console.log` calls in the bracket generators | Remove, or `Logger.debug` through the Nest logger if the content is worth keeping. They write to stdout in production too | Open |
-| 2 | `DeprecationWarning` from `pg`, twelve times across the e2e suite | Wrap `process.emitWarning` in `apps/api/tests/setup-env.ts` and drop only this message. Record the `pg@9` risk below as tracked debt | Open |
+| 1 | Six `console.log` calls in the bracket generators | Four were a trace of the loop and are gone. The two that record a decision — the byes added to round the bracket up — became `Logger.debug` on a logger named after the system | Done |
+| 2 | `DeprecationWarning` from `pg`, twelve times across the e2e suite | `apps/api/tests/global-setup.ts` wraps `process.emitWarning` and drops only this message. The `pg@9` risk is recorded below as tracked debt | Done |
 
 Item 1 stays in this batch even though the calls live in the bracket
 generators, which are otherwise deferred: that code still runs in the e2e suite,
 and the noise is what prompted the review.
+
+The filter does not belong in `setup-env.ts`, where the plan first put it.
+Jest hands each test sandbox a deep copy of `process`, while `util.deprecate`
+emits on the real one; patching the copy changes nothing, and the warning still
+printed. The global setup runs in the Jest process itself and shares the real
+`process`, so the patch takes effect there. `maxWorkers: 1` keeps the suite in
+band, so no worker process escapes it — were that to change, the warning would
+come back rather than anything breaking.
+
+The full e2e suite now prints sixteen `PASS` lines, the test names and the
+summary, and nothing else. The unit suite still prints Nest logger output from
+`StartggMatchReporter`, which is a separate question and outside this batch.
 
 ### What the deprecation warning actually is
 
