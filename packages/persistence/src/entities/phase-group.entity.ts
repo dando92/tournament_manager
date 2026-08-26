@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -14,6 +15,7 @@ import { PhaseGroupEntrant } from './phase-group-entrant.entity';
 export type PhaseGroupState = 'pending' | 'active' | 'completed';
 
 @Entity()
+@Index('IDX_phase_group_phase', ['phase'])
 export class PhaseGroup {
   @PrimaryGeneratedColumn()
   id: number;

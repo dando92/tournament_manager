@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -17,6 +18,7 @@ export type EntrantType = 'player' | 'team';
 export type EntrantStatus = 'active' | 'dropped' | 'withdrawn' | 'dq' | 'unknown';
 
 @Entity()
+@Index('IDX_entrant_division', ['division'])
 export class Entrant {
   @PrimaryGeneratedColumn()
   id: number;

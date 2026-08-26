@@ -13,6 +13,7 @@ import { Song } from "./song.entity";
  */
 @Entity()
 @Index("UQ_match_tiebreak_sequence", ["match", "sequence"], { unique: true })
+@Index("IDX_match_tiebreak_song", ["song"])
 export class MatchTiebreak {
     @PrimaryGeneratedColumn()
     id: number;

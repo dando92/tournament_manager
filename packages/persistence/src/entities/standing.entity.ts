@@ -22,6 +22,7 @@ import { Player } from './player.entity'
  */
 @Entity()
 @Index(['round', 'player'], { unique: true })
+@Index('IDX_standing_player', ['player'])
 export class Standing {
   @PrimaryGeneratedColumn()
   id: number;

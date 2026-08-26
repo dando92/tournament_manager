@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -13,6 +14,9 @@ import { PhaseGroup } from './phase-group.entity';
 export type PhaseGroupEntrantStatus = 'pending' | 'active' | 'advanced' | 'eliminated' | 'withdrawn' | 'dq';
 
 @Entity()
+@Index('IDX_phase_group_entrant_phase_group', ['phaseGroup'])
+@Index('IDX_phase_group_entrant_entrant', ['entrant'])
+@Index('IDX_phase_group_entrant_source_advancement_rule', ['sourceAdvancementRule'])
 export class PhaseGroupEntrant {
   @PrimaryGeneratedColumn()
   id: number;

@@ -24,6 +24,7 @@ import { MatchAssignment } from './match_assignment.entity';
 @Entity()
 @Index(['match', 'song'], { unique: true })
 @Index(['match'], { unique: true, where: '"songId" IS NULL' })
+@Index('IDX_round_song', ['song'])
 export class Round {
   @PrimaryGeneratedColumn()
   id: number;

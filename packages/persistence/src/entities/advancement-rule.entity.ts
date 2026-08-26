@@ -1,8 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 export type AdvancementCompetitionKind = 'match' | 'phase_group';
 
 @Entity()
+@Index('IDX_advancement_rule_source', ['sourceKind', 'sourceId'])
+@Index('IDX_advancement_rule_target', ['targetKind', 'targetId'])
 export class AdvancementRule {
   @PrimaryGeneratedColumn()
   id: number;

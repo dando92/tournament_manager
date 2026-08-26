@@ -7,6 +7,7 @@ import { Score } from "./score.entity";
 /** One player's evidence in one tiebreak attempt. */
 @Entity()
 @Index("UQ_match_tiebreak_standing_player", ["tiebreak", "player"], { unique: true })
+@Index("IDX_match_tiebreak_standing_player_lookup", ["player"])
 export class MatchTiebreakStanding {
     @PrimaryGeneratedColumn()
     id: number;

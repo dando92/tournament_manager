@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   Column,
   PrimaryGeneratedColumn,
   ManyToOne,
@@ -17,6 +18,7 @@ import { PhaseGroup } from './phase-group.entity'
 import { MatchTiebreak } from './match-tiebreak.entity'
 
 @Entity()
+@Index('IDX_match_phase_group', ['phaseGroup'])
 export class Match {
   @PrimaryGeneratedColumn()
   id: number;

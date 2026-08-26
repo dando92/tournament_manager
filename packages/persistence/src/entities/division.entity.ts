@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
@@ -12,6 +13,7 @@ import { Entrant } from './entrant.entity';
 
 
 @Entity()
+@Index('IDX_division_tournament', ['tournament'])
 export class Division {
   @PrimaryGeneratedColumn()
   id: number;

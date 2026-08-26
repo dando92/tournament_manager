@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   ManyToMany,
@@ -16,6 +17,9 @@ export type ParticipantRole = 'competitor' | 'spectator' | 'owner' | 'staff' | '
 export type ParticipantStatus = 'registered' | 'checked_in' | 'withdrawn' | 'unknown';
 
 @Entity()
+@Index('IDX_participant_tournament', ['tournament'])
+@Index('IDX_participant_player', ['player'])
+@Index('IDX_participant_account', ['account'])
 export class Participant {
   @PrimaryGeneratedColumn()
   id: number;

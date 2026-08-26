@@ -47,6 +47,34 @@ describe('migration runner', () => {
     await expect(dataSource.runMigrations({ transaction: 'all' })).resolves.toEqual([]);
   });
 
+  it('creates every index the entities declare, under the declared name and columns', async () => {
+    const rows = await dataSource.query<{ indexName: string; tableName: string; columns: string[] }[]>(
+      `SELECT i.relname AS "indexName", t.relname AS "tableName", array_agg(a.attname::text ORDER BY k.ord) AS "columns"
+       FROM pg_class t
+       JOIN pg_namespace n ON n.oid = t.relnamespace
+       JOIN pg_index ix ON ix.indrelid = t.oid
+       JOIN pg_class i ON i.oid = ix.indexrelid
+       JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum, ord) ON true
+       JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = k.attnum
+       WHERE n.nspname = 'public'
+       GROUP BY i.relname, t.relname`,
+    );
+    const schema = new Map(rows.map((row) => [row.indexName, row]));
+
+    const declared = dataSource.entityMetadatas.flatMap((entity) =>
+      entity.indices.map((index) => ({
+        name: index.name,
+        tableName: entity.tableName,
+        columns: index.columns.map((column) => column.databaseName),
+      })),
+    );
+    expect(declared.length).toBeGreaterThan(0);
+
+    for (const index of declared) {
+      expect(schema.get(index.name)).toEqual({ indexName: index.name, tableName: index.tableName, columns: index.columns });
+    }
+  });
+
   it('upgrades existing control room flows without deleting them', async () => {
     const runner = dataSource.createQueryRunner();
     await runner.connect();

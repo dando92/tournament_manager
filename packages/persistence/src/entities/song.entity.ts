@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   Check,
   Column,
   PrimaryGeneratedColumn,
@@ -21,6 +22,7 @@ export type ChartDifficulty = 'Novice' | 'Easy' | 'Medium' | 'Hard' | 'Expert' |
 
 @Entity()
 @Check('CHK_song_chart_difficulty', `"chartDifficulty" IN ('Novice', 'Easy', 'Medium', 'Hard', 'Expert', 'Edit')`)
+@Index('IDX_song_tournament', ['tournament'])
 export class Song {
   @PrimaryGeneratedColumn()
   id: number;

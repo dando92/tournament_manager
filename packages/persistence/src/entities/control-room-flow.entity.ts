@@ -1,4 +1,4 @@
-import { Check, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, VersionColumn } from "typeorm";
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, VersionColumn } from "typeorm";
 
 import { Tournament } from "./tournament.entity";
 import { ControlRoomFlowEntry } from "./control-room-flow-entry.entity";
@@ -7,6 +7,8 @@ export type ControlRoomFlowStatus = "inactive" | "running" | "paused" | "complet
 
 @Entity()
 @Check("CHK_control_room_flow_status", `"status" IN ('inactive', 'running', 'paused', 'completed')`)
+@Index("IDX_control_room_flow_tournament", ["tournament"])
+@Index("IDX_control_room_flow_current_entry", ["currentEntry"])
 export class ControlRoomFlow {
     @PrimaryGeneratedColumn()
     id: number;
