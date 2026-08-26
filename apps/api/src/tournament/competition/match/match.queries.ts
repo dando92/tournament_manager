@@ -18,10 +18,11 @@ import { resolvePlacements } from '@match/placement.resolver';
  * Which matches a projection covers. The three read routes differ in this and
  * in nothing else, so they share one query and one mapper.
  */
-type MatchScope = 'match' | 'phaseGroup' | 'division' | 'tournament';
+type MatchScope = 'match' | 'ids' | 'phaseGroup' | 'division' | 'tournament';
 
 const SCOPE_PREDICATE: Record<MatchScope, string> = {
     match: 'm."id" = $1',
+    ids: 'm."id" = ANY($1::int[])',
     phaseGroup: 'm."phaseGroupId" = $1',
     division: `m."phaseGroupId" IN (
         SELECT  pg."id"
@@ -189,6 +190,7 @@ const matchesInScope = (predicate: string): string => `
 /** One query per scope, built once at module load rather than on every read. */
 const MATCHES_IN_SCOPE: Record<MatchScope, string> = {
     match: matchesInScope(SCOPE_PREDICATE.match),
+    ids: matchesInScope(SCOPE_PREDICATE.ids),
     phaseGroup: matchesInScope(SCOPE_PREDICATE.phaseGroup),
     division: matchesInScope(SCOPE_PREDICATE.division),
     tournament: matchesInScope(SCOPE_PREDICATE.tournament),
@@ -420,6 +422,17 @@ export class MatchQueries {
         return match ?? null;
     }
 
+    /**
+     * A named set of matches, for the callers that already know which ones they
+     * are answering about. The control room reads its flows this way rather
+     * than projecting every match of the tournament to resolve a handful.
+     */
+    async byIds(ids: number[]): Promise<MatchDto[]> {
+        if (ids.length === 0) return [];
+
+        return await this.inScope('ids', ids);
+    }
+
     async byPhaseGroup(phaseGroupId: number): Promise<MatchDto[]> {
         return await this.inScope('phaseGroup', phaseGroupId);
     }
@@ -464,7 +477,7 @@ export class MatchQueries {
         return rows.length > 0;
     }
 
-    private async inScope(scope: MatchScope, id: number): Promise<MatchDto[]> {
+    private async inScope(scope: MatchScope, id: number | number[]): Promise<MatchDto[]> {
         const rows: MatchRow[] = await this.dataSource.query(MATCHES_IN_SCOPE[scope], [id]);
         if (rows.length === 0) return [];
 

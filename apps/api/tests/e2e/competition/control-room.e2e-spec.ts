@@ -149,6 +149,21 @@ describe("Control Room (e2e)", () => {
         }
     }
 
+    it("offers the matches no flow of the tournament holds, to the creation form and to the editor", async () => {
+        const assigned = await createMatch("Assigned to a flow", entrants.slice(0, 2));
+        const free = await createMatch("Left unassigned", entrants.slice(0, 2));
+        const flowId = await createFlow("Cabinet with one match", [assigned.id]);
+
+        const creation = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/control-room/creation`).expect(200);
+        const offeredIds = creation.body.unassignedMatches.map((match: MatchBody) => match.id);
+        expect(offeredIds).toContain(free.id);
+        expect(offeredIds).not.toContain(assigned.id);
+
+        const editor = await request(app.getHttpServer()).get(`/control-room/flows/${flowId}/editor`).expect(200);
+        expect(editor.body.unassignedMatches.map((match: MatchBody) => match.id)).toEqual(offeredIds);
+        expect(editor.body.flow.entries.map((entry: { match: MatchBody }) => entry.match.id)).toEqual([assigned.id]);
+    });
+
     it("advances without committing and blocks manual activation", async () => {
         const first = await createMatch("First", entrants.slice(0, 2));
         const second = await createMatch("Second", entrants.slice(0, 2));

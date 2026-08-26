@@ -6,19 +6,31 @@ import { ControlRoomFlow } from "@tournament-manager/persistence";
 
 import { MatchQueries } from "@match/match.queries";
 
-/** The rows `ASSIGNED_MATCH_IDS_OF_TOURNAMENT` produces. */
-type AssignedMatchRow = { matchId: number };
+/** The rows `UNASSIGNED_MATCH_IDS_OF_TOURNAMENT` produces. */
+type UnassignedMatchRow = { matchId: number };
 
 /**
- * Every match a flow of this tournament already holds, which is what both the
- * creation form and the editor subtract from the tournament's matches to offer
- * the rest.
+ * Every match of the tournament that no flow of it holds yet, which is what
+ * both the creation form and the editor offer.
+ *
+ * The subtraction is a `NOT EXISTS` rather than a projection of every match of
+ * the tournament filtered in memory: only the matches actually offered are
+ * projected afterwards, through `MatchQueries.byIds`.
  */
-const ASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
-    SELECT  entry."matchId" AS "matchId"
-    FROM    "control_room_flow_entry" entry
-    JOIN    "control_room_flow" flow ON flow."id" = entry."flowId"
-    WHERE   flow."tournamentId" = $1
+const UNASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
+    SELECT   m."id" AS "matchId"
+    FROM     "match" m
+    JOIN     "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN     "phase" ph ON ph."id" = pg."phaseId"
+    JOIN     "division" d ON d."id" = ph."divisionId"
+    WHERE    d."tournamentId" = $1
+        AND  NOT EXISTS (
+                SELECT  1
+                FROM    "control_room_flow_entry" entry
+                JOIN    "control_room_flow" flow ON flow."id" = entry."flowId"
+                WHERE   entry."matchId" = m."id" AND flow."tournamentId" = $1
+             )
+    ORDER BY m."id"
 `;
 
 /** Which tournament a flow belongs to. */
@@ -51,19 +63,15 @@ export class ControlRoomQueries {
 
     async byId(flowId: number): Promise<ControlRoomFlowDto> {
         const flow = await this.flowOrFail(flowId);
-        const tournamentId = await this.tournamentIdOf(flowId);
-        const matches = await this.matches.byTournament(tournamentId);
+        const matches = await this.matches.byIds(this.matchIdsOf(flow));
 
         return this.toDto(flow, new Map(matches.map((match) => [match.id, match])));
     }
 
     async creation(tournamentId: number): Promise<ControlRoomCreationDto> {
-        const [allMatches, assigned] = await Promise.all([
-            this.matches.byTournament(tournamentId),
-            this.flows.manager.query<AssignedMatchRow[]>(ASSIGNED_MATCH_IDS_OF_TOURNAMENT, [tournamentId]),
-        ]);
-        const assignedIds = new Set(assigned.map((entry) => entry.matchId));
-        return { unassignedMatches: allMatches.filter((match) => !assignedIds.has(match.id)) };
+        const unassignedIds = await this.unassignedMatchIdsOf(tournamentId);
+
+        return { unassignedMatches: await this.matches.byIds(unassignedIds) };
     }
 
     async editor(flowId: number): Promise<ControlRoomEditorDto> {
@@ -72,16 +80,15 @@ export class ControlRoomQueries {
             throw new ConflictException(`Control room flow ${flowId} is not editable`);
         }
         const tournamentId = await this.tournamentIdOf(flowId);
-        const [allMatches, assigned] = await Promise.all([
-            this.matches.byTournament(tournamentId),
-            this.flows.manager.query<AssignedMatchRow[]>(ASSIGNED_MATCH_IDS_OF_TOURNAMENT, [tournamentId]),
-        ]);
-        const assignedIds = new Set(assigned.map((entry) => entry.matchId));
-        const matchById = new Map(allMatches.map((match) => [match.id, match]));
+        const unassignedIds = await this.unassignedMatchIdsOf(tournamentId);
+        const flowMatchIds = this.matchIdsOf(flow);
+        const matches = await this.matches.byIds([...new Set([...flowMatchIds, ...unassignedIds])]);
+        const matchById = new Map(matches.map((match) => [match.id, match]));
+        const unassigned = new Set(unassignedIds);
 
         return {
             flow: this.toDto(flow, matchById),
-            unassignedMatches: allMatches.filter((match) => !assignedIds.has(match.id)),
+            unassignedMatches: matches.filter((match) => unassigned.has(match.id)),
         };
     }
 
@@ -96,6 +103,16 @@ export class ControlRoomQueries {
         }
 
         return flow;
+    }
+
+    private matchIdsOf(flow: ControlRoomFlow): number[] {
+        return (flow.entries ?? []).map((entry) => entry.match.id);
+    }
+
+    private async unassignedMatchIdsOf(tournamentId: number): Promise<number[]> {
+        const rows: UnassignedMatchRow[] = await this.flows.manager.query(UNASSIGNED_MATCH_IDS_OF_TOURNAMENT, [tournamentId]);
+
+        return rows.map((row) => row.matchId);
     }
 
     private async tournamentIdOf(flowId: number): Promise<number> {

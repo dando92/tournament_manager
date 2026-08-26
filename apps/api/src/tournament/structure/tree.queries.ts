@@ -33,7 +33,6 @@ const SCOPE_PREDICATE: Record<TreeScope, string> = {
 type StructureRow = {
     divisionId: number;
     divisionName: string;
-    divisionEntrantCount: number;
     phaseId: number | null;
     phaseName: string | null;
     phaseGroupId: number | null;
@@ -47,7 +46,6 @@ type StructureRow = {
 const structureInScope = (predicate: string): string => `
     SELECT  d."id"                  AS "divisionId",
             d."name"                AS "divisionName",
-            entrants."count"        AS "divisionEntrantCount",
             ph."id"                 AS "phaseId",
             ph."name"               AS "phaseName",
             pg."id"                 AS "phaseGroupId",
@@ -59,11 +57,6 @@ const structureInScope = (predicate: string): string => `
     FROM        "division" d
     LEFT JOIN   "phase" ph ON ph."divisionId" = d."id"
     LEFT JOIN   "phase_group" pg ON pg."phaseId" = ph."id"
-    LEFT JOIN LATERAL (
-        SELECT  COUNT(*)::int AS "count"
-        FROM    "entrant" e
-        WHERE   e."divisionId" = d."id" AND e."status" = 'active'
-    ) entrants ON TRUE
     LEFT JOIN LATERAL (
         SELECT  COUNT(*)::int AS "count"
         FROM    "match" m
@@ -78,6 +71,48 @@ const STRUCTURE_IN_SCOPE: Record<TreeScope, string> = {
     tournament: structureInScope(SCOPE_PREDICATE.tournament),
     division: structureInScope(SCOPE_PREDICATE.division),
     phaseGroup: structureInScope(SCOPE_PREDICATE.phaseGroup),
+};
+
+/** The rows `ENTRANT_COUNTS_IN_SCOPE` produces. */
+type EntrantCountRow = {
+    divisionId: number;
+    entrantCount: number;
+};
+
+/**
+ * Which divisions a scope covers, reached from the division itself rather than
+ * from the pools below it.
+ *
+ * The structure query returns one row per pool, so a count carried in it is
+ * recomputed once per pool of the same division. Joining the pools in here
+ * instead would multiply each entrant by them, hence the pool scope resolves
+ * its division first.
+ */
+const DIVISION_PREDICATE: Record<TreeScope, string> = {
+    tournament: 'd."tournamentId" = $1',
+    division: 'd."id" = $1',
+    phaseGroup: `d."id" = (
+        SELECT  ph."divisionId"
+        FROM    "phase_group" pg
+        JOIN    "phase" ph ON ph."id" = pg."phaseId"
+        WHERE   pg."id" = $1
+    )`,
+};
+
+/** How many entrants still compete in each division of the scope. */
+const entrantCountsInScope = (predicate: string): string => `
+    SELECT   d."id" AS "divisionId", COUNT(e."id")::int AS "entrantCount"
+    FROM     "division" d
+    JOIN     "entrant" e ON e."divisionId" = d."id" AND e."status" = 'active'
+    WHERE    ${predicate}
+    GROUP BY d."id"
+`;
+
+/** The same, per scope, built once at module load. */
+const ENTRANT_COUNTS_IN_SCOPE: Record<TreeScope, string> = {
+    tournament: entrantCountsInScope(DIVISION_PREDICATE.tournament),
+    division: entrantCountsInScope(DIVISION_PREDICATE.division),
+    phaseGroup: entrantCountsInScope(DIVISION_PREDICATE.phaseGroup),
 };
 
 /** The rows `PENDING_MATCHES_IN_SCOPE` produces. */
@@ -268,7 +303,8 @@ export class TreeQueries {
         const rows: StructureRow[] = await this.dataSource.query(STRUCTURE_IN_SCOPE[scope], [id]);
         if (rows.length === 0) return [];
 
-        const [progressed, pending, rules] = await Promise.all([
+        const [entrants, progressed, pending, rules] = await Promise.all([
+            this.entrantCounts(scope, id),
             this.progressedCounts(scope, id),
             this.pendingCounts(scope, id),
             this.advancementRulesOf(rows.map((row) => row.phaseGroupId).filter((value): value is number => value !== null)),
@@ -278,7 +314,7 @@ export class TreeQueries {
         const phasesByDivision = new Map<number, Map<number, DivisionPhaseDto>>();
 
         for (const row of rows) {
-            const division = this.divisionOf(divisions, phasesByDivision, row);
+            const division = this.divisionOf(divisions, phasesByDivision, row, entrants.get(row.divisionId) ?? 0);
             if (row.phaseId === null) continue;
 
             const phase = this.phaseOf(division, phasesByDivision.get(row.divisionId)!, row);
@@ -306,6 +342,7 @@ export class TreeQueries {
         divisions: DivisionSummaryDto[],
         phasesByDivision: Map<number, Map<number, DivisionPhaseDto>>,
         row: StructureRow,
+        entrantCount: number,
     ): DivisionSummaryDto {
         const existing = divisions.find((division) => division.id === row.divisionId);
         if (existing) return existing;
@@ -313,7 +350,7 @@ export class TreeQueries {
         const division: DivisionSummaryDto = {
             id: row.divisionId,
             name: row.divisionName,
-            entrantCount: row.divisionEntrantCount,
+            entrantCount,
             matchCount: 0,
             phases: [],
         };
@@ -337,6 +374,12 @@ export class TreeQueries {
         division.phases.push(phase);
 
         return phase;
+    }
+
+    private async entrantCounts(scope: TreeScope, id: number): Promise<Map<number, number>> {
+        const rows: EntrantCountRow[] = await this.dataSource.query(ENTRANT_COUNTS_IN_SCOPE[scope], [id]);
+
+        return new Map(rows.map((row) => [Number(row.divisionId), Number(row.entrantCount)]));
     }
 
     private async pendingCounts(scope: TreeScope, id: number): Promise<Map<number, number>> {

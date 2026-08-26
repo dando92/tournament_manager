@@ -29,28 +29,33 @@ export interface TournamentMutationReference {
 
 const TOURNAMENT_MUTATION_REFERENCE = 'tournamentMutationReference';
 
+/** The rows every query in `TOURNAMENT_OF` produces. */
+type TournamentRow = { id: number; status: string };
+
 /**
- * Which tournament each kind of reference belongs to.
+ * The tournament each kind of reference belongs to, and whether it is open.
  *
  * Every mutating route names one entity, and the guard walks from it up to the
  * tournament that owns it. The walk is the same chain the read queries take:
  * `match` to `phase_group` to `phase` to `division`.
+ *
+ * The status comes back with the identifier because the guard needs both on
+ * every mutating request, and resolving the tournament first only to ask for
+ * its status afterwards cost a second round trip on each one.
  */
-const TOURNAMENT_ID_OF: Record<
-  Exclude<TournamentEntityReference, 'tournament' | 'advancement-source'>,
+const TOURNAMENT_OF: Record<
+  Exclude<TournamentEntityReference, 'advancement-source'>,
   string
 > = {
-  division: `SELECT d."tournamentId" AS id FROM "division" d WHERE d."id" = $1`,
-  phase: `SELECT d."tournamentId" AS id FROM "phase" p JOIN "division" d ON d."id" = p."divisionId" WHERE p."id" = $1`,
-  'phase-group': `SELECT d."tournamentId" AS id FROM "phase_group" pg JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE pg."id" = $1`,
-  match: `SELECT d."tournamentId" AS id FROM "match" m JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE m."id" = $1`,
-  round: `SELECT d."tournamentId" AS id FROM "round" r JOIN "match" m ON m."id" = r."matchId" JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE r."id" = $1`,
-  song: `SELECT s."tournamentId" AS id FROM "song" s WHERE s."id" = $1`,
-  'control-room-flow': `SELECT flow."tournamentId" AS id FROM "control_room_flow" flow WHERE flow."id" = $1`,
+  tournament: `SELECT t."id" AS id, t."status" AS status FROM "tournament" t WHERE t."id" = $1`,
+  division: `SELECT t."id" AS id, t."status" AS status FROM "division" d JOIN "tournament" t ON t."id" = d."tournamentId" WHERE d."id" = $1`,
+  phase: `SELECT t."id" AS id, t."status" AS status FROM "phase" p JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE p."id" = $1`,
+  'phase-group': `SELECT t."id" AS id, t."status" AS status FROM "phase_group" pg JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE pg."id" = $1`,
+  match: `SELECT t."id" AS id, t."status" AS status FROM "match" m JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE m."id" = $1`,
+  round: `SELECT t."id" AS id, t."status" AS status FROM "round" r JOIN "match" m ON m."id" = r."matchId" JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE r."id" = $1`,
+  song: `SELECT t."id" AS id, t."status" AS status FROM "song" s JOIN "tournament" t ON t."id" = s."tournamentId" WHERE s."id" = $1`,
+  'control-room-flow': `SELECT t."id" AS id, t."status" AS status FROM "control_room_flow" flow JOIN "tournament" t ON t."id" = flow."tournamentId" WHERE flow."id" = $1`,
 };
-
-/** Whether that tournament is still open to changes. */
-const TOURNAMENT_STATUS = `SELECT t."status" AS status FROM "tournament" t WHERE t."id" = $1`;
 
 export const RequireOpenTournament = (reference: TournamentMutationReference) =>
   SetMetadata(TOURNAMENT_MUTATION_REFERENCE, reference);
@@ -78,66 +83,53 @@ export class TournamentOpenGuard implements CanActivate {
       );
     }
 
-    const tournamentId = await this.resolveTournamentId(
+    const tournament = await this.resolveTournament(
       reference.entity,
       entityId,
       request.params,
     );
-    if (tournamentId === null) {
+    if (!tournament) {
       throw new NotFoundException(
-        `Cannot resolve a tournament for ${reference.entity} ${entityId}`,
+        reference.entity === 'tournament'
+          ? `Tournament with id ${entityId} not found`
+          : `Cannot resolve a tournament for ${reference.entity} ${entityId}`,
       );
     }
-
-    const rows: Array<{ status: string }> = await this.dataSource.query(
-      TOURNAMENT_STATUS,
-      [tournamentId],
-    );
-    if (rows.length === 0) {
-      throw new NotFoundException(
-        `Tournament with id ${tournamentId} not found`,
-      );
-    }
-    if (rows[0].status === 'closed') {
+    if (tournament.status === 'closed') {
       throw new ConflictException(
-        `Tournament with id ${tournamentId} is closed and must be reopened before it can be modified`,
+        `Tournament with id ${tournament.id} is closed and must be reopened before it can be modified`,
       );
     }
-    request.tournamentId = tournamentId;
+    request.tournamentId = tournament.id;
     return true;
   }
 
-  private async resolveTournamentId(
+  private async resolveTournament(
     entity: TournamentEntityReference,
     entityId: number,
     params: Record<string, string>,
-  ): Promise<number | null> {
-    if (entity === 'tournament') return entityId;
+  ): Promise<TournamentRow | null> {
     if (entity === 'advancement-source') {
       const sourceKind = params.sourceKind;
-      if (sourceKind === 'match') return this.queryMatch(entityId);
-      if (sourceKind === 'phase_group') return this.queryPhaseGroup(entityId);
+      if (sourceKind === 'match') {
+        return this.queryOne(TOURNAMENT_OF.match, entityId);
+      }
+      if (sourceKind === 'phase_group') {
+        return this.queryOne(TOURNAMENT_OF['phase-group'], entityId);
+      }
       throw new BadRequestException(
         `Unsupported advancement source ${sourceKind}`,
       );
     }
 
-    return this.queryId(TOURNAMENT_ID_OF[entity], entityId);
+    return this.queryOne(TOURNAMENT_OF[entity], entityId);
   }
 
-  private queryMatch(id: number): Promise<number | null> {
-    return this.resolveTournamentId('match', id, {});
-  }
-
-  private queryPhaseGroup(id: number): Promise<number | null> {
-    return this.resolveTournamentId('phase-group', id, {});
-  }
-
-  private async queryId(query: string, id: number): Promise<number | null> {
-    const rows: Array<{ id: number | null }> = await this.dataSource.query(
-      query,
-      [id],
-    );
-    return rows[0]?.id ?? null;
+  private async queryOne(
+    query: string,
+    id: number,
+  ): Promise<TournamentRow | null> {
+    const rows: TournamentRow[] = await this.dataSource.query(query, [id]);
+    return rows[0] ?? null;
   }
 }

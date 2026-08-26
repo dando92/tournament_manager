@@ -183,14 +183,45 @@ review.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 13 | `AdvancementRollbackGuard.blockingMatches` loads a full match aggregate per target inside a loop | One query over all target ids: join `match_entrants_entrant` for the membership test, and reuse the progressed predicate already written a few lines below in the same file, returning id, name and reason | Open |
-| 14 | `AdvancementRollbackGuard.blockingPhaseGroups` loads a full pool aggregate per target only to test `seat.sourceAdvancementRule?.id` | `SELECT DISTINCT "phaseGroupId" FROM phase_group_entrant WHERE "phaseGroupId" = ANY($1) AND "sourceAdvancementRuleId" = ANY($2)`. Two round trips per target become two in total | Open |
-| 15 | `ControlRoomQueries.byId`, `creation` and `editor` each project every match of the tournament | Add an `'ids'` scope to `MatchQueries` (`m."id" = ANY($1::int[])`) and expose `byIds()`; the three methods then ask only for the matches they reference | Open |
-| 16 | `TournamentOpenGuard` issues two queries on every mutating request: resolve the tournament, then read its status | Each entry of the `Record` also selects `t."status"` through the join to `tournament`; one round trip | Open |
-| 18 | `TreeQueries` recomputes the division entrant count once per pool, because the lateral sits in the query that returns one row per pool | Move it out as a query aggregated by `divisionId`, the way `progressed` and `pending` already are | Open |
+| 13 | `AdvancementRollbackGuard.blockingMatches` loads a full match aggregate per target inside a loop | `PROGRESSED_MATCHES`: one query over all target ids, joining `match_entrants_entrant` for the membership test and reusing the progressed predicate written a few lines below in the same file | Done |
+| 14 | `AdvancementRollbackGuard.blockingPhaseGroups` loads a full pool aggregate per target only to test `seat.sourceAdvancementRule?.id` | `SEATS_TAKEN_BY_RULES`, one lookup on `phase_group_entrant` for every target at once, then the existing `PROGRESSED_POOLS` over what it returns | Done |
+| 15 | `ControlRoomQueries.byId`, `creation` and `editor` each project every match of the tournament | `MatchQueries` gained an `'ids'` scope and `byIds()`; `byId` asks for its flow's entries, and the other two for the matches they offer | Done |
+| 16 | `TournamentOpenGuard` issues two queries on every mutating request: resolve the tournament, then read its status | Each entry of `TOURNAMENT_OF` selects `t."id"` and `t."status"` through the join to `tournament`; one round trip | Done |
+| 18 | `TreeQueries` recomputes the division entrant count once per pool, because the lateral sits in the query that returns one row per pool | `ENTRANT_COUNTS_IN_SCOPE`, aggregated by `divisionId`, the way `progressed` and `pending` already are | Done |
 
 Item 14 depends on `phase_group_entrant(phaseGroupId)` from batch B to be worth
 doing.
+
+What the rewrites had to preserve, and how:
+
+- **Item 13 pairs its ids.** A target is affected only when it holds the entrant
+  *its own* rule put there. Two flat arrays would let a match blocked by one
+  rule be matched against an entrant impacted by another, so the target ids and
+  the entrant ids arrive as `unnest($1::int[], $2::int[])` and the join tests
+  the pair. The progressed predicate is the same evidence
+  `MatchAggregate.poolState` computes in memory — a committed result, or a
+  standing with a score or a hand-scored point — which is what makes the
+  aggregate load unnecessary rather than merely expensive.
+- **Item 15 keeps the offered set in SQL.** `creation` and `editor` used to
+  project every match of the tournament and subtract the assigned ones in
+  memory. `UNASSIGNED_MATCH_IDS_OF_TOURNAMENT` does the subtraction as a
+  `NOT EXISTS` over ids, and only the matches actually returned are projected.
+  `forTournament` still reads the tournament, because it answers about every
+  flow of it at once.
+- **Item 16 keeps both 404s.** Resolving and reading the status in one query
+  collapses "cannot resolve" and "not found" into one empty result, so the guard
+  chooses the message the two-query form produced: a reference to a tournament
+  that does not exist still says `Tournament with id X not found`, and every
+  other unresolvable reference still says `Cannot resolve a tournament for ...`.
+- **Item 18 resolves the division first.** The entrant count cannot join the
+  pools it is scoped by without multiplying each entrant by them, so the pool
+  scope resolves its division in a scalar subquery and the count groups by
+  `divisionId`.
+
+`control-room.e2e-spec.ts` gained the case items 15 covers, because the creation
+form and the editor had no e2e coverage before: a match held by a flow is not
+offered, one that is free is, and the editor answers with the same set plus its
+own entries.
 
 ## G — Connection configuration
 

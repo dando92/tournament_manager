@@ -3,7 +3,6 @@ import { DataSource } from "typeorm";
 import { AdvancementRule, Entrant } from "@tournament-manager/persistence";
 
 import { MatchAggregate } from "@match/match.aggregate";
-import { MatchStore } from "@match/match.store";
 import { PhaseGroupStore } from "@tournament/structure/phase-group/phase-group.store";
 import { AdvancementRuleStore } from "./advancement-rule.store";
 
@@ -24,6 +23,63 @@ type ProgressedPoolRow = {
     blockingMatchName: string;
     reason: "RESULT_COMMITTED" | "SCORES_RECORDED";
 };
+
+/** The rows `PROGRESSED_MATCHES` produces. */
+type ProgressedMatchRow = {
+    targetId: number;
+    targetName: string;
+    reason: "RESULT_COMMITTED" | "SCORES_RECORDED";
+};
+
+/** The rows `SEATS_TAKEN_BY_RULES` produces. */
+type SeatedPoolRow = { phaseGroupId: number };
+
+/**
+ * The target matches among these that have already started competing.
+ *
+ * A target counts only when it holds the entrant its own rule put there, which
+ * is why the ids arrive paired: a match that happens to hold an entrant
+ * impacted by a rule aimed at a different match is not affected by this
+ * rollback. `unnest` of two arrays is that pairing.
+ *
+ * Progress is the same evidence `PROGRESSED_POOLS` looks for, which is what
+ * `MatchAggregate.poolState` computes in memory: a committed result, or a
+ * standing carrying a score or a hand-scored point. This replaces loading the
+ * whole aggregate of every target, one target at a time.
+ */
+const PROGRESSED_MATCHES = `
+    WITH impact("matchId", "entrantId") AS (
+        SELECT * FROM unnest($1::int[], $2::int[])
+    )
+    SELECT DISTINCT
+             m."id" AS "targetId",
+             m."name" AS "targetName",
+             CASE WHEN m."matchResultId" IS NOT NULL THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
+    FROM     "match" m
+    JOIN     impact i ON i."matchId" = m."id"
+    JOIN     "match_entrants_entrant" me ON me."matchId" = m."id" AND me."entrantId" = i."entrantId"
+    WHERE    m."matchResultId" IS NOT NULL OR EXISTS (
+                SELECT  1
+                FROM    "round" r
+                JOIN    "standing" st ON st."roundId" = r."id"
+                WHERE   r."matchId" = m."id"
+                    AND (st."scoreId" IS NOT NULL OR st."points" > 0)
+             )
+    ORDER BY m."id"
+`;
+
+/**
+ * Which of these pools actually seated somebody through one of these rules.
+ *
+ * A seat records the rule that produced it, so the question is one lookup on
+ * `phase_group_entrant` rather than a pool aggregate loaded per target.
+ */
+const SEATS_TAKEN_BY_RULES = `
+    SELECT DISTINCT seat."phaseGroupId" AS "phaseGroupId"
+    FROM   "phase_group_entrant" seat
+    WHERE  seat."phaseGroupId" = ANY($1::int[])
+        AND seat."sourceAdvancementRuleId" = ANY($2::int[])
+`;
 
 /**
  * The pools among these that have already started competing, with the match
@@ -57,7 +113,6 @@ export class AdvancementRollbackGuard {
     constructor(
         private readonly dataSource: DataSource,
         private readonly rules: AdvancementRuleStore,
-        private readonly matches: MatchStore,
         private readonly phaseGroups: PhaseGroupStore,
     ) {}
 
@@ -93,37 +148,34 @@ export class AdvancementRollbackGuard {
     }
 
     private async blockingMatches(impacts: Impact[]): Promise<BlockingTarget[]> {
-        const byTarget = this.groupByTarget(impacts.filter((impact) => impact.rule.targetKind === "match"));
-        const blockers: BlockingTarget[] = [];
-        for (const [targetId, targetImpacts] of byTarget) {
-            const target = await this.matches.load(targetId);
-            if (!target || !targetImpacts.some((impact) => target.entrants.some((entrant) => entrant.id === impact.entrant.id))) {
-                continue;
-            }
-            if (target.poolState.completed) {
-                blockers.push({ kind: "match", id: target.id, name: target.entity.name, reason: "RESULT_COMMITTED" });
-            } else if (target.poolState.progressed) {
-                blockers.push({ kind: "match", id: target.id, name: target.entity.name, reason: "SCORES_RECORDED" });
-            }
-        }
-
-        return blockers;
-    }
-
-    private async blockingPhaseGroups(impacts: Impact[]): Promise<BlockingTarget[]> {
-        const byTarget = this.groupByTarget(impacts.filter((impact) => impact.rule.targetKind === "phase_group"));
-        const affectedIds: number[] = [];
-        for (const [targetId, targetImpacts] of byTarget) {
-            const target = await this.phaseGroups.load(targetId);
-            if (target?.entity.entrants?.some((seat) => targetImpacts.some((impact) => seat.sourceAdvancementRule?.id === impact.rule.id))) {
-                affectedIds.push(targetId);
-            }
-        }
-        if (affectedIds.length === 0) {
+        const targeted = impacts.filter((impact) => impact.rule.targetKind === "match");
+        if (targeted.length === 0) {
             return [];
         }
 
-        const rows: ProgressedPoolRow[] = await this.dataSource.query(PROGRESSED_POOLS, [affectedIds]);
+        const rows: ProgressedMatchRow[] = await this.dataSource.query(PROGRESSED_MATCHES, [
+            targeted.map((impact) => impact.rule.targetId),
+            targeted.map((impact) => impact.entrant.id),
+        ]);
+
+        return rows.map((row) => ({ kind: "match", id: row.targetId, name: row.targetName, reason: row.reason }));
+    }
+
+    private async blockingPhaseGroups(impacts: Impact[]): Promise<BlockingTarget[]> {
+        const targeted = impacts.filter((impact) => impact.rule.targetKind === "phase_group");
+        if (targeted.length === 0) {
+            return [];
+        }
+
+        const seated: SeatedPoolRow[] = await this.dataSource.query(SEATS_TAKEN_BY_RULES, [
+            targeted.map((impact) => impact.rule.targetId),
+            targeted.map((impact) => impact.rule.id),
+        ]);
+        if (seated.length === 0) {
+            return [];
+        }
+
+        const rows: ProgressedPoolRow[] = await this.dataSource.query(PROGRESSED_POOLS, [seated.map((row) => row.phaseGroupId)]);
 
         return rows.map((row) => ({
             kind: "phase_group",
@@ -135,12 +187,4 @@ export class AdvancementRollbackGuard {
         }));
     }
 
-    private groupByTarget(impacts: Impact[]): Map<number, Impact[]> {
-        const grouped = new Map<number, Impact[]>();
-        for (const impact of impacts) {
-            grouped.set(impact.rule.targetId, [...(grouped.get(impact.rule.targetId) ?? []), impact]);
-        }
-
-        return grouped;
-    }
 }
