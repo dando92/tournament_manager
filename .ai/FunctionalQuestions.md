@@ -309,7 +309,14 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   matches, so the decision adds the constraint rather than a behavior.
 - Consequence: two different people who both compete as `Dando` share one
   catalogue entry and one history. Telling them apart requires them to choose
-  different names; the application offers no other discriminator.
+  different names; the application offers no other discriminator. What an
+  account registration should do when it names a player who already exists is
+  FQ-030.
+- Observed in the local database when the constraint was first applied: two
+  players named `Momo`, one carrying two participations, eight scores and their
+  standings, the other created by an account registration and carrying only the
+  account. They were merged onto the competing row, which is the shape the rule
+  now guarantees.
 - Rule: a unique expression index on `LOWER(TRIM("playerName"))` enforces this.
   The two lookups that pick the older of two matching rows stop guessing, and
   both become sargable. Items 28 and 25 of
@@ -317,3 +324,28 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   by this answer; the index cannot be created over a catalogue that already
   holds a duplicate, which the pre-production reset policy in `AGENTS.md`
   covers.
+
+### FQ-030 — An account that registers under a player name somebody already uses
+
+- Status: Deferred.
+- Observed behavior: three writes create or rename a player without consulting
+  the catalogue. `AccountCommands.create` always builds a new `Player` from the
+  requested player name, `ensurePlayer` builds one from the username, and
+  `updateProfile` renames the account's player to any value. Before FQ-029 each
+  of them could produce a second catalogue row for a name that already existed,
+  which is exactly what the local database held: a competitor named `Momo` with
+  a history, and a second `Momo` created by an account registration. With
+  `UQ_player_normalized_name` in place the write is refused, and the request
+  fails on the constraint rather than with a stated answer.
+- Question: what should happen — the account takes over the existing player row,
+  inheriting that person's history, or the registration is refused because the
+  name is taken? Reuse is convenient at a tournament where the organizer knows
+  everybody by name; it also lets anybody claim another competitor's results by
+  registering under their name. Refusing is safe and leaves an organizer to link
+  the two, which is a flow that does not exist yet.
+- Evidence: `apps/api/src/account/account.commands.ts` (`create`,
+  `ensurePlayer`, `updateProfile`), `apps/api/src/tournament/catalog/player.store.ts`,
+  and the migration `1788700000000-SchemaAndTypes`.
+- Rule: preserve the current behavior until this is decided. A duplicate name is
+  refused by the database, so nothing silently creates a second person; the cost
+  of deferring is the shape of the failure, not its outcome.
