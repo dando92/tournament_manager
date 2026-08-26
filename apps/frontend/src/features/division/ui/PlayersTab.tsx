@@ -1,27 +1,22 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowDownAZ, faDownload, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDownAZ } from "@fortawesome/free-solid-svg-icons";
 import PlayersByNameList from "@/features/division/ui/PlayersByNameList";
 import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
 import PlayersWarning from "@/features/division/ui/PlayersWarning";
 import { usePlayersTab } from "@/features/division/model/usePlayersTab";
-import { useItgmaniaProfileExport } from "@/features/participant/model/useItgmaniaProfileExport";
 import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/participant/model/types";
-import { btnSecondary } from "@/styles/buttonStyles";
 
 type Props = {
   division: Division;
   entrants: Entrant[];
   canEdit: boolean;
-  tournamentName: string;
-  divisionIds: number[];
 };
 
-export default function PlayersTab({ division, entrants, canEdit, tournamentName, divisionIds }: Props) {
+export default function PlayersTab({ division, entrants, canEdit }: Props) {
   const [orderByName, setOrderByName] = useState(false);
   const state = usePlayersTab({ division, entrants, orderByName });
-  const profileExport = useItgmaniaProfileExport({ tournamentName, divisionIds });
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -29,18 +24,6 @@ export default function PlayersTab({ division, entrants, canEdit, tournamentName
         <div className="min-w-0 flex-1">
           <PlayersSearchBar value={state.search} onChange={state.setSearch} />
         </div>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={profileExport.exportProfiles}
-            disabled={profileExport.exporting}
-            className={`flex shrink-0 items-center gap-2 text-xs font-medium ${btnSecondary}`}
-            title="Export ITGmania profiles"
-          >
-            <FontAwesomeIcon icon={profileExport.exporting ? faSpinner : faDownload} className={profileExport.exporting ? "animate-spin" : undefined} />
-            {profileExport.exporting ? "Exporting..." : "Export ITGmania"}
-          </button>
-        )}
         <button
           type="button"
           onClick={() => setOrderByName((current) => !current)}

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { Participant, Player } from "@/features/participant/model/types";
 import { getAllPlayers } from "@/features/participant/api/player.api";
+import { useItgmaniaProfileExport } from "@/features/participant/model/useItgmaniaProfileExport";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import {
   createParticipant,
@@ -26,7 +27,7 @@ const noPlayers: Player[] = [];
  * update, which invalidates this shared query for every client.
  */
 export function useTournamentParticipantsPage() {
-  const { tournamentId, controls, participantsManageModal, setParticipantsManageModal } =
+  const { tournamentId, tournamentName, controls, participantsManageModal, setParticipantsManageModal } =
     useTournamentPageContext();
   const [name, setName] = useState("");
   const [participantSearch, setParticipantSearch] = useState("");
@@ -54,6 +55,7 @@ export function useTournamentParticipantsPage() {
   const participants = participantsQuery.data ?? noParticipants;
   const allPlayers = playersQuery.data ?? noPlayers;
   const submitting = registerMutation.isPending || importMutation.isPending;
+  const profileExport = useItgmaniaProfileExport({ tournamentName, participants });
 
   const participantPlayerIds = useMemo(
     () => new Set(participants.map((participant) => participant.player.id)),
@@ -159,6 +161,8 @@ export function useTournamentParticipantsPage() {
     preview,
     loadingPreview,
     submitting,
+    participantsLoading: participantsQuery.isLoading,
+    profileExporting: profileExport.exporting,
     manageModal: participantsManageModal,
     closeManageModal: () => setParticipantsManageModal("none"),
     handleRegister,
@@ -168,5 +172,6 @@ export function useTournamentParticipantsPage() {
     handleRemoveStaff,
     handlePreviewImport,
     handleConfirmImport,
+    handleExportItgmaniaProfiles: profileExport.exportProfiles,
   };
 }

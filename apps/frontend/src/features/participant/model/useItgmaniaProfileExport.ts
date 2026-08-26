@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { listDivisionEntrants } from "@/features/division/api/division.api";
+import type { Participant } from "@/features/participant/model/types";
 import {
     createItgmaniaProfilesArchive,
     itgmaniaArchiveFileName,
@@ -9,17 +9,16 @@ import {
 
 type Options = {
     tournamentName: string;
-    divisionIds: number[];
+    participants: Participant[];
 };
 
-export function useItgmaniaProfileExport({ tournamentName, divisionIds }: Options) {
+export function useItgmaniaProfileExport({ tournamentName, participants }: Options) {
     const [exporting, setExporting] = useState(false);
 
     const exportProfiles = async () => {
         setExporting(true);
         try {
-            const entrants = (await Promise.all(divisionIds.map(listDivisionEntrants))).flat();
-            const players = playersForItgmaniaProfiles(entrants);
+            const players = playersForItgmaniaProfiles(participants);
             const archive = await createItgmaniaProfilesArchive(players);
             downloadArchive(archive, itgmaniaArchiveFileName(tournamentName));
             toast.success(`Exported ${players.length} ITGmania profile${players.length === 1 ? "" : "s"}.`);

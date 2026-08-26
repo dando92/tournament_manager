@@ -122,14 +122,14 @@ the API validates that payload and writes it in one transaction.
 
 ## ITGmania Profile Export
 
-The division entrants page exposes a tournament-wide ITGmania profile export
-to users who can edit the tournament. The browser reads every division roster,
-including withdrawn and dropped entrants, deduplicates players across divisions
-and team entrants, and creates the archive without a backend export endpoint.
+The tournament Participants page exposes an ITGmania profile export to users
+who can edit the tournament. The browser uses the complete tournament roster,
+including withdrawn participants, deduplicates players, and creates the archive
+without a backend export endpoint.
 
 - The ZIP is named after the tournament and contains
   `LocalProfiles/<player>/Editable.ini` for every player who has belonged to a
-  tournament division.
+  tournament roster.
 - `Editable.ini` is a small source constant. Every profile preserves it and
   changes only `DisplayName` to the player's original name.
 - Only filesystem path segments are sanitized. The display name inside the INI

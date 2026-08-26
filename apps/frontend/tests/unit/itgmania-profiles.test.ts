@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import JSZip from 'jszip';
-import type { Entrant, Player } from '../../src/features/participant/model/types.ts';
+import type { Participant, Player } from '../../src/features/participant/model/types.ts';
 import {
   createItgmaniaProfilesArchive,
   itgmaniaArchiveFileName,
@@ -9,28 +9,22 @@ import {
   sanitizeWindowsName,
 } from '../../src/features/participant/model/itgmaniaProfiles.ts';
 
-function entrant(id: number, status: Entrant['status'], players: Player[], type: Entrant['type'] = 'player'): Entrant {
+function participant(id: number, status: Participant['status'], player: Player): Participant {
   return {
     id,
-    name: players.map((player) => player.playerName).join(' / '),
-    type,
+    roles: ['competitor'],
     status,
-    participants: players.map((player, index) => ({
-      id: id * 10 + index,
-      roles: ['competitor'],
-      status: status === 'withdrawn' ? 'withdrawn' : 'registered',
-      player,
-    })),
+    player,
   };
 }
 
-test('players are collected tournament-wide once, including withdrawn and team entrants', () => {
+test('players are collected once from the whole tournament roster, including withdrawn participants', () => {
   const ann = { id: 1, playerName: 'Ann' };
   const bob = { id: 2, playerName: 'Bob' };
   const players = playersForItgmaniaProfiles([
-    entrant(1, 'active', [ann]),
-    entrant(2, 'withdrawn', [bob]),
-    entrant(3, 'dropped', [ann, bob], 'team'),
+    participant(1, 'registered', ann),
+    participant(2, 'withdrawn', bob),
+    participant(3, 'checked_in', ann),
   ]);
 
   assert.deepEqual(players, [ann, bob]);

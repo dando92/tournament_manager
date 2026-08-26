@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import type { Entrant, Player } from "@/features/participant/model/types";
+import type { Participant, Player } from "@/features/participant/model/types";
 
 const EDITABLE_INI_TEMPLATE = [
     "[Editable]",
@@ -16,13 +16,11 @@ const EDITABLE_INI_TEMPLATE = [
 
 const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
-export function playersForItgmaniaProfiles(entrants: Entrant[]): Player[] {
+export function playersForItgmaniaProfiles(participants: Participant[]): Player[] {
     const players = new Map<number, Player>();
 
-    for (const entrant of entrants) {
-        for (const participant of entrant.participants ?? []) {
-            players.set(participant.player.id, participant.player);
-        }
+    for (const participant of participants) {
+        players.set(participant.player.id, participant.player);
     }
 
     return [...players.values()];

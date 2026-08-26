@@ -1,6 +1,8 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faDownload,
   faMagnifyingGlass,
+  faSpinner,
   faUserShield,
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -31,6 +33,8 @@ export default function ParticipantsPage() {
     preview,
     loadingPreview,
     submitting,
+    participantsLoading,
+    profileExporting,
     manageModal,
     closeManageModal,
     handleRegister,
@@ -40,6 +44,7 @@ export default function ParticipantsPage() {
     handleRemoveStaff,
     handlePreviewImport,
     handleConfirmImport,
+    handleExportItgmaniaProfiles,
   } = useTournamentParticipantsPage();
 
   if (!controls) {
@@ -48,18 +53,30 @@ export default function ParticipantsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative">
-        <FontAwesomeIcon
-          icon={faMagnifyingGlass}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-mute text-sm"
-        />
-        <input
-          type="search"
-          value={participantSearch}
-          onChange={(event) => setParticipantSearch(event.target.value)}
-          placeholder="Search participants by name..."
-          className="w-full rounded-lg border border-ui-border-strong py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-mute text-sm"
+          />
+          <input
+            type="search"
+            value={participantSearch}
+            onChange={(event) => setParticipantSearch(event.target.value)}
+            placeholder="Search participants by name..."
+            className="w-full rounded-lg border border-ui-border-strong py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleExportItgmaniaProfiles}
+          disabled={participantsLoading || profileExporting}
+          className={`flex shrink-0 items-center gap-2 text-xs font-medium ${btnSecondary}`}
+          title="Export ITGmania profiles"
+        >
+          <FontAwesomeIcon icon={profileExporting ? faSpinner : faDownload} className={profileExporting ? "animate-spin" : undefined} />
+          {profileExporting ? "Exporting..." : "Export ITGmania"}
+        </button>
       </div>
 
       <div className="grid gap-2">
