@@ -4,7 +4,7 @@
 
 The current deployment is pre-production and contains no production data. GitHub Actions is the release control plane, GitHub Container Registry stores immutable images, and the `testing` GitHub environment deploys to the existing self-hosted Docker runner. This target has no provider-specific application dependency and can run on a free self-hosted machine or free-tier Docker host.
 
-The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.yml). It runs pinned PostgreSQL and Redis containers with named volumes and consumes migrations, API, SyncStart, realtime, and frontend images tagged only with the Git commit SHA. A reverse proxy or tunnel may expose the loopback-bound API, realtime, and frontend ports; that edge component is outside the application contract.
+The deployment adapter is [deploy/docker-compose.yml](../deploy/docker-compose.yml). It runs pinned PostgreSQL and Redis containers with named volumes and consumes migrations, API, SyncStart, realtime, and frontend images tagged only with the Git commit SHA. The frontend Nginx image is the single browser gateway: `/api/` reaches the API and `/realtime/` reaches one realtime replica. An external tunnel or TLS reverse proxy exposes only the loopback-bound frontend port.
 
 Alternative hosted targets, and the changes they would require, are recorded in [Hosting Options](HostingOptions.md); none is selected.
 
@@ -14,7 +14,7 @@ Production is not declared. Before production use, replace the pre-production re
 
 Every deployment runs during an explicit maintenance window in which user access to the complete platform is blocked. Continuous availability, zero-downtime rollout, live connection handoff, and compatibility between the old and new application versions are not deployment requirements.
 
-The traffic-blocking mechanism belongs to the external edge or operator procedure because the reverse proxy and tunnel are outside the application contract. A promotion must start only after traffic has been blocked and must restore access only after either the new release or the rolled-back release has passed readiness and smoke checks. The concrete edge integration remains an operational configuration decision.
+The traffic-blocking mechanism belongs to the external tunnel, TLS edge, or operator procedure. A promotion must start only after traffic has been blocked and must restore access only after either the new release or the rolled-back release has passed readiness and smoke checks. The concrete external edge integration remains an operational configuration decision.
 
 PostgreSQL and Redis may remain running for migration, backup, and recovery operations while API, SyncStart, Realtime, and frontend traffic is unavailable. SyncStart connections and Realtime browser connections may be terminated and reconstructed after deployment; no cross-version state transfer is required.
 
@@ -67,7 +67,7 @@ After the operator has blocked platform traffic, the testing promotion then:
 
 Traffic is restored only after step 8 succeeds. During rollback it remains blocked until the restored release passes its smoke checks.
 
-Frontend endpoint and authentication settings are written to `runtime-config.js` when its container starts. They are not compiled into the image, so the published frontend digest is portable between the local and testing configurations.
+Frontend endpoint and authentication settings are written to `runtime-config.js` when its container starts. Same-origin `/api/` and `/realtime/` values use the bundled Nginx gateway; absolute overrides support a split-origin host. They are not compiled into the image, so the published frontend digest is portable between the local and testing configurations.
 
 ## Failure and Rollback
 

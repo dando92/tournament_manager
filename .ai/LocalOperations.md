@@ -20,6 +20,8 @@ the services after startup.
 
 No cloud account or provider-specific credentials are required. Compose defaults are suitable for local use; create a repository-root `.env` only when overriding ports or local credentials.
 
+The same repository-root `.env` supports both host development and Compose. Host processes use the loopback `API_INTERNAL_URL` and `SYNCSTART_INTERNAL_URL` values; the local Compose file deliberately replaces them with `http://api:3000` and `http://syncstart:3002` on its private network.
+
 ## Start and Verify
 
 Install workspace dependencies once after cloning or changing the lockfile:
@@ -46,6 +48,8 @@ npm run verify:local
 Local endpoints:
 
 - Frontend: `http://localhost`
+- Same-origin API gateway: `http://localhost/api/`
+- Same-origin realtime gateway: `http://localhost/realtime/`
 - API: `http://localhost:3000`
 - Swagger: `http://localhost:3000/api-docs`
 - API liveness: `http://localhost:3000/health/live`
@@ -80,8 +84,18 @@ ITGmania broadcasts to the local link, so the host running the bridge must be on
 
 The local stack runs two realtime replicas deliberately. They are not local capacity: they verify that Pub/Sub fan-out converges across replicas without client affinity, which is the property `npm run verify:local` checks and `npm run check:architecture` enforces. A hosted deployment may run a single instance without changing this local contract.
 
-The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. `PUBLIC_REALTIME_URL` selects the browser-facing replica. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
-The frontend container reads `PUBLIC_API_URL` and `PUBLIC_REALTIME_URL` at startup and writes `/runtime-config.js`. Changing these values requires only a frontend container restart, not an image rebuild.
+The realtime replicas subscribe independently to `LIVE_EVENT_CHANNEL`, scope every browser connection by tournament, and expose compatibility WebSocket paths at `/uiupdatehub`, `/lobbygateway`, and `/livematchgateway`. The browser reaches replica A through the frontend Nginx `/realtime/` gateway by default. Ordered live events receive a Redis-assigned per-tournament sequence; reconnects and gaps trigger an HTTP snapshot reload. Realtime caches are replaceable and never authoritative.
+The frontend container reads `PUBLIC_API_URL` and `PUBLIC_REALTIME_URL` at startup and writes `/runtime-config.js`. Their local defaults are the same-origin `/api/` and `/realtime/` gateway paths. Changing these values requires only a frontend container restart, not an image rebuild.
+
+## Remote browser access
+
+Nginx is the single browser gateway for the complete Compose stack. A tunnel needs to expose only `http://localhost`; API requests and browser WebSockets remain same-origin and are proxied across the private Compose network. For example:
+
+```text
+cloudflared tunnel --url http://localhost
+```
+
+Direct API and realtime host ports remain available for diagnostics and verification, but they do not need to be internet-accessible. The gateway does not expose PostgreSQL, Redis, SyncStart, or the legacy SyncStart bridge. Cabinet broadcasts and the bridge continue to use the venue LAN and `ws://host.docker.internal:1337` independently of browser traffic.
 
 `LIVE_EVENT_CHANNEL` and internal HTTP settings are deploy-time configuration. A process restart is required after changing environment values. Hosted deployments use a maintenance window with platform traffic blocked and do not require rolling continuity.
 

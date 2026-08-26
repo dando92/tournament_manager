@@ -47,6 +47,8 @@ npm run dev
 - Swagger UI: `http://localhost:3000/api-docs`
 - Frontend: `http://localhost:5173`
 
+Vite proxies browser API and realtime traffic through `http://localhost:5173/api/` and `http://localhost:5173/realtime/`, so a development tunnel needs to expose only port `5173`.
+
 The dependency command starts PostgreSQL, Redis, and the one-shot migration runner. Direct development and automated persistence tests use PostgreSQL only; TypeORM schema synchronization is disabled. Runtime data and environment files are not committed.
 
 ## Docker
@@ -58,8 +60,12 @@ npm run local:up
 ```
 
 - Frontend: `http://localhost`
+- Browser API gateway: `http://localhost/api/`
+- Browser realtime gateway: `http://localhost/realtime/`
 - API: `http://localhost:3000`
 - Swagger UI: `http://localhost:3000/api-docs`
+
+The frontend Nginx container is the single browser gateway. A public tunnel needs to expose only the frontend port; API, realtime, SyncStart, PostgreSQL, Redis, and the legacy bridge stay private.
 
 Inspect and verify it with:
 
@@ -69,6 +75,8 @@ npm run verify:local
 ```
 
 Stop it without deleting data with `npm run local:down`. See [Local Platform Operations](.ai/LocalOperations.md) for logs, backup, restore, restart, recovery, and explicit reset procedures.
+
+For a clean installation on another computer, including the legacy ITGmania bridge and optional public tunnel, follow the [New PC Setup Guide](.ai/NewPcSetup.md).
 
 GitHub Actions verifies pull requests, publishes commit-SHA images, and promotes `main` to the pre-production testing target. See [Continuous Delivery and Testing Deployment](.ai/Deployment.md) for required environment settings and rollback behavior.
 

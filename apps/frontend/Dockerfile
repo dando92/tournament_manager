@@ -30,7 +30,7 @@ COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/frontend/runtime-config.template.js /etc/tournament-manager/runtime-config.template.js
 COPY apps/frontend/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
-ENV PUBLIC_API_URL=http://localhost:3000/ \
-    PUBLIC_REALTIME_URL=http://localhost:3003/
+ENV PUBLIC_API_URL=/api/ \
+    PUBLIC_REALTIME_URL=/realtime/
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

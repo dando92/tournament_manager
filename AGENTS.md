@@ -77,6 +77,7 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - [Incremental architecture migration work plan](.ai/MigrationPlan.md)
 - [Migration execution status and next action](.ai/MigrationStatus.md)
 - [Local platform operations](.ai/LocalOperations.md)
+- [New PC setup guide](.ai/NewPcSetup.md)
 - [Continuous delivery and testing deployment](.ai/Deployment.md)
 - [Hosting options and deferred hosted target](.ai/HostingOptions.md)
 - [Current behavior and migration safety-net inventory](.ai/BaselineInventory.md)

@@ -781,6 +781,29 @@ npm run verify:local
 PASS: complete local verification after retained-volume restart
 ```
 
+### Single-origin local gateway and portable setup
+
+- The frontend Nginx container is now the single browser entrypoint for the
+  Compose stack. It proxies `/api/` to the API and `/realtime/` to Realtime,
+  including WebSocket upgrades, while direct host ports remain diagnostic.
+- Runtime frontend URLs default to same-origin paths. Vite provides matching
+  development proxies, so neither a new PC nor a new temporary tunnel hostname
+  requires a frontend configuration change.
+- The repository-root environment template is portable between host development
+  and Compose. Compose fixes private service addresses to Docker DNS names and
+  the legacy ITGmania bridge continues running on the host for LAN broadcasts.
+- Added a new-PC guide covering prerequisites, environment setup, startup,
+  bridge configuration, health checks, optional Cloudflare Tunnel access, data
+  transfer, shutdown, and troubleshooting.
+- Verification: Compose configuration is valid; architecture boundaries pass;
+  all 68 frontend unit tests pass; and the frontend production build succeeds.
+  Earlier gateway smoke tests confirmed API path rewriting, Realtime HTTP path
+  rewriting, and WebSocket upgrade through the built Nginx image.
+- `graphify update .` could not run because the Graphify CLI is not installed in
+  this environment.
+- Next action: install the documented stack on the destination PC and, if data
+  must move with it, transfer a PostgreSQL backup separately from `.env`.
+
 ## Handoff Rule
 
 After each coherent checkpoint, record the completed scope, exact verification commands and results, and the next concrete action. Functional ambiguities belong in [FunctionalQuestions.md](FunctionalQuestions.md).

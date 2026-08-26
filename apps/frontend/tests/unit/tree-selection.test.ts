@@ -50,3 +50,16 @@ test('prefers runtime deployment configuration over build-time defaults', () => 
   assert.equal(apiUrl(), 'https://api.example.test/');
   assert.equal(realtimeUrl(), 'https://realtime.example.test/');
 });
+
+test('resolves gateway paths against the browser origin', () => {
+  globalThis.window = {
+    location: { origin: 'https://tournament.example.test' },
+    __TOURNAMENT_MANAGER_CONFIG__: {
+      apiUrl: '/api/',
+      realtimeUrl: '/realtime/',
+    },
+  } as Window & typeof globalThis;
+
+  assert.equal(apiUrl(), 'https://tournament.example.test/api/');
+  assert.equal(realtimeUrl(), 'https://tournament.example.test/realtime/');
+});

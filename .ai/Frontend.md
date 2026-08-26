@@ -13,7 +13,7 @@
 
 The frontend is located in `apps/frontend` and is an npm workspace. It communicates with the API through HTTP and with `apps/realtime` through browser WebSockets.
 
-Vite loads build-time development defaults from the repository root. Container deployments inject public endpoints through `/runtime-config.js` at startup so one immutable image works in every environment.
+Vite loads build-time development defaults from the repository root. Container deployments inject public endpoints through `/runtime-config.js` at startup so one immutable image works in every environment. Development Vite and the frontend Nginx image expose the same browser gateway contract: `/api/` proxies the API and `/realtime/` proxies browser WebSockets to one realtime replica. Absolute public endpoint overrides remain supported for split-origin hosting.
 
 ## Realtime Recovery
 
@@ -23,6 +23,7 @@ Vite loads build-time development defaults from the repository root. Container d
 - Reload the relevant snapshot after reconnecting or detecting a sequence gap.
 - Do not require replay of replaceable high-frequency live events.
 - Configure the browser WebSocket and realtime snapshot origin independently with `PUBLIC_REALTIME_URL`; `PUBLIC_API_URL` remains the authoritative application API. The `VITE_*` values are development fallbacks only.
+- Prefer the same-origin `/api/` and `/realtime/` gateway paths. A public tunnel or reverse proxy needs to expose only the frontend origin; PostgreSQL, Redis, SyncStart, and the legacy SyncStart bridge remain private.
 - Keep the legacy path-specific message handlers during the migration, but route them through the shared reconnecting and sequence-aware client.
 
 ## Tournament Lifecycle
@@ -167,6 +168,7 @@ Additional frontend architectural and coding rules remain intentionally minimal.
 
 ## Deployment Cache Recovery
 
+- The frontend Nginx image is the browser edge gateway. It proxies `/api/` to `api:3000` and `/realtime/` to `realtime-a:3003`, including WebSocket upgrades, before applying the SPA fallback.
 - Nginx must not cache the SPA document or runtime configuration. Local static
   assets are revalidated because the application is rebuilt and replaced in
   place frequently.

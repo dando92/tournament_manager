@@ -52,3 +52,5 @@ await expectResponse('deterministic local seed', `${apiUrl}/tournaments/public`,
   return tournaments.some((tournament) => tournament.name === seedName);
 });
 await expectResponse('frontend', frontendUrl, (body) => body.includes('<div id="root">'));
+await expectResponse('frontend API gateway', `${frontendUrl}/api/health/live`, (body) => JSON.parse(body).status === 'ok');
+await expectResponse('frontend realtime gateway', `${frontendUrl}/realtime/health/live`, (body) => JSON.parse(body).status === 'ok');
