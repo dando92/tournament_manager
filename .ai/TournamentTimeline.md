@@ -105,7 +105,13 @@ either value could be recovered. Actual timestamps remain null.
 
 ## V1 boundaries
 
-V1 does not persist derived starts or estimates, broadcast focused duration
-edits, predict durations, add schedule anchors or buffers, or provide timing
-analytics. Actual timestamps intentionally provide the basis for later
-analytics without introducing scheduling infrastructure now.
+V1 does not persist derived starts or estimates, predict durations, add
+schedule anchors or buffers, or provide timing analytics. Actual timestamps
+intentionally provide the basis for later analytics without introducing
+scheduling infrastructure now.
+
+A duration edit is announced like every other flow change: the timing endpoint
+publishes `ui.control-room-flow-changed`, so a second operator watching the
+same timeline sees the new schedule rather than a stale one. This was
+originally deferred, and the deferral did not survive contact with two people
+running one tournament from two screens.

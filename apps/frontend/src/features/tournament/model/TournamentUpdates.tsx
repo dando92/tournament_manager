@@ -16,12 +16,19 @@ const UI_UPDATE_INVALIDATION_DEBOUNCE_MS = 150;
  *
  * It provides no context. What it produces is invalidation, and the query cache
  * already carries that to every reader.
+ *
+ * Invalidation reaches everyone watching; the warning toast does not. A warning
+ * says a run arrived from a cabinet and was not saved, which is addressed to
+ * whoever can go and fix it. `canEdit` is the same value the tree is given, so
+ * the two agree on who is operating the tournament.
  */
 export function TournamentUpdatesProvider({
   tournamentId,
+  canEdit,
   children,
 }: {
   tournamentId: number;
+  canEdit: boolean;
   children: ReactNode;
 }) {
   const queryClient = useQueryClient();
@@ -58,7 +65,7 @@ export function TournamentUpdatesProvider({
     if (!msg?.data || msg.data.tournamentId !== tournamentId) return;
 
     if (msg.event === "UiWarning") {
-      toast.warn(msg.data.message);
+      if (canEdit) toast.warn(msg.data.message);
 
       return;
     }

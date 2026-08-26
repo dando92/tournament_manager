@@ -40,7 +40,8 @@ export class ControlRoomCommands {
     }
 
     async updateExpectedDuration(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<void> {
-        await this.store.updateExpectedDuration(flowId, entryId, expectedDurationMinutes);
+        const tournamentId = await this.store.updateExpectedDuration(flowId, entryId, expectedDurationMinutes);
+        await this.publisher.emitControlRoomFlowUpdate(tournamentId, flowId);
     }
 
     async start(flowId: number, entryId?: number): Promise<void> {

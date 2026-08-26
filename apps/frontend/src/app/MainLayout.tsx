@@ -46,6 +46,7 @@ export default function MainLayout() {
   }, [routeTournamentId, scopedTournamentId]);
 
   const tournamentId = routeTournamentId ?? scopedTournamentId;
+  const canEdit = tournamentId !== null && canEditTournament(tournamentId);
 
   /* The name comes from the sidebar's own snapshot: it is only needed to label
      a dialog, and waiting on a request to draw a label is not worth a spinner. */
@@ -55,11 +56,11 @@ export default function MainLayout() {
   }, [tournamentId]);
 
   return (
-    <TournamentUpdatesProvider key={tournamentId ?? 0} tournamentId={tournamentId ?? 0}>
+    <TournamentUpdatesProvider key={tournamentId ?? 0} tournamentId={tournamentId ?? 0} canEdit={canEdit}>
       <TournamentTreeProvider
         tournamentId={tournamentId}
         tournamentName={tournamentName}
-        controls={tournamentId !== null && canEditTournament(tournamentId)}
+        controls={canEdit}
       >
         <div className="flex h-screen overflow-hidden">
           <ResizableSidebar>

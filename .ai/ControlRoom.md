@@ -333,8 +333,10 @@ editor query additionally includes unassigned matches.
 
 Writes publish `ui.control-room-flow-changed` addressed by tournament and flow. Any
 automatic active-state change also publishes the existing match invalidation.
-The focused expected-duration edit is the exception: it updates the initiating
-client locally and deliberately publishes no realtime invalidation.
+The focused expected-duration edit publishes it too, from the tournament id the
+write already read: a schedule only one screen knows about is worse than the
+extra event. The initiating client still patches its own cache first, so the
+field it typed in does not wait for the round trip.
 
 ## Frontend behavior
 

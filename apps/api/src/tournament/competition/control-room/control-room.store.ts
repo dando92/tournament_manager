@@ -169,8 +169,9 @@ export class ControlRoomStore {
         });
     }
 
-    async updateExpectedDuration(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<void> {
-        await this.dataSource.transaction(async (manager) => {
+    /** Answers with the tournament the flow belongs to, which its caller announces. */
+    async updateExpectedDuration(flowId: number, entryId: number, expectedDurationMinutes: number): Promise<number> {
+        return this.dataSource.transaction(async (manager) => {
             const flow = await manager.findOneBy(ControlRoomFlow, { id: flowId });
             if (!flow) {
                 throw new NotFoundException(`Control room flow ${flowId} not found`);
@@ -184,6 +185,8 @@ export class ControlRoomStore {
             }
             entry.expectedDurationMinutes = expectedDurationMinutes;
             await manager.save(ControlRoomFlowEntry, entry);
+
+            return flow.tournamentId;
         });
     }
 
