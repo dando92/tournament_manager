@@ -687,6 +687,38 @@ Requested by the user on 2026-08-23, outside the phase sequence.
   pass.
 - Next action: run local-stack verification when a Docker checkpoint is wanted.
 
+### Match tiebreak placement resolution
+
+- Added match-owned tiebreak attempts with either a song score or manually
+  entered integer values. Tiebreak evidence resolves placement only and is
+  excluded from normal points, player score history, statistics, and reported
+  Start.gg games.
+- Split result construction into normal-point calculation, sequential placement
+  resolution, and immutable result construction. A tie blocks commit only when
+  its occupied placements lead to different advancement outcomes; otherwise
+  shared placement is retained.
+- Integrated unresolved and completed tiebreaks with commit, rollback,
+  advancement, Start.gg winner reporting, Control Room progress, and SyncStart
+  completed-song routing. Changes to ordinary match scoring invalidate earlier
+  attempts without deleting their audit evidence.
+- Added the Tiebreak state and song/manual editors. Desktop appends tiebreak
+  evidence after points. Mobile avoids horizontal swipe and nested scrolling:
+  fields up to four players use a transposed table, while larger fields use a
+  compact placement table with vertically expandable score details.
+- Checkpoints: `dc874cc` adds the domain, persistence, migration, API, and pure
+  placement resolver; `e4b9feb` integrates live progression and advancement;
+  `f0d0a8f` adds the responsive frontend.
+- Verification: architecture boundaries pass; every workspace builds; contract
+  tests pass; all workspace unit suites pass, including 151 API and 65 frontend
+  tests; all linters complete with the one existing API warning and five
+  existing frontend warnings; responsive browser checks pass at 390 px for both
+  the transposed and expandable layouts.
+- PostgreSQL e2e and migration-runner suites could not run because the local
+  Docker daemon is unavailable. `graphify update .` could not run because the
+  Graphify CLI is not installed in this environment.
+- Next action: review the three commits, then run `npm run test:e2e` once the
+  local PostgreSQL service is available.
+
 ## Verification
 
 ### API and frontend structure refactoring complete
