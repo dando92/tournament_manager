@@ -71,13 +71,7 @@ describe('migration runner', () => {
     expect(declared.length).toBeGreaterThan(0);
 
     for (const index of declared) {
-      /* An index the schema builder is told not to synchronize — a GIN one, which
-         the decorator cannot express — carries no resolved columns in metadata, so
-         only its name and table can be compared against the schema. */
-      const expected = index.columns.length > 0
-        ? { indexName: index.name, tableName: index.tableName, columns: index.columns }
-        : { indexName: index.name, tableName: index.tableName, columns: expect.any(Array) };
-      expect(schema.get(index.name)).toEqual(expected);
+      expect(schema.get(index.name)).toEqual({ indexName: index.name, tableName: index.tableName, columns: index.columns });
     }
   });
 

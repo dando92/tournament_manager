@@ -307,7 +307,7 @@ upgrade compatibility, per the policy in `AGENTS.md`.
 | --- | --- | --- | --- |
 | 22 | `match_result."playerPoints"` is `text` holding JSON, cast `::json` on every read | `jsonb`, which `staleDetails` and `interruptionDetails` already are; the cast is gone from the projection | Done |
 | 23 | `participant."roles"` is a `simple-array`, unpacked with `string_to_array` in five queries, each guarded by `CASE WHEN COALESCE(roles, '') = ''` | Native `text[]`; the five reads take the column itself, and the guard is gone | Done |
-| 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | `pa."roles" && ARRAY['owner', 'staff']`, an operator on the column, plus `IDX_participant_roles` (GIN) | Done |
+| 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | `pa."roles" && ARRAY['owner', 'staff']`, an operator on the column. The GIN index the plan paired with it was not created — see below | Done |
 | 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Resolved by 28: the unique expression index serves both lookups | Done |
 | 26 | Nothing enforces one participant per person per tournament, a rule `TournamentStore` applies in memory | `UQ_participant_tournament_player` on `participant(tournamentId, playerId)` | Done |
 | 27 | `score."percentage"` is unbounded `numeric` | `numeric(5, 2)` — see FQ-028 | Done |
@@ -322,22 +322,32 @@ people, not about schema.
 The composite covers `participant."tournamentId"` as its leading column, so
 `IDX_participant_tournament`, created in batch B, was dropped with it.
 
-Two of the three new indexes cannot be declared the way the convention asks.
-TypeORM's decorator expresses neither an expression index nor a GIN one:
+`UQ_player_normalized_name` cannot be declared the way the convention asks:
+TypeORM's decorator does not express an index over an expression. It is
+invisible to the schema builder for the same reason — the builder skips such
+indexes when it reads the schema — so nothing proposes to drop it, and it lives
+in the migration alone.
 
-- `UQ_player_normalized_name` is invisible to the schema builder, which skips
-  indexes over expressions, so it lives in the migration alone.
-- `IDX_participant_roles` is visible, and an index the metadata does not declare
-  is one the schema builder proposes to drop, so the entity declares it with
-  `synchronize: false` — an option TypeORM reads but does not put on the type.
-  Such an index carries no resolved columns in metadata, so
-  `migration-runner.e2e-spec.ts` compares its name and table and leaves the
-  columns to the schema.
+**No GIN index on `roles`.** Item 24 paired one with the array migration, on the
+reasoning that `&&` is the operator a GIN index exists to serve. It is, but only
+where the role test is what selects. In `canEdit` it is not: `accountId` already
+has an index and leaves the participations of one account, `tournamentId` leaves
+exactly one of them now that `UQ_participant_tournament_player` exists, and the
+role test then reads a single row. An index cannot save a read of one row, so
+the planner would never choose it, while every registration, import and role
+change would maintain it — and a GIN index costs more to maintain than a B-tree,
+one entry per element rather than one per row.
 
-That GIN index is insurance rather than a measured win: `canEdit` already
-selects through `tournamentId` and `accountId`, which leaves it a role test over
-almost nothing. It earns its place only for a read that asks about roles alone,
-and it is one line to remove if that read never appears.
+It also cost three pieces of friction that existed only for it: the decorator
+cannot declare a GIN index, an index the metadata does not declare is one the
+schema builder proposes to drop, so it needed `synchronize: false` — an option
+TypeORM reads but does not put on the type, hence a cast — and such an index
+resolves no columns in metadata, so the parity test needed a special case.
+
+The substance of item 24 stands without it: the test is an operator on the
+column rather than on a value rebuilt per row. A GIN index becomes worth adding
+when a read asks about roles alone — every staff member of a tournament, every
+owner in the installation — and none does today.
 
 With the rule enforced, the three reads that used to resolve a duplicate stopped
 guarding against one: `IMPORT_PREVIEW_OF_NAMES` joins the player rather than

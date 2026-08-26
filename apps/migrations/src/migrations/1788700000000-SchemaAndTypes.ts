@@ -26,8 +26,9 @@ import { MigrationInterface, QueryRunner } from "typeorm";
  * The composite covers `participant."tournamentId"` as its leading column, so
  * the single-column index that batch B created for it goes.
  *
- * An expression index and a GIN index cannot be declared in entity metadata,
- * so these three live in the migration alone, under names of their own.
+ * An expression index cannot be declared in entity metadata, so
+ * `UQ_player_normalized_name` lives here alone; the schema builder skips
+ * indexes over expressions, so nothing proposes to drop it.
  */
 export class SchemaAndTypes1788700000000 implements MigrationInterface {
     name = "SchemaAndTypes1788700000000";
@@ -45,7 +46,6 @@ export class SchemaAndTypes1788700000000 implements MigrationInterface {
             USING (CASE WHEN COALESCE("roles", '') = '' THEN '{}'::text[] ELSE string_to_array("roles", ',') END)
         `);
         await queryRunner.query(`ALTER TABLE "participant" ALTER COLUMN "roles" SET DEFAULT '{unknown}'`);
-        await queryRunner.query(`CREATE INDEX "IDX_participant_roles" ON "participant" USING GIN ("roles")`);
 
         await queryRunner.query(`ALTER TABLE "score" ALTER COLUMN "percentage" TYPE numeric(5, 2)`);
 
@@ -61,7 +61,6 @@ export class SchemaAndTypes1788700000000 implements MigrationInterface {
 
         await queryRunner.query(`ALTER TABLE "score" ALTER COLUMN "percentage" TYPE numeric`);
 
-        await queryRunner.query(`DROP INDEX "IDX_participant_roles"`);
         await queryRunner.query(`ALTER TABLE "participant" ALTER COLUMN "roles" DROP DEFAULT`);
         await queryRunner.query(`ALTER TABLE "participant" ALTER COLUMN "roles" TYPE text USING array_to_string("roles", ',')`);
         await queryRunner.query(`ALTER TABLE "participant" ALTER COLUMN "roles" SET DEFAULT 'unknown'`);
