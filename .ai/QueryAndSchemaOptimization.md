@@ -250,9 +250,53 @@ Measure before rewriting.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 19 | `ENTRANTS_OF_PHASE_GROUP` scans the whole `entrant` table: the `OR` between the seat test and the derived-entrant `EXISTS` leaves no restrictive predicate the planner can use | A `UNION` of two branches — seated entrants, and entrants derived from the pool's matches — each with an indexable predicate | Open |
-| 20 | `pendingMatchesInScope` uses five CTEs, materializes `match_player` because three references force it, and puts a correlated `EXISTS` inside a `LEFT JOIN ... ON` clause. It runs on every tournament overview load | `EXPLAIN (ANALYZE, BUFFERS)` against realistic data first. Direction: replace the correlated `EXISTS` with a join to `match_player`, and reduce the CTE count. No improvement is promised before the plan is in hand | Open |
-| 21 | The `phase_group → phase → division → tournament` chain is written out eight times across four files | One SQL view in a migration (`tournamentId, divisionId, phaseId, phaseGroupId, matchId`), used by both address queries, by `TournamentOpenGuard`, and by `activeConflicts` | Open |
+| 19 | `ENTRANTS_OF_PHASE_GROUP` scans the whole `entrant` table: the `OR` between the seat test and the derived-entrant `EXISTS` leaves no restrictive predicate the planner can use | A `UNION ALL` of two branches — the pool's seats, and the entrants of the pool's own matches that hold no seat — each asked of the pool rather than of `entrant` | Done |
+| 20 | `pendingMatchesInScope` uses five CTEs, materializes `match_player` because three references force it, and puts a correlated `EXISTS` inside a `LEFT JOIN ... ON` clause. It runs on every tournament overview load | Four CTEs, the correlated `EXISTS` replaced by a join to `match_player`, and the round and match levels aggregated in one pass each | Done |
+| 21 | The `phase_group → phase → division → tournament` chain is written out eight times across four files | The `competition_address` view, created in `1788600000000-CompetitionAddressView`, used by both address queries, by `TournamentOpenGuard` below a pool, and by `activeConflicts` | Done |
+
+### The database the numbers come from
+
+A fresh database, migrated and seeded: 4 tournaments, 24 divisions, 48 phases,
+480 pools, 19 200 matches, 1 536 competing entrants, 3 840 seats, 57 600 rounds
+and 57 600 standings with a score each. Half the matches of every pool have been
+played and a sixth of those have a committed result, so each tournament carries
+a mix rather than an all-or-nothing. A fifth tournament of archived seasons
+brings `entrant` to 21 536 rows without giving those entrants any matches —
+which is exactly the shape item 19 is about: an installation accumulates
+entrants, and a pool read must not grow with them.
+
+`EXPLAIN (ANALYZE, BUFFERS)`, best of three, against that database:
+
+| | Before | After |
+| --- | --- | --- |
+| `ENTRANTS_OF_PHASE_GROUP`, one pool of 22 | 31.3 ms, 511 buffers | 0.97 ms, 566 buffers |
+| `pendingMatchesInScope('tournament')`, 4 800 matches over 120 pools | 113.7 ms, 12 501 buffers | 59.4 ms, 7 074 buffers |
+| Address of one match | 10 buffers | 10 buffers |
+
+Item 19 is the one the numbers argue for: the old plan read all 21 536 entrants
+and discarded 21 514 of them, so its cost was the installation's roster rather
+than the pool's. The new plan touches marginally more buffers and thirty times
+less time, and the gap widens with every season the installation keeps.
+
+Item 20 halves the work but no more than that, which is what the plan asked to
+find out before promising anything. The shape that mattered was the correlated
+`EXISTS` in the `LEFT JOIN ... ON`: as a join to `match_player` the membership
+test is evaluated once per standing rather than once per standing per round.
+A first attempt that expressed the same restriction as a parenthesized
+`standing JOIN match_player` join was no faster and read 55 444 buffers, so it
+was discarded.
+
+Item 21 is duplication, not cost: the planner expands the view, so a lookup
+through it produces the same plan and the same ten buffers the written-out
+joins did. It is used only from a pool downwards — a division or a phase that
+carries no pool has an address the view cannot show, so the guard still reaches
+those directly.
+
+Both rewrites were checked against their originals on the seeded database
+before being applied: identical result sets for item 19 over four pools, and
+for item 20 over five scopes covering two tournaments, a division and two
+pools. `migration-runner.e2e-spec.ts` asserts the view addresses a pool with
+matches and one without.
 
 ## F — Schema and types
 

@@ -75,6 +75,30 @@ describe('migration runner', () => {
     }
   });
 
+  it('addresses every pool and every match through one view, and a pool without matches too', async () => {
+    await dataSource.query(`INSERT INTO "tournament" ("name") VALUES ('View tournament')`);
+    await dataSource.query(`INSERT INTO "division" ("name", "tournamentId") SELECT 'View division', id FROM "tournament" WHERE name = 'View tournament'`);
+    await dataSource.query(`INSERT INTO "phase" ("name", "divisionId") SELECT 'View phase', id FROM "division" WHERE name = 'View division'`);
+    await dataSource.query(`INSERT INTO "phase_group" ("name", "phaseId") SELECT 'Empty pool', id FROM "phase" WHERE name = 'View phase'`);
+    await dataSource.query(
+      `INSERT INTO "match" ("name", "scoringSystem", "phaseGroupId") SELECT 'View match', 'PlacementPointsWithFailZero', id FROM "phase_group" WHERE name = 'Empty pool'`,
+    );
+
+    const rows = await dataSource.query<Array<{ tournamentId: number; divisionId: number; phaseId: number; phaseGroupId: number; matchId: number | null }>>(
+      `SELECT ca.* FROM "competition_address" ca JOIN "phase_group" pg ON pg."id" = ca."phaseGroupId" WHERE pg."name" = 'Empty pool'`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].matchId).not.toBeNull();
+
+    await dataSource.query(`DELETE FROM "match" WHERE name = 'View match'`);
+    const withoutMatches = await dataSource.query<Array<{ matchId: number | null }>>(
+      `SELECT ca."matchId" FROM "competition_address" ca JOIN "phase_group" pg ON pg."id" = ca."phaseGroupId" WHERE pg."name" = 'Empty pool'`,
+    );
+    expect(withoutMatches).toEqual([{ matchId: null }]);
+
+    await dataSource.query(`DELETE FROM "tournament" WHERE name = 'View tournament'`);
+  });
+
   it('upgrades existing control room flows without deleting them', async () => {
     const runner = dataSource.createQueryRunner();
     await runner.connect();

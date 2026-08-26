@@ -18,24 +18,61 @@ type PhaseGroupEntrantRow = PhaseGroupEntrantDto;
  * copied into a seat row by a `syncDerivedEntrants` that every match write had
  * to remember to call, and it is a `NOT EXISTS` away from being read instead.
  *
- * The two are one list here. A seated entrant comes first in seeded order; a
- * derived one has no seat, so it sorts after every seated one by the seed its
- * division gave it and then by name, which is the order the copies used to be
- * assigned their slots in.
+ * The two are one list here, and each branch is asked of the pool rather than
+ * of the entrant table: the seats through `phase_group_entrant`, the derived
+ * ones through the pool's own matches. Written as one scan of `entrant` with
+ * the two tests `OR`ed together, it had no predicate the planner could use, so
+ * it read every entrant in the installation to answer about one pool.
+ *
+ * A seated entrant comes first in seeded order; a derived one has no seat, so
+ * it sorts after every seated one by the seed its division gave it and then by
+ * name, which is the order the copies used to be assigned their slots in.
  */
 const ENTRANTS_OF_PHASE_GROUP = `
-    SELECT  seat."seedNum"                  AS "seedNum",
-            seat."slot"                     AS "slot",
-            COALESCE(seat."status", 'active') AS "status",
+    SELECT  member."seedNum"        AS "seedNum",
+            member."slot"           AS "slot",
+            member."status"         AS "status",
             json_build_object(
-                'id', e."id",
-                'name', e."name",
-                'type', e."type",
-                'status', e."status",
+                'id', member."entrantId",
+                'name', member."name",
+                'type', member."type",
+                'status', member."entrantStatus",
                 'participants', COALESCE(participants."json", '[]'::json)
-            )                               AS "entrant"
-    FROM        "entrant" e
-    LEFT JOIN   "phase_group_entrant" seat ON seat."entrantId" = e."id" AND seat."phaseGroupId" = $1
+            )                       AS "entrant"
+    FROM (
+        SELECT  seat."seedNum"      AS "seedNum",
+                seat."slot"         AS "slot",
+                seat."status"       AS "status",
+                e."id"              AS "entrantId",
+                e."name"            AS "name",
+                e."type"            AS "type",
+                e."status"          AS "entrantStatus",
+                e."seedNum"         AS "divisionSeedNum"
+        FROM    "phase_group_entrant" seat
+        JOIN    "entrant" e ON e."id" = seat."entrantId"
+        WHERE   seat."phaseGroupId" = $1
+
+        UNION ALL
+
+        SELECT  DISTINCT
+                NULL::int           AS "seedNum",
+                NULL::int           AS "slot",
+                'active'            AS "status",
+                e."id"              AS "entrantId",
+                e."name"            AS "name",
+                e."type"            AS "type",
+                e."status"          AS "entrantStatus",
+                e."seedNum"         AS "divisionSeedNum"
+        FROM    "match" m
+        JOIN    "match_entrants_entrant" me ON me."matchId" = m."id"
+        JOIN    "entrant" e ON e."id" = me."entrantId"
+        WHERE   m."phaseGroupId" = $1
+            AND NOT EXISTS (
+                SELECT  1
+                FROM    "phase_group_entrant" seat
+                WHERE   seat."entrantId" = e."id" AND seat."phaseGroupId" = $1
+            )
+    ) member
     LEFT JOIN LATERAL (
         SELECT  json_agg(
                     json_build_object(
@@ -51,16 +88,9 @@ const ENTRANTS_OF_PHASE_GROUP = `
         FROM    "entrant_participants_participant" ep
         JOIN    "participant" pa ON pa."id" = ep."participantId"
         JOIN    "player" pl ON pl."id" = pa."playerId"
-        WHERE   ep."entrantId" = e."id"
+        WHERE   ep."entrantId" = member."entrantId"
     ) participants ON TRUE
-    WHERE   seat."id" IS NOT NULL
-        OR  EXISTS (
-                SELECT  1
-                FROM    "match_entrants_entrant" me
-                JOIN    "match" m ON m."id" = me."matchId"
-                WHERE   me."entrantId" = e."id" AND m."phaseGroupId" = $1
-            )
-    ORDER BY seat."seedNum" ASC NULLS LAST, e."seedNum" ASC NULLS LAST, LOWER(e."name"), e."id"
+    ORDER BY member."seedNum" ASC NULLS LAST, member."divisionSeedNum" ASC NULLS LAST, LOWER(member."name"), member."entrantId"
 `;
 
 /** The rows `ADDRESS_OF_PHASE_GROUP` produces. */
@@ -71,29 +101,30 @@ type PhaseGroupAddressRow = PhaseGroupAddress;
  * it. An advancement rule is the only such write: it is an edge between two
  * competitions rather than a change to either, so it has no aggregate to load
  * and no address in hand.
+ *
+ * `competition_address` is the walk up to the tournament, written once in a
+ * migration rather than in each of the queries that took it. A pool appears in
+ * it once per match and once on its own when it has none, so one row is asked
+ * for.
  */
 const ADDRESS_OF_PHASE_GROUP = `
-    SELECT  d."tournamentId" AS "tournamentId",
-            p."divisionId"   AS "divisionId",
-            pg."phaseId"     AS "phaseId",
-            pg."id"          AS "phaseGroupId"
-    FROM    "phase_group" pg
-    JOIN    "phase" p ON p."id" = pg."phaseId"
-    JOIN    "division" d ON d."id" = p."divisionId"
-    WHERE   pg."id" = $1
+    SELECT  ca."tournamentId" AS "tournamentId",
+            ca."divisionId"   AS "divisionId",
+            ca."phaseId"      AS "phaseId",
+            ca."phaseGroupId" AS "phaseGroupId"
+    FROM    "competition_address" ca
+    WHERE   ca."phaseGroupId" = $1
+    LIMIT   1
 `;
 
 /** The same address, reached from a match: the pool a match belongs to. */
 const ADDRESS_OF_MATCH_POOL = `
-    SELECT  d."tournamentId" AS "tournamentId",
-            p."divisionId"   AS "divisionId",
-            pg."phaseId"     AS "phaseId",
-            pg."id"          AS "phaseGroupId"
-    FROM    "match" m
-    JOIN    "phase_group" pg ON pg."id" = m."phaseGroupId"
-    JOIN    "phase" p ON p."id" = pg."phaseId"
-    JOIN    "division" d ON d."id" = p."divisionId"
-    WHERE   m."id" = $1
+    SELECT  ca."tournamentId" AS "tournamentId",
+            ca."divisionId"   AS "divisionId",
+            ca."phaseId"      AS "phaseId",
+            ca."phaseGroupId" AS "phaseGroupId"
+    FROM    "competition_address" ca
+    WHERE   ca."matchId" = $1
 `;
 
 /** Whether a pool exists. The row carries nothing; only its presence is read. */

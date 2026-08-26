@@ -36,8 +36,9 @@ type TournamentRow = { id: number; status: string };
  * The tournament each kind of reference belongs to, and whether it is open.
  *
  * Every mutating route names one entity, and the guard walks from it up to the
- * tournament that owns it. The walk is the same chain the read queries take:
- * `match` to `phase_group` to `phase` to `division`.
+ * tournament that owns it. From a pool downwards the walk is the
+ * `competition_address` view; a division or a phase is reached directly,
+ * because one that carries no pool has an address the view cannot show.
  *
  * The status comes back with the identifier because the guard needs both on
  * every mutating request, and resolving the tournament first only to ask for
@@ -50,9 +51,9 @@ const TOURNAMENT_OF: Record<
   tournament: `SELECT t."id" AS id, t."status" AS status FROM "tournament" t WHERE t."id" = $1`,
   division: `SELECT t."id" AS id, t."status" AS status FROM "division" d JOIN "tournament" t ON t."id" = d."tournamentId" WHERE d."id" = $1`,
   phase: `SELECT t."id" AS id, t."status" AS status FROM "phase" p JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE p."id" = $1`,
-  'phase-group': `SELECT t."id" AS id, t."status" AS status FROM "phase_group" pg JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE pg."id" = $1`,
-  match: `SELECT t."id" AS id, t."status" AS status FROM "match" m JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE m."id" = $1`,
-  round: `SELECT t."id" AS id, t."status" AS status FROM "round" r JOIN "match" m ON m."id" = r."matchId" JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" JOIN "tournament" t ON t."id" = d."tournamentId" WHERE r."id" = $1`,
+  'phase-group': `SELECT t."id" AS id, t."status" AS status FROM "competition_address" ca JOIN "tournament" t ON t."id" = ca."tournamentId" WHERE ca."phaseGroupId" = $1 LIMIT 1`,
+  match: `SELECT t."id" AS id, t."status" AS status FROM "competition_address" ca JOIN "tournament" t ON t."id" = ca."tournamentId" WHERE ca."matchId" = $1`,
+  round: `SELECT t."id" AS id, t."status" AS status FROM "round" r JOIN "competition_address" ca ON ca."matchId" = r."matchId" JOIN "tournament" t ON t."id" = ca."tournamentId" WHERE r."id" = $1`,
   song: `SELECT t."id" AS id, t."status" AS status FROM "song" s JOIN "tournament" t ON t."id" = s."tournamentId" WHERE s."id" = $1`,
   'control-room-flow': `SELECT t."id" AS id, t."status" AS status FROM "control_room_flow" flow JOIN "tournament" t ON t."id" = flow."tournamentId" WHERE flow."id" = $1`,
 };

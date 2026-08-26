@@ -59,14 +59,12 @@ type ActiveConflictRow = { matchId: number; playerId: number };
 const ACTIVE_CONFLICTS = `
     SELECT DISTINCT other."id" AS "matchId",
             participant."playerId" AS "playerId"
-    FROM    "match" other
-    JOIN    "phase_group" pg ON pg."id" = other."phaseGroupId"
-    JOIN    "phase" p ON p."id" = pg."phaseId"
-    JOIN    "division" d ON d."id" = p."divisionId"
+    FROM    "competition_address" ca
+    JOIN    "match" other ON other."id" = ca."matchId"
     JOIN    "match_entrants_entrant" me ON me."matchId" = other."id"
     JOIN    "entrant_participants_participant" ep ON ep."entrantId" = me."entrantId"
     JOIN    "participant" ON participant."id" = ep."participantId"
-    WHERE   d."tournamentId" = $1
+    WHERE   ca."tournamentId" = $1
         AND other."active" = TRUE
         AND other."id" <> $2
         AND participant."playerId" = ANY($3::int[])

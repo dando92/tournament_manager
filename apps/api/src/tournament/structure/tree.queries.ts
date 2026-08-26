@@ -172,7 +172,10 @@ const PROGRESSED_MATCHES_IN_SCOPE: Record<TreeScope, string> = {
  * are pending operator work and therefore keep the pool's pending count.
  *
  * It counts rather than loading the matches, because its caller wants a number
- * per pool and nothing else.
+ * per pool and nothing else. A standing counts only for a player the match
+ * holds, which used to be a correlated `EXISTS` inside a `LEFT JOIN ... ON`
+ * clause and is now a join to `match_player`; a match with no round produces no
+ * row to join, which is what the separate emptiness test used to say.
  */
 const pendingMatchesInScope = (predicate: string): string => `
     WITH scoped_match AS (
@@ -191,44 +194,35 @@ const pendingMatchesInScope = (predicate: string): string => `
         JOIN "entrant_participants_participant" ep ON ep."entrantId" = e."id"
         JOIN "participant" pa ON pa."id" = ep."participantId"
     ),
-    player_count AS (
-        SELECT "matchId", COUNT(*) AS "players"
-        FROM match_player
-        GROUP BY "matchId"
-    ),
-    match_round AS (
-        SELECT r."matchId", r."id" AS "roundId", r."songId" IS NOT NULL AS "played"
+    round_fill AS (
+        SELECT r."matchId",
+               r."songId" IS NOT NULL AS "played",
+               COUNT(DISTINCT st."playerId") FILTER (WHERE mp."playerId" IS NOT NULL) AS "entered",
+               COUNT(*) FILTER (WHERE mp."playerId" IS NOT NULL AND st."points" > 0) AS "stated"
         FROM "round" r
         JOIN scoped_match sm ON sm."id" = r."matchId"
+        LEFT JOIN "standing" st ON st."roundId" = r."id"
+        LEFT JOIN match_player mp ON mp."matchId" = r."matchId" AND mp."playerId" = st."playerId"
+        GROUP BY r."matchId", r."id", r."songId"
     ),
-    round_fill AS (
-        SELECT
-            mr."matchId",
-            mr."roundId",
-            mr."played",
-            COUNT(DISTINCT s."playerId") AS "entered",
-            COUNT(*) FILTER (WHERE s."points" > 0) AS "stated"
-        FROM match_round mr
-        LEFT JOIN "standing" s
-            ON s."roundId" = mr."roundId"
-            AND EXISTS (
-                SELECT 1 FROM match_player mp
-                WHERE mp."matchId" = mr."matchId" AND mp."playerId" = s."playerId"
-            )
-        GROUP BY mr."matchId", mr."roundId", mr."played"
-    ),
-    unsettled_round AS (
-        SELECT DISTINCT rf."matchId"
+    match_fill AS (
+        SELECT rf."matchId",
+               COUNT(*) FILTER (
+                   WHERE (rf."played" AND rf."entered" < pc."players")
+                      OR (NOT rf."played" AND rf."stated" = 0)
+               ) AS "unsettled"
         FROM round_fill rf
-        JOIN player_count pc ON pc."matchId" = rf."matchId"
-        WHERE (rf."played" AND rf."entered" < pc."players")
-           OR (NOT rf."played" AND rf."stated" = 0)
+        JOIN (
+            SELECT "matchId", COUNT(*) AS "players"
+            FROM match_player
+            GROUP BY "matchId"
+        ) pc ON pc."matchId" = rf."matchId"
+        GROUP BY rf."matchId"
     )
     SELECT sm."phaseGroupId" AS "phaseGroupId", COUNT(*)::int AS "pendingMatchCount"
     FROM scoped_match sm
-    JOIN player_count pc ON pc."matchId" = sm."id"
-    WHERE EXISTS (SELECT 1 FROM match_round mr WHERE mr."matchId" = sm."id")
-      AND NOT EXISTS (SELECT 1 FROM unsettled_round ur WHERE ur."matchId" = sm."id")
+    JOIN match_fill mf ON mf."matchId" = sm."id"
+    WHERE mf."unsettled" = 0
     GROUP BY sm."phaseGroupId"
 `;
 
