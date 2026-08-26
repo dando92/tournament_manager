@@ -121,6 +121,7 @@ export default function DivisionMatchesPage() {
                         controls={controls}
                         onSelect={() => page.selectMatch(match.id)}
                         onCommit={() => void page.commitMatch(match)}
+                        onTiebreak={() => page.selectMatch(match.id)}
                       />
                     </div>
                   ))}

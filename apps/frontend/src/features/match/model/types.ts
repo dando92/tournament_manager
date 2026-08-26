@@ -16,7 +16,7 @@ export type {
   CommitMatchResultResponseDto as CommitMatchResultResponse,
 } from "@tournament-manager/contracts";
 
-export type MatchCommitState = "Disabled" | "Pending" | "Completed";
+export type MatchCommitState = "Disabled" | "Tiebreak" | "Pending" | "Completed";
 
 /**
  * A rule as the editor holds it before it is saved. The identifier is the

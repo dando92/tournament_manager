@@ -37,6 +37,18 @@ type MatchRowProps = {
   onDeleteStanding: (playerId: number, roundId: number) => void;
   /** Writes the points of a hand-scored round, which has no score to enter. */
   onChangePoints: (playerId: number, roundId: number, points: number) => void;
+  onOpenAddTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string) => void;
+  onOpenEditTiebreakStanding: (
+    playerId: number,
+    tiebreakId: number,
+    playerName: string,
+    songTitle: string,
+    scoreId: number,
+    percentage: number,
+    isFailed: boolean,
+  ) => void;
+  onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
+  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
 };
 
 export default function MatchRow({
@@ -56,6 +68,10 @@ export default function MatchRow({
   onOpenEditStanding,
   onDeleteStanding,
   onChangePoints,
+  onOpenAddTiebreakStanding,
+  onOpenEditTiebreakStanding,
+  onChangeTiebreakPoints,
+  onClearTiebreakStanding,
 }: MatchRowProps) {
   const [mobileScoreMenu, setMobileScoreMenu] = useState<MobileScoreMenuState | null>(null);
   const matchResultPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
@@ -290,6 +306,82 @@ export default function MatchRow({
       {match.rounds.length > 0 && (
         <td className="px-1 sm:px-3 py-2 text-center border-l border-ui-border">
           <span className="font-bold text-ui-text-soft">{totalPoints}</span>
+        </td>
+      )}
+      {match.tiebreaks.map((tiebreak) => {
+        const standing = tiebreak.standings.find((candidate) => candidate.player.id === player.id);
+        if (!standing) return <td key={tiebreak.id} className="border-l border-ui-border px-3 py-2 text-center text-ui-text-mute">—</td>;
+        if (tiebreak.song) {
+          if (!standing.score) {
+            return (
+              <td key={tiebreak.id} className="border-l border-ui-border px-3 py-2 text-center">
+                {controls && !tiebreak.invalidated ? (
+                  <button
+                    type="button"
+                    className={btnCreateIcon}
+                    title="Add tiebreak score"
+                    onClick={() => onOpenAddTiebreakStanding(player.id, tiebreak.id, player.playerName, tiebreak.song!.title)}
+                  >
+                    <FontAwesomeIcon icon={faPlus} />
+                  </button>
+                ) : <span className="text-ui-text-mute">—</span>}
+              </td>
+            );
+          }
+          return (
+            <td key={tiebreak.id} className="border-l border-ui-border bg-ui-selected/40 px-3 py-2 text-center">
+              <button
+                type="button"
+                disabled={!controls || tiebreak.invalidated}
+                className="font-bold text-ui-text disabled:cursor-default"
+                onClick={() => onOpenEditTiebreakStanding(
+                  player.id,
+                  tiebreak.id,
+                  player.playerName,
+                  tiebreak.song!.title,
+                  standing.score!.id,
+                  Number(standing.score!.percentage),
+                  standing.score!.isFailed,
+                )}
+              >
+                {Number(standing.score.percentage).toFixed(2)}%
+              </button>
+            </td>
+          );
+        }
+
+        const points = standing.manualPoints;
+        return (
+          <td key={tiebreak.id} className="border-l border-ui-border bg-ui-selected/40 px-2 py-2 text-center">
+            {controls && !tiebreak.invalidated ? (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  disabled={points === null || points <= 0}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border disabled:opacity-40"
+                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, Math.max(0, (points ?? 0) - 1))}
+                >
+                  <FontAwesomeIcon icon={faMinus} />
+                </button>
+                <span className="w-6 font-bold text-ui-text-soft">{points ?? "—"}</span>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border"
+                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, (points ?? 0) + 1)}
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+                {points !== null && (
+                  <button type="button" className="text-xs text-ui-text-mute" onClick={() => onClearTiebreakStanding(tiebreak.id, player.id)}>clear</button>
+                )}
+              </div>
+            ) : <span className="font-bold text-ui-text-soft">{points ?? "—"}</span>}
+          </td>
+        );
+      })}
+      {match.rounds.length > 0 && (
+        <td className="border-l border-ui-border px-2 py-2 text-center font-bold text-ui-text-soft">
+          {match.resultState.entries.find((entry) => entry.playerId === player.id)?.placement ?? "—"}
         </td>
       )}
       {mobileScoreMenu && (

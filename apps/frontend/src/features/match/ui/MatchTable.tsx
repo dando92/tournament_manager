@@ -7,6 +7,7 @@ import MatchRow from "@/features/match/ui/MatchRow";
 import PathRow from "@/features/match/ui/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { toOrdinal } from "@/shared/utils";
+import MobileMatchTable from "@/features/match/ui/MobileMatchTable";
 
 type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed: boolean };
 
@@ -35,6 +36,11 @@ type MatchTableProps = {
   onDeleteStanding: (playerId: number, roundId: number) => void;
   /** Writes the points of the hand-scored round, which has no score to enter. */
   onChangePoints: (playerId: number, roundId: number, points: number) => void;
+  onDeleteTiebreak: (tiebreakId: number) => void;
+  onOpenAddTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string) => void;
+  onOpenEditTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string, scoreId: number, percentage: number, isFailed: boolean) => void;
+  onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
+  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
 };
 
 export default function MatchTable({
@@ -52,6 +58,11 @@ export default function MatchTable({
   onOpenEditStanding,
   onDeleteStanding,
   onChangePoints,
+  onDeleteTiebreak,
+  onOpenAddTiebreakStanding,
+  onOpenEditTiebreakStanding,
+  onChangeTiebreakPoints,
+  onClearTiebreakStanding,
 }: MatchTableProps) {
   const [tooltip, setTooltip] = useState<{ roundId: number; title: string; x: number; y: number } | null>(null);
 
@@ -95,17 +106,20 @@ export default function MatchTable({
       })
       .filter((entry): entry is readonly [number, number] => Boolean(entry)),
   );
-  const sortedPlayers = [...matchPlayers].sort(
-    (a, b) => getTotalPoints(b.id) - getTotalPoints(a.id),
+  const orderByPlayerId = new Map(match.resultState.entries.map((entry, index) => [entry.playerId, index]));
+  const sortedPlayers = [...matchPlayers].sort((a, b) =>
+    (orderByPlayerId.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (orderByPlayerId.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      || getTotalPoints(b.id) - getTotalPoints(a.id)
+      || a.id - b.id,
   );
   const sortedMatchResults = [...(match.matchResult?.playerPoints ?? [])].sort(
-    (a, b) => b.points - a.points || a.playerId - b.playerId,
+    (a, b) => a.placement - b.placement || a.playerId - b.playerId,
   );
   const routeByPlayerId = new Map(
     sortedMatchResults
-      .map((result, index) => {
+      .map((result) => {
         const route = (match.advancementRules ?? []).find(
-          (rule) => rule.sourceKind === "match" && rule.sourceId === match.id && rule.sourcePlacement === index + 1,
+          (rule) => rule.sourceKind === "match" && rule.sourceId === match.id && rule.sourcePlacement === result.placement,
         );
         if (!route || route.targetKind !== "match") {
           return [result.playerId, null] as const;
@@ -121,7 +135,7 @@ export default function MatchTable({
   const hasContent = sortedPlayers.length > 0 || incomingRules.length > 0 || sortedMatchResults.length > 0;
   const canEditMatchContent = controls && !match.matchResult;
 
-  const totalCols = Math.max(3, match.rounds.length + 3);
+  const totalCols = Math.max(3, match.rounds.length + match.tiebreaks.length + 4);
   const phaseGroups = (division.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
   const getPhaseGroupName = (phaseGroupId: number) => phaseGroups.find((phaseGroup) => phaseGroup.id === phaseGroupId)?.name ?? `Pool ${phaseGroupId}`;
   const getHighlightForTarget = (targetKind: AdvancementCompetitionKind, targetId: number): MatchHighlight => {
@@ -139,7 +153,7 @@ export default function MatchTable({
 
   return (
     <>
-      <div className={`${allowMobileTableScroll ? "overflow-x-auto" : "overflow-x-hidden sm:overflow-x-auto"} rounded-lg border border-ui-border bg-ui-row`}>
+      <div className={`${allowMobileTableScroll ? "overflow-x-auto" : "overflow-x-hidden sm:overflow-x-auto"} hidden rounded-lg border border-ui-border bg-ui-row sm:block`}>
         <table className="w-full text-sm border-collapse">
           {match.rounds.length === 0 && (
             <thead>
@@ -207,6 +221,23 @@ export default function MatchTable({
                   );
                 })}
                 <th className="px-1 sm:px-3 py-2.5 text-center font-semibold w-[48px] sm:w-[72px]">Pts</th>
+                {match.tiebreaks.map((tiebreak) => (
+                  <th key={tiebreak.id} className="min-w-[130px] border-l border-ui-border bg-ui-selected/40 px-3 py-2.5 text-center font-semibold">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span title={tiebreak.song?.title ?? "By hand"}>TB {tiebreak.sequence} · {tiebreak.song?.title ?? "By hand"}</span>
+                      {tiebreak.invalidated && <span className="text-state-failed">Invalid</span>}
+                      {canEditMatchContent && (
+                        <DeleteConfirmButton
+                          onConfirm={() => onDeleteTiebreak(tiebreak.id)}
+                          title="Remove tiebreak"
+                          confirmMessage={`Remove tiebreak ${tiebreak.sequence}?`}
+                          confirmText="Remove"
+                        />
+                      )}
+                    </div>
+                  </th>
+                ))}
+                <th className="w-[72px] border-l border-ui-border px-2 py-2.5 text-center font-semibold">Place</th>
               </tr>
             </thead>
           )}
@@ -288,6 +319,10 @@ export default function MatchTable({
                     onOpenEditStanding={onOpenEditStanding}
                     onDeleteStanding={onDeleteStanding}
                     onChangePoints={onChangePoints}
+                    onOpenAddTiebreakStanding={onOpenAddTiebreakStanding}
+                    onOpenEditTiebreakStanding={onOpenEditTiebreakStanding}
+                    onChangeTiebreakPoints={onChangeTiebreakPoints}
+                    onClearTiebreakStanding={onClearTiebreakStanding}
                   />
                 );
               })()
@@ -296,6 +331,18 @@ export default function MatchTable({
           </tbody>
         </table>
       </div>
+
+      <MobileMatchTable
+        match={match}
+        controls={canEditMatchContent}
+        onOpenAddStanding={onOpenAddStanding}
+        onOpenEditStanding={onOpenEditStanding}
+        onChangePoints={onChangePoints}
+        onOpenAddTiebreakStanding={onOpenAddTiebreakStanding}
+        onOpenEditTiebreakStanding={onOpenEditTiebreakStanding}
+        onChangeTiebreakPoints={onChangeTiebreakPoints}
+        onClearTiebreakStanding={onClearTiebreakStanding}
+      />
 
       {tooltip && createPortal(
         <div

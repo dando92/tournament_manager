@@ -74,6 +74,13 @@ export default function MatchList({
       onHighlight={onHighlight}
       enablePathRowHighlight={enablePathRowHighlight}
       onDeleteStanding={actions.deleteStanding}
+      onCreateTiebreak={(playerIds, songId) => actions.createTiebreak(match.id, playerIds, songId)}
+      onDeleteTiebreak={(tiebreakId) => actions.deleteTiebreak(match.id, tiebreakId)}
+      onSaveTiebreakScore={(tiebreakId, playerId, percentage, isFailed, scoreId) =>
+        actions.saveTiebreakScore(match.id, tiebreakId, playerId, { percentage, isFailed, scoreId })
+      }
+      onSaveTiebreakPoints={(tiebreakId, playerId, points) => actions.saveTiebreakPoints(match.id, tiebreakId, playerId, points)}
+      onClearTiebreakStanding={(tiebreakId, playerId) => actions.clearTiebreakStanding(match.id, tiebreakId, playerId)}
       onMatchUpdated={refreshMatches}
       onEditMatchNotes={actions.editMatchNotes}
       onRenameMatch={actions.renameMatch}

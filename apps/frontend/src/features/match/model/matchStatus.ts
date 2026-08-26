@@ -1,6 +1,6 @@
 import { entrantPlayers } from "@/features/participant/model/entrant";
-import { Match, MatchCommitState, Round } from "@/features/match/model/types";
-import { Player } from "@/features/participant/model/types";
+import type { Match, MatchCommitState, Round } from "@/features/match/model/types";
+import type { Player } from "@/features/participant/model/types";
 import type { Status } from "@/shared/components/ui/status";
 
 /**
@@ -50,11 +50,12 @@ export function hasAllStandings(match: Match): boolean {
  * They map onto the status ring in order, so the glyph fills as the match moves
  * forward and the list still reads in greyscale. See .ai/Design.md.
  */
-export type MatchProgress = "empty" | "started" | "readyToCommit" | "completed";
+export type MatchProgress = "empty" | "started" | "tiebreakRequired" | "readyToCommit" | "completed";
 
 const PROGRESS_STATUS: Record<MatchProgress, Status> = {
   empty: "idle",
   started: "running",
+  tiebreakRequired: "pending",
   readyToCommit: "pending",
   completed: "done",
 };
@@ -62,14 +63,16 @@ const PROGRESS_STATUS: Record<MatchProgress, Status> = {
 const PROGRESS_LABEL: Record<MatchProgress, string> = {
   empty: "Empty",
   started: "In progress",
+  tiebreakRequired: "Tiebreak required",
   readyToCommit: "Ready to commit",
   completed: "Completed",
 };
 
 export function getMatchProgress(match: Match): MatchProgress {
   if (match.matchResult) return "completed";
+  if (match.resultState.status === "tiebreak_required") return "tiebreakRequired";
+  if (match.resultState.status === "ready") return "readyToCommit";
   if (match.rounds.length === 0) return "empty";
-  if (hasAllStandings(match)) return "readyToCommit";
 
   return match.rounds.some(roundHasContent) ? "started" : "empty";
 }
@@ -91,6 +94,7 @@ export function getMatchProgressLabel(progress: MatchProgress): string {
 export function getMatchCommitState(match: Match): MatchCommitState {
   const progress = getMatchProgress(match);
   if (progress === "completed") return "Completed";
+  if (progress === "tiebreakRequired") return "Tiebreak";
   return progress === "readyToCommit" ? "Pending" : "Disabled";
 }
 

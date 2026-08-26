@@ -70,6 +70,13 @@ export default function ConnectedMatchCard({
         actions.saveScore(playerId, roundId, { percentage, isFailed, scoreId })
       }
       onDeleteStanding={actions.deleteStanding}
+      onCreateTiebreak={(playerIds, songId) => actions.createTiebreak(match.id, playerIds, songId)}
+      onDeleteTiebreak={(tiebreakId) => actions.deleteTiebreak(match.id, tiebreakId)}
+      onSaveTiebreakScore={(tiebreakId, playerId, percentage, isFailed, scoreId) =>
+        actions.saveTiebreakScore(match.id, tiebreakId, playerId, { percentage, isFailed, scoreId })
+      }
+      onSaveTiebreakPoints={(tiebreakId, playerId, points) => actions.saveTiebreakPoints(match.id, tiebreakId, playerId, points)}
+      onClearTiebreakStanding={(tiebreakId, playerId) => actions.clearTiebreakStanding(match.id, tiebreakId, playerId)}
       onUpdateMatchAdvancementRules={actions.updateMatchAdvancementRules}
       onUpdateMatchActive={actions.updateMatchActive}
       onReopenMatchResult={actions.reopenMatchResult}

@@ -256,6 +256,35 @@ export async function reopenMatchResult(matchId: number): Promise<boolean> {
   }
 }
 
+export async function createTiebreak(matchId: number, playerIds: number[], songId?: number): Promise<number> {
+  const response = await axios.post<{ id: number }>(`matches/${matchId}/tiebreaks`, {
+    playerIds,
+    ...(songId ? { songId } : {}),
+  });
+  return response.data.id;
+}
+
+export async function deleteTiebreak(matchId: number, tiebreakId: number): Promise<void> {
+  await axios.delete(`matches/${matchId}/tiebreaks/${tiebreakId}`);
+}
+
+export async function upsertTiebreakScore(
+  matchId: number,
+  tiebreakId: number,
+  playerId: number,
+  score: { percentage: number; isFailed: boolean; scoreId?: number },
+): Promise<void> {
+  await axios.put(`matches/${matchId}/tiebreaks/${tiebreakId}/scores/${playerId}`, score);
+}
+
+export async function upsertTiebreakPoints(matchId: number, tiebreakId: number, playerId: number, points: number): Promise<void> {
+  await axios.put(`matches/${matchId}/tiebreaks/${tiebreakId}/points/${playerId}`, { points });
+}
+
+export async function clearTiebreakStanding(matchId: number, tiebreakId: number, playerId: number): Promise<void> {
+  await axios.delete(`matches/${matchId}/tiebreaks/${tiebreakId}/standings/${playerId}`);
+}
+
 export async function listScoringSystems(): Promise<string[]> {
   const response = await axios.get<string[]>("matches/scoring-systems");
   return response.data;

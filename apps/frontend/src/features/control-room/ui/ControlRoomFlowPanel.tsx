@@ -196,6 +196,7 @@ function QueueEntryRow({
                 controls={!committing}
                 onSelect={onSelect}
                 onCommit={onCommit}
+                onTiebreak={onSelect}
             />
         </div>
     );

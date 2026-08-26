@@ -13,6 +13,8 @@ import MatchTable from "@/features/match/ui/MatchTable";
 import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
 import { getMatchCommitState } from "@/features/match/model/matchStatus";
 import { entrantPlayers } from "@/features/participant/model/entrant";
+import TiebreakModal from "@/features/match/ui/TiebreakModal";
+import { btnPrimary } from "@/styles/buttonStyles";
 
 type MatchCardProps = {
   division: Division;
@@ -56,6 +58,17 @@ type MatchCardProps = {
     scoreId?: number,
   ) => void;
   onDeleteStanding: (playerId: number, roundId: number) => void;
+  onCreateTiebreak: (playerIds: number[], songId?: number) => Promise<void>;
+  onDeleteTiebreak: (tiebreakId: number) => void;
+  onSaveTiebreakScore: (
+    tiebreakId: number,
+    playerId: number,
+    percentage: number,
+    isFailed: boolean,
+    scoreId?: number,
+  ) => void;
+  onSaveTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
+  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
@@ -74,6 +87,7 @@ type StandingModalState = {
   initialScore?: number;
   initialScoreId?: number;
   initialIsFailed?: boolean;
+  target: "round" | "tiebreak";
 };
 
 const closedModal: StandingModalState = {
@@ -84,6 +98,7 @@ const closedModal: StandingModalState = {
   songId: 0,
   playerName: "",
   songTitle: "",
+  target: "round",
 };
 
 export default function MatchCard({
@@ -111,6 +126,11 @@ export default function MatchCard({
   onUpdateMatchScoringSystem,
   onRenameMatch,
   onDeleteStanding,
+  onCreateTiebreak,
+  onDeleteTiebreak,
+  onSaveTiebreakScore,
+  onSaveTiebreakPoints,
+  onClearTiebreakStanding,
   onEditStanding,
   onUpdateMatchAdvancementRules,
   onUpdateMatchActive,
@@ -123,6 +143,7 @@ export default function MatchCard({
   const [standingModal, setStandingModal] = useState<StandingModalState>(closedModal);
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editScoringSystemModalOpen, setEditScoringSystemModalOpen] = useState(false);
+  const [tiebreakModalOpen, setTiebreakModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [savingAdvancementRules, setSavingAdvancementRules] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
@@ -265,12 +286,23 @@ export default function MatchCard({
         {...standingModal}
         onClose={() => setStandingModal(closedModal)}
         onSave={(playerId, roundId, pct, score, isFailed, scoreId) => {
+          if (standingModal.target === "tiebreak") {
+            onSaveTiebreakScore(roundId, playerId, pct, isFailed, scoreId);
+            return;
+          }
           if (standingModal.mode === "add") {
             onAddStandingToMatch(playerId, roundId, pct, score, isFailed, scoreId);
           } else {
             onEditStanding(playerId, roundId, pct, score, isFailed, scoreId);
           }
         }}
+      />
+      <TiebreakModal
+        open={tiebreakModalOpen}
+        match={match}
+        tournamentId={tournamentId}
+        onClose={() => setTiebreakModalOpen(false)}
+        onCreate={onCreateTiebreak}
       />
       <EditMatchNotesModal
         match={match}
@@ -319,6 +351,15 @@ export default function MatchCard({
         manualActivationAllowed={manualActivationAllowed}
       />
 
+      {controls && commitState === "Tiebreak" && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2">
+          <span className="text-sm text-ui-text-soft">A tied placement has different advancement destinations.</span>
+          <button type="button" className={`${btnPrimary} text-sm`} onClick={() => setTiebreakModalOpen(true)}>
+            Create tiebreak
+          </button>
+        </div>
+      )}
+
       {showEmptySlots && (
         <MatchEmptySlots
           canAddSong={matchPlayers.length > 0}
@@ -346,13 +387,22 @@ export default function MatchCard({
             )
           }
           onOpenAddStanding={(playerId, roundId, playerName, songTitle) =>
-            setStandingModal({ open: true, mode: "add", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle })
+            setStandingModal({ open: true, mode: "add", target: "round", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle })
           }
           onOpenEditStanding={(playerId, roundId, playerName, songTitle, scoreId, percentage, score, isFailed) =>
-            setStandingModal({ open: true, mode: "edit", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
+            setStandingModal({ open: true, mode: "edit", target: "round", playerId, roundId, songId: songIdOfRound(roundId), playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: score, initialIsFailed: isFailed })
           }
           onDeleteStanding={onDeleteStanding}
           onChangePoints={onChangePoints}
+          onDeleteTiebreak={onDeleteTiebreak}
+          onOpenAddTiebreakStanding={(playerId, tiebreakId, playerName, songTitle) =>
+            setStandingModal({ open: true, mode: "add", target: "tiebreak", playerId, roundId: tiebreakId, songId: match.tiebreaks.find((candidate) => candidate.id === tiebreakId)?.song?.id ?? 0, playerName, songTitle })
+          }
+          onOpenEditTiebreakStanding={(playerId, tiebreakId, playerName, songTitle, scoreId, percentage, isFailed) =>
+            setStandingModal({ open: true, mode: "edit", target: "tiebreak", playerId, roundId: tiebreakId, songId: match.tiebreaks.find((candidate) => candidate.id === tiebreakId)?.song?.id ?? 0, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: 0, initialIsFailed: isFailed })
+          }
+          onChangeTiebreakPoints={onSaveTiebreakPoints}
+          onClearTiebreakStanding={onClearTiebreakStanding}
         />
       )}
     </div>

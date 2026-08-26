@@ -33,6 +33,11 @@ export default function ReadOnlyMatchCard({ division, match, allMatches }: Props
             onUpdateMatchScoringSystem={noopAsync}
             onEditStanding={noop}
             onDeleteStanding={noop}
+            onCreateTiebreak={noopAsync}
+            onDeleteTiebreak={noop}
+            onSaveTiebreakScore={noop}
+            onSaveTiebreakPoints={noop}
+            onClearTiebreakStanding={noop}
         />
     );
 }

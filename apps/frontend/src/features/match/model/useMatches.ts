@@ -114,6 +114,25 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
       deleteStanding: (playerId: number, roundId: number) =>
         run(() => MatchesApi.deleteStanding(roundId, playerId), "Error deleting the standing."),
 
+      createTiebreak: (matchId: number, playerIds: number[], songId?: number) =>
+        run(() => MatchesApi.createTiebreak(matchId, playerIds, songId).then(() => undefined), "Error creating the tiebreak."),
+
+      deleteTiebreak: (matchId: number, tiebreakId: number) =>
+        run(() => MatchesApi.deleteTiebreak(matchId, tiebreakId), "Error deleting the tiebreak."),
+
+      saveTiebreakScore: (
+        matchId: number,
+        tiebreakId: number,
+        playerId: number,
+        score: { percentage: number; isFailed: boolean; scoreId?: number },
+      ) => run(() => MatchesApi.upsertTiebreakScore(matchId, tiebreakId, playerId, score), "Error saving the tiebreak score."),
+
+      saveTiebreakPoints: (matchId: number, tiebreakId: number, playerId: number, points: number) =>
+        run(() => MatchesApi.upsertTiebreakPoints(matchId, tiebreakId, playerId, points), "Error saving the tiebreak points."),
+
+      clearTiebreakStanding: (matchId: number, tiebreakId: number, playerId: number) =>
+        run(() => MatchesApi.clearTiebreakStanding(matchId, tiebreakId, playerId), "Error clearing the tiebreak standing."),
+
       /* An advancement rule is not part of the match aggregate, but writing one
          now announces the pool its source sits in, so it moves like every other
          write and nothing here re-reads. */

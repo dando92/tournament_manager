@@ -305,6 +305,21 @@ The match page keeps the live panel below the match cards for every permission
 level. The lobby-control card lives in Control Room, where staff operate flows
 and cabinets together without binding a lobby to a flow or match.
 
+### Tiebreak results and responsive tables
+
+A match that cannot be committed because a tie spans different advancement
+destinations replaces the Commit action with a Tiebreak action. Tiebreaks are
+visually separate evidence after normal points and before final placement; they
+never look like another points-bearing round.
+
+Desktop retains the player-by-result table. Mobile introduces no horizontal
+gesture because overview and control-room surfaces already own swipe. With up
+to four players the table is transposed so players are columns and rounds,
+points, tiebreaks, and placement are rows. With more players it keeps the
+scannable Player, Points, Place summary and reveals one player's score details
+vertically. Both layouts preserve table semantics and touch-sized editing
+controls without a nested horizontal scroll surface.
+
 ## Match control room
 
 Control Room presents one tournament-level lobby control followed by each

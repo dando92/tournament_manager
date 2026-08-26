@@ -1,0 +1,253 @@
+import { type ReactNode, useMemo, useState } from "react";
+
+import { entrantPlayers } from "@/features/participant/model/entrant";
+import { Match } from "@/features/match/model/types";
+import BaseModal from "@/shared/components/ui/BaseModal";
+import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+
+type Props = {
+  match: Match;
+  controls: boolean;
+  onOpenAddStanding: (playerId: number, roundId: number, playerName: string, songTitle: string) => void;
+  onOpenEditStanding: (playerId: number, roundId: number, playerName: string, songTitle: string, scoreId: number, percentage: number, score: number, isFailed: boolean) => void;
+  onChangePoints: (playerId: number, roundId: number, points: number) => void;
+  onOpenAddTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string) => void;
+  onOpenEditTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string, scoreId: number, percentage: number, isFailed: boolean) => void;
+  onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
+  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
+};
+
+type Metric =
+  | { kind: "round"; id: number; label: string }
+  | { kind: "points"; id: 0; label: "Points" }
+  | { kind: "tiebreak"; id: number; label: string }
+  | { kind: "placement"; id: 0; label: "Place" };
+
+type ManualEditor = {
+  title: string;
+  save: (value: number) => void;
+  clear?: () => void;
+};
+
+export default function MobileMatchTable(props: Props) {
+  const { match } = props;
+  const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
+  const [manualEditor, setManualEditor] = useState<ManualEditor | null>(null);
+  const [manualValue, setManualValue] = useState(0);
+  const players = useMemo(() => {
+    const order = new Map(match.resultState.entries.map((entry, index) => [entry.playerId, index]));
+    return entrantPlayers(match.entrants).sort((left, right) =>
+      (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER) || left.id - right.id,
+    );
+  }, [match]);
+  const metrics: Metric[] = [
+    ...match.rounds.map((round, index): Metric => ({ kind: "round", id: round.id, label: round.song?.title ?? `By hand ${index + 1}` })),
+    { kind: "points", id: 0, label: "Points" },
+    ...match.tiebreaks.map((tiebreak): Metric => ({ kind: "tiebreak", id: tiebreak.id, label: `TB ${tiebreak.sequence}` })),
+    { kind: "placement", id: 0, label: "Place" },
+  ];
+
+  function editManual(title: string, value: number, save: (next: number) => void, clear?: () => void) {
+    setManualValue(value);
+    setManualEditor({ title, save, clear });
+  }
+
+  function cell(player: (typeof players)[number], metric: Metric) {
+    const result = match.resultState.entries.find((entry) => entry.playerId === player.id);
+    if (metric.kind === "points") return <span className="font-semibold">{result?.points ?? 0}</span>;
+    if (metric.kind === "placement") return <span className="font-semibold text-ui-text-soft">{result?.placement ?? "—"}</span>;
+
+    if (metric.kind === "round") {
+      const round = match.rounds.find((candidate) => candidate.id === metric.id)!;
+      const standing = round.standings.find((candidate) => candidate.player.id === player.id);
+      if (!round.song) {
+        const value = standing?.points ?? 0;
+        return props.controls ? (
+          <button type="button" className="min-h-11 min-w-11 font-semibold" onClick={() =>
+            editManual(`${player.playerName} · By hand`, value, (next) => props.onChangePoints(player.id, round.id, next))
+          }>{value}</button>
+        ) : <span>{value}</span>;
+      }
+      if (!standing?.score) {
+        return props.controls ? (
+          <button type="button" className="min-h-11 min-w-11 text-ui-text-soft" onClick={() =>
+            props.onOpenAddStanding(player.id, round.id, player.playerName, round.song!.title)
+          }>+</button>
+        ) : <span>—</span>;
+      }
+      return (
+        <button
+          type="button"
+          disabled={!props.controls}
+          className="min-h-11 font-semibold disabled:cursor-default"
+          onClick={() => props.onOpenEditStanding(
+            player.id,
+            round.id,
+            player.playerName,
+            round.song!.title,
+            standing.score!.id,
+            Number(standing.score!.percentage),
+            standing.points,
+            standing.score!.isFailed,
+          )}
+        >
+          {Number(standing.score.percentage).toFixed(2)}%
+        </button>
+      );
+    }
+
+    const tiebreak = match.tiebreaks.find((candidate) => candidate.id === metric.id)!;
+    const standing = tiebreak.standings.find((candidate) => candidate.player.id === player.id);
+    if (!standing) return <span className="text-ui-text-mute">—</span>;
+    if (!tiebreak.song) {
+      const value = standing.manualPoints ?? 0;
+      return props.controls && !tiebreak.invalidated ? (
+        <button type="button" className="min-h-11 min-w-11 font-semibold" onClick={() =>
+          editManual(`${player.playerName} · Tiebreak ${tiebreak.sequence}`, value, (next) =>
+            props.onChangeTiebreakPoints(tiebreak.id, player.id, next), standing.manualPoints === null ? undefined : () =>
+              props.onClearTiebreakStanding(tiebreak.id, player.id))
+        }>{standing.manualPoints ?? "—"}</button>
+      ) : <span>{standing.manualPoints ?? "—"}</span>;
+    }
+    if (!standing.score) {
+      return props.controls && !tiebreak.invalidated ? (
+        <button type="button" className="min-h-11 min-w-11 text-ui-text-soft" onClick={() =>
+          props.onOpenAddTiebreakStanding(player.id, tiebreak.id, player.playerName, tiebreak.song!.title)
+        }>+</button>
+      ) : <span>—</span>;
+    }
+    return (
+      <button
+        type="button"
+        disabled={!props.controls || tiebreak.invalidated}
+        className="min-h-11 font-semibold disabled:cursor-default"
+        onClick={() => props.onOpenEditTiebreakStanding(
+          player.id,
+          tiebreak.id,
+          player.playerName,
+          tiebreak.song!.title,
+          standing.score!.id,
+          Number(standing.score!.percentage),
+          standing.score!.isFailed,
+        )}
+      >
+        {Number(standing.score.percentage).toFixed(2)}%
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <div className="overflow-hidden rounded-lg border border-ui-border bg-ui-row sm:hidden">
+        {players.length <= 4 ? (
+          <table className="w-full table-fixed border-collapse text-xs">
+            <thead className="bg-ui-raised text-ui-text-mute">
+              <tr>
+                <th className="w-[30%] px-2 py-2 text-left">Result</th>
+                {players.map((player) => <th key={player.id} className="truncate px-1 py-2 text-center" title={player.playerName}>{player.playerName}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.map((metric) => (
+                <tr key={`${metric.kind}-${metric.id}`} className={`${metric.kind === "tiebreak" ? "bg-ui-selected/40" : ""} border-t border-ui-separator`}>
+                  <th className="truncate px-2 py-2 text-left font-medium" title={metric.label}>{metric.label}</th>
+                  {players.map((player) => <td key={player.id} className="px-1 py-1 text-center tabular-nums">{cell(player, metric)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-ui-raised text-ui-text-mute"><tr><th className="px-3 py-2 text-left">Player</th><th className="px-2 py-2 text-center">Pts</th><th className="px-2 py-2 text-center">Place</th></tr></thead>
+            <tbody>
+              {players.map((player) => (
+                <FragmentRows
+                  key={player.id}
+                  player={player}
+                  expanded={expandedPlayerId === player.id}
+                  onToggle={() => setExpandedPlayerId((current) => current === player.id ? null : player.id)}
+                  points={match.resultState.entries.find((entry) => entry.playerId === player.id)?.points ?? 0}
+                  placement={match.resultState.entries.find((entry) => entry.playerId === player.id)?.placement ?? null}
+                  metrics={metrics.filter((metric) => metric.kind !== "points" && metric.kind !== "placement")}
+                  renderCell={(metric) => cell(player, metric)}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <BaseModal
+        open={manualEditor !== null}
+        onClose={() => setManualEditor(null)}
+        title={manualEditor?.title}
+        maxWidth="max-w-sm"
+        footer={(
+          <div className="flex flex-1 justify-between gap-2">
+            <div>
+              {manualEditor?.clear && (
+                <button type="button" className={btnSecondary} onClick={() => {
+                  manualEditor.clear?.();
+                  setManualEditor(null);
+                }}>Clear</button>
+              )}
+            </div>
+            <div className="flex gap-2">
+            <button type="button" className={btnSecondary} onClick={() => setManualEditor(null)}>Cancel</button>
+            <button type="button" className={btnPrimary} onClick={() => {
+              manualEditor?.save(manualValue);
+              setManualEditor(null);
+            }}>Save</button>
+            </div>
+          </div>
+        )}
+      >
+        <input
+          type="number"
+          min="0"
+          inputMode="numeric"
+          className="w-full rounded border border-ui-border-strong bg-ui-surface px-3 py-3 text-base text-ui-text"
+          value={manualValue}
+          onChange={(event) => setManualValue(Math.max(0, Number(event.target.value) || 0))}
+        />
+      </BaseModal>
+    </>
+  );
+}
+
+function FragmentRows({
+  player,
+  expanded,
+  onToggle,
+  points,
+  placement,
+  metrics,
+  renderCell,
+}: {
+  player: { id: number; playerName: string };
+  expanded: boolean;
+  onToggle: () => void;
+  points: number;
+  placement: number | null;
+  metrics: Metric[];
+  renderCell: (metric: Metric) => ReactNode;
+}) {
+  return (
+    <>
+      <tr className="border-t border-ui-separator">
+        <th className="px-3 py-2 text-left"><button type="button" className="min-h-11 w-full text-left font-medium" onClick={onToggle}>{player.playerName} {expanded ? "▾" : "▸"}</button></th>
+        <td className="px-2 py-2 text-center font-semibold">{points}</td>
+        <td className="px-2 py-2 text-center font-semibold">{placement ?? "—"}</td>
+      </tr>
+      {expanded && (
+        <tr className="bg-ui-raised/50">
+          <td colSpan={3} className="px-4 py-2">
+            <table className="w-full text-xs">
+              <tbody>{metrics.map((metric) => <tr key={`${metric.kind}-${metric.id}`}><th className="py-1 text-left font-medium">{metric.label}</th><td className="py-1 text-right">{renderCell(metric)}</td></tr>)}</tbody>
+            </table>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}

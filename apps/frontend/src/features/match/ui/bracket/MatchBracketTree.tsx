@@ -139,7 +139,7 @@ function getPlayerPoint(match: Match, entrant: Entrant): number | null {
 
 function getAdvancedPlayerIds(match: Match): Set<number> {
   const sortedResults = [...(match.matchResult?.playerPoints ?? [])].sort(
-    (left, right) => right.points - left.points || left.playerId - right.playerId,
+    (left, right) => left.placement - right.placement || left.playerId - right.playerId,
   );
 
   return new Set(

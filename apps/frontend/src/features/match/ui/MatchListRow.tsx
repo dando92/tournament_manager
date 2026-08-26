@@ -37,6 +37,7 @@ type MatchListRowProps = {
   controls: boolean;
   onSelect: () => void;
   onCommit: () => void;
+  onTiebreak: () => void;
 };
 
 export default function MatchListRow({
@@ -46,6 +47,7 @@ export default function MatchListRow({
   controls,
   onSelect,
   onCommit,
+  onTiebreak,
 }: MatchListRowProps) {
   const nameViewportRef = useRef<HTMLSpanElement>(null);
   const nameContentRef = useRef<HTMLSpanElement>(null);
@@ -57,6 +59,7 @@ export default function MatchListRow({
   const blocker = getCommitBlocker(match);
   const label = blocker ?? getMatchProgressLabel(progress);
   const canCommit = controls && progress === "readyToCommit";
+  const needsTiebreak = controls && progress === "tiebreakRequired";
 
   const playerCount = entrantPlayers(match.entrants).length;
   const players = `${playerCount} player${playerCount !== 1 ? "s" : ""}`;
@@ -145,13 +148,13 @@ export default function MatchListRow({
       </button>
 
       <div ref={statusRef} className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-3">
-        {canCommit ? (
+        {canCommit || needsTiebreak ? (
           <button
             type="button"
-            onClick={onCommit}
+            onClick={needsTiebreak ? onTiebreak : onCommit}
             className="pointer-events-auto rounded-md border border-state-pending/30 bg-state-pending/10 px-3 py-1 text-xs font-semibold text-ui-text-soft transition-colors hover:bg-state-pending/20"
           >
-            Commit
+            {needsTiebreak ? "Tiebreak" : "Commit"}
           </button>
         ) : (
           <StatusBadge status={status} label={label} />
