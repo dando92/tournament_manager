@@ -18,6 +18,36 @@ type CompletedFlow = {
     entryId: number;
 };
 
+/**
+ * The running or paused flow a rollback of this match would invalidate: one
+ * whose current position has not passed the match yet, because a flow that has
+ * already moved past it keeps its history.
+ */
+const ROLLBACK_FLOW_OF_MATCH = `
+    SELECT      flow."id" AS "flowId",
+                flow."name" AS "flowName",
+                flow."status" AS "status",
+                target."position" AS "matchPosition",
+                current."position" AS "currentPosition"
+    FROM        "control_room_flow_entry" target
+    JOIN        "control_room_flow" flow ON flow."id" = target."flowId"
+    LEFT JOIN   "control_room_flow_entry" current ON current."id" = flow."currentEntryId"
+    WHERE       target."matchId" = $1
+        AND     flow."status" IN ('running', 'paused')
+        AND     (current."position" IS NULL OR target."position" <= current."position")
+`;
+
+/** The completed flow this match belongs to, which reopening its result reopens. */
+const COMPLETED_FLOW_OF_MATCH = `
+    SELECT  flow."id" AS "flowId",
+            flow."name" AS "flowName",
+            entry."id" AS "entryId"
+    FROM    "control_room_flow_entry" entry
+    JOIN    "control_room_flow" flow ON flow."id" = entry."flowId"
+    WHERE   entry."matchId" = $1
+        AND flow."status" = 'completed'
+`;
+
 @Injectable()
 export class ControlRoomMutationGuard {
     constructor(
@@ -75,28 +105,13 @@ export class ControlRoomMutationGuard {
     }
 
     private async rollbackFlow(matchId: number): Promise<RollbackFlow | null> {
-        const rows: RollbackFlow[] = await this.dataSource.query(
-            `SELECT flow.id AS "flowId", flow.name AS "flowName", flow.status AS "status",
-                    target.position AS "matchPosition", current.position AS "currentPosition"
-             FROM "control_room_flow_entry" target
-             JOIN "control_room_flow" flow ON flow.id = target."flowId"
-             LEFT JOIN "control_room_flow_entry" current ON current.id = flow."currentEntryId"
-             WHERE target."matchId" = $1 AND flow.status IN ('running', 'paused')
-               AND (current.position IS NULL OR target.position <= current.position)`,
-            [matchId],
-        );
+        const rows: RollbackFlow[] = await this.dataSource.query(ROLLBACK_FLOW_OF_MATCH, [matchId]);
 
         return rows[0] ?? null;
     }
 
     private async completedFlow(matchId: number): Promise<CompletedFlow | null> {
-        const rows: CompletedFlow[] = await this.dataSource.query(
-            `SELECT flow.id AS "flowId", flow.name AS "flowName", entry.id AS "entryId"
-             FROM "control_room_flow_entry" entry
-             JOIN "control_room_flow" flow ON flow.id = entry."flowId"
-             WHERE entry."matchId" = $1 AND flow.status = 'completed'`,
-            [matchId],
-        );
+        const rows: CompletedFlow[] = await this.dataSource.query(COMPLETED_FLOW_OF_MATCH, [matchId]);
 
         return rows[0] ?? null;
     }

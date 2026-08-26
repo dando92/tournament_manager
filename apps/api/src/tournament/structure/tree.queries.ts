@@ -23,7 +23,7 @@ const SCOPE_PREDICATE: Record<TreeScope, string> = {
 };
 
 /**
- * The rows `structureInScope` produces: one per pool, carrying the division and
+ * The rows `STRUCTURE_IN_SCOPE` produces: one per pool, carrying the division and
  * phase it hangs from. Changing one without the other is a bug.
  *
  * A division with no phases and a phase with no pools still appear, with nulls
@@ -44,7 +44,7 @@ type StructureRow = {
     matchCount: number;
 };
 
-const structureInScope = (scope: TreeScope): string => `
+const structureInScope = (predicate: string): string => `
     SELECT  d."id"                  AS "divisionId",
             d."name"                AS "divisionName",
             entrants."count"        AS "divisionEntrantCount",
@@ -69,11 +69,18 @@ const structureInScope = (scope: TreeScope): string => `
         FROM    "match" m
         WHERE   m."phaseGroupId" = pg."id"
     ) matches ON TRUE
-    WHERE    ${SCOPE_PREDICATE[scope]}
+    WHERE    ${predicate}
     ORDER BY d."id", ph."id", pg."id"
 `;
 
-/** The rows `pendingMatchesInScope` produces. */
+/** One structure query per scope, built once at module load. */
+const STRUCTURE_IN_SCOPE: Record<TreeScope, string> = {
+    tournament: structureInScope(SCOPE_PREDICATE.tournament),
+    division: structureInScope(SCOPE_PREDICATE.division),
+    phaseGroup: structureInScope(SCOPE_PREDICATE.phaseGroup),
+};
+
+/** The rows `PENDING_MATCHES_IN_SCOPE` produces. */
 type PendingCountRow = {
     phaseGroupId: number;
     pendingMatchCount: number;
@@ -90,13 +97,13 @@ type ProgressedCountRow = {
  * Players, songs and bracket slots are preparation. A played score or positive
  * hand-scored standing is progress, as is a committed result.
  */
-const progressedMatchesInScope = (scope: TreeScope): string => `
+const progressedMatchesInScope = (predicate: string): string => `
     SELECT m."phaseGroupId" AS "phaseGroupId", COUNT(*)::int AS "progressedMatchCount"
     FROM "match" m
     JOIN "phase_group" pg ON pg."id" = m."phaseGroupId"
     JOIN "phase" ph ON ph."id" = pg."phaseId"
     JOIN "division" d ON d."id" = ph."divisionId"
-    WHERE ${SCOPE_PREDICATE[scope]}
+    WHERE ${predicate}
       AND (
           m."matchResultId" IS NOT NULL
           OR EXISTS (
@@ -109,6 +116,13 @@ const progressedMatchesInScope = (scope: TreeScope): string => `
       )
     GROUP BY m."phaseGroupId"
 `;
+
+/** The same, for the progressed count. */
+const PROGRESSED_MATCHES_IN_SCOPE: Record<TreeScope, string> = {
+    tournament: progressedMatchesInScope(SCOPE_PREDICATE.tournament),
+    division: progressedMatchesInScope(SCOPE_PREDICATE.division),
+    phaseGroup: progressedMatchesInScope(SCOPE_PREDICATE.phaseGroup),
+};
 
 /**
  * How many matches in each pool are waiting on a result action.
@@ -125,14 +139,14 @@ const progressedMatchesInScope = (scope: TreeScope): string => `
  * It counts rather than loading the matches, because its caller wants a number
  * per pool and nothing else.
  */
-const pendingMatchesInScope = (scope: TreeScope): string => `
+const pendingMatchesInScope = (predicate: string): string => `
     WITH scoped_match AS (
         SELECT m."id", m."phaseGroupId"
         FROM "match" m
         JOIN "phase_group" pg ON pg."id" = m."phaseGroupId"
         JOIN "phase" ph ON ph."id" = pg."phaseId"
         JOIN "division" d ON d."id" = ph."divisionId"
-        WHERE ${SCOPE_PREDICATE[scope]} AND m."matchResultId" IS NULL
+        WHERE ${predicate} AND m."matchResultId" IS NULL
     ),
     match_player AS (
         SELECT DISTINCT sm."id" AS "matchId", pa."playerId"
@@ -182,6 +196,13 @@ const pendingMatchesInScope = (scope: TreeScope): string => `
       AND NOT EXISTS (SELECT 1 FROM unsettled_round ur WHERE ur."matchId" = sm."id")
     GROUP BY sm."phaseGroupId"
 `;
+
+/** The same, for the pending count. */
+const PENDING_MATCHES_IN_SCOPE: Record<TreeScope, string> = {
+    tournament: pendingMatchesInScope(SCOPE_PREDICATE.tournament),
+    division: pendingMatchesInScope(SCOPE_PREDICATE.division),
+    phaseGroup: pendingMatchesInScope(SCOPE_PREDICATE.phaseGroup),
+};
 
 /** The rows `ADVANCEMENT_RULES_FROM_PHASE_GROUPS` produces. */
 type AdvancementRuleRow = AdvancementRuleDto;
@@ -244,7 +265,7 @@ export class TreeQueries {
     }
 
     private async inScope(scope: TreeScope, id: number): Promise<DivisionSummaryDto[]> {
-        const rows: StructureRow[] = await this.dataSource.query(structureInScope(scope), [id]);
+        const rows: StructureRow[] = await this.dataSource.query(STRUCTURE_IN_SCOPE[scope], [id]);
         if (rows.length === 0) return [];
 
         const [progressed, pending, rules] = await Promise.all([
@@ -319,13 +340,13 @@ export class TreeQueries {
     }
 
     private async pendingCounts(scope: TreeScope, id: number): Promise<Map<number, number>> {
-        const rows: PendingCountRow[] = await this.dataSource.query(pendingMatchesInScope(scope), [id]);
+        const rows: PendingCountRow[] = await this.dataSource.query(PENDING_MATCHES_IN_SCOPE[scope], [id]);
 
         return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.pendingMatchCount)]));
     }
 
     private async progressedCounts(scope: TreeScope, id: number): Promise<Map<number, number>> {
-        const rows: ProgressedCountRow[] = await this.dataSource.query(progressedMatchesInScope(scope), [id]);
+        const rows: ProgressedCountRow[] = await this.dataSource.query(PROGRESSED_MATCHES_IN_SCOPE[scope], [id]);
 
         return new Map(rows.map((row) => [Number(row.phaseGroupId), Number(row.progressedMatchCount)]));
     }

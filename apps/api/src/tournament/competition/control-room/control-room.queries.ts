@@ -6,6 +6,28 @@ import { ControlRoomFlow } from "@tournament-manager/persistence";
 
 import { MatchQueries } from "@match/match.queries";
 
+/** The rows `ASSIGNED_MATCH_IDS_OF_TOURNAMENT` produces. */
+type AssignedMatchRow = { matchId: number };
+
+/**
+ * Every match a flow of this tournament already holds, which is what both the
+ * creation form and the editor subtract from the tournament's matches to offer
+ * the rest.
+ */
+const ASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
+    SELECT  entry."matchId" AS "matchId"
+    FROM    "control_room_flow_entry" entry
+    JOIN    "control_room_flow" flow ON flow."id" = entry."flowId"
+    WHERE   flow."tournamentId" = $1
+`;
+
+/** Which tournament a flow belongs to. */
+const TOURNAMENT_ID_OF_FLOW = `
+    SELECT  flow."tournamentId" AS "tournamentId"
+    FROM    "control_room_flow" flow
+    WHERE   flow."id" = $1
+`;
+
 @Injectable()
 export class ControlRoomQueries {
     constructor(
@@ -38,12 +60,7 @@ export class ControlRoomQueries {
     async creation(tournamentId: number): Promise<ControlRoomCreationDto> {
         const [allMatches, assigned] = await Promise.all([
             this.matches.byTournament(tournamentId),
-            this.flows.manager.query<Array<{ matchId: number }>>(
-                `SELECT entry."matchId" AS "matchId" FROM "control_room_flow_entry" entry
-                 JOIN "control_room_flow" flow ON flow.id = entry."flowId"
-                 WHERE flow."tournamentId" = $1`,
-                [tournamentId],
-            ),
+            this.flows.manager.query<AssignedMatchRow[]>(ASSIGNED_MATCH_IDS_OF_TOURNAMENT, [tournamentId]),
         ]);
         const assignedIds = new Set(assigned.map((entry) => entry.matchId));
         return { unassignedMatches: allMatches.filter((match) => !assignedIds.has(match.id)) };
@@ -57,12 +74,7 @@ export class ControlRoomQueries {
         const tournamentId = await this.tournamentIdOf(flowId);
         const [allMatches, assigned] = await Promise.all([
             this.matches.byTournament(tournamentId),
-            this.flows.manager.query<Array<{ matchId: number }>>(
-                `SELECT entry."matchId" AS "matchId" FROM "control_room_flow_entry" entry
-                 JOIN "control_room_flow" flow ON flow.id = entry."flowId"
-                 WHERE flow."tournamentId" = $1`,
-                [tournamentId],
-            ),
+            this.flows.manager.query<AssignedMatchRow[]>(ASSIGNED_MATCH_IDS_OF_TOURNAMENT, [tournamentId]),
         ]);
         const assignedIds = new Set(assigned.map((entry) => entry.matchId));
         const matchById = new Map(allMatches.map((match) => [match.id, match]));
@@ -87,10 +99,7 @@ export class ControlRoomQueries {
     }
 
     private async tournamentIdOf(flowId: number): Promise<number> {
-        const rows: Array<{ tournamentId: number }> = await this.flows.manager.query(
-            `SELECT "tournamentId" AS "tournamentId" FROM "control_room_flow" WHERE id = $1`,
-            [flowId],
-        );
+        const rows: Array<{ tournamentId: number }> = await this.flows.manager.query(TOURNAMENT_ID_OF_FLOW, [flowId]);
         if (!rows[0]) {
             throw new NotFoundException(`Control room flow ${flowId} not found`);
         }

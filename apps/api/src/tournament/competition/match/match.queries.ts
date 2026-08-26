@@ -39,7 +39,7 @@ const SCOPE_PREDICATE: Record<MatchScope, string> = {
 };
 
 /**
- * The rows `matchesInScope` produces. Changing one without the other is a bug.
+ * The rows `MATCHES_IN_SCOPE` produces. Changing one without the other is a bug.
  *
  * The two collections are aggregated into JSON in the database rather than
  * joined flat, so one match is one row: a flat join would multiply entrants by
@@ -62,7 +62,7 @@ type MatchRow = {
     tiebreaks: MatchTiebreakDto[];
 };
 
-const matchesInScope = (scope: MatchScope): string => `
+const matchesInScope = (predicate: string): string => `
     SELECT  m."id"                      AS "id",
             m."name"                    AS "name",
             m."subtitle"                AS "subtitle",
@@ -182,9 +182,17 @@ const matchesInScope = (scope: MatchScope): string => `
         ) tiebreak_standings ON TRUE
         WHERE mt."matchId" = m."id"
     ) tiebreaks ON TRUE
-    WHERE   ${SCOPE_PREDICATE[scope]}
+    WHERE   ${predicate}
     ORDER BY m."id"
 `;
+
+/** One query per scope, built once at module load rather than on every read. */
+const MATCHES_IN_SCOPE: Record<MatchScope, string> = {
+    match: matchesInScope(SCOPE_PREDICATE.match),
+    phaseGroup: matchesInScope(SCOPE_PREDICATE.phaseGroup),
+    division: matchesInScope(SCOPE_PREDICATE.division),
+    tournament: matchesInScope(SCOPE_PREDICATE.tournament),
+};
 
 /** The rows `ADVANCEMENT_RULES_FOR_MATCHES` produces. */
 type AdvancementRuleRow = AdvancementRuleDto;
@@ -282,39 +290,67 @@ const LIVE_TARGETS_FOR_SONG = `
     ORDER BY target."playerId", target.priority, target."matchId", target."targetId"
 `;
 
+/** The rows `ACTIVE_TOURNAMENT_SONGS` and `ACTIVE_TOURNAMENT_SONG` produce. */
+type ActiveSongRow = SongRefDto;
+
+/**
+ * Every song a match of the tournament is currently playing, once per match
+ * that plays it: a round of an active match, or a tiebreak of one that has not
+ * been invalidated.
+ *
+ * The tournament is filtered inside both branches rather than around the union.
+ * Outside it, each branch had to produce every active song of the installation
+ * before the filter could discard all but one tournament's.
+ *
+ * It is a fragment: both queries below wrap it, and neither works without a
+ * `$1` bound to the tournament.
+ */
 const ACTIVE_TOURNAMENT_SONGS_BASE = `
-    SELECT
-            active_song."id",
-            active_song."title"
-    FROM (
-        SELECT so."id", so."title", d."tournamentId"
-        FROM        "round" r
-        JOIN        "song" so        ON so."id" = r."songId"
-        JOIN        "match" m        ON m."id" = r."matchId" AND m."active" = TRUE
-        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
-        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
-        JOIN        "division" d     ON d."id" = ph."divisionId"
+    SELECT so."id", so."title"
+    FROM        "round" r
+    JOIN        "song" so        ON so."id" = r."songId"
+    JOIN        "match" m        ON m."id" = r."matchId" AND m."active" = TRUE
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+    JOIN        "division" d     ON d."id" = ph."divisionId"
+    WHERE       d."tournamentId" = $1
 
-        UNION ALL
+    UNION ALL
 
-        SELECT so."id", so."title", d."tournamentId"
-        FROM        "match_tiebreak" mt
-        JOIN        "song" so        ON so."id" = mt."songId"
-        JOIN        "match" m        ON m."id" = mt."matchId" AND m."active" = TRUE
-        JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
-        JOIN        "phase" ph       ON ph."id" = pg."phaseId"
-        JOIN        "division" d     ON d."id" = ph."divisionId"
-        WHERE mt."invalidated" = FALSE
-    ) active_song
-    WHERE active_song."tournamentId" = $1
+    SELECT so."id", so."title"
+    FROM        "match_tiebreak" mt
+    JOIN        "song" so        ON so."id" = mt."songId"
+    JOIN        "match" m        ON m."id" = mt."matchId" AND m."active" = TRUE
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph       ON ph."id" = pg."phaseId"
+    JOIN        "division" d     ON d."id" = ph."divisionId"
+    WHERE       d."tournamentId" = $1
+        AND     mt."invalidated" = FALSE
 `;
 
+/** Each of those songs once, by title, which is how the lobby names a song. */
 const ACTIVE_TOURNAMENT_SONGS = `
     SELECT DISTINCT ON (active_song."title")
             active_song."id",
             active_song."title"
     FROM (${ACTIVE_TOURNAMENT_SONGS_BASE}) active_song
     ORDER BY active_song."title", active_song."id"
+`;
+
+/** One of them, for the caller that already knows which song it is asking about. */
+const ACTIVE_TOURNAMENT_SONG = `
+    SELECT  active_song."id",
+            active_song."title"
+    FROM (${ACTIVE_TOURNAMENT_SONGS_BASE}) active_song
+    WHERE   active_song."id" = $2
+    LIMIT   1
+`;
+
+/** Whether a match exists. The row carries nothing; only its presence is read. */
+const MATCH_EXISTS = `
+    SELECT  1
+    FROM    "match" m
+    WHERE   m."id" = $1
 `;
 
 function projectedResultState(row: MatchRow, rules: AdvancementRuleDto[]): MatchResultStateDto {
@@ -410,27 +446,26 @@ export class MatchQueries {
 
     /** Every distinct song assigned to a match currently accepting lobby results. */
     async activeSongsForTournament(tournamentId: number): Promise<SongRefDto[]> {
-        return await this.dataSource.query(ACTIVE_TOURNAMENT_SONGS, [tournamentId]);
+        const rows: ActiveSongRow[] = await this.dataSource.query(ACTIVE_TOURNAMENT_SONGS, [tournamentId]);
+
+        return rows;
     }
 
     async activeSongForTournament(tournamentId: number, songId: number): Promise<SongRefDto | null> {
-        const songs = await this.dataSource.query<SongRefDto[]>(
-            `${ACTIVE_TOURNAMENT_SONGS_BASE}
-             AND active_song."id" = $2`,
-            [tournamentId, songId],
-        );
-        return songs[0] ?? null;
+        const rows: ActiveSongRow[] = await this.dataSource.query(ACTIVE_TOURNAMENT_SONG, [tournamentId, songId]);
+
+        return rows[0] ?? null;
     }
 
     /** Whether a match exists, for the callers that only need to refuse when it does not. */
     async exists(id: number): Promise<boolean> {
-        const rows: Array<{ id: number }> = await this.dataSource.query('SELECT m."id" AS "id" FROM "match" m WHERE m."id" = $1', [id]);
+        const rows: unknown[] = await this.dataSource.query(MATCH_EXISTS, [id]);
 
         return rows.length > 0;
     }
 
     private async inScope(scope: MatchScope, id: number): Promise<MatchDto[]> {
-        const rows: MatchRow[] = await this.dataSource.query(matchesInScope(scope), [id]);
+        const rows: MatchRow[] = await this.dataSource.query(MATCHES_IN_SCOPE[scope], [id]);
         if (rows.length === 0) return [];
 
         const rules = await this.advancementRulesOf(rows.map((row) => row.id));

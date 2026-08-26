@@ -29,6 +29,29 @@ export interface TournamentMutationReference {
 
 const TOURNAMENT_MUTATION_REFERENCE = 'tournamentMutationReference';
 
+/**
+ * Which tournament each kind of reference belongs to.
+ *
+ * Every mutating route names one entity, and the guard walks from it up to the
+ * tournament that owns it. The walk is the same chain the read queries take:
+ * `match` to `phase_group` to `phase` to `division`.
+ */
+const TOURNAMENT_ID_OF: Record<
+  Exclude<TournamentEntityReference, 'tournament' | 'advancement-source'>,
+  string
+> = {
+  division: `SELECT d."tournamentId" AS id FROM "division" d WHERE d."id" = $1`,
+  phase: `SELECT d."tournamentId" AS id FROM "phase" p JOIN "division" d ON d."id" = p."divisionId" WHERE p."id" = $1`,
+  'phase-group': `SELECT d."tournamentId" AS id FROM "phase_group" pg JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE pg."id" = $1`,
+  match: `SELECT d."tournamentId" AS id FROM "match" m JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE m."id" = $1`,
+  round: `SELECT d."tournamentId" AS id FROM "round" r JOIN "match" m ON m."id" = r."matchId" JOIN "phase_group" pg ON pg."id" = m."phaseGroupId" JOIN "phase" p ON p."id" = pg."phaseId" JOIN "division" d ON d."id" = p."divisionId" WHERE r."id" = $1`,
+  song: `SELECT s."tournamentId" AS id FROM "song" s WHERE s."id" = $1`,
+  'control-room-flow': `SELECT flow."tournamentId" AS id FROM "control_room_flow" flow WHERE flow."id" = $1`,
+};
+
+/** Whether that tournament is still open to changes. */
+const TOURNAMENT_STATUS = `SELECT t."status" AS status FROM "tournament" t WHERE t."id" = $1`;
+
 export const RequireOpenTournament = (reference: TournamentMutationReference) =>
   SetMetadata(TOURNAMENT_MUTATION_REFERENCE, reference);
 
@@ -67,7 +90,7 @@ export class TournamentOpenGuard implements CanActivate {
     }
 
     const rows: Array<{ status: string }> = await this.dataSource.query(
-      `SELECT status FROM tournament WHERE id = $1`,
+      TOURNAMENT_STATUS,
       [tournamentId],
     );
     if (rows.length === 0) {
@@ -99,19 +122,7 @@ export class TournamentOpenGuard implements CanActivate {
       );
     }
 
-    const queries: Record<
-      Exclude<TournamentEntityReference, 'tournament' | 'advancement-source'>,
-      string
-    > = {
-      division: `SELECT "tournamentId" AS id FROM division WHERE id = $1`,
-      phase: `SELECT d."tournamentId" AS id FROM phase p JOIN division d ON d.id = p."divisionId" WHERE p.id = $1`,
-      'phase-group': `SELECT d."tournamentId" AS id FROM phase_group pg JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE pg.id = $1`,
-      match: `SELECT d."tournamentId" AS id FROM "match" m JOIN phase_group pg ON pg.id = m."phaseGroupId" JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE m.id = $1`,
-      round: `SELECT d."tournamentId" AS id FROM round r JOIN "match" m ON m.id = r."matchId" JOIN phase_group pg ON pg.id = m."phaseGroupId" JOIN phase p ON p.id = pg."phaseId" JOIN division d ON d.id = p."divisionId" WHERE r.id = $1`,
-      song: `SELECT "tournamentId" AS id FROM song WHERE id = $1`,
-      'control-room-flow': `SELECT "tournamentId" AS id FROM control_room_flow WHERE id = $1`,
-    };
-    return this.queryId(queries[entity], entityId);
+    return this.queryId(TOURNAMENT_ID_OF[entity], entityId);
   }
 
   private queryMatch(id: number): Promise<number | null> {

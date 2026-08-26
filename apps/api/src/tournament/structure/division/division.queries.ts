@@ -86,6 +86,24 @@ const AVAILABLE_PARTICIPANTS_OF_DIVISION = `
 `;
 
 /**
+ * Which tournament a division belongs to. The registration routes reach the
+ * tournament before they reach the division, because a player is registered as
+ * a participant of the tournament first.
+ */
+const TOURNAMENT_ID_OF_DIVISION = `
+    SELECT  d."tournamentId" AS "tournamentId"
+    FROM    "division" d
+    WHERE   d."id" = $1
+`;
+
+/** Whether a division exists. The row carries nothing; only its presence is read. */
+const DIVISION_EXISTS = `
+    SELECT  1
+    FROM    "division" d
+    WHERE   d."id" = $1
+`;
+
+/**
  * Every read of a division's roster.
  *
  * The structure below a division — its phases and pools — is read through
@@ -111,16 +129,9 @@ export class DivisionQueries {
         return rows;
     }
 
-    /**
-     * Which tournament a division belongs to, for the callers that have to
-     * reach the tournament before they can reach the division — registering a
-     * player creates a participant of the tournament first.
-     */
+    /** Which tournament a division belongs to. */
     async tournamentIdOf(divisionId: number): Promise<number | null> {
-        const rows: Array<{ tournamentId: number | null }> = await this.dataSource.query(
-            'SELECT d."tournamentId" AS "tournamentId" FROM "division" d WHERE d."id" = $1',
-            [divisionId],
-        );
+        const rows: Array<{ tournamentId: number | null }> = await this.dataSource.query(TOURNAMENT_ID_OF_DIVISION, [divisionId]);
 
         return rows[0]?.tournamentId ?? null;
     }
@@ -130,7 +141,7 @@ export class DivisionQueries {
      * does not, which an empty collection cannot say on its own.
      */
     async exists(divisionId: number): Promise<boolean> {
-        const rows: Array<{ id: number }> = await this.dataSource.query('SELECT d."id" AS "id" FROM "division" d WHERE d."id" = $1', [divisionId]);
+        const rows: unknown[] = await this.dataSource.query(DIVISION_EXISTS, [divisionId]);
 
         return rows.length > 0;
     }

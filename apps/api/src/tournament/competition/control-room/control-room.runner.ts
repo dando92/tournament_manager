@@ -18,6 +18,60 @@ const RUNNER_MATCH_GRAPH: FindOptionsRelations<Match> = {
 
 type FlowTransition = { tournamentId: number; flowId: number; matchAddresses: MatchAddress[] };
 
+/** The flow a match sits in, for the writes that recalculate after touching it. */
+const FLOW_ID_OF_MATCH = `
+    SELECT  entry."flowId" AS "flowId"
+    FROM    "control_room_flow_entry" entry
+    WHERE   entry."matchId" = $1
+`;
+
+/** The same for a set of matches, once per flow rather than once per match. */
+const FLOW_IDS_OF_MATCHES = `
+    SELECT DISTINCT entry."flowId" AS "flowId"
+    FROM    "control_room_flow_entry" entry
+    WHERE   entry."matchId" = ANY($1::int[])
+`;
+
+/** The flows of a tournament that are under way, which closing it has to stop. */
+const OPERATIONAL_FLOW_IDS_OF_TOURNAMENT = `
+    SELECT  flow."id" AS "id"
+    FROM    "control_room_flow" flow
+    WHERE   flow."tournamentId" = $1
+        AND flow."status" IN ('running', 'paused')
+`;
+
+/** Every running flow, which a restarted API reconciles against the database. */
+const RUNNING_FLOW_IDS = `
+    SELECT   flow."id" AS "id"
+    FROM     "control_room_flow" flow
+    WHERE    flow."status" = 'running'
+    ORDER BY flow."id"
+`;
+
+/** The rows `ACTIVE_CONFLICTS` produces. */
+type ActiveConflictRow = { matchId: number; playerId: number };
+
+/**
+ * Which other active match of the tournament already holds one of these
+ * players. A player cannot be sent to two cabinets at once, so an entry waits
+ * while another match has them.
+ */
+const ACTIVE_CONFLICTS = `
+    SELECT DISTINCT other."id" AS "matchId",
+            participant."playerId" AS "playerId"
+    FROM    "match" other
+    JOIN    "phase_group" pg ON pg."id" = other."phaseGroupId"
+    JOIN    "phase" p ON p."id" = pg."phaseId"
+    JOIN    "division" d ON d."id" = p."divisionId"
+    JOIN    "match_entrants_entrant" me ON me."matchId" = other."id"
+    JOIN    "entrant_participants_participant" ep ON ep."entrantId" = me."entrantId"
+    JOIN    "participant" ON participant."id" = ep."participantId"
+    WHERE   d."tournamentId" = $1
+        AND other."active" = TRUE
+        AND other."id" <> $2
+        AND participant."playerId" = ANY($3::int[])
+`;
+
 @Injectable()
 export class ControlRoomRunner {
     constructor(
@@ -26,7 +80,7 @@ export class ControlRoomRunner {
     ) {}
 
     async recalculateForMatch(matchId: number): Promise<void> {
-        const rows: Array<{ flowId: number }> = await this.dataSource.query(`SELECT "flowId" FROM "control_room_flow_entry" WHERE "matchId" = $1`, [matchId]);
+        const rows: Array<{ flowId: number }> = await this.dataSource.query(FLOW_ID_OF_MATCH, [matchId]);
         if (rows[0]) {
             await this.recalculate(rows[0].flowId);
         }
@@ -36,10 +90,7 @@ export class ControlRoomRunner {
         if (matchIds.length === 0) {
             return;
         }
-        const rows: Array<{ flowId: number }> = await this.dataSource.query(
-            `SELECT DISTINCT "flowId" FROM "control_room_flow_entry" WHERE "matchId" = ANY($1::int[])`,
-            [matchIds],
-        );
+        const rows: Array<{ flowId: number }> = await this.dataSource.query(FLOW_IDS_OF_MATCHES, [matchIds]);
         for (const { flowId } of rows) {
             await this.recalculate(flowId);
         }
@@ -79,17 +130,14 @@ export class ControlRoomRunner {
     }
 
     async stopTournament(tournamentId: number): Promise<void> {
-        const ids: Array<{ id: number }> = await this.dataSource.query(
-            `SELECT id FROM "control_room_flow" WHERE "tournamentId" = $1 AND status IN ('running', 'paused')`,
-            [tournamentId],
-        );
+        const ids: Array<{ id: number }> = await this.dataSource.query(OPERATIONAL_FLOW_IDS_OF_TOURNAMENT, [tournamentId]);
         for (const { id } of ids) {
             await this.stop(id, "TOURNAMENT_CLOSED", { tournamentId });
         }
     }
 
     async reconcileRunning(): Promise<void> {
-        const rows: Array<{ id: number }> = await this.dataSource.query(`SELECT id FROM "control_room_flow" WHERE status = 'running' ORDER BY id`);
+        const rows: Array<{ id: number }> = await this.dataSource.query(RUNNING_FLOW_IDS);
         for (const { id } of rows) {
             await this.recalculate(id);
         }
@@ -253,24 +301,12 @@ export class ControlRoomRunner {
         tournamentId: number,
         matchId: number,
         playerIds: number[],
-    ): Promise<Array<{ matchId: number; playerId: number }>> {
+    ): Promise<ActiveConflictRow[]> {
         if (playerIds.length === 0) {
             return [];
         }
 
-        return manager.query(
-            `SELECT DISTINCT other.id AS "matchId", participant."playerId" AS "playerId"
-             FROM "match" other
-             JOIN phase_group pg ON pg.id = other."phaseGroupId"
-             JOIN phase p ON p.id = pg."phaseId"
-             JOIN division d ON d.id = p."divisionId"
-             JOIN match_entrants_entrant me ON me."matchId" = other.id
-             JOIN entrant_participants_participant ep ON ep."entrantId" = me."entrantId"
-             JOIN participant ON participant.id = ep."participantId"
-             WHERE d."tournamentId" = $1 AND other.active = TRUE AND other.id <> $2
-               AND participant."playerId" = ANY($3::int[])`,
-            [tournamentId, matchId, playerIds],
-        );
+        return manager.query(ACTIVE_CONFLICTS, [tournamentId, matchId, playerIds]);
     }
 
     private async loadFlowForUpdate(manager: EntityManager, flowId: number): Promise<ControlRoomFlow> {

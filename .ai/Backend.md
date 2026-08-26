@@ -86,6 +86,33 @@ Detailed ownership and communication flows are defined in [Architecture.md](Arch
 
 `PostgresTournamentPersistence` is superseded. Tournament creation and its required transaction belong directly in `TournamentCommands`.
 
+### How hand-written SQL is written
+
+Every hand-written statement, in a queries class or anywhere else, follows the
+same form. It exists so that a query can be read, explained and measured
+without reading the method around it.
+
+- Declare the SQL as a module-level `SCREAMING_SNAKE_CASE` constant. Never hold
+  it inline in the function body, and never assemble one query out of another
+  by concatenating a fragment onto a call site.
+- Name the constant after what it answers — `STANDINGS_OF_DIVISION`,
+  `ACTIVE_TOURNAMENT_SONGS`, `PROGRESSED_POOLS` — not after the method that
+  calls it.
+- Declare the row type beside it, above the constant, named `...Row`, and say
+  in one line which constant produces it. Where the row is already a DTO, alias
+  it: `type StandingRow = DivisionStandingRowDto;`.
+- Write a comment above the constant that says what question the query answers
+  and why it is shaped the way it is. Record what it replaced when that
+  explains the shape.
+- One query per scope, built once at module load. A query that varies by scope
+  keeps its predicates in a `Record<Scope, string>` and its variants in another
+  `Record<Scope, string>`; it does not rebuild the string on every call.
+- A shared fragment is allowed only as a named constant that both complete
+  queries interpolate, and every query that interpolates it is complete on its
+  own.
+- A query that only asks whether a row exists selects `1`, and its caller reads
+  `rows.length`.
+
 ## Live Messages
 
 - API and SyncStart depend on `LiveEventPublisher`, implemented by a Redis Pub/Sub adapter.

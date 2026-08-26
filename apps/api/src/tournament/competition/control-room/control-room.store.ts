@@ -7,6 +7,19 @@ import { ControlRoomAggregate } from "./control-room.aggregate";
 
 export type ControlRoomEntryInput = { matchId: number; expectedDurationMinutes: number };
 
+/**
+ * Moves every entry of a flow out of the way before the new order is written.
+ *
+ * Position is unique per flow, so writing the replacement order directly would
+ * collide with the order being replaced. The offset is larger than any flow
+ * will ever hold.
+ */
+const PARK_ENTRY_POSITIONS = `
+    UPDATE  "control_room_flow_entry"
+    SET     "position" = "position" + 1000000
+    WHERE   "flowId" = $1
+`;
+
 @Injectable()
 export class ControlRoomStore {
     constructor(
@@ -135,7 +148,7 @@ export class ControlRoomStore {
                 await manager.remove(ControlRoomFlowEntry, removed);
             }
             if (existing.length > 0) {
-                await manager.query(`UPDATE "control_room_flow_entry" SET position = position + 1000000 WHERE "flowId" = $1`, [flowId]);
+                await manager.query(PARK_ENTRY_POSITIONS, [flowId]);
             }
             const replacement = inputs.map((input, index) => {
                 const entry = existingByMatchId.get(input.matchId) ?? new ControlRoomFlowEntry();

@@ -148,23 +148,33 @@ No behavior change.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 6 | Nineteen inline queries across ten files | Extract to module-level `SCREAMING_SNAKE` constants with a row type and a comment, matching the form the conforming `*.queries.ts` files already use | Open |
-| 7 | The assigned-match-ids query is written twice, identically, in `control-room.queries.ts` | One shared constant | Open |
-| 8 | `MatchQueries.activeSongForTournament` builds its SQL as `${ACTIVE_TOURNAMENT_SONGS_BASE} AND ...`, which works only because the base happens to end in a `WHERE` | Two complete constants, or a nullable parameter: `($2::int IS NULL OR active_song."id" = $2)` | Open |
-| 9 | The convention is not written down | Add the rule to `.ai/Backend.md` | Open |
-| 10 | `exists()` selects `id` in three files | `SELECT 1` | Open |
-| 11 | `matchesInScope(scope)` and the other scope builders rebuild the string on every call | Precompute a `Record<Scope, string>` at module load | Open |
-| 12 | `ACTIVE_TOURNAMENT_SONGS_BASE` filters by tournament outside the `UNION ALL` | Filter inside both branches | Open |
+| 6 | Nineteen inline queries across ten files | Extracted to module-level `SCREAMING_SNAKE` constants with a row type and a comment, in the form the conforming `*.queries.ts` files already used | Done |
+| 7 | The assigned-match-ids query is written twice, identically, in `control-room.queries.ts` | One `ASSIGNED_MATCH_IDS_OF_TOURNAMENT`, read by both the creation form and the editor | Done |
+| 8 | `MatchQueries.activeSongForTournament` builds its SQL as `${ACTIVE_TOURNAMENT_SONGS_BASE} AND ...`, which works only because the base happens to end in a `WHERE` | `ACTIVE_TOURNAMENT_SONGS` and `ACTIVE_TOURNAMENT_SONG`, each complete, each wrapping the named base | Done |
+| 9 | The convention is not written down | Written down in `.ai/Backend.md`, under **How hand-written SQL is written** | Done |
+| 10 | `exists()` selects `id` in three files | `SELECT 1`, and the caller reads `rows.length` against an `unknown[]` | Done |
+| 11 | `matchesInScope(scope)` and the other scope builders rebuild the string on every call | The builders take a predicate, and a `Record<Scope, string>` beside each holds the finished queries, built once at module load | Done |
+| 12 | `ACTIVE_TOURNAMENT_SONGS_BASE` filters by tournament outside the `UNION ALL` | Filtered inside both branches, which also let the wrapper and its carried `tournamentId` column go | Done |
 
-The inline call sites: `control-room.queries.ts` (3), `control-room.runner.ts`
-(5), `control-room.store.ts` (1), `control-room-mutation.guard.ts` (2),
-`tournament-open.guard.ts` (1, plus the seven in its `Record`),
-`advancement-rollback.guard.ts` (1), `match.queries.ts` (1),
-`division.queries.ts` (2), `phase-group.queries.ts` (2),
-`participants.queries.ts` (1).
+The inline call sites were: `control-room.queries.ts` (3),
+`control-room.runner.ts` (5), `control-room.store.ts` (1),
+`control-room-mutation.guard.ts` (2), `tournament-open.guard.ts` (1, plus the
+seven in its `Record`), `advancement-rollback.guard.ts` (1),
+`match.queries.ts` (1), `division.queries.ts` (2), `phase-group.queries.ts` (2),
+`participants.queries.ts` (1). They are now eighteen named constants — eighteen
+rather than nineteen because of item 7 — plus `TOURNAMENT_ID_OF`, which keeps
+the guard's seven walks as a `Record` because that is what its caller indexes.
 
-Item 9 is the one that keeps the rest from regressing. Everything else here is
-mechanical.
+Item 9 is the one that keeps the rest from regressing. The rule as written also
+covers the two forms this batch removed: no fragment concatenated onto a call
+site, and no query rebuilt per call.
+
+Two things were tidied along the way rather than left half-converted. The
+identifiers in the extracted SQL are now quoted and aliased the way the
+conforming files quote them, so `JOIN match ON match."phaseGroupId" = pg.id`
+reads as `JOIN "match" m ON m."phaseGroupId" = pg."id"`. And the extracted
+control-room and guard queries kept their semantics exactly; the e2e suite,
+which covers every one of these routes, passes unchanged.
 
 ## D — Round trips and N+1
 

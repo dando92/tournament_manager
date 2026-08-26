@@ -115,6 +115,20 @@ const DIVISIONS_OF_PARTICIPANT = `
 `;
 
 /**
+ * Whether an account may edit a tournament. Owning it and staffing it are the
+ * same permission, so one row of either role answers the question and nothing
+ * from that row is read.
+ */
+const PARTICIPANT_CAN_EDIT = `
+    SELECT  1
+    FROM    "participant" pa
+    WHERE   pa."tournamentId" = $1
+        AND pa."accountId" = $2
+        AND (string_to_array(pa."roles", ',') && ARRAY['owner', 'staff'])
+    LIMIT   1
+`;
+
+/**
  * Every read of who takes part in a tournament.
  *
  * It projects and nothing else: it does not write, does not publish, and does
@@ -158,15 +172,7 @@ export class ParticipantQueries {
      * same permission; the guards ask the same question of the same rows.
      */
     async canEdit(tournamentId: number, accountId: string): Promise<boolean> {
-        const rows: Array<{ id: number }> = await this.dataSource.query(
-            `SELECT pa."id" AS "id"
-             FROM   "participant" pa
-             WHERE  pa."tournamentId" = $1
-                AND pa."accountId" = $2
-                AND (string_to_array(pa."roles", ',') && ARRAY['owner', 'staff'])
-             LIMIT  1`,
-            [tournamentId, accountId],
-        );
+        const rows: unknown[] = await this.dataSource.query(PARTICIPANT_CAN_EDIT, [tournamentId, accountId]);
 
         return rows.length > 0;
     }

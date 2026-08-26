@@ -96,6 +96,25 @@ const ADDRESS_OF_MATCH_POOL = `
     WHERE   m."id" = $1
 `;
 
+/** Whether a pool exists. The row carries nothing; only its presence is read. */
+const PHASE_GROUP_EXISTS = `
+    SELECT  1
+    FROM    "phase_group" pg
+    WHERE   pg."id" = $1
+`;
+
+/**
+ * The first pool of a phase. The start.gg import puts a set whose pool it
+ * cannot place into the phase's own pool rather than inventing one.
+ */
+const DEFAULT_PHASE_GROUP_OF_PHASE = `
+    SELECT   pg."id" AS "id"
+    FROM     "phase_group" pg
+    WHERE    pg."phaseId" = $1
+    ORDER BY pg."id" ASC
+    LIMIT    1
+`;
+
 /** Every read of a pool that is not part of the tree. */
 @Injectable()
 export class PhaseGroupQueries {
@@ -127,23 +146,14 @@ export class PhaseGroupQueries {
      * answer `404` for one that does not, which an empty list cannot say.
      */
     async exists(phaseGroupId: number): Promise<boolean> {
-        const rows: Array<{ id: number }> = await this.dataSource.query(
-            'SELECT pg."id" AS "id" FROM "phase_group" pg WHERE pg."id" = $1',
-            [phaseGroupId],
-        );
+        const rows: unknown[] = await this.dataSource.query(PHASE_GROUP_EXISTS, [phaseGroupId]);
 
         return rows.length > 0;
     }
 
-    /**
-     * The first pool of a phase. The start.gg import puts a set whose pool it
-     * cannot place into the phase's own pool rather than inventing one.
-     */
+    /** The pool a phase's own sets belong to. */
     async defaultForPhase(phaseId: number): Promise<number | null> {
-        const rows: Array<{ id: number }> = await this.dataSource.query(
-            'SELECT pg."id" AS "id" FROM "phase_group" pg WHERE pg."phaseId" = $1 ORDER BY pg."id" ASC LIMIT 1',
-            [phaseId],
-        );
+        const rows: Array<{ id: number }> = await this.dataSource.query(DEFAULT_PHASE_GROUP_OF_PHASE, [phaseId]);
 
         return rows[0]?.id ?? null;
     }

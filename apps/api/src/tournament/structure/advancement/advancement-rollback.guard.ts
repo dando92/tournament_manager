@@ -25,6 +25,33 @@ type ProgressedPoolRow = {
     reason: "RESULT_COMMITTED" | "SCORES_RECORDED";
 };
 
+/**
+ * The pools among these that have already started competing, with the match
+ * that proves it.
+ *
+ * A committed result is progress, and so is any standing carrying a score or a
+ * hand-scored point. Both block a rollback that would change who competes in
+ * the pool.
+ */
+const PROGRESSED_POOLS = `
+    SELECT   pg."id" AS "targetId",
+             pg."name" AS "targetName",
+             m."id" AS "blockingMatchId",
+             m."name" AS "blockingMatchName",
+             CASE WHEN m."matchResultId" IS NOT NULL THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
+    FROM     "phase_group" pg
+    JOIN     "match" m ON m."phaseGroupId" = pg."id"
+    WHERE    pg."id" = ANY($1::int[])
+        AND  (m."matchResultId" IS NOT NULL OR EXISTS (
+                SELECT  1
+                FROM    "round" r
+                JOIN    "standing" st ON st."roundId" = r."id"
+                WHERE   r."matchId" = m."id"
+                    AND (st."scoreId" IS NOT NULL OR st."points" > 0)
+             ))
+    ORDER BY pg."id", m."id"
+`;
+
 @Injectable()
 export class AdvancementRollbackGuard {
     constructor(
@@ -96,21 +123,7 @@ export class AdvancementRollbackGuard {
             return [];
         }
 
-        const rows: ProgressedPoolRow[] = await this.dataSource.query(
-            `SELECT pg.id AS "targetId", pg.name AS "targetName", match.id AS "blockingMatchId",
-                    match.name AS "blockingMatchName",
-                    CASE WHEN match."matchResultId" IS NOT NULL THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS reason
-             FROM phase_group pg
-             JOIN match ON match."phaseGroupId" = pg.id
-             WHERE pg.id = ANY($1::int[])
-               AND (match."matchResultId" IS NOT NULL OR EXISTS (
-                   SELECT 1 FROM round
-                   JOIN standing ON standing."roundId" = round.id
-                   WHERE round."matchId" = match.id AND (standing."scoreId" IS NOT NULL OR standing.points > 0)
-               ))
-             ORDER BY pg.id, match.id`,
-            [affectedIds],
-        );
+        const rows: ProgressedPoolRow[] = await this.dataSource.query(PROGRESSED_POOLS, [affectedIds]);
 
         return rows.map((row) => ({
             kind: "phase_group",
