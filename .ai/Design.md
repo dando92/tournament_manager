@@ -320,6 +320,23 @@ scannable Player, Points, Place summary and reveals one player's score details
 vertically. Both layouts preserve table semantics and touch-sized editing
 controls without a nested horizontal scroll surface.
 
+A played percentage is the single standing-management affordance at every
+viewport size. Hover and keyboard focus make the cell visibly interactive;
+activating it opens the standing editor, whose footer contains both Save and a
+confirmed Delete action. The table does not duplicate pencil and trash icons.
+Committed matches remain read-only until they are reopened. On mobile, player
+and song removal lives in the match-level `⋮` menu rather than individual
+headers. Each action opens a multi-selection modal containing only removable
+items: current players for player removal, and song rounds without standings
+for song removal. Desktop keeps its direct row and column actions.
+
+Imported song titles may still contain their pack path in frontend data, but
+tables and song selectors present only the final path segment. Truncated song
+titles move horizontally on pointer hover, keyboard focus, or touch activation
+to reveal the hidden text; reduced-motion preferences suppress the animation.
+This applies to normal round and tiebreak headers, which share bounded widths
+so a long tiebreak title cannot determine the whole table layout.
+
 ## Match control room
 
 Control Room presents one tournament-level lobby control followed by each

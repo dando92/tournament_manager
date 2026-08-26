@@ -53,7 +53,7 @@ export default function DeleteConfirmButton({
           if (stopPropagation) event.stopPropagation();
           setOpen(true);
         }}
-        className={`${btnTrash} ${className}`}
+        className={`${children ? `${btnDanger} gap-2` : btnTrash} ${className}`}
       >
         <FontAwesomeIcon icon={faTrash} className={iconClassName} />
         {children}

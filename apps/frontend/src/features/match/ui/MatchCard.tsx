@@ -14,6 +14,8 @@ import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
 import { getMatchCommitState } from "@/features/match/model/matchStatus";
 import { entrantPlayers } from "@/features/participant/model/entrant";
 import TiebreakModal from "@/features/match/ui/TiebreakModal";
+import RemoveMatchItemsModal from "@/features/match/ui/RemoveMatchItemsModal";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 import { btnPrimary } from "@/styles/buttonStyles";
 
 type MatchCardProps = {
@@ -144,6 +146,7 @@ export default function MatchCard({
   const [editMatchNotesModalOpen, setEditMatchNotesModalOpen] = useState(false);
   const [editScoringSystemModalOpen, setEditScoringSystemModalOpen] = useState(false);
   const [tiebreakModalOpen, setTiebreakModalOpen] = useState(false);
+  const [removeItemsModal, setRemoveItemsModal] = useState<"players" | "songs" | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [savingAdvancementRules, setSavingAdvancementRules] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
@@ -156,6 +159,14 @@ export default function MatchCard({
   const isHighlighted = match.id === highlight.matchId;
   const commitState = getMatchCommitState(match);
   const matchPlayers = entrantPlayers(match.entrants);
+  const removablePlayers = (match.entrants ?? [])
+    .filter((entrant) => entrant.type === "player")
+    .map((entrant) => ({ id: entrant.id, label: entrant.name }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+  const removableSongs = match.rounds
+    .filter((round) => round.song !== null && (round.standings ?? []).length === 0)
+    .map((round) => ({ id: round.id, label: displaySongTitle(round.song!.title) }))
+    .sort((left, right) => left.label.localeCompare(right.label));
   const hasIncomingRoutes = (match.advancementRules ?? []).some(
     (rule) => rule.targetKind === "match" && rule.targetId === match.id,
   );
@@ -285,6 +296,13 @@ export default function MatchCard({
       <StandingModal
         {...standingModal}
         onClose={() => setStandingModal(closedModal)}
+        onDelete={standingModal.mode === "edit" ? () => {
+          if (standingModal.target === "tiebreak") {
+            onClearTiebreakStanding(standingModal.roundId, standingModal.playerId);
+          } else {
+            onDeleteStanding(standingModal.playerId, standingModal.roundId);
+          }
+        } : undefined}
         onSave={(playerId, roundId, pct, score, isFailed, scoreId) => {
           if (standingModal.target === "tiebreak") {
             onSaveTiebreakScore(roundId, playerId, pct, isFailed, scoreId);
@@ -303,6 +321,22 @@ export default function MatchCard({
         tournamentId={tournamentId}
         onClose={() => setTiebreakModalOpen(false)}
         onCreate={onCreateTiebreak}
+      />
+      <RemoveMatchItemsModal
+        open={removeItemsModal !== null}
+        title={removeItemsModal === "players" ? "Remove players from match" : "Remove songs from match"}
+        emptyMessage={removeItemsModal === "players" ? "No players can be removed." : "No songs without standings can be removed."}
+        items={removeItemsModal === "players" ? removablePlayers : removableSongs}
+        onClose={() => setRemoveItemsModal(null)}
+        onRemove={async (ids) => {
+          if (removeItemsModal === "players") {
+            await onAddPlayersToMatch((match.entrants ?? []).filter((entrant) => !ids.includes(entrant.id)).map((entrant) => entrant.id));
+            return;
+          }
+          for (const roundId of ids) {
+            await onDeleteRound(roundId);
+          }
+        }}
       />
       <EditMatchNotesModal
         match={match}
@@ -343,6 +377,10 @@ export default function MatchCard({
         onDeleteMatch={onDeleteMatch}
         onOpenAddSong={openAddSong}
         onOpenAddPlayer={() => setAddPlayersToMatchModalOpen(true)}
+        canRemovePlayers={removablePlayers.length > 0}
+        canRemoveSongs={removableSongs.length > 0}
+        onOpenRemovePlayers={() => setRemoveItemsModal("players")}
+        onOpenRemoveSongs={() => setRemoveItemsModal("songs")}
         onRenameMatch={onRenameMatch}
         canEditAdvancementRules={controls && !editMode}
         onEditAdvancementRules={enterEditMode}

@@ -1,6 +1,8 @@
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { useStandingModal } from "@/features/match/model/useStandingModal";
 import { btnPrimary } from "@/styles/buttonStyles";
+import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 
 type StandingModalProps = {
   mode: "add" | "edit";
@@ -17,6 +19,7 @@ type StandingModalProps = {
   initialScoreId?: number;
   initialIsFailed?: boolean;
   onClose: () => void;
+  onDelete?: () => void | Promise<void>;
   onSave: (
     playerId: number,
     roundId: number,
@@ -39,8 +42,10 @@ export default function StandingModal({
   initialScoreId,
   initialIsFailed,
   onClose,
+  onDelete,
   onSave,
 }: StandingModalProps) {
+  const visibleSongTitle = displaySongTitle(songTitle);
   const {
     percentage,
     isFailed,
@@ -77,7 +82,23 @@ export default function StandingModal({
       onClose={onClose}
       title={mode === "add" ? "Add standing" : "Edit standing"}
       footer={
-        <div className="flex flex-row gap-2 justify-end">
+        <div className="flex flex-row justify-between gap-2">
+          <div>
+            {mode === "edit" && onDelete && (
+              <DeleteConfirmButton
+                onConfirm={async () => {
+                  await onDelete();
+                  onClose();
+                }}
+                title="Delete standing"
+                confirmTitle="Delete standing"
+                confirmMessage={`Delete ${playerName}'s standing for "${visibleSongTitle}"?`}
+                confirmText="Delete"
+              >
+                Delete
+              </DeleteConfirmButton>
+            )}
+          </div>
           <div className="flex flex-row gap-2">
             <button
               type="button"
@@ -94,7 +115,7 @@ export default function StandingModal({
       }
     >
       <p className="text-sm text-ui-text-mute mb-4">
-        {playerName} for {songTitle}
+        {playerName} for {visibleSongTitle}
       </p>
       <div className="flex flex-col gap-4">
         <div>

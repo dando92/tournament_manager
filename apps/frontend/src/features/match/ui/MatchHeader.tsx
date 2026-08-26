@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalculator, faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCalculator, faMusic, faPenToSquare, faRotateLeft, faStickyNote, faTowerBroadcast, faTrash, faUserMinus, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, MatchCommitState } from "@/features/match/model/types";
 import { btnSecondary } from "@/styles/buttonStyles";
 import ActionsMenu from "@/shared/components/ui/ActionsMenu";
@@ -22,6 +22,10 @@ type Props = {
   onDeleteMatch: (matchId: number) => void;
   onOpenAddSong: () => void;
   onOpenAddPlayer: () => void;
+  canRemovePlayers: boolean;
+  canRemoveSongs: boolean;
+  onOpenRemovePlayers: () => void;
+  onOpenRemoveSongs: () => void;
   onRenameMatch?: (matchId: number, name: string) => void;
   canEditAdvancementRules?: boolean;
   onEditAdvancementRules?: () => void;
@@ -44,6 +48,10 @@ export default function MatchHeader({
   onDeleteMatch,
   onOpenAddSong,
   onOpenAddPlayer,
+  canRemovePlayers,
+  canRemoveSongs,
+  onOpenRemovePlayers,
+  onOpenRemoveSongs,
   onRenameMatch,
   canEditAdvancementRules = false,
   onEditAdvancementRules,
@@ -173,6 +181,24 @@ export default function MatchHeader({
                   icon: faPenToSquare,
                   hidden: isMatchEnded || !canEditAdvancementRules,
                   onSelect: () => onEditAdvancementRules?.(),
+                },
+                {
+                  key: "remove-players",
+                  label: "Remove players",
+                  icon: faUserMinus,
+                  danger: true,
+                  hidden: isMatchEnded || !canRemovePlayers,
+                  className: "sm:hidden",
+                  onSelect: onOpenRemovePlayers,
+                },
+                {
+                  key: "remove-songs",
+                  label: "Remove songs",
+                  icon: faMusic,
+                  danger: true,
+                  hidden: isMatchEnded || !canRemoveSongs,
+                  className: "sm:hidden",
+                  onSelect: onOpenRemoveSongs,
                 },
                 {
                   key: "reopen",

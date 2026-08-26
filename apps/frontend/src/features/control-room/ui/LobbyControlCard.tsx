@@ -1,5 +1,6 @@
 import { useLobbyControl } from "@/features/tournament/model/useLobbyControl";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 
 export default function LobbyControlCard({ tournamentId }: { tournamentId: number }) {
     const control = useLobbyControl(tournamentId);
@@ -45,7 +46,7 @@ export default function LobbyControlCard({ tournamentId }: { tournamentId: numbe
                             {songs.length === 0 && <option value="">No song in an active match</option>}
                             {songs.map((song) => (
                                 <option key={song.id} value={song.id}>
-                                    {song.title}
+                                    {displaySongTitle(song.title)}
                                 </option>
                             ))}
                         </select>

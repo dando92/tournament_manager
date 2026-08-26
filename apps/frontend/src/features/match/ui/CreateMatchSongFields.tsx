@@ -5,6 +5,7 @@ import { Song } from "@/features/song/model/types";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import { btnCreateIcon } from "@/styles/buttonStyles";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 
 type CreateMatchSongFieldsProps = {
   songAddType: "title" | "roll";
@@ -37,7 +38,7 @@ export default function CreateMatchSongFields({
   onAddDifficulty,
   onRemoveDifficulty,
 }: CreateMatchSongFieldsProps) {
-  const songOptions = songs.map((song) => ({ value: song.id, label: song.title }));
+  const songOptions = songs.map((song) => ({ value: song.id, label: displaySongTitle(song.title) }));
 
   return (
     <div className="w-full">
@@ -113,7 +114,7 @@ export default function CreateMatchSongFields({
       {songAddType === "title" && (
         <MultiSelect
           options={songOptions}
-          value={selectedSongs.map((song) => ({ value: song.id, label: song.title }))}
+          value={selectedSongs.map((song) => ({ value: song.id, label: displaySongTitle(song.title) }))}
           onChange={(selected) =>
             onSelectedSongsChange(
               selected

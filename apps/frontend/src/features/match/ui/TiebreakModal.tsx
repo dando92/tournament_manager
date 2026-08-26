@@ -5,6 +5,7 @@ import { listSongs } from "@/features/song/api/song.api";
 import { Song } from "@/features/song/model/types";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 
 type Props = {
   open: boolean;
@@ -120,7 +121,7 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
               onChange={(event) => setSongId(Number(event.target.value) || null)}
             >
               {songs.length === 0 && <option value="">No songs available</option>}
-              {songs.map((song) => <option key={song.id} value={song.id}>{song.title}</option>)}
+              {songs.map((song) => <option key={song.id} value={song.id}>{displaySongTitle(song.title)}</option>)}
             </select>
           </label>
         )}

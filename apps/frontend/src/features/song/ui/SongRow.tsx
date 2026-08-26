@@ -1,6 +1,8 @@
 import { Song } from "@/features/song/model/types";
 import { chartDifficultyPresentation, meterColor } from "@/features/song/model/chartDifficultyPresentation";
+import { displaySongLabel } from "@/features/song/model/songTitle";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
+import OverflowMarquee from "@/shared/components/ui/OverflowMarquee";
 
 type Props = {
   song: Song;
@@ -17,7 +19,7 @@ type Props = {
  * about a slot it was never told.
  */
 export default function SongRow({ song, canEdit, onDelete }: Props) {
-  const label = song.artist ? `${song.artist} - ${song.title}` : song.title;
+  const label = displaySongLabel(song);
   const slot = song.chartDifficulty ? chartDifficultyPresentation[song.chartDifficulty] : null;
 
   return (
@@ -36,7 +38,7 @@ export default function SongRow({ song, canEdit, onDelete }: Props) {
           </span>
         )}
 
-        <span className="flex-1 text-sm text-ui-text truncate">{label}</span>
+        <OverflowMarquee text={label} className="flex-1 text-sm text-ui-text" />
 
         {canEdit && (
           <DeleteConfirmButton

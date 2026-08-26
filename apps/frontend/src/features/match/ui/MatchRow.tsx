@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faMinus, faPlus, faPencil } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, Round } from "@/features/match/model/types";
 import { Player } from "@/features/participant/model/types";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { btnCreateIcon } from "@/styles/buttonStyles";
-import MobileScoreActionsMenu, {
-  type MobileScoreMenuState,
-  type ScoreEntry,
-} from "@/features/match/ui/MobileScoreActionsMenu";
+
+type ScoreEntry = {
+  scoreId: number;
+  score: number;
+  percentage: number;
+  isFailed: boolean;
+};
 
 type MatchRowProps = {
   match: Match;
@@ -73,25 +75,12 @@ export default function MatchRow({
   onChangeTiebreakPoints,
   onClearTiebreakStanding,
 }: MatchRowProps) {
-  const [mobileScoreMenu, setMobileScoreMenu] = useState<MobileScoreMenuState | null>(null);
   const matchResultPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
   const totalPoints = matchResultPoints ?? match.rounds
     .map((r) => (r.standings ?? []).find((s) => s.player.id === player.id))
     .reduce((acc, s) => acc + (s?.points ?? 0), 0);
   const canToggleRoute = Boolean(match.matchResult && routeTargetMatchId && onToggleRouteHighlight);
   const canClickCompletedRow = Boolean(match.matchResult && (canToggleRoute || canClearRouteHighlight));
-
-  useEffect(() => {
-    if (!mobileScoreMenu) return;
-
-    const close = () => setMobileScoreMenu(null);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("click", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("click", close);
-    };
-  }, [mobileScoreMenu]);
 
   /**
    * A hand-scored round has no score to open a modal for: the points are the
@@ -229,27 +218,27 @@ export default function MatchRow({
                column reads as a state of the round rather than of one run. */
             className="px-1 sm:px-3 py-2 text-center"
           >
-            <div
-              className={`relative inline-flex flex-col items-center gap-0.5 ${
-                controls ? "w-full sm:w-auto cursor-pointer sm:cursor-default" : ""
+            <button
+              type="button"
+              disabled={!controls}
+              className={`relative inline-flex flex-col items-center gap-0.5 rounded px-2 transition-colors disabled:cursor-default ${
+                controls ? "cursor-pointer hover:bg-ui-raised focus:outline-none focus:ring-2 focus:ring-ui-accent/60" : ""
               }`}
               onClick={(event) => {
                 if (!controls) return;
                 event.stopPropagation();
-                const rect = event.currentTarget.getBoundingClientRect();
-                setMobileScoreMenu((current) =>
-                  current?.roundId === round.id && current.scoreId === scoreData.scoreId
-                    ? null
-                    : {
-                        roundId: round.id,
-                        scoreId: scoreData.scoreId,
-                        x: Math.min(rect.right, window.innerWidth - 8),
-                        y: rect.bottom + 4,
-                        scoreData,
-                        songTitle: song.title,
-                      },
+                onOpenEditStanding(
+                  player.id,
+                  round.id,
+                  player.playerName,
+                  song.title,
+                  scoreData.scoreId,
+                  scoreData.percentage,
+                  scoreData.score,
+                  scoreData.isFailed,
                 );
               }}
+              title={controls ? "Edit or delete standing" : undefined}
             >
               <div className="flex min-h-7 items-center justify-center gap-1.5">
                 <span className={`match-score-percentage font-bold text-base ${scoreData.isFailed ? "text-state-failed" : "text-ui-text"}`}>
@@ -258,46 +247,11 @@ export default function MatchRow({
                 {scoreData.isFailed && (
                   <span className="text-xs bg-state-failed/10 text-state-failed px-1 rounded font-semibold">F</span>
                 )}
-                {controls && (
-                  <FontAwesomeIcon icon={faChevronDown} className="sm:hidden text-xs text-ui-text-mute" />
-                )}
-                {controls && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenEditStanding(
-                        player.id,
-                        round.id,
-                        player.playerName,
-                        song.title,
-                        scoreData.scoreId,
-                        scoreData.percentage,
-                        scoreData.score,
-                        scoreData.isFailed,
-                      );
-                    }}
-                    title="Edit score"
-                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center text-ui-text-mute hover:text-ui-text"
-                  >
-                    <FontAwesomeIcon icon={faPencil} className="text-sm" />
-                  </button>
-                )}
               </div>
-              <div className="-mt-1 flex min-h-4 items-center justify-center gap-1.5 sm:mt-0 sm:min-h-6">
+              <div className="-mt-1 flex min-h-4 items-center justify-center sm:mt-0 sm:min-h-6">
                 <span className="text-xs text-ui-text-mute">{scoreData.score} pts</span>
-                {controls && (
-                  <DeleteConfirmButton
-                    onConfirm={() => onDeleteStanding(player.id, round.id)}
-                    title="Delete score"
-                    className="hidden sm:inline-flex h-6 w-6 items-center justify-center shrink-0"
-                    iconClassName="text-sm"
-                    confirmMessage={`Delete ${player.playerName}'s score for "${song.title}"?`}
-                    stopPropagation
-                  />
-                )}
               </div>
-            </div>
+            </button>
           </td>
         );
       })}
@@ -333,7 +287,8 @@ export default function MatchRow({
               <button
                 type="button"
                 disabled={!controls || tiebreak.invalidated}
-                className="font-bold text-ui-text disabled:cursor-default"
+                className="rounded px-2 py-1 font-bold text-ui-text transition-colors enabled:hover:bg-ui-raised enabled:focus:outline-none enabled:focus:ring-2 enabled:focus:ring-ui-accent/60 disabled:cursor-default"
+                title={controls && !tiebreak.invalidated ? "Edit or delete standing" : undefined}
                 onClick={() => onOpenEditTiebreakStanding(
                   player.id,
                   tiebreak.id,
@@ -383,16 +338,6 @@ export default function MatchRow({
         <td className="border-l border-ui-border px-2 py-2 text-center font-bold text-ui-text-soft">
           {match.resultState.entries.find((entry) => entry.playerId === player.id)?.placement ?? "—"}
         </td>
-      )}
-      {mobileScoreMenu && (
-        <MobileScoreActionsMenu
-          menu={mobileScoreMenu}
-          playerId={player.id}
-          playerName={player.playerName}
-          onClose={() => setMobileScoreMenu(null)}
-          onOpenEditStanding={onOpenEditStanding}
-          onDeleteStanding={onDeleteStanding}
-        />
       )}
     </tr>
   );

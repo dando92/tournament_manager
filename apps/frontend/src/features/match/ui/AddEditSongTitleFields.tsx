@@ -2,6 +2,7 @@ import { Song } from "@/features/song/model/types";
 import Select from "react-select";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";
+import { displaySongLabel } from "@/features/song/model/songTitle";
 
 type AddEditSongTitleFieldsProps = {
   songGroups: string[];
@@ -22,7 +23,7 @@ export default function AddEditSongTitleFields({
 }: AddEditSongTitleFieldsProps) {
   const songOptions = filteredSongs.map((song) => ({
     value: song.id,
-    label: song.artist ? `${song.artist} - ${song.title}` : song.title,
+    label: displaySongLabel(song),
   }));
 
   return (
@@ -50,7 +51,7 @@ export default function AddEditSongTitleFields({
             options={songOptions}
             value={selectedSongs.map((song) => ({
               value: song.id,
-              label: song.artist ? `${song.artist} - ${song.title}` : song.title,
+              label: displaySongLabel(song),
             }))}
             onChange={(selected) =>
               onSongsSelect(

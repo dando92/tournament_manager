@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
 import { entrantPlayers } from "@/features/participant/model/entrant";
@@ -8,6 +6,8 @@ import PathRow from "@/features/match/ui/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { toOrdinal } from "@/shared/utils";
 import MobileMatchTable from "@/features/match/ui/MobileMatchTable";
+import OverflowMarquee from "@/shared/components/ui/OverflowMarquee";
+import { displaySongTitle } from "@/features/song/model/songTitle";
 
 type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed: boolean };
 
@@ -64,19 +64,6 @@ export default function MatchTable({
   onChangeTiebreakPoints,
   onClearTiebreakStanding,
 }: MatchTableProps) {
-  const [tooltip, setTooltip] = useState<{ roundId: number; title: string; x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    if (!tooltip) return;
-    const close = () => setTooltip(null);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("click", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("click", close);
-    };
-  }, [tooltip]);
-
   /* Only played standings appear here: a hand-scored one has no score to show,
      and its cell reads the points off the round instead. */
   const scoreTable: Record<string, ScoreEntry> = {};
@@ -168,40 +155,18 @@ export default function MatchTable({
               <tr className="bg-ui-raised text-[10px] uppercase tracking-wider text-ui-text-mute">
                 <th className="px-2 py-2.5 w-8" />
                 <th className="px-3 py-2.5 text-left font-semibold w-[120px] sm:w-[160px]">Player</th>
-                {match.rounds.map((round, idx) => {
+                {match.rounds.map((round) => {
                   const song = round.song;
                   /* A hand-scored round holds nothing while every point is
                      zero, so it can still be taken away. */
                   const roundHasStandings = song
                     ? (round.standings ?? []).length > 0
                     : (round.standings ?? []).some((standing) => standing.points > 0);
-                  const title = song ? song.title : "By hand";
+                  const title = song ? displaySongTitle(song.title) : "By hand";
                   return (
                     <th key={round.id} className={`px-1 sm:px-3 py-2.5 text-center font-semibold ${song ? "min-w-[70px]" : "min-w-[92px]"} sm:min-w-[130px]`}>
                       <div className="flex items-center justify-center gap-1.5">
-                        {song ? (
-                          <div className="sm:hidden">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (tooltip?.roundId === round.id) {
-                                  setTooltip(null);
-                                } else {
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setTooltip({ roundId: round.id, title, x: rect.left + rect.width / 2, y: rect.top - 8 });
-                                }
-                              }}
-                              className="font-semibold px-1"
-                            >
-                              {idx + 1}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="whitespace-nowrap sm:hidden">By hand</span>
-                        )}
-                        <span className="hidden sm:inline truncate max-w-[110px]" title={title}>
-                          {title}
-                        </span>
+                        <OverflowMarquee text={title} className="max-w-[110px]" />
                         {canEditMatchContent && !roundHasStandings && (
                           <DeleteConfirmButton
                             onConfirm={() => onDeleteRound(round.id)}
@@ -210,7 +175,7 @@ export default function MatchTable({
                             iconClassName="text-xs"
                             confirmMessage={
                               song
-                                ? `Remove song "${song.title}" from this match?`
+                                ? `Remove song "${title}" from this match?`
                                 : "Stop scoring this match by hand?"
                             }
                             confirmText="Remove"
@@ -224,7 +189,10 @@ export default function MatchTable({
                 {match.tiebreaks.map((tiebreak) => (
                   <th key={tiebreak.id} className="min-w-[130px] border-l border-ui-border bg-ui-selected/40 px-3 py-2.5 text-center font-semibold">
                     <div className="flex items-center justify-center gap-1.5">
-                      <span title={tiebreak.song?.title ?? "By hand"}>TB {tiebreak.sequence} · {tiebreak.song?.title ?? "By hand"}</span>
+                      <OverflowMarquee
+                        text={`TB ${tiebreak.sequence} · ${tiebreak.song ? displaySongTitle(tiebreak.song.title) : "By hand"}`}
+                        className="max-w-[180px]"
+                      />
                       {tiebreak.invalidated && <span className="text-state-failed">Invalid</span>}
                       {canEditMatchContent && (
                         <DeleteConfirmButton
@@ -344,16 +312,6 @@ export default function MatchTable({
         onClearTiebreakStanding={onClearTiebreakStanding}
       />
 
-      {tooltip && createPortal(
-        <div
-          style={{ position: "fixed", left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)", zIndex: 9999 }}
-          className="bg-ui-text text-ui-surface text-xs rounded px-2 py-1.5 whitespace-nowrap shadow-lg pointer-events-none"
-        >
-          {tooltip.title}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ui-text" />
-        </div>,
-        document.body,
-      )}
     </>
   );
 }
