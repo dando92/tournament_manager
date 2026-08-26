@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This file is the inspectable backlog for ambiguous product rules and suspected functional defects discovered during the architecture migration. These items are deliberately separate from migration tasks: the migration must preserve and characterize current behavior unless the user explicitly approves an earlier functional change.
+This file is the inspectable backlog for ambiguous product rules and suspected functional defects. Open questions remain separate from implementation work until the user approves the intended behavior.
 
 ## Workflow
 
 - Add an item as soon as a functional doubt is discovered.
 - Use a stable `FQ-###` identifier in tests, documentation, and later decisions.
 - Record observed behavior and evidence without presenting it as an approved requirement.
-- Keep the status `Deferred` during the architecture migration unless the user explicitly changes its priority.
-- After the architecture migration, review each item with the user, record the decision, implement it in a focused change, and set its status to `Resolved`.
+- Keep the status `Deferred` until the user explicitly changes its priority.
+- When an item is prioritized, review it with the user, record the decision, implement it in a focused change, and set its status to `Resolved`.
 - Prefer a short regression test that exposes the current behavior. Keep test helpers and production changes simple enough for a future maintainer to understand locally.
 
 ## Open Questions
@@ -246,3 +246,68 @@ This file is the inspectable backlog for ambiguous product rules and suspected f
   `apps/api/src/tournament/structure/advancement/advancement.runner.ts`.
 - Rule: preserve these choices unless the user explicitly changes the Control
   Room lifecycle or entrant-readiness model.
+
+### FQ-028 — What precision a score percentage carries
+
+- Status: Deferred.
+- Observed behavior: `Score.percentage` is declared `decimal` with no precision
+  or scale, so the column is an unbounded PostgreSQL `numeric`. The entity
+  transformer converts it back with `Number(value)`, and the raw JSON
+  projections in `MatchQueries` bypass that transformer entirely and rely on
+  `json_build_object` rendering the numeric as a JSON number. Nothing states how
+  many decimal places a percentage may hold, so nothing rejects a value with
+  more.
+- Question: what precision is authoritative for a percentage — the one
+  GrooveStats and the SyncStart protocol report, or a stricter application
+  rule? A bounded `numeric(p, s)` or an integer count of thousandths would both
+  be exact and cheaper to store and compare, but each fixes a different answer.
+- Evidence: `packages/persistence/src/entities/score.entity.ts`, the
+  `percentage` fields aggregated in
+  `apps/api/src/tournament/competition/match/match.queries.ts`, and the
+  comparisons in `apps/api/src/tournament/competition/match/placement.resolver.ts`.
+- Rule: preserve the unbounded column until the reported precision is
+  established. Item 27 of
+  [QueryAndSchemaOptimization.md](QueryAndSchemaOptimization.md) is blocked on
+  this answer.
+
+### FQ-029 — Two players whose names normalize to the same value
+
+- Status: Resolved. A normalized player name is unique across the application:
+  `Dando` and `dando` are one person and one row.
+- Observed behavior: the player catalogue is application-wide and keyed by id
+  alone. Nothing prevents two rows whose `playerName` normalizes — trimmed and
+  lowercased — to the same value. The import preview already treats that state
+  as wrong: its own comment records that two such players "would be a defect in
+  the catalogue rather than a choice this query should make", and it resolves
+  the ambiguity by taking the older of the two so the read at least stays
+  deterministic. The lobby name lookup makes the same choice independently, with
+  `DISTINCT ON` and the same tie-break.
+- Question: is a normalized player name unique across the application? If it
+  is, the two lookups above become a constraint violation rather than a silent
+  pick, and two people who genuinely compete under the same name need a
+  different way to be told apart. If it is not, both reads keep guessing and the
+  guess should be stated as a product rule rather than as a comment.
+- Evidence: `IMPORT_PREVIEW_OF_NAMES` and `PLAYERS_OF_TOURNAMENT_BY_NAME` in
+  `apps/api/src/tournament/registration/participants.queries.ts`, and
+  `apps/api/src/tournament/catalog/player.store.ts`.
+- Related consequence: both lookups apply `LOWER(TRIM("playerName"))`, which no
+  index can serve today. A unique expression index on that value would enforce
+  the rule and make the lookups sargable in one change; a plain expression index
+  would do only the second. Items 25 and 28 of
+  [QueryAndSchemaOptimization.md](QueryAndSchemaOptimization.md) are blocked on
+  which of the two applies.
+- Decision: normalization is trimming and lowercasing, which is what
+  `normalizePlayerName` and both lookups already apply. Internal whitespace and
+  diacritics are **not** normalized: `Dan do` and `Dandò` remain different
+  people. The write side already reuses the existing row for a name that
+  matches, so the decision adds the constraint rather than a behavior.
+- Consequence: two different people who both compete as `Dando` share one
+  catalogue entry and one history. Telling them apart requires them to choose
+  different names; the application offers no other discriminator.
+- Rule: a unique expression index on `LOWER(TRIM("playerName"))` enforces this.
+  The two lookups that pick the older of two matching rows stop guessing, and
+  both become sargable. Items 28 and 25 of
+  [QueryAndSchemaOptimization.md](QueryAndSchemaOptimization.md) are unblocked
+  by this answer; the index cannot be created over a catalogue that already
+  holds a duplicate, which the pre-production reset policy in `AGENTS.md`
+  covers.

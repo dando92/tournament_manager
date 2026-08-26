@@ -308,13 +308,20 @@ upgrade compatibility, per the policy in `AGENTS.md`.
 | 22 | `match_result."playerPoints"` is `text` holding JSON, cast `::json` on every read | Migrate to `jsonb`, which `staleDetails` and `interruptionDetails` already are | Open |
 | 23 | `participant."roles"` is a `simple-array`, unpacked with `string_to_array` in five queries, each guarded by `CASE WHEN COALESCE(roles, '') = ''` | Migrate to a native `text[]`; the guard disappears from all five | Open |
 | 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | Resolved by 23, plus a GIN index on `roles` | Open |
-| 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Expression index on `player (LOWER(TRIM("playerName")))` | Open |
+| 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Resolved by 28: the unique expression index serves both lookups | Open |
 | 26 | Nothing enforces one participant per person per tournament, a rule `TournamentStore` applies in memory | Unique index on `participant(tournamentId, playerId)` | Open |
 | 27 | `score."percentage"` is unbounded `numeric` | Needs a decision — see FQ-028 | Blocked |
-| 28 | Nothing prevents two players whose names normalize to the same value, which `IMPORT_PREVIEW_OF_NAMES` itself calls a defect in the catalogue | Needs a decision — see FQ-029 | Blocked |
+| 28 | Nothing prevents two players whose names normalize to the same value, which `IMPORT_PREVIEW_OF_NAMES` itself calls a defect in the catalogue | Unique expression index on `player (LOWER(TRIM("playerName")))`, and the two lookups stop picking the older of two matches — see FQ-029 | Open |
 
-Items 25 and 28 are the same index. If the normalized name becomes unique, 25
-comes for free.
+Items 25 and 28 are the same index, and FQ-029 is now answered: a normalized
+player name is unique across the application, normalization being the trimming
+and lowercasing the code already applies. `Dando` and `dando` are one person;
+`Dan do` and `Dandò` are not. So the index is the unique one, 25 comes with it,
+and both lookups stop resolving a duplicate they should never see. The
+constraint cannot be added over a catalogue that already holds one, which the
+pre-production reset policy covers.
+
+Item 27 is still blocked on FQ-028.
 
 ## Deferred
 
