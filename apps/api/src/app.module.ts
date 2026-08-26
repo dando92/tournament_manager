@@ -32,6 +32,19 @@ import { InternalController } from './internal.controller';
           config.get('DATABASE_SSL') === 'true'
             ? { rejectUnauthorized: false }
             : false,
+        // A query slower than this is logged rather than left to be inferred
+        // from a slow request.
+        maxQueryExecutionTime: Number(config.get('DATABASE_SLOW_QUERY_MS') ?? 500),
+        extra: {
+          // The pool is per process, so a replica cannot open more than this.
+          max: Number(config.get('DATABASE_POOL_MAX') ?? 10),
+          // Without these, one pathological query or one abandoned transaction
+          // holds a connection, and its locks, for as long as the process runs.
+          statement_timeout: Number(config.get('DATABASE_STATEMENT_TIMEOUT_MS') ?? 15000),
+          idle_in_transaction_session_timeout: Number(config.get('DATABASE_IDLE_TRANSACTION_TIMEOUT_MS') ?? 30000),
+          // What `pg_stat_activity` shows this connection as.
+          application_name: config.get('DATABASE_APPLICATION_NAME') ?? 'tournament-manager-api',
+        },
       }),
     }),
     PersistenceModule,

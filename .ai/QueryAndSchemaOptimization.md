@@ -227,8 +227,22 @@ own entries.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 29 | `app.module.ts` sets nothing on `extra` | Pool `max`, `statement_timeout`, `idle_in_transaction_session_timeout`, `application_name`. Without a statement timeout, one pathological query holds a connection indefinitely | Open |
-| 30 | No visibility into slow queries | `maxQueryExecutionTime` on the TypeORM options, so batch E is measured rather than guessed | Open |
+| 29 | `app.module.ts` sets nothing on `extra` | Pool `max` 10, `statement_timeout` 15 s, `idle_in_transaction_session_timeout` 30 s, `application_name` `tournament-manager-api`, each overridable through the environment | Done |
+| 30 | No visibility into slow queries | `maxQueryExecutionTime`, 500 ms by default, so batch E is measured rather than guessed | Done |
+
+The defaults are deliberate rather than tuned: the API answers one request per
+query and holds no long transaction, so fifteen seconds is far beyond anything
+it legitimately does, and thirty seconds of an idle open transaction only ever
+means a handler died holding locks. The four settings and the slow-query
+threshold are `DATABASE_POOL_MAX`, `DATABASE_STATEMENT_TIMEOUT_MS`,
+`DATABASE_IDLE_TRANSACTION_TIMEOUT_MS`, `DATABASE_APPLICATION_NAME` and
+`DATABASE_SLOW_QUERY_MS`, listed in `.env.example` and commented out at their
+defaults.
+
+Nothing in the application fails when these are dropped — a query simply runs
+unbounded again — so `connection.e2e-spec.ts` asks the session what it actually
+carries. The threshold logged nothing across the e2e suite, which is the point:
+what it prints later is a query worth reading.
 
 ## E — SQL rewrites
 
