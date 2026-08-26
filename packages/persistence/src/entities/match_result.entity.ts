@@ -18,7 +18,7 @@ export class MatchResult {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'simple-json' })
+  @Column({ type: 'jsonb' })
   playerPoints: MatchResultEntry[];
 
   @OneToOne(() => Match, (match) => match.matchResult, { onDelete: 'CASCADE' })

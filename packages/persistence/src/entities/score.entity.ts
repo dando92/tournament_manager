@@ -9,8 +9,12 @@ export class Score {
   @PrimaryGeneratedColumn()
   id: number;
 
+  /* Two decimal places are authoritative — FQ-028 — and 100.00 needs five
+     digits. */
   @Column({
     type: 'decimal',
+    precision: 5,
+    scale: 2,
     transformer: {
       to: (value: number) => value,
       from: (value: string) => Number(value),

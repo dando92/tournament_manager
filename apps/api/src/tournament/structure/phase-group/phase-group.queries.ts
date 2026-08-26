@@ -77,10 +77,7 @@ const ENTRANTS_OF_PHASE_GROUP = `
         SELECT  json_agg(
                     json_build_object(
                         'id', pa."id",
-                        'roles', CASE
-                            WHEN COALESCE(pa."roles", '') = '' THEN '[]'::json
-                            ELSE to_json(string_to_array(pa."roles", ','))
-                        END,
+                        'roles', to_json(pa."roles"),
                         'status', pa."status",
                         'player', json_build_object('id', pl."id", 'playerName', pl."playerName")
                     ) ORDER BY pa."id"

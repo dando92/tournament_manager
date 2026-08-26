@@ -38,9 +38,8 @@ export class PlayerStore {
     /**
      * The players whose names match, keyed by the normalized name.
      *
-     * Two players normalizing to the same name would be a defect in the
-     * catalogue rather than a choice to make here, so the older of the two wins
-     * and the answer stays deterministic.
+     * `UQ_player_normalized_name` makes that key unique in the catalogue, so
+     * one name answers with one player and the map cannot lose a row (FQ-029).
      */
     async byNormalizedNames(playerNames: string[]): Promise<Map<string, Player>> {
         const normalized = [...new Set(playerNames.map(normalizePlayerName).filter(Boolean))];
@@ -49,7 +48,6 @@ export class PlayerStore {
         const found = await this.players
             .createQueryBuilder('player')
             .where('LOWER(TRIM(player.playerName)) IN (:...normalized)', { normalized })
-            .orderBy('player.id', 'DESC')
             .getMany();
 
         return new Map(found.map((player) => [normalizePlayerName(player.playerName), player]));

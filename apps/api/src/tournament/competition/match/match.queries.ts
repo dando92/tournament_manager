@@ -72,7 +72,7 @@ const matchesInScope = (predicate: string): string => `
             m."active"                  AS "active",
             m."phaseGroupId"            AS "phaseGroupId",
             mr."id"                     AS "matchResultId",
-            mr."playerPoints"::json     AS "matchResultPlayerPoints",
+            mr."playerPoints"           AS "matchResultPlayerPoints",
             COALESCE(entrants."json", '[]'::json) AS "entrants",
             COALESCE(rounds."json", '[]'::json)   AS "rounds",
             COALESCE(tiebreaks."json", '[]'::json) AS "tiebreaks"
@@ -94,10 +94,7 @@ const matchesInScope = (predicate: string): string => `
             SELECT  json_agg(
                         json_build_object(
                             'id', pa."id",
-                            'roles', CASE
-                                WHEN COALESCE(pa."roles", '') = '' THEN '[]'::json
-                                ELSE to_json(string_to_array(pa."roles", ','))
-                            END,
+                            'roles', to_json(pa."roles"),
                             'status', pa."status",
                             'player', json_build_object('id', pl."id", 'playerName', pl."playerName")
                         ) ORDER BY pa."id"

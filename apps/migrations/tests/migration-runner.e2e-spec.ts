@@ -71,7 +71,13 @@ describe('migration runner', () => {
     expect(declared.length).toBeGreaterThan(0);
 
     for (const index of declared) {
-      expect(schema.get(index.name)).toEqual({ indexName: index.name, tableName: index.tableName, columns: index.columns });
+      /* An index the schema builder is told not to synchronize — a GIN one, which
+         the decorator cannot express — carries no resolved columns in metadata, so
+         only its name and table can be compared against the schema. */
+      const expected = index.columns.length > 0
+        ? { indexName: index.name, tableName: index.tableName, columns: index.columns }
+        : { indexName: index.name, tableName: index.tableName, columns: expect.any(Array) };
+      expect(schema.get(index.name)).toEqual(expected);
     }
   });
 
@@ -97,6 +103,33 @@ describe('migration runner', () => {
     expect(withoutMatches).toEqual([{ matchId: null }]);
 
     await dataSource.query(`DELETE FROM "tournament" WHERE name = 'View tournament'`);
+  });
+
+  it('refuses a second player whose name only differs by case or padding', async () => {
+    await dataSource.query(`INSERT INTO "player" ("playerName") VALUES ('Dando')`);
+    await expect(dataSource.query(`INSERT INTO "player" ("playerName") VALUES ('  dando ')`)).rejects.toThrow(/UQ_player_normalized_name/);
+    await dataSource.query(`INSERT INTO "player" ("playerName") VALUES ('Dandò')`);
+
+    await dataSource.query(`DELETE FROM "player" WHERE LOWER(TRIM("playerName")) IN ('dando', 'dandò')`);
+  });
+
+  it('refuses a second participation of the same person in one tournament', async () => {
+    await dataSource.query(`INSERT INTO "tournament" ("name") VALUES ('Participant uniqueness')`);
+    await dataSource.query(`INSERT INTO "player" ("playerName") VALUES ('Twice registered')`);
+    const insert = `INSERT INTO "participant" ("tournamentId", "playerId")
+                    SELECT t."id", pl."id" FROM "tournament" t, "player" pl
+                    WHERE t."name" = 'Participant uniqueness' AND pl."playerName" = 'Twice registered'`;
+
+    await dataSource.query(insert);
+    await expect(dataSource.query(insert)).rejects.toThrow(/UQ_participant_tournament_player/);
+
+    const [participant] = await dataSource.query<Array<{ roles: string[] }>>(
+      `SELECT "roles" FROM "participant" WHERE "playerId" = (SELECT "id" FROM "player" WHERE "playerName" = 'Twice registered')`,
+    );
+    expect(participant.roles).toEqual(['unknown']);
+
+    await dataSource.query(`DELETE FROM "tournament" WHERE name = 'Participant uniqueness'`);
+    await dataSource.query(`DELETE FROM "player" WHERE "playerName" = 'Twice registered'`);
   });
 
   it('upgrades existing control room flows without deleting them', async () => {

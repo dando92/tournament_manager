@@ -23,16 +23,15 @@ type TournamentRolesRow = {
  * account, or the player behind the participant does. The two used to be two
  * query-builder reads of the same join differing only in the role they matched.
  *
- * `roles` is a `simple-array` column, so a role is an element of the split
- * value rather than a substring of it. The previous form matched `LIKE
- * '%owner%'`, which would also have matched a role that merely contained the
- * word.
+ * A role is an element of the `roles` array rather than a substring of a
+ * joined value. The form before that matched `LIKE '%owner%'`, which would
+ * also have matched a role that merely contained the word.
  */
 const TOURNAMENT_ROLES_OF_ACCOUNT = `
     WITH membership AS (
         SELECT DISTINCT
-                pa."tournamentId"                AS "tournamentId",
-                string_to_array(pa."roles", ',') AS "roles"
+                pa."tournamentId" AS "tournamentId",
+                pa."roles"        AS "roles"
         FROM        "participant" pa
         LEFT JOIN   "account" acc ON acc."playerId" = pa."playerId"
         WHERE       pa."tournamentId" IS NOT NULL

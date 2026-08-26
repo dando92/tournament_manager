@@ -28,10 +28,7 @@ const ENTRANTS_OF_DIVISION = `
         SELECT  json_agg(
                     json_build_object(
                         'id', pa."id",
-                        'roles', CASE
-                            WHEN COALESCE(pa."roles", '') = '' THEN '[]'::json
-                            ELSE to_json(string_to_array(pa."roles", ','))
-                        END,
+                        'roles', to_json(pa."roles"),
                         'status', pa."status",
                         'player', json_build_object('id', pl."id", 'playerName', pl."playerName")
                     ) ORDER BY pa."id"
@@ -65,10 +62,7 @@ type AvailableParticipantRow = ParticipantDto;
  */
 const AVAILABLE_PARTICIPANTS_OF_DIVISION = `
     SELECT  pa."id"     AS "id",
-            CASE
-                WHEN COALESCE(pa."roles", '') = '' THEN '[]'::json
-                ELSE to_json(string_to_array(pa."roles", ','))
-            END         AS "roles",
+            to_json(pa."roles") AS "roles",
             pa."status" AS "status",
             json_build_object('id', pl."id", 'playerName', pl."playerName") AS "player"
     FROM    "participant" pa

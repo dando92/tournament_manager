@@ -305,15 +305,55 @@ upgrade compatibility, per the policy in `AGENTS.md`.
 
 | # | Finding | Resolution | Status |
 | --- | --- | --- | --- |
-| 22 | `match_result."playerPoints"` is `text` holding JSON, cast `::json` on every read | Migrate to `jsonb`, which `staleDetails` and `interruptionDetails` already are | Open |
-| 23 | `participant."roles"` is a `simple-array`, unpacked with `string_to_array` in five queries, each guarded by `CASE WHEN COALESCE(roles, '') = ''` | Migrate to a native `text[]`; the guard disappears from all five | Open |
-| 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | Resolved by 23, plus a GIN index on `roles` | Open |
-| 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Resolved by 28: the unique expression index serves both lookups | Open |
-| 26 | Nothing enforces one participant per person per tournament, a rule `TournamentStore` applies in memory | Unique index on `participant(tournamentId, playerId)` | Open |
-| 27 | `score."percentage"` is unbounded `numeric` | `numeric(5, 2)`, declared on the entity and migrated — see FQ-028 | Open |
-| 28 | Nothing prevents two players whose names normalize to the same value, which `IMPORT_PREVIEW_OF_NAMES` itself calls a defect in the catalogue | Unique expression index on `player (LOWER(TRIM("playerName")))`, and the two lookups stop picking the older of two matches — see FQ-029 | Open |
+| 22 | `match_result."playerPoints"` is `text` holding JSON, cast `::json` on every read | `jsonb`, which `staleDetails` and `interruptionDetails` already are; the cast is gone from the projection | Done |
+| 23 | `participant."roles"` is a `simple-array`, unpacked with `string_to_array` in five queries, each guarded by `CASE WHEN COALESCE(roles, '') = ''` | Native `text[]`; the five reads take the column itself, and the guard is gone | Done |
+| 24 | `ParticipantQueries.canEdit` is not sargable (`string_to_array(...) && ARRAY[...]`) | `pa."roles" && ARRAY['owner', 'staff']`, an operator on the column, plus `IDX_participant_roles` (GIN) | Done |
+| 25 | The two name lookups are not sargable (`LOWER(TRIM("playerName"))`) | Resolved by 28: the unique expression index serves both lookups | Done |
+| 26 | Nothing enforces one participant per person per tournament, a rule `TournamentStore` applies in memory | `UQ_participant_tournament_player` on `participant(tournamentId, playerId)` | Done |
+| 27 | `score."percentage"` is unbounded `numeric` | `numeric(5, 2)` — see FQ-028 | Done |
+| 28 | Nothing prevents two players whose names normalize to the same value, which `IMPORT_PREVIEW_OF_NAMES` itself calls a defect in the catalogue | `UQ_player_normalized_name` on `player (LOWER(TRIM("playerName")))` — see FQ-029 | Done |
 
-Items 25 and 28 are the same index, and FQ-029 is now answered: a normalized
+Both unique indexes state a rule the application already believed, so neither
+can be created over data that breaks it. The migration checks each first and
+reports what collides — the normalized names and the row ids — rather than
+failing on an index name, because the answer to a collision is a decision about
+people, not about schema.
+
+The composite covers `participant."tournamentId"` as its leading column, so
+`IDX_participant_tournament`, created in batch B, was dropped with it.
+
+Two of the three new indexes cannot be declared the way the convention asks.
+TypeORM's decorator expresses neither an expression index nor a GIN one:
+
+- `UQ_player_normalized_name` is invisible to the schema builder, which skips
+  indexes over expressions, so it lives in the migration alone.
+- `IDX_participant_roles` is visible, and an index the metadata does not declare
+  is one the schema builder proposes to drop, so the entity declares it with
+  `synchronize: false` — an option TypeORM reads but does not put on the type.
+  Such an index carries no resolved columns in metadata, so
+  `migration-runner.e2e-spec.ts` compares its name and table and leaves the
+  columns to the schema.
+
+That GIN index is insurance rather than a measured win: `canEdit` already
+selects through `tournamentId` and `accountId`, which leaves it a role test over
+almost nothing. It earns its place only for a read that asks about roles alone,
+and it is one line to remove if that read never appears.
+
+With the rule enforced, the three reads that used to resolve a duplicate stopped
+guarding against one: `IMPORT_PREVIEW_OF_NAMES` joins the player rather than
+taking the first row of a lateral, `PLAYERS_OF_TOURNAMENT_BY_NAME` drops its
+`DISTINCT ON`, and `PlayerStore.byNormalizedNames` drops the ordering that
+decided which of two rows won its map.
+
+`migration-runner.e2e-spec.ts` covers what the two rules now refuse: a second
+`dando` beside a `Dando`, and a second participation of the same person in one
+tournament. It also covers what they allow — `Dandò` beside both, because
+normalization stops at trimming and case.
+
+`external_mapping."payload"` is still a `simple-json`. It was not part of this
+review and no read unpacks it in SQL, so it stays as it is until one does.
+
+Items 25 and 28 were the same index, and FQ-029 answered it: a normalized
 player name is unique across the application, normalization being the trimming
 and lowercasing the code already applies. `Dando` and `dando` are one person;
 `Dan do` and `Dandò` are not. So the index is the unique one, 25 comes with it,
@@ -321,10 +361,9 @@ and both lookups stop resolving a duplicate they should never see. The
 constraint cannot be added over a catalogue that already holds one, which the
 pre-production reset policy covers.
 
-FQ-028 is answered too: a percentage carries two decimal places, so the column
-becomes `numeric(5, 2)` — five digits, because `100.00` needs them — and a
-value arriving with more precision is rounded rather than refused. Nothing in
-this batch is blocked any more.
+FQ-028 answered item 27: a percentage carries two decimal places, so the column
+is `numeric(5, 2)` — five digits, because `100.00` needs them — and a value
+arriving with more precision is rounded rather than refused.
 
 ## Deferred
 

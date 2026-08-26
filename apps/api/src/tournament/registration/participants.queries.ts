@@ -8,16 +8,10 @@ type ParticipantRow = ParticipantDto;
 
 /**
  * Everybody registered in a tournament, ordered by the name they compete under.
- *
- * `roles` is a `simple-array` column: an empty string means no role rather than
- * one empty role, which is why it is not split unconditionally.
  */
 const PARTICIPANTS_OF_TOURNAMENT = `
     SELECT  pa."id"     AS "id",
-            CASE
-                WHEN COALESCE(pa."roles", '') = '' THEN '[]'::json
-                ELSE to_json(string_to_array(pa."roles", ','))
-            END         AS "roles",
+            to_json(pa."roles") AS "roles",
             pa."status" AS "status",
             json_build_object('id', pl."id", 'playerName', pl."playerName") AS "player"
     FROM    "participant" pa
@@ -42,31 +36,25 @@ type ImportPreviewRow = {
  * an array parameter and keep their order through `WITH ORDINALITY`, so the
  * response rows still line up with the list the client sent.
  *
- * A name matches at most one player. Two players whose names normalize to the
- * same value would be a defect in the catalogue rather than a choice this query
- * should make, so it takes the older of the two and stays deterministic.
+ * A name matches at most one player, and now says so: `UQ_player_normalized_name`
+ * makes the normalized name unique, so the lateral no longer has to pick the
+ * older of two rows it should never have seen (FQ-029).
  */
 const IMPORT_PREVIEW_OF_NAMES = `
     WITH requested AS (
         SELECT  "name", "ordinality"
         FROM    unnest($2::text[]) WITH ORDINALITY AS t("name", "ordinality")
     )
-    SELECT  r."name"       AS "name",
-            matched."id"   AS "playerId",
-            matched."name" AS "playerName",
+    SELECT  r."name"             AS "name",
+            matched."id"         AS "playerId",
+            matched."playerName" AS "playerName",
             EXISTS (
                 SELECT  1
                 FROM    "participant" pa
                 WHERE   pa."tournamentId" = $1 AND pa."playerId" = matched."id"
-            )              AS "alreadyParticipant"
+            )                    AS "alreadyParticipant"
     FROM        requested r
-    LEFT JOIN LATERAL (
-        SELECT  pl."id" AS "id", pl."playerName" AS "name"
-        FROM    "player" pl
-        WHERE   LOWER(TRIM(pl."playerName")) = LOWER(TRIM(r."name"))
-        ORDER BY pl."id"
-        LIMIT   1
-    ) matched ON TRUE
+    LEFT JOIN   "player" matched ON LOWER(TRIM(matched."playerName")) = LOWER(TRIM(r."name"))
     ORDER BY r."ordinality"
 `;
 
@@ -81,16 +69,18 @@ type NamedPlayerRow = { normalizedName: string; playerId: number };
  * normalized name, and it is asked once for a whole lobby rather than once per
  * score. Somebody who is not registered in this tournament is not matched, which
  * is what makes the run a warning rather than a score against a stranger.
+ *
+ * One name is one player — `UQ_player_normalized_name` — and one person takes
+ * part in a tournament once — `UQ_participant_tournament_player` — so the row
+ * per name is unique without a `DISTINCT ON` to make it so.
  */
 const PLAYERS_OF_TOURNAMENT_BY_NAME = `
-    SELECT DISTINCT ON (LOWER(TRIM(pl."playerName")))
-            LOWER(TRIM(pl."playerName")) AS "normalizedName",
-            pl."id"                      AS "playerId"
+    SELECT   LOWER(TRIM(pl."playerName")) AS "normalizedName",
+             pl."id"                      AS "playerId"
     FROM     "participant" pa
     JOIN     "player" pl ON pl."id" = pa."playerId"
     WHERE    pa."tournamentId" = $1
         AND  LOWER(TRIM(pl."playerName")) = ANY($2::text[])
-    ORDER BY LOWER(TRIM(pl."playerName")), pl."id"
 `;
 
 /** The rows `DIVISIONS_OF_PARTICIPANT` produces. */
@@ -118,13 +108,16 @@ const DIVISIONS_OF_PARTICIPANT = `
  * Whether an account may edit a tournament. Owning it and staffing it are the
  * same permission, so one row of either role answers the question and nothing
  * from that row is read.
+ *
+ * `roles` is a native array, so the overlap is an operator on the column rather
+ * than on a value computed from it, and the GIN index can serve it.
  */
 const PARTICIPANT_CAN_EDIT = `
     SELECT  1
     FROM    "participant" pa
     WHERE   pa."tournamentId" = $1
         AND pa."accountId" = $2
-        AND (string_to_array(pa."roles", ',') && ARRAY['owner', 'staff'])
+        AND pa."roles" && ARRAY['owner', 'staff']
     LIMIT   1
 `;
 
