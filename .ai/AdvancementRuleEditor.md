@@ -34,6 +34,11 @@ as context.
   match tree will visualize those relationships.
 - The persisted model and API remain unchanged: each saved item is one
   `AdvancementRuleInput`.
+- A match or phase group is not offered as its own destination, and both the
+  modal and API reject a source targeting itself.
+- A finishing place can appear only once in a draft. Duplicate source
+  placements block saving because the same finisher cannot advance to two
+  different destinations.
 
 ## Deferred quick-rule mode
 

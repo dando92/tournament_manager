@@ -6,6 +6,7 @@ import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import { AdvancementRuleStore } from './advancement-rule.store';
 import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { assertValidAdvancementRules } from './advancement-rule.validation';
 
 /**
  * The rules that say where the entrants of a competition go next.
@@ -33,6 +34,7 @@ export class AdvancementRuleCommands {
     rules: AdvancementRuleInputDto[],
   ): Promise<void> {
     await this.assertSourceExists(sourceKind, sourceId);
+    assertValidAdvancementRules(sourceKind, sourceId, rules);
     const previous = await this.advancementRules.findBySource(sourceKind, sourceId);
     await this.advancementRules.deleteBySource(sourceKind, sourceId);
     await this.advancementRules.createAll(

@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
+import { isAdvancementSourceTarget, validateAdvancementRules } from "@/features/match/model/advancementRuleValidation";
 import { Division } from "@/features/division/model/types";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import { btnCreate, btnPrimary, btnSecondary, btnTrash } from "@/styles/buttonStyles";
@@ -48,15 +49,15 @@ export default function AdvancementRulesModal({
     );
     const phaseGroupLabelById = new Map(phaseGroups.map((phaseGroup) => [phaseGroup.id, phaseGroup.label]));
     const matchOptions: TargetOption[] = [...allMatches]
-        .filter((match) => !(sourceKind === "match" && match.id === sourceId))
+        .filter((match) => !isAdvancementSourceTarget(sourceKind, sourceId, "match", match.id))
         .sort((left, right) => left.id - right.id)
         .map((match) => ({
             kind: "match",
             id: match.id,
             label: `${phaseGroupLabelById.get(match.phaseGroupId) ?? "Unknown pool"} / ${match.name}`,
         }));
-    const phaseGroupOptions: TargetOption[] = phaseGroups.filter(
-        (phaseGroup) => !(sourceKind === "phase_group" && phaseGroup.id === sourceId),
+    const phaseGroupOptions: TargetOption[] = phaseGroups.filter((phaseGroup) =>
+        !isAdvancementSourceTarget(sourceKind, sourceId, "phase_group", phaseGroup.id),
     );
     const targetOptions = [...matchOptions, ...phaseGroupOptions];
     const sourceLabel = sourceKind === "match"
@@ -69,7 +70,7 @@ export default function AdvancementRulesModal({
         targetId: rule.targetId,
         targetSlot: rule.targetSlot,
     }));
-    const errors = validateRules(draftRules, sourceKind, sourceId);
+    const errors = validateAdvancementRules(draftRules, sourceKind, sourceId);
     const canSave = errors.length === 0 && !saving;
 
     const updateRule = (index: number, nextRule: AdvancementRuleInput) => {
@@ -262,37 +263,4 @@ function matchOptionsLabel(match: Match | undefined, phaseGroupLabelById: Map<nu
         return "Match";
     }
     return `${phaseGroupLabelById.get(match.phaseGroupId) ?? "Unknown pool"} / ${match.name}`;
-}
-
-function validateRules(
-    rules: AdvancementRuleInput[],
-    sourceKind: AdvancementCompetitionKind,
-    sourceId: number,
-): string[] {
-    const errors: string[] = [];
-    const targetSlots = new Set<string>();
-
-    for (const [index, rule] of rules.entries()) {
-        const label = `Rule ${index + 1}`;
-        if (rule.sourcePlacement <= 0 || !Number.isFinite(rule.sourcePlacement)) {
-            errors.push(`${label}: finishing place must be greater than 0.`);
-        }
-        if (rule.targetId <= 0 || !Number.isFinite(rule.targetId)) {
-            errors.push(`${label}: select a destination.`);
-        }
-        if (rule.targetSlot <= 0 || !Number.isFinite(rule.targetSlot)) {
-            errors.push(`${label}: target slot must be greater than 0.`);
-        }
-        if (rule.targetKind === sourceKind && rule.targetId === sourceId) {
-            errors.push(`${label}: source cannot target itself.`);
-        }
-
-        const targetKey = `${rule.targetKind}:${rule.targetId}:${rule.targetSlot}`;
-        if (targetSlots.has(targetKey)) {
-            errors.push(`${label}: target slot is already used.`);
-        }
-        targetSlots.add(targetKey);
-    }
-
-    return errors;
 }
