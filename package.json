@@ -35,7 +35,7 @@
     "test:integration": "npm run test:integration --workspace=@tournament-manager/api",
     "check:architecture": "node scripts/check-architecture.mjs",
     "verify": "npm run check:architecture && npm run build && npm run lint && npm run test:contract && npm run test:unit && npm run test:e2e",
-    "local:up": "docker compose up --build --detach --wait --remove-orphans",
+    "local:up": "cross-env COMPOSE_PARALLEL_LIMIT=1 docker compose up --build --detach --wait --remove-orphans",
     "local_sync:up": "npm run local:up && npm run local_sync:bridge",
     "local_sync:bridge": "npm run build --workspace=@tournament-manager/legacy-syncstart-bridge && npm run start --workspace=@tournament-manager/legacy-syncstart-bridge",
     "local:status": "docker compose ps && node scripts/local-status.mjs",

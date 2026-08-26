@@ -1,5 +1,16 @@
 # Local Platform Operations
 
+## Resource-bounded image builds
+
+`npm run local:up` serializes Compose image builds. This keeps the complete
+stack buildable on Docker Desktop installations with approximately 2 GB of
+memory, where concurrent TypeScript builds can exhaust the shared VM even
+though each workspace builds independently.
+
+API, SyncStart, and Realtime receive a 1408 MB Node heap only in their Docker
+build layer. The setting is not persisted into the runtime image or applied to
+the services after startup.
+
 ## Prerequisites
 
 - Node.js 22 or later
