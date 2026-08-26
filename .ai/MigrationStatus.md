@@ -707,17 +707,23 @@ Requested by the user on 2026-08-23, outside the phase sequence.
   compact placement table with vertically expandable score details.
 - Checkpoints: `dc874cc` adds the domain, persistence, migration, API, and pure
   placement resolver; `e4b9feb` integrates live progression and advancement;
-  `f0d0a8f` adds the responsive frontend.
+  `f0d0a8f` adds the responsive frontend; `18df3be` aligns the migration and
+  read-model e2e fixtures; `7a82e35` makes local image builds reliable within a
+  2 GB Docker Desktop VM.
 - Verification: architecture boundaries pass; every workspace builds; contract
   tests pass; all workspace unit suites pass, including 151 API and 65 frontend
   tests; all linters complete with the one existing API warning and five
   existing frontend warnings; responsive browser checks pass at 390 px for both
   the transposed and expandable layouts.
-- PostgreSQL e2e and migration-runner suites could not run because the local
-  Docker daemon is unavailable. `graphify update .` could not run because the
-  Graphify CLI is not installed in this environment.
-- Next action: review the three commits, then run `npm run test:e2e` once the
-  local PostgreSQL service is available.
+- PostgreSQL verification passes: all 108 API e2e tests and both migration-
+  runner e2e tests pass, including migration idempotency and zero TypeORM schema
+  drift. A complete serialized Docker build succeeds with 2 GB available and
+  API, SyncStart, both Realtime replicas, frontend, PostgreSQL, Redis, migrations,
+  and fixtures reach their expected healthy or completed state.
+- `graphify update .` could not run because the Graphify CLI is not installed in
+  this environment.
+- Next action: review the tiebreak checkpoints; no implementation or verification
+  work remains for this feature.
 
 ## Verification
 
