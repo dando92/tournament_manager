@@ -1,16 +1,20 @@
 import FormModal from "@/shared/components/ui/FormModal";
-import AddEditSongRollFields from "@/features/match/ui/AddEditSongRollFields";
+import SongRollPanel from "@/features/song/ui/SongRollPanel";
 import AddEditSongTitleFields from "@/features/match/ui/AddEditSongTitleFields";
 import { useAddEditSongToMatchModal } from "@/features/match/model/useAddEditSongToMatchModal";
 import { RoundSourceRequest } from "@/features/match/model/types";
 
 /**
- * Picks the song for a round: a title, several titles, or a roll over a group
- * and a difficulty. Editing replaces the song of one round, which is why it
- * names a round and not a song.
+ * Picks the song for a round: a title, several titles, or a draw over the pool
+ * the division may still play. Editing replaces the song of one round, which is
+ * why it names a round and not a song — and why a draw made to replace one is
+ * confirmed only while it holds a single card.
  */
 type AddSongToMatchModalProps = {
   tournamentId?: number;
+  /** The pool a draw reaches, and the match whose songs it may never repeat. */
+  divisionId?: number;
+  matchId?: number;
   /** The round whose song is being replaced, or null when adding new rounds. */
   editingRoundId: number | null;
   open: boolean;
@@ -23,28 +27,32 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
   const state = useAddEditSongToMatchModal({
     open: props.open,
     tournamentId: props.tournamentId,
+    divisionId: props.divisionId,
+    matchId: props.matchId,
   });
 
   const validate = () => {
     if (state.songAddType === "roll") {
-      const errors: string[] = [];
-      if (!state.selectedGroupName) {
-        errors.push("Choose the pack to roll from.");
-      }
-      if (!state.difficultyInput) {
-        errors.push("Choose the difficulty to roll.");
+      /* A draw is confirmed by what is on the table, not by what was asked
+         for: rolling is a separate act, and nothing is added before it. */
+      if (state.roll.drawnSongIds.length === 0) {
+        return ["Roll the songs before adding them."];
       }
 
-      return errors;
+      return props.editingRoundId !== null && state.roll.drawnSongIds.length > 1
+        ? ["Replacing a song takes one card: take the others out of the draw."]
+        : [];
     }
 
     return state.selectedSongs.length === 0 ? ["Choose at least one song."] : [];
   };
 
   const handleSubmit = async () => {
+    /* Both kinds of choice commit song ids: the draw sends the cards it kept,
+       which is what makes the dialog answer with the songs it showed. */
     const sources: RoundSourceRequest[] =
       state.songAddType === "roll"
-        ? [{ group: state.selectedGroupName, level: state.difficultyInput }]
+        ? state.roll.drawnSongIds.map((songId) => ({ songId }))
         : state.selectedSongs.map((song) => ({ songId: song.id }));
 
     /* Editing replaces the song of one round, so only the first choice lands. */
@@ -94,13 +102,7 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
         </div>
 
         {state.songAddType === "roll" ? (
-          <AddEditSongRollFields
-            songGroups={state.songGroups}
-            selectedGroupName={state.selectedGroupName}
-            difficultyInput={state.difficultyInput}
-            onGroupChange={state.setSelectedGroupName}
-            onDifficultyChange={state.setDifficultyInput}
-          />
+          <SongRollPanel roll={state.roll} songGroups={state.songGroups} />
         ) : (
           <AddEditSongTitleFields
             songGroups={state.songGroups}

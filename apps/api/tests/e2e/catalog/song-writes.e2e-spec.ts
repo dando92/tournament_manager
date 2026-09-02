@@ -126,9 +126,10 @@ describe('Song writes (e2e)', () => {
       .send({ playerName: 'Ann' })
       .expect(201);
     const entrant = await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participant.body.id}`)
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participant.body.id] })
       .expect(201);
-    entrantId = entrant.body.id;
+    entrantId = entrant.body[0].id;
 
     await request(app.getHttpServer()).post('/phases').send({ name: 'Qualifiers', divisionId }).expect(201);
     const summary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
@@ -323,5 +324,116 @@ describe('Song writes (e2e)', () => {
       .expect(204);
 
     expect(await songsOf(matchId)).toEqual([]);
+  });
+  /**
+   * The draw shown before anything is written.
+   *
+   * `POST /songs/roll` answers the question the round write asks — one song
+   * per level, over what the division may still play — and writes nothing, so
+   * a person can look at the draw, re-roll a card and only then commit the
+   * identifiers. What is worth a database is the SQL: two predicates the
+   * compiler cannot check, over a division whose matches really hold rounds.
+   */
+  describe('drawing before writing', () => {
+    it('answers one slot per level, and leaves the match alone', async () => {
+      const first = await addSong('Preview One', 'Preview Pack', 7);
+      const second = await addSong('Preview Two', 'Preview Pack', 7);
+      const matchId = await createMatch();
+
+      const drawn = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Preview Pack', levels: [7, 7], matchId })
+        .expect(200);
+
+      expect(drawn.body.map((slot: { level: number }) => slot.level)).toEqual([7, 7]);
+      expect(drawn.body.map((slot: { song: { id: number } }) => slot.song.id).sort()).toEqual([first, second].sort());
+      expect(drawn.body[0].song).toEqual({
+        id: drawn.body[0].song.id,
+        title: expect.any(String),
+        artist: 'Someone',
+        difficulty: 7,
+        chartDifficulty: null,
+        group: 'Preview Pack',
+      });
+      expect(await songsOf(matchId)).toEqual([]);
+    });
+
+    it('answers an empty slot for a level the pool cannot fill', async () => {
+      const drawn = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Preview Pack', levels: [7, 18] })
+        .expect(200);
+
+      expect(drawn.body[1]).toEqual({ level: 18, song: null });
+    });
+
+    it('offers a song the division has already played only when asked to', async () => {
+      const song = await addSong('Played Once', 'Replay Pack', 14);
+      const played = await createMatch();
+      await request(app.getHttpServer())
+        .post(`/matches/${played}/rounds`)
+        .send({ group: 'Replay Pack', level: '14' })
+        .expect(204);
+      expect(await songsOf(played)).toEqual([song]);
+
+      const withoutFlag = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Replay Pack', levels: [14] })
+        .expect(200);
+      expect(withoutFlag.body).toEqual([{ level: 14, song: null }]);
+
+      const withFlag = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Replay Pack', levels: [14], allowPlayed: true })
+        .expect(200);
+      expect(withFlag.body[0].song.id).toEqual(song);
+    });
+
+    /* A match cannot hold the same song twice, whatever the flag says: the
+       draw that would break that index never offers the song at all. */
+    it('never offers a song the match it draws for already holds', async () => {
+      const song = await addSong('Held', 'Held Pack', 15);
+      const matchId = await createMatch();
+      await request(app.getHttpServer())
+        .post(`/matches/${matchId}/rounds`)
+        .send({ group: 'Held Pack', level: '15' })
+        .expect(204);
+      expect(await songsOf(matchId)).toEqual([song]);
+
+      const drawn = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Held Pack', levels: [15], allowPlayed: true, matchId })
+        .expect(200);
+
+      expect(drawn.body).toEqual([{ level: 15, song: null }]);
+    });
+
+    it('leaves out the cards the caller is already holding', async () => {
+      const kept = await addSong('Kept', 'Reroll Pack', 16);
+      const other = await addSong('Other', 'Reroll Pack', 16);
+
+      const drawn = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, group: 'Reroll Pack', levels: [16], excludeSongIds: [kept] })
+        .expect(200);
+
+      expect(drawn.body[0].song.id).toEqual(other);
+    });
+
+    it('draws from the whole pool when no pack is named', async () => {
+      const drawn = await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId, levels: [7] })
+        .expect(200);
+
+      expect(drawn.body[0].song.group).toEqual('Preview Pack');
+    });
+
+    it('refuses a draw for a division that does not exist', async () => {
+      await request(app.getHttpServer())
+        .post('/songs/roll')
+        .send({ divisionId: 999999, levels: [7] })
+        .expect(404);
+    });
   });
 });

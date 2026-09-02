@@ -36,3 +36,16 @@ export type SongImportResultDto = {
     imported: number;
     skipped: number;
 };
+
+/**
+ * One slot of a roll: the level that was asked for, and what the pool answered
+ * with.
+ *
+ * A slot with no song is not an error. It says the pool holds nothing of that
+ * level the roll may still use, which is what the caller has to see before it
+ * decides to lower the level, widen the pack, or allow songs already played.
+ */
+export type SongRollSlotDto = {
+    level: number;
+    song: SongDto | null;
+};

@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { SongImportResultDto } from "@tournament-manager/contracts";
-import { CreateSongRequest, Song } from "@/features/song/model/types";
+import { CreateSongRequest, Song, SongRollSlot } from "@/features/song/model/types";
 import type { ImportRow } from "@/features/song/model/songImport/types";
 
 /**
@@ -41,6 +41,34 @@ export async function importSongs(tournamentId: number, songs: ImportRow[]): Pro
   const response = await axios.post<SongImportResultDto>("songs/import", { tournamentId, songs });
 
   return response.data;
+}
+
+/** What a draw asks for. The division decides the pool; the match, when there is one, what may not repeat in it. */
+export type SongRollRequest = {
+  divisionId: number;
+  levels: number[];
+  group?: string;
+  allowPlayed?: boolean;
+  excludeSongIds?: number[];
+  matchId?: number;
+};
+
+/**
+ * The songs a draw would use, before any of them is a round.
+ *
+ * The pool a draw may still play is the server's to know — it depends on what
+ * the whole division has already played — so the browser asks rather than
+ * filtering the catalogue it happens to hold. Nothing is written: what the
+ * caller keeps, it sends back as song ids.
+ */
+export async function rollSongs(request: SongRollRequest): Promise<SongRollSlot[]> {
+  try {
+    const response = await axios.post<SongRollSlot[]>("songs/roll", request);
+    return response.data;
+  } catch (error) {
+    console.error("Error rolling songs:", error);
+    throw new Error("Unable to roll the songs.");
+  }
 }
 
 export async function deleteSong(songId: number): Promise<void> {

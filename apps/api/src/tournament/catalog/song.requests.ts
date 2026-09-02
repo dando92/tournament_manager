@@ -2,6 +2,7 @@ import {
   ArrayNotEmpty,
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -105,4 +106,53 @@ export class CreateSongDto {
   @IsNumber()
   @Type(() => Number)
   tournamentId?: number;
+}
+
+/**
+ * A draw, asked for before anything is written.
+ *
+ * The division says which pool is drawn from and what it has already played;
+ * the match, when the draw is for one that exists, says which songs a round of
+ * it may not repeat. `excludeSongIds` is the draw the caller is already
+ * holding on screen — re-rolling one card must not answer with a card that is
+ * already on the table.
+ */
+export class RollSongsDto {
+    @ApiProperty({ example: 3, description: 'Division whose pool is drawn from' })
+    @IsNotEmpty()
+    @IsNumber()
+    @Type(() => Number)
+    divisionId: number;
+
+    @ApiProperty({ example: [9, 9, 10, 10], description: 'One song is drawn per level asked for' })
+    @IsArray()
+    @ArrayNotEmpty()
+    @ArrayMaxSize(50)
+    @IsInt({ each: true })
+    @Type(() => Number)
+    levels: number[];
+
+    @ApiProperty({ example: 'Pack A', required: false, description: 'Pack to draw from; the whole pool when absent' })
+    @IsOptional()
+    @IsString()
+    @Type(() => String)
+    group?: string;
+
+    @ApiProperty({ example: false, required: false, description: 'Draws songs the division has already played too' })
+    @IsOptional()
+    @IsBoolean()
+    allowPlayed?: boolean;
+
+    @ApiProperty({ example: [12, 34], required: false, description: 'Songs the caller already holds, which are not drawn again' })
+    @IsOptional()
+    @IsArray()
+    @IsInt({ each: true })
+    @Type(() => Number)
+    excludeSongIds?: number[];
+
+    @ApiProperty({ example: 7, required: false, description: 'Match the draw is for, whose songs are never drawn again' })
+    @IsOptional()
+    @IsNumber()
+    @Type(() => Number)
+    matchId?: number;
 }

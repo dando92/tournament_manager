@@ -24,8 +24,13 @@ const SONGS_OF_TOURNAMENT = `
     ORDER BY s."group", s."difficulty", LOWER(s."title"), s."id"
 `;
 
-/** The rows `ROLLABLE_SONGS` produces: what a roll picks from. */
-type RollableRow = { id: number; difficulty: number };
+/** How far a roll may reach: what it may repeat, and where it may never repeat. */
+export type RollScope = {
+    /** Offers songs the division has already played. The match's own songs stay out either way. */
+    allowPlayed?: boolean;
+    /** The match the roll is for, when there is one already. */
+    matchId?: number | null;
+};
 
 /**
  * What a division may still be asked to play: the tournament's pool, minus
@@ -34,25 +39,42 @@ type RollableRow = { id: number; difficulty: number };
  * A bracket does not ask a division to play the same song twice, whichever pool
  * or match it was played in. Collecting that used to be two reads — the whole
  * pool as entities, and the set of songs the division had played — and the
- * roller subtracted one from the other in memory. It is one query, and it
- * carries the two columns a roll decides on rather than every column of a song.
+ * roller subtracted one from the other in memory. It is one query.
  *
- * A round without a song — one scored by hand — has nothing to exclude and is
- * skipped by the join. A `NULL` group asks for the whole pool.
+ * It projects a whole song rather than the two columns a roll decides on,
+ * because a roll is now shown to the person who asked for it before it becomes
+ * a round: what they read is the title, the artist and the slot, and the pool
+ * is the only place that holds them.
+ *
+ * Two things narrow it. `$4` is the division rule, which a draw may waive to
+ * offer songs the division has already played. `$5` is the match the draw is
+ * for, whose songs it may never offer again whatever `$4` says, because a match
+ * cannot hold the same song twice. A round without a song — one scored by hand
+ * — has nothing to exclude and is skipped by both. A `NULL` group asks for the
+ * whole pool.
  */
 const ROLLABLE_SONGS = `
-    SELECT  s."id"         AS "id",
-            s."difficulty" AS "difficulty"
+    SELECT  s."id"              AS "id",
+            s."title"           AS "title",
+            s."artist"          AS "artist",
+            s."difficulty"      AS "difficulty",
+            s."chartDifficulty" AS "chartDifficulty",
+            s."group"           AS "group"
     FROM    "song" s
     WHERE   s."tournamentId" = $1
         AND ($3::text IS NULL OR s."group" = $3)
-        AND NOT EXISTS (
+        AND ($4::boolean OR NOT EXISTS (
             SELECT  1
             FROM    "round" r
             JOIN    "match" m        ON m."id"  = r."matchId"
             JOIN    "phase_group" pg ON pg."id" = m."phaseGroupId"
             JOIN    "phase" p        ON p."id"  = pg."phaseId"
             WHERE   p."divisionId" = $2 AND r."songId" = s."id"
+        ))
+        AND NOT EXISTS (
+            SELECT  1
+            FROM    "round" r
+            WHERE   r."matchId" = $5::int AND r."songId" = s."id"
         )
     ORDER BY s."id"
 `;
@@ -94,8 +116,10 @@ export class SongQueries {
         return rows;
     }
 
-    async rollable(tournamentId: number, divisionId: number, group: string | null): Promise<RollableRow[]> {
-        return await this.dataSource.query(ROLLABLE_SONGS, [tournamentId, divisionId, group ?? null]);
+    async rollable(tournamentId: number, divisionId: number, group: string | null, scope: RollScope = {}): Promise<SongDto[]> {
+        const parameters = [tournamentId, divisionId, group ?? null, scope.allowPlayed ?? false, scope.matchId ?? null];
+
+        return await this.dataSource.query(ROLLABLE_SONGS, parameters);
     }
 
     async idByTitle(tournamentId: number, title: string): Promise<number | null> {

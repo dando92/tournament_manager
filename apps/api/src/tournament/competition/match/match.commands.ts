@@ -9,7 +9,7 @@ import { AdvancementRunner } from '@tournament/structure/advancement/advancement
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
-import { SongRoller } from '@tournament/catalog/song-roller';
+import { parseLevels, SongRoller } from '@tournament/catalog/song-roller';
 import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
 import { ControlRoomMutationGuard } from '@tournament/competition/control-room/control-room-mutation.guard';
 import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
@@ -481,9 +481,15 @@ export class MatchCommands {
         if (!levels) return [];
 
         const { tournamentId, divisionId } = match.address;
-        const rolled = await this.songRoller.roll(tournamentId, divisionId, source.group ?? null, levels);
+        const rolled = await this.songRoller.roll({
+            tournamentId,
+            divisionId,
+            group: source.group ?? null,
+            levels: parseLevels(levels),
+            matchId: match.id,
+        });
 
-        return await this.store.loadSongs(rolled);
+        return await this.store.loadSongs(rolled.flatMap((slot) => (slot.song ? [slot.song.id] : [])));
     }
 
     private draftScore(player: Player, song: Song, input: ScoreInput): Score {

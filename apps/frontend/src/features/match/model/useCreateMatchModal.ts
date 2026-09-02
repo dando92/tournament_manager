@@ -15,6 +15,7 @@ import { listDivisionEntrants } from "@/features/division/api/division.api";
 import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/api/match.api";
 import { listSongs } from "@/features/song/api/song.api";
+import { useSongRoll } from "@/features/song/model/useSongRoll";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -58,12 +59,12 @@ export function useCreateMatchModal({
   const [subtitle, setSubtitle] = useState("");
   const [selectedEntrants, setSelectedEntrants] = useState<Entrant[]>([]);
   const [songAddType, setSongAddType] = useState<"title" | "roll">("title");
-  const [selectedSongDifficulties, setSelectedSongDifficulties] = useState<string[]>([]);
-  const [difficultyInput, setDifficultyInput] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
   const [songGroups, setSongGroups] = useState<string[]>([]);
-  const [selectedGroupName, setSelectedGroupName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<Song[]>([]);
+  /* The draw reaches the pool through the division of the path the match is
+     being created in, which the picker settles before anything is rolled. */
+  const roll = useSongRoll({ open, divisionId: path.divisionId ?? undefined, tournamentId });
 
   const pathLevels = useMemo(() => matchPathLevels(divisions), [divisions]);
   const pathValue = useMemo(() => matchPathValue(path), [path]);
@@ -95,8 +96,6 @@ export function useCreateMatchModal({
     });
     setSelectedEntrants([]);
     setSelectedSongs([]);
-    setSelectedSongDifficulties([]);
-    setDifficultyInput("");
     setSongAddType("title");
   }, [divisions.length, divisionId, open, phaseGroupId, phaseId]);
 
@@ -136,7 +135,6 @@ export function useCreateMatchModal({
       .then((catalog) => {
         setSongs(catalog);
         setSongGroups([...new Set(catalog.map((song) => song.group))]);
-        setSelectedGroupName(catalog[0]?.group ?? "");
       })
       .catch(() => setSongs([]));
   }, [open, tournamentId]);
@@ -153,16 +151,6 @@ export function useCreateMatchModal({
     });
   }, [open, tournamentId]);
 
-  const addDifficulty = () => {
-    if (!difficultyInput) return;
-    setSelectedSongDifficulties((prev) => [...prev, difficultyInput]);
-    setDifficultyInput("");
-  };
-
-  const removeDifficulty = (index: number) => {
-    setSelectedSongDifficulties((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
-  };
-
   const handleSubmit = async () => {
     if (!isCompleteMatchPath(path)) return;
 
@@ -170,21 +158,14 @@ export function useCreateMatchModal({
       phaseGroupId: path.phaseGroupId,
       name: name.trim(),
       subtitle: subtitle.trim(),
-      group: selectedGroupName,
       scoringSystem,
       entrantIds: selectedEntrants.map((entrant) => entrant.id),
     };
 
-    const request: CreateMatchRequest =
-      songAddType === "title"
-        ? {
-            ...baseRequest,
-            songIds: selectedSongs.map((song) => song.id),
-          } as CreateMatchRequest
-        : {
-            ...baseRequest,
-            levels: selectedSongDifficulties.join(","),
-          } as CreateMatchRequest;
+    /* A draw is committed by the cards it kept, the same way a choice by title
+       is: the match is created on the songs the dialog showed. */
+    const songIds = songAddType === "title" ? selectedSongs.map((song) => song.id) : roll.drawnSongIds;
+    const request = { ...baseRequest, songIds } as CreateMatchRequest;
 
     await onCreate(request);
   };
@@ -196,9 +177,7 @@ export function useCreateMatchModal({
     scoringSystems,
     selectedEntrants,
     selectedSongs,
-    selectedSongDifficulties,
-    selectedGroupName,
-    difficultyInput,
+    roll,
     scoringSystem,
     name,
     subtitle,
@@ -209,14 +188,10 @@ export function useCreateMatchModal({
     setPathValue,
     setSelectedEntrants,
     setSelectedSongs,
-    setSelectedGroupName,
-    setDifficultyInput,
     setScoringSystem,
     setName,
     setSubtitle,
     setSongAddType,
-    addDifficulty,
-    removeDifficulty,
     handleSubmit,
   };
 }

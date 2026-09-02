@@ -270,6 +270,8 @@ export default function MatchCard({
       <AddEditSongToMatchModal
         editingRoundId={editRoundId}
         tournamentId={tournamentId}
+        divisionId={division.id}
+        matchId={match.id}
         open={addSongToMatchModalOpen}
         onAddRounds={onAddRounds}
         onReplaceRoundSong={onReplaceRoundSong}

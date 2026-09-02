@@ -95,15 +95,9 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
           songs={state.songs}
           songGroups={state.songGroups}
           selectedSongs={state.selectedSongs}
-          selectedSongDifficulties={state.selectedSongDifficulties}
-          selectedGroupName={state.selectedGroupName}
-          difficultyInput={state.difficultyInput}
+          roll={state.roll}
           onSongAddTypeChange={state.setSongAddType}
           onSelectedSongsChange={state.setSelectedSongs}
-          onSelectedGroupNameChange={state.setSelectedGroupName}
-          onDifficultyInputChange={state.setDifficultyInput}
-          onAddDifficulty={state.addDifficulty}
-          onRemoveDifficulty={state.removeDifficulty}
         />
       </div>
     </FormModal>
