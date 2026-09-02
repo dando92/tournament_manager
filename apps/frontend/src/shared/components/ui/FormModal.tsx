@@ -193,8 +193,18 @@ export default function FormModal({
         }
     };
 
-    /* What is missing is said from the start; only its tone changes once it has refused a confirmation. */
-    const errors = failure ? [failure] : validate ? validate() : [];
+    /*
+     * What is missing is said from the start; only its tone changes once it has
+     * refused a confirmation.
+     *
+     * A dialog on its way out says nothing at all, and neither does one that is
+     * working. What a confirmation succeeded at doing is often to clear the very
+     * state it was checked against — an import that empties its preview, a form
+     * that empties its field — and without this the last thing seen during the
+     * closing transition would be the dialog complaining that the work it just
+     * finished is missing.
+     */
+    const errors = !open || busy ? [] : failure ? [failure] : validate ? validate() : [];
 
     return (
         <BaseModal
