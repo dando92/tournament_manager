@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { createMigrationDataSource } from '../src/migration-data-source';
+import { seedLocalFixture } from '../src/seed-local-fixture';
 import { TournamentTimelineTiming1788300000000 } from '../src/migrations/1788300000000-TournamentTimelineTiming';
 
 const host = process.env.DATABASE_HOST ?? '127.0.0.1';
@@ -124,6 +125,52 @@ describe('migration runner', () => {
 
     await dataSource.query(`DELETE FROM "tournament" WHERE name = 'Participant uniqueness'`);
     await dataSource.query(`DELETE FROM "player" WHERE "playerName" = 'Twice registered'`);
+  });
+
+  describe('local fixture seed', () => {
+    const name = 'Seeded fixture tournament';
+    const environment = { ...process.env };
+
+    beforeEach(() => {
+      process.env.LOCAL_FIXTURE_TOURNAMENT_NAME = name;
+      delete process.env.LOCAL_FIXTURE_SYNCSTART_URL;
+    });
+
+    afterEach(async () => {
+      process.env = { ...environment };
+      await dataSource.query(`DELETE FROM "tournament" WHERE name = $1`, [name]);
+    });
+
+    it('creates nothing unless the seed is explicitly enabled', async () => {
+      delete process.env.LOCAL_FIXTURE_ENABLED;
+      await seedLocalFixture(dataSource);
+      process.env.LOCAL_FIXTURE_ENABLED = 'false';
+      await seedLocalFixture(dataSource);
+
+      const rows = await dataSource.query<Array<{ count: string }>>(`SELECT COUNT(*) AS count FROM "tournament" WHERE name = $1`, [name]);
+      expect(rows[0].count).toBe('0');
+    });
+
+    it('creates the fixture once and leaves it alone when it already exists', async () => {
+      process.env.LOCAL_FIXTURE_ENABLED = 'true';
+      await seedLocalFixture(dataSource);
+
+      const created = await dataSource.query<Array<{ id: number; syncstartUrl: string; availableSetupsCount: number; defaultScoringSystem: string }>>(
+        `SELECT "id", "syncstartUrl", "availableSetupsCount", "defaultScoringSystem" FROM "tournament" WHERE name = $1`,
+        [name],
+      );
+      expect(created).toHaveLength(1);
+      expect(created[0]).toMatchObject({ syncstartUrl: '', availableSetupsCount: 2, defaultScoringSystem: 'PlacementPointsWithFailZero' });
+
+      await dataSource.query(`UPDATE "tournament" SET "availableSetupsCount" = 5 WHERE name = $1`, [name]);
+      await seedLocalFixture(dataSource);
+
+      const after = await dataSource.query<Array<{ id: number; availableSetupsCount: number }>>(
+        `SELECT "id", "availableSetupsCount" FROM "tournament" WHERE name = $1`,
+        [name],
+      );
+      expect(after).toEqual([{ id: created[0].id, availableSetupsCount: 5 }]);
+    });
   });
 
   it('upgrades existing control room flows without deleting them', async () => {

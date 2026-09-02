@@ -3,14 +3,7 @@ import { join, relative } from "node:path";
 
 const root = process.cwd();
 const errors = [];
-const apps = [
-  "api",
-  "migrations",
-  "local-fixtures",
-  "syncstart",
-  "realtime",
-  "frontend",
-];
+const apps = ["api", "migrations", "syncstart", "realtime", "frontend"];
 const tools = ["syncstart-simulator", "legacy-syncstart-bridge"];
 
 const prettierConfigPath = join(root, ".prettierrc.json");
@@ -170,7 +163,7 @@ const deploymentCompose = readFileSync(
   join(root, "deploy", "docker-compose.yml"),
   "utf8",
 );
-for (const app of apps.filter((app) => app !== "local-fixtures")) {
+for (const app of apps) {
   const imageName = app === "api" ? "api" : app;
   if (
     !deploymentCompose.includes(
@@ -209,6 +202,7 @@ for (const required of [
   "npm run test:e2e",
   "npm run build",
   "npm run verify:local",
+  "target: ${{ matrix.name }}",
   "type=raw,value=${{ github.sha }}",
   "Apply migrations once",
   "Smoke test release",
@@ -230,14 +224,6 @@ const allowedDependencies = new Map([
   ["@tournament-manager/syncstart-protocol", ["@tournament-manager/contracts"]],
   ["@tournament-manager/startgg", []],
   ["@tournament-manager/migrations", ["@tournament-manager/persistence"]],
-  [
-    "@tournament-manager/local-fixtures",
-    [
-      "@tournament-manager/contracts",
-      "@tournament-manager/live-messaging",
-      "@tournament-manager/persistence",
-    ],
-  ],
   [
     "@tournament-manager/api",
     [
@@ -282,76 +268,66 @@ for (const workspace of [
 }
 
 /*
- * An image builds its workspaces by a hand-written chain, so nothing forces
- * that chain to agree with the dependency graph. When contracts gained its
- * dependency on scoring, three Dockerfiles kept building contracts first and
- * every image stopped building — the graph and the images had drifted with no
- * failing check between them.
+ * Every image is a target of the repository-root Dockerfile, which installs
+ * dependencies once and builds the monorepo once in stages the targets share.
+ * The per-image build chain that used to drift from the dependency graph is
+ * gone: scripts/build-workspaces.mjs reads the order from the manifests. What
+ * the Dockerfile still names by hand is the set of workspaces it copies, so a
+ * workspace added to the repository and forgotten there would produce an
+ * image that cannot install or cannot resolve a package at runtime.
  */
-const workspaceDirectories = [
-  "packages/contracts",
-  "packages/scoring",
-  "packages/persistence",
-  "packages/live-messaging",
-  "packages/syncstart-protocol",
-  "packages/startgg",
-  ...apps.map((app) => `apps/${app}`),
-];
-const dependencyGraph = new Map(
-  workspaceDirectories.map((directory) => {
-    const pkg = packageJson(directory);
-    return [pkg.name, internalDependencies(pkg)];
-  }),
-);
+const dockerfilePath = join(root, "Dockerfile");
+if (!existsSync(dockerfilePath)) {
+  errors.push("the repository-root Dockerfile is required");
+} else {
+  const dockerfile = readFileSync(dockerfilePath, "utf8");
+  const rootWorkspaces = packageJson(".").workspaces;
 
-function transitiveDependencies(name, seen = new Set()) {
-  for (const dependency of dependencyGraph.get(name) ?? []) {
-    if (seen.has(dependency)) continue;
-    seen.add(dependency);
-    transitiveDependencies(dependency, seen);
-  }
-  return seen;
-}
-
-for (const app of apps) {
-  const dockerfilePath = join(root, "apps", app, "Dockerfile");
-  if (!existsSync(dockerfilePath)) {
-    errors.push(`apps/${app}/Dockerfile is required`);
-    continue;
-  }
-
-  const name = packageJson(`apps/${app}`).name;
-  const built = readFileSync(dockerfilePath, "utf8")
-    .split(/\r?\n/)
-    .filter((line) => line.includes("npm run build"))
-    .flatMap((line) =>
-      [...line.matchAll(/--workspace=(\S+)/g)].map((match) => match[1]),
-    );
-  const position = new Map(built.map((workspace, index) => [workspace, index]));
-
-  if (!position.has(name)) {
-    errors.push(`apps/${app}/Dockerfile must build ${name}`);
-    continue;
-  }
-
-  const required = transitiveDependencies(name);
-  for (const dependency of required) {
-    if (!position.has(dependency)) {
+  for (const directory of rootWorkspaces) {
+    if (
+      !dockerfile.includes(
+        `COPY ${directory}/package.json ${directory}/package.json`,
+      )
+    ) {
       errors.push(
-        `apps/${app}/Dockerfile must build ${dependency}, which ${name} depends on`,
+        `the root Dockerfile must copy ${directory}/package.json into the manifest stage`,
       );
     }
   }
-  for (const dependent of [name, ...required]) {
-    for (const dependency of dependencyGraph.get(dependent) ?? []) {
-      if (!position.has(dependency) || !position.has(dependent)) continue;
-      if (position.get(dependency) > position.get(dependent)) {
-        errors.push(
-          `apps/${app}/Dockerfile builds ${dependent} before its dependency ${dependency}`,
-        );
-      }
+
+  for (const directory of rootWorkspaces) {
+    const isPackage = directory.startsWith("packages/");
+    const target = directory.split("/")[1];
+    const output =
+      target === "frontend"
+        ? `COPY --from=build /app/${directory}/dist /usr/share/nginx/html`
+        : `COPY --from=build /app/${directory}/dist ${directory}/dist`;
+
+    if (!dockerfile.includes(output)) {
+      errors.push(
+        isPackage
+          ? `the root Dockerfile must copy ${directory}/dist into the shared runtime stage`
+          : `the ${target} image target must copy the ${directory} build output`,
+      );
+    }
+    if (isPackage) continue;
+    if (!new RegExp(`^FROM .+ AS ${target}$`, "m").test(dockerfile)) {
+      errors.push(`the root Dockerfile must define the ${target} image target`);
     }
   }
+}
+
+for (const app of apps) {
+  if (!localCompose.includes(`target: ${app}`)) {
+    errors.push(
+      `local Compose must build the ${app} target of the root Dockerfile`,
+    );
+  }
+}
+if (/^\s+dockerfile: (?!Dockerfile$)/m.test(localCompose)) {
+  errors.push(
+    "local Compose services must build targets of the root Dockerfile",
+  );
 }
 
 for (const path of [

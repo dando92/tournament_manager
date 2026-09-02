@@ -100,17 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: migrations
-            dockerfile: apps/migrations/Dockerfile
-          - name: api
-            dockerfile: apps/api/Dockerfile
-          - name: syncstart
-            dockerfile: apps/syncstart/Dockerfile
-          - name: realtime
-            dockerfile: apps/realtime/Dockerfile
-          - name: frontend
-            dockerfile: apps/frontend/Dockerfile
+        name: [migrations, api, syncstart, realtime, frontend]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -127,7 +117,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: Dockerfile
+          target: ${{ matrix.name }}
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}

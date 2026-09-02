@@ -37,7 +37,8 @@ services:
   migrations:
     build:
       context: .
-      dockerfile: apps/migrations/Dockerfile
+      dockerfile: Dockerfile
+      target: migrations
     restart: "no"
     environment: &application-environment
       NODE_ENV: production
@@ -61,6 +62,7 @@ services:
       STARTGG_API_URL: ${STARTGG_API_URL:-https://api.start.gg/gql/alpha}
       STARTGG_PER_PAGE: ${STARTGG_PER_PAGE:-64}
       STARTGG_MIN_INTERVAL_MS: ${STARTGG_MIN_INTERVAL_MS:-1000}
+      LOCAL_FIXTURE_ENABLED: ${LOCAL_FIXTURE_ENABLED:-true}
       LOCAL_FIXTURE_TOURNAMENT_NAME: ${LOCAL_FIXTURE_TOURNAMENT_NAME:-Local E2E Tournament}
       LOCAL_FIXTURE_SYNCSTART_URL: ${LOCAL_FIXTURE_SYNCSTART_URL:-}
     depends_on:
@@ -70,7 +72,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
+      target: api
     restart: unless-stopped
     ports:
       - "${API_PORT:-3000}:3000"
@@ -81,8 +84,6 @@ services:
       redis:
         condition: service_healthy
       migrations:
-        condition: service_completed_successfully
-      local-fixtures:
         condition: service_completed_successfully
       syncstart:
         condition: service_healthy
@@ -96,7 +97,8 @@ services:
   syncstart:
     build:
       context: .
-      dockerfile: apps/syncstart/Dockerfile
+      dockerfile: Dockerfile
+      target: syncstart
     restart: unless-stopped
     environment: *application-environment
     depends_on:
@@ -112,32 +114,18 @@ services:
   syncstart-simulator:
     build:
       context: .
-      dockerfile: tools/syncstart-simulator/Dockerfile
+      dockerfile: Dockerfile
+      target: syncstart-simulator
     restart: unless-stopped
     profiles: ["simulator"]
     environment:
       SYNCSTART_SIMULATOR_PORT: 19000
 
-  local-fixtures:
-    build:
-      context: .
-      dockerfile: apps/local-fixtures/Dockerfile
-    restart: "no"
-    environment: *application-environment
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
-      syncstart:
-        condition: service_healthy
-
   realtime-a:
     build:
       context: .
-      dockerfile: apps/realtime/Dockerfile
+      dockerfile: Dockerfile
+      target: realtime
     restart: unless-stopped
     ports:
       - "${REALTIME_PORT:-3003}:3003"
@@ -155,7 +143,8 @@ services:
   realtime-b:
     build:
       context: .
-      dockerfile: apps/realtime/Dockerfile
+      dockerfile: Dockerfile
+      target: realtime
     restart: unless-stopped
     ports:
       - "${REALTIME_REPLICA_PORT:-3004}:3003"
@@ -173,7 +162,8 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: Dockerfile
+      target: frontend
     restart: unless-stopped
     environment:
       PUBLIC_API_URL: ${PUBLIC_API_URL:-/api/}

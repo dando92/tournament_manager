@@ -10,7 +10,6 @@
     "packages/syncstart-protocol",
     "packages/startgg",
     "apps/migrations",
-    "apps/local-fixtures",
     "apps/api",
     "apps/syncstart",
     "apps/realtime",
@@ -19,7 +18,7 @@
     "tools/legacy-syncstart-bridge"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "node scripts/build-workspaces.mjs",
     "dev": "concurrently --names api,syncstart,realtime,frontend --prefix-colors blue,yellow,green,magenta \"npm run dev:api\" \"npm run dev:syncstart\" \"npm run dev:realtime\" \"npm run dev:frontend\"",
     "dev:dependencies": "docker compose up --detach --wait postgres redis migrations",
     "dev:api": "npm run start:dev --workspace=@tournament-manager/api",
@@ -35,13 +34,13 @@
     "test:integration": "npm run test:integration --workspace=@tournament-manager/api",
     "check:architecture": "node scripts/check-architecture.mjs",
     "verify": "npm run check:architecture && npm run build && npm run lint && npm run test:contract && npm run test:unit && npm run test:e2e",
-    "local:up": "cross-env COMPOSE_PARALLEL_LIMIT=1 docker compose up --build --detach --wait --remove-orphans",
+    "local:up": "docker compose build api && docker compose up --build --detach --wait --remove-orphans",
     "local_sync:up": "npm run local:up && npm run local_sync:bridge",
     "local_sync:bridge": "npm run build --workspace=@tournament-manager/legacy-syncstart-bridge && npm run start --workspace=@tournament-manager/legacy-syncstart-bridge",
     "local:status": "docker compose ps && node scripts/local-status.mjs",
     "local:logs": "docker compose logs --follow --tail=200",
     "local:down": "docker compose down --remove-orphans",
-    "local:reset": "docker compose down --volumes --remove-orphans && docker compose up --build --detach --wait",
+    "local:reset": "docker compose down --volumes --remove-orphans && npm run local:up",
     "verify:local": "npm run build && npm run test:integration && npm run test:e2e && node scripts/verify-local.mjs"
   },
   "devDependencies": {

@@ -89,8 +89,7 @@ Every file below lives in the external `tournament_manager-docs` repository, clo
 ## Repository Architecture
 
 - `apps/api`: NestJS HTTP API, synchronous application entrypoints, and application-owned request/response integrations.
-- `apps/migrations`: One-shot PostgreSQL migration runner.
-- `apps/local-fixtures`: Optional one-shot local fixture application.
+- `apps/migrations`: One-shot PostgreSQL migration runner, which also seeds the first administrator and, when explicitly enabled, the deterministic local fixture.
 - `apps/syncstart`: Independently deployable SyncStart protocol, connector, and lobby-session service, including the deterministic local protocol simulator.
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
 - `apps/frontend`: Current React and Vite web application.

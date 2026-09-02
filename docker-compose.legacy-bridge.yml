@@ -12,7 +12,8 @@ services:
   legacy-syncstart-bridge:
     build:
       context: .
-      dockerfile: tools/legacy-syncstart-bridge/Dockerfile
+      dockerfile: Dockerfile
+      target: legacy-syncstart-bridge
     restart: unless-stopped
     ports:
       - "${LEGACY_BRIDGE_UDP_PORT:-53000}:53000/udp"
