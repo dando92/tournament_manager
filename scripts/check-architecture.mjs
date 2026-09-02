@@ -16,7 +16,7 @@ if (!existsSync(prettierConfigPath)) {
         tabWidth: 4,
         useTabs: false,
         semi: true,
-        singleQuote: false,
+        singleQuote: true,
         trailingComma: 'all',
     };
     if (JSON.stringify(prettierConfig) !== JSON.stringify(expectedPrettierConfig)) {

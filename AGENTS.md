@@ -62,11 +62,12 @@ Tournament Manager is a self-contained, provider-independent application for man
   use single-line `if` statements. This rule wins over the reference files,
   which predate it and still contain single-line `if` statements: give one
   braces when you edit its line, and never copy the shape into new code.
-- The repository-root Prettier configuration supplies the remaining defaults,
-  including the 160-column print width. Its `singleQuote: false` disagrees with
-  the reference files and is not followed; everything else matches them. Do not
-  run Prettier over an existing file when doing so would rewrite its
-  established formatting.
+- The repository-root Prettier configuration matches the reference files and
+  supplies the remaining defaults, including the 160-column print width. It is
+  not applied to the repository as a whole: several workspaces still use double
+  quotes, and `npm run format` would rewrite every one of them. Do not run
+  Prettier over an existing file when doing so would rewrite its established
+  formatting; let a file converge when it is edited for another reason.
 
 ## Documentation Index
 
