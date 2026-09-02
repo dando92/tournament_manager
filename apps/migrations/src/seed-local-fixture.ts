@@ -17,7 +17,9 @@ import { Tournament } from '@tournament-manager/persistence';
  * environment must never gain rows because a variable was left set somewhere.
  */
 export async function seedLocalFixture(dataSource: DataSource): Promise<void> {
-    if (process.env.LOCAL_FIXTURE_ENABLED !== 'true') return;
+    if (process.env.LOCAL_FIXTURE_ENABLED !== 'true') {
+        return;
+    }
 
     const name = process.env.LOCAL_FIXTURE_TOURNAMENT_NAME?.trim() || 'Local E2E Tournament';
     const tournaments = dataSource.getRepository(Tournament);

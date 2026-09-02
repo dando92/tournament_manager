@@ -29,9 +29,13 @@ if (existsSync(join(root, 'apps', 'api', '.prettierrc'))) {
 }
 
 function filesBelow(directory) {
-    if (!existsSync(directory)) return [];
+    if (!existsSync(directory)) {
+        return [];
+    }
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'coverage') return [];
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'coverage') {
+            return [];
+        }
         const path = join(directory, entry.name);
         return entry.isDirectory() ? filesBelow(path) : [path];
     });
@@ -235,7 +239,9 @@ if (!existsSync(dockerfilePath)) {
                     : `the ${target} image target must copy the ${directory} build output`,
             );
         }
-        if (isPackage) continue;
+        if (isPackage) {
+            continue;
+        }
         if (!new RegExp(`^FROM .+ AS ${target}$`, 'm').test(dockerfile)) {
             errors.push(`the root Dockerfile must define the ${target} image target`);
         }

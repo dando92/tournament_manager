@@ -59,7 +59,9 @@ Tournament Manager is a self-contained, provider-independent application for man
   one line whenever reasonably possible. When a line must wrap, keep related
   parameters grouped instead of placing every parameter on its own line.
 - Always put an `if` body on the following line and enclose it in braces. Do not
-  use single-line `if` statements.
+  use single-line `if` statements. This rule wins over the reference files,
+  which predate it and still contain single-line `if` statements: give one
+  braces when you edit its line, and never copy the shape into new code.
 - The repository-root Prettier configuration supplies the remaining defaults,
   including the 160-column print width. Its `singleQuote: false` disagrees with
   the reference files and is not followed; everything else matches them. Do not
