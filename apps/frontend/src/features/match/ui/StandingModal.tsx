@@ -1,7 +1,6 @@
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
 import { useStandingModal } from "@/features/match/model/useStandingModal";
-import { btnPrimary } from "@/styles/buttonStyles";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 
@@ -28,7 +27,7 @@ type StandingModalProps = {
     score: number,
     isFailed: boolean,
     scoreId?: number,
-  ) => void;
+  ) => Promise<void>;
 };
 
 export default function StandingModal({
@@ -63,9 +62,7 @@ export default function StandingModal({
     setSelectedScoreId,
   } = useStandingModal({ open, playerId, songId, initialPercentage, initialScoreId, initialIsFailed });
 
-  function handleSave() {
-    if (!canSave) return;
-
+  const handleSave = () =>
     onSave(
       playerId,
       roundId,
@@ -74,48 +71,44 @@ export default function StandingModal({
       isFailed,
       selectedScoreId ? Number(selectedScoreId) : undefined,
     );
-    onClose();
-  }
+
+  const validate = () => {
+    if (canSave) {
+      return [];
+    }
+
+    return [isRegisteredScoreMode ? "Choose the registered score to use." : "A percentage reads as a number between 0 and 100."];
+  };
+
+  const deleteStanding = mode === "edit" && onDelete
+    ? (
+        <DeleteConfirmButton
+          onConfirm={async () => {
+            await onDelete();
+            onClose();
+          }}
+          title="Delete standing"
+          confirmTitle="Delete standing"
+          confirmMessage={`Delete ${playerName}'s standing for "${visibleSongTitle}"?`}
+          confirmText="Delete"
+        >
+          Delete
+        </DeleteConfirmButton>
+      )
+    : undefined;
 
   return (
-    <BaseModal
+    <FormModal
       open={open}
       onClose={onClose}
       title={mode === "add" ? "Add standing" : "Edit standing"}
-      footer={
-        <div className="flex flex-row justify-between gap-2">
-          <div>
-            {mode === "edit" && onDelete && (
-              <DeleteConfirmButton
-                onConfirm={async () => {
-                  await onDelete();
-                  onClose();
-                }}
-                title="Delete standing"
-                confirmTitle="Delete standing"
-                confirmMessage={`Delete ${playerName}'s standing for "${visibleSongTitle}"?`}
-                confirmText="Delete"
-              >
-                Delete
-              </DeleteConfirmButton>
-            )}
-          </div>
-          <div className="flex flex-row gap-2">
-            <button
-              type="button"
-              className="text-ui-text-soft px-3 py-1.5 rounded hover:underline"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button type="button" className={btnPrimary} onClick={handleSave} disabled={!canSave}>
-              Save
-            </button>
-          </div>
-        </div>
-      }
+      confirmText="Save"
+      validate={validate}
+      onConfirm={handleSave}
+      leadingActions={deleteStanding}
+      failureFallback="The standing could not be saved."
     >
-      <p className="text-sm text-ui-text-mute mb-4">
+      <p className="text-sm text-ui-text-mute">
         {playerName} for {visibleSongTitle}
       </p>
       <div className="flex flex-col gap-4">
@@ -169,6 +162,6 @@ export default function StandingModal({
           </>
         )}
       </div>
-    </BaseModal>
+    </FormModal>
   );
 }

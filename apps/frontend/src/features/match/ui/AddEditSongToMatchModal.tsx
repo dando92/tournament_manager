@@ -1,4 +1,4 @@
-import OkModal from "@/shared/components/ui/OkModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import AddEditSongRollFields from "@/features/match/ui/AddEditSongRollFields";
 import AddEditSongTitleFields from "@/features/match/ui/AddEditSongTitleFields";
 import { useAddEditSongToMatchModal } from "@/features/match/model/useAddEditSongToMatchModal";
@@ -15,8 +15,8 @@ type AddSongToMatchModalProps = {
   editingRoundId: number | null;
   open: boolean;
   onClose: () => void;
-  onAddRounds: (sources: RoundSourceRequest[]) => void;
-  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => void;
+  onAddRounds: (sources: RoundSourceRequest[]) => Promise<void>;
+  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => Promise<void>;
 };
 
 export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps) {
@@ -25,38 +25,46 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
     tournamentId: props.tournamentId,
   });
 
-  const handleSubmit = () => {
+  const validate = () => {
     if (state.songAddType === "roll") {
-      if (!state.selectedGroupName || !state.difficultyInput) return;
-      const source: RoundSourceRequest = {
-        group: state.selectedGroupName,
-        level: state.difficultyInput,
-      };
+      const errors: string[] = [];
+      if (!state.selectedGroupName) {
+        errors.push("Choose the pack to roll from.");
+      }
+      if (!state.difficultyInput) {
+        errors.push("Choose the difficulty to roll.");
+      }
 
-      if (props.editingRoundId !== null) props.onReplaceRoundSong(props.editingRoundId, source);
-      else props.onAddRounds([source]);
+      return errors;
+    }
 
-      props.onClose();
+    return state.selectedSongs.length === 0 ? ["Choose at least one song."] : [];
+  };
+
+  const handleSubmit = async () => {
+    const sources: RoundSourceRequest[] =
+      state.songAddType === "roll"
+        ? [{ group: state.selectedGroupName, level: state.difficultyInput }]
+        : state.selectedSongs.map((song) => ({ songId: song.id }));
+
+    /* Editing replaces the song of one round, so only the first choice lands. */
+    if (props.editingRoundId !== null) {
+      await props.onReplaceRoundSong(props.editingRoundId, sources[0]);
       return;
     }
 
-    if (state.selectedSongs.length === 0) return;
-
-    if (props.editingRoundId !== null) {
-      props.onReplaceRoundSong(props.editingRoundId, { songId: state.selectedSongs[0].id });
-    } else {
-      props.onAddRounds(state.selectedSongs.map((song) => ({ songId: song.id })));
-    }
-
-    props.onClose();
+    await props.onAddRounds(sources);
   };
 
   return (
-    <OkModal
+    <FormModal
       open={props.open}
       onClose={props.onClose}
       title={props.editingRoundId !== null ? "Edit song" : "Add song"}
-      onOk={handleSubmit}
+      confirmText={props.editingRoundId !== null ? "Replace song" : "Add song"}
+      validate={validate}
+      onConfirm={handleSubmit}
+      failureFallback="The song could not be set on the match."
     >
       <div className="w-full">
         <h3>Songs</h3>
@@ -104,6 +112,6 @@ export default function AddEditSongToMatchModal(props: AddSongToMatchModalProps)
           />
         )}
       </div>
-    </OkModal>
+    </FormModal>
   );
 }

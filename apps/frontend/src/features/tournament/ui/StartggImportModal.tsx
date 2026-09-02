@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import type { Status } from "@/shared/components/ui/status";
-import { toast } from "react-toastify";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import FormModal from "@/shared/components/ui/FormModal";
+import { apiErrorMessage } from "@/shared/lib/apiError";
+import { btnSecondary } from "@/styles/buttonStyles";
 import {
   importStartggEvent,
   previewStartggImport,
@@ -60,73 +60,72 @@ export default function StartggImportModal({
   const [eventSlug, setEventSlug] = useState("");
   const [preview, setPreview] = useState<StartggImportPreviewResponse | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setPreview(null);
       setEventSlug("");
-      return;
     }
   }, [fixedTournamentId, open]);
 
+  /* A slug that changed describes a different event, so what was read of the old one is gone. */
   useEffect(() => {
     setPreview(null);
+    setPreviewError(null);
   }, [eventSlug]);
 
   async function handlePreview() {
     if (!eventSlug.trim() || !fixedTournamentId) return;
 
     setLoadingPreview(true);
+    setPreviewError(null);
     try {
       const response = await previewStartggImport(fixedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" });
       setPreview(response);
-    } catch {
-      toast.error("Failed to preview start.gg import.");
+    } catch (error) {
+      setPreviewError(apiErrorMessage(error, "That event could not be read from start.gg."));
     } finally {
       setLoadingPreview(false);
     }
   }
 
-  async function handleImport() {
-    if (!eventSlug.trim() || !fixedTournamentId) return;
-
-    setSubmitting(true);
-    try {
-      const response = await importStartggEvent(fixedTournamentId, { eventSlug: eventSlug.trim(), mode: "create-division" });
-      toast.success("start.gg import completed.");
-      await onImported?.({ tournamentId: response.tournamentId, divisionId: response.divisionId });
-      onClose();
-    } catch {
-      toast.error("Failed to import from start.gg.");
-    } finally {
-      setSubmitting(false);
+  const validate = () => {
+    if (!fixedTournamentId) {
+      return ["Open a tournament before importing into it."];
     }
+    if (!eventSlug.trim()) {
+      return ["Enter the start.gg event slug."];
+    }
+
+    return preview ? [] : ["Preview the event before importing it."];
+  };
+
+  /* The division the import built is where it is read, so the caller opens it
+     instead of this dialog reporting what it made. */
+  async function handleImport() {
+    const response = await importStartggEvent(fixedTournamentId!, { eventSlug: eventSlug.trim(), mode: "create-division" });
+    await onImported?.({ tournamentId: response.tournamentId, divisionId: response.divisionId });
   }
 
-  const footer = (
-    <div className="flex items-center justify-between gap-3">
-      <button type="button" onClick={handlePreview} disabled={loadingPreview || !eventSlug.trim()} className={`${btnSecondary} text-sm`}>
-        {loadingPreview ? "Previewing..." : "Preview"}
-      </button>
-      <div className="flex gap-2">
-        <button type="button" onClick={onClose} className={`${btnSecondary} text-sm`}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleImport}
-          disabled={submitting || !preview || !fixedTournamentId}
-          className={`${btnPrimary} text-sm`}
-        >
-          {submitting ? "Importing..." : "Confirm import"}
-        </button>
-      </div>
-    </div>
+  const previewAction = (
+    <button type="button" onClick={handlePreview} disabled={loadingPreview || !eventSlug.trim()} className={`${btnSecondary} text-sm`}>
+      {loadingPreview ? "Previewing..." : "Preview"}
+    </button>
   );
 
   return (
-    <BaseModal open={open} onClose={onClose} title="Import from start.gg" maxWidth="max-w-4xl" footer={footer}>
+    <FormModal
+      open={open}
+      onClose={onClose}
+      title="Import from start.gg"
+      confirmText="Confirm import"
+      validate={validate}
+      onConfirm={handleImport}
+      leadingActions={previewAction}
+      failureFallback="The import from start.gg did not complete."
+      maxWidth="max-w-4xl"
+    >
       <div className="flex flex-col gap-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -135,9 +134,10 @@ export default function StartggImportModal({
               value={eventSlug}
               onChange={(event) => setEventSlug(event.target.value)}
               placeholder="tournament/example/event/singles"
-              autoFocus
               className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
             />
+            {/* The preview is content this dialog reads, so a failure to read it stays where it would have appeared. */}
+            {previewError && <p className="text-xs text-state-failed">{previewError}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -253,6 +253,6 @@ export default function StartggImportModal({
           </div>
         )}
       </div>
-    </BaseModal>
+    </FormModal>
   );
 }

@@ -1,4 +1,4 @@
-import OkModal from "@/shared/components/ui/OkModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import Select from "react-select";
 import { selectPortalStyles } from "@/styles/selectStyles";
 import { CreateMatchRequest } from "@/features/match/model/types";
@@ -11,7 +11,7 @@ import { scoringSystemLabel } from "@/features/match/model/scoringSystem";
 type CreateMatchModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreate: (request: CreateMatchRequest) => void;
+  onCreate: (request: CreateMatchRequest) => Promise<void>;
   /** Where the modal was opened from. The picker starts there and can be moved. */
   divisionId?: number;
   phaseId?: number;
@@ -23,13 +23,14 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
   const state = useCreateMatchModal(props);
 
   return (
-    <OkModal
-      okText="Create match"
-      okDisabled={!state.canCreate}
+    <FormModal
       title="Create Match"
+      confirmText="Create match"
       open={props.open}
       onClose={props.onClose}
-      onOk={state.handleSubmit}
+      validate={state.validate}
+      onConfirm={state.handleSubmit}
+      failureFallback="The match could not be created."
     >
       <div className="flex flex-col w-full gap-3">
         <div className="w-full">
@@ -45,6 +46,7 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
         <div className="w-full">
           <h3>Name</h3>
           <input
+            data-autofocus
             className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
             type="text"
             value={state.name}
@@ -104,6 +106,6 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
           onRemoveDifficulty={state.removeDifficulty}
         />
       </div>
-    </OkModal>
+    </FormModal>
   );
 }

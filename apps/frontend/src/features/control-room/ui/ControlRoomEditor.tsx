@@ -5,8 +5,8 @@ import { getEditor } from "@/features/control-room/api/control-room.api";
 import { controlRoomKeys } from "@/features/control-room/api/control-room.keys";
 import { localDateTimeToIso, toLocalDateTimeValue } from "@/features/control-room/model/flowDateTime";
 import ControlRoomMatchAssignment, { type EditableFlowEntry } from "@/features/control-room/ui/ControlRoomMatchAssignment";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnDanger, btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import FormModal from "@/shared/components/ui/FormModal";
+import { btnDanger, focusRing } from "@/styles/buttonStyles";
 
 type Props = {
     flowId: number | null;
@@ -28,7 +28,6 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
     const [willStartAt, setWillStartAt] = useState("");
     const [assigned, setAssigned] = useState<EditableFlowEntry[]>([]);
     const [unassigned, setUnassigned] = useState(query.data?.unassignedMatches ?? []);
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (!query.data) return;
@@ -38,44 +37,55 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
         setUnassigned(query.data.unassignedMatches);
     }, [query.data]);
 
-    async function save() {
-        if (!query.data || !name.trim() || !willStartAt) return;
-        setSaving(true);
-        try {
-            await onSave(
-                query.data.flow.id,
-                query.data.flow.version,
-                assigned.map((entry) => ({ matchId: entry.match.id, expectedDurationMinutes: entry.expectedDurationMinutes })),
-                name.trim(),
-                localDateTimeToIso(willStartAt),
-                { name: query.data.flow.name, willStartAt: query.data.flow.willStartAt },
-            );
-            onClose();
-        } finally {
-            setSaving(false);
+    const validate = () => {
+        if (!query.data) {
+            return ['This flow is not loaded yet.'];
         }
-    }
+
+        const errors: string[] = [];
+        if (!name.trim()) {
+            errors.push('A flow needs a name.');
+        }
+        if (!willStartAt) {
+            errors.push('A flow needs a start time.');
+        }
+
+        return errors;
+    };
+
+    const save = () =>
+        onSave(
+            query.data!.flow.id,
+            query.data!.flow.version,
+            assigned.map((entry) => ({ matchId: entry.match.id, expectedDurationMinutes: entry.expectedDurationMinutes })),
+            name.trim(),
+            localDateTimeToIso(willStartAt),
+            { name: query.data!.flow.name, willStartAt: query.data!.flow.willStartAt },
+        );
+
+    const deleteFlow = (
+        <button
+            type="button"
+            className={btnDanger}
+            disabled={!query.data}
+            onClick={() => query.data && window.confirm(`Delete flow "${query.data.flow.name}"?`) && onDelete(query.data.flow.id).then(onClose)}
+        >
+            Delete flow
+        </button>
+    );
 
     return (
-        <BaseModal
+        <FormModal
             open={flowId !== null}
             onClose={onClose}
             title="Edit control room flow"
+            confirmText="Save flow"
+            validate={validate}
+            onConfirm={save}
+            leadingActions={deleteFlow}
+            failureFallback="The flow could not be saved."
             maxWidth="max-w-5xl"
             fitViewport
-            footer={
-                <div className="flex flex-wrap justify-between gap-2">
-                    <button type="button" className={btnDanger} disabled={!query.data || saving} onClick={() => query.data && window.confirm(`Delete flow "${query.data.flow.name}"?`) && onDelete(query.data.flow.id).then(onClose)}>
-                        Delete flow
-                    </button>
-                    <div className="flex gap-2">
-                        <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
-                        <button type="button" className={btnPrimary} disabled={!query.data || !name.trim() || !willStartAt || saving} onClick={save}>
-                            {saving ? "Saving…" : "Save flow"}
-                        </button>
-                    </div>
-                </div>
-            }
         >
             {query.isLoading ? (
                 <p className="text-sm text-ui-text-mute">Loading flow…</p>
@@ -86,7 +96,7 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <label className="text-sm font-semibold text-ui-text">
                             Flow name
-                            <input value={name} onChange={(event) => setName(event.target.value)} className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
+                            <input data-autofocus value={name} onChange={(event) => setName(event.target.value)} className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
                         </label>
                         <label className="text-sm font-semibold text-ui-text">
                             Will start at
@@ -96,6 +106,6 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
                     <ControlRoomMatchAssignment assigned={assigned} unassigned={unassigned} defaultExpectedDurationMinutes={30} onAssignedChange={setAssigned} onUnassignedChange={setUnassigned} />
                 </div>
             )}
-        </BaseModal>
+        </FormModal>
     );
 }

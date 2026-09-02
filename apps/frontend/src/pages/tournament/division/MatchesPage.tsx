@@ -149,10 +149,7 @@ export default function DivisionMatchesPage() {
       <CreateMatchModal
         open={matchCreation.createMatchOpen}
         onClose={matchCreation.closeCreateMatch}
-        onCreate={async (request) => {
-          await matchCreation.createMatch(request);
-          matchCreation.closeCreateMatch();
-        }}
+        onCreate={matchCreation.createMatch}
         divisionId={division.id}
         phaseId={page.createTargetPhase}
         phaseGroupId={page.scopePoolId ?? undefined}

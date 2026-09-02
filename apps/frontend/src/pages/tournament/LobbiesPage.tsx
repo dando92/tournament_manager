@@ -2,8 +2,7 @@ import { Navigate } from "react-router-dom";
 import LobbyCardsSection from "@/features/tournament/ui/lobbies/LobbyCardsSection";
 import { useTournamentLobbiesContext } from "@/features/tournament/model/TournamentLobbiesContext";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import FormModal from "@/shared/components/ui/FormModal";
 
 export default function LobbiesPage() {
   const { tournamentId, controls } = useTournamentPageContext();
@@ -12,7 +11,6 @@ export default function LobbiesPage() {
     connectionStatus,
     spectateModal,
     setSpectateModal,
-    spectating,
     openSpectateModal,
     closeSpectateModal,
     handleSpectateLobby,
@@ -25,60 +23,40 @@ export default function LobbiesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <BaseModal
+      <FormModal
         open={spectateModal.open}
         onClose={closeSpectateModal}
         title={`Spectate ${spectateModal.lobbyCode}`}
+        confirmText="Spectate"
+        validate={() => (spectateModal.lobbyCode ? [] : ["Lobby code is required."])}
+        onConfirm={handleSpectateLobby}
+        failureFallback="That lobby could not be spectated."
         maxWidth="max-w-md"
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={closeSpectateModal} disabled={spectating} className={btnSecondary}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                handleSpectateLobby().catch(() => {});
-              }}
-              disabled={spectating}
-              className={btnPrimary}
-            >
-              {spectating ? "Spectating..." : "Spectate"}
-            </button>
-          </div>
-        }
       >
-        <div className="flex flex-col gap-3">
-          <input
-            className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
-            placeholder="Lobby name"
-            value={spectateModal.lobbyName}
-            onChange={(event) =>
-              setSpectateModal((current) => ({
-                ...current,
-                lobbyName: event.target.value,
-              }))
-            }
-          />
-          <input
-            className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
-            placeholder="Password (optional)"
-            type="password"
-            value={spectateModal.password}
-            onChange={(event) =>
-              setSpectateModal((current) => ({
-                ...current,
-                password: event.target.value,
-              }))
-            }
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleSpectateLobby().catch(() => {});
-              }
-            }}
-          />
-        </div>
-      </BaseModal>
+        <input
+          className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
+          placeholder="Lobby name"
+          value={spectateModal.lobbyName}
+          onChange={(event) =>
+            setSpectateModal((current) => ({
+              ...current,
+              lobbyName: event.target.value,
+            }))
+          }
+        />
+        <input
+          className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
+          placeholder="Password (optional)"
+          type="password"
+          value={spectateModal.password}
+          onChange={(event) =>
+            setSpectateModal((current) => ({
+              ...current,
+              password: event.target.value,
+            }))
+          }
+        />
+      </FormModal>
 
       <LobbyCardsSection
         lobbies={lobbies}

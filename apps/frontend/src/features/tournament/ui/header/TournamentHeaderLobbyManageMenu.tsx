@@ -3,7 +3,7 @@ import { faChevronDown, faPlug, faPowerOff, faRotate, faSatelliteDish } from "@f
 import { btnPrimary } from "@/styles/buttonStyles";
 import { useTournamentLobbiesContext } from "@/features/tournament/model/TournamentLobbiesContext";
 import { useTournamentHeaderLobbyManageMenu } from "@/features/tournament/model/useTournamentHeaderLobbyManageMenu";
-import HeaderActionModal from "./HeaderActionModal";
+import FormModal from "@/shared/components/ui/FormModal";
 
 type Props = {
   tournamentId: number;
@@ -24,7 +24,6 @@ export default function TournamentHeaderLobbyManageMenu({
   const {
     menuOpen,
     createLobbyModalOpen,
-    creatingLobby,
     createLobbyName,
     createLobbyPassword,
     setCreateLobbyModalOpen,
@@ -44,18 +43,19 @@ export default function TournamentHeaderLobbyManageMenu({
 
   return (
     <>
-      <HeaderActionModal
+      <FormModal
         open={createLobbyModalOpen}
         onClose={() => setCreateLobbyModalOpen(false)}
         title="Create lobby"
-        description="Create a new SyncStart lobby that players can join from their machines."
-        confirmLabel="Create lobby"
-        loading={creatingLobby}
-        confirmDisabled={!connectionStatus.isConnected}
-        onConfirm={() => {
-          handleCreateLobby().catch(() => {});
-        }}
+        confirmText="Create lobby"
+        validate={() => (connectionStatus.isConnected ? [] : ["Connect to SyncStart before creating a lobby."])}
+        onConfirm={handleCreateLobby}
+        failureFallback="The lobby could not be created."
+        maxWidth="max-w-md"
       >
+        <p className="text-sm text-ui-text-mute">
+          Create a new SyncStart lobby that players can join from their machines.
+        </p>
         <input
           className="rounded-lg border border-ui-border-strong px-3 py-2 text-sm"
           placeholder="Lobby name"
@@ -68,13 +68,8 @@ export default function TournamentHeaderLobbyManageMenu({
           type="password"
           value={createLobbyPassword}
           onChange={(event) => setCreateLobbyPassword(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handleCreateLobby().catch(() => {});
-            }
-          }}
         />
-      </HeaderActionModal>
+      </FormModal>
 
       <div className="relative">
         <button

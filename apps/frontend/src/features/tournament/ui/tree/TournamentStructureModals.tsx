@@ -7,6 +7,9 @@ import RenameModal from "@/shared/components/ui/RenameModal";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { useTournamentStructureDialogs } from "@/features/tournament/model/useTournamentStructureDialogs";
 import { nextPoolName } from "@/features/division/model/poolVisibility";
+import { divisionPath } from "@/features/tournament/model/treeSelection";
+import { treeNodeKey } from "@/shared/lib/treeState";
+import { useNavigate } from "react-router-dom";
 
 /**
  * The dialogs that change the shape of a tournament.
@@ -17,6 +20,7 @@ import { nextPoolName } from "@/features/division/model/poolVisibility";
  * never be open at once.
  */
 export default function TournamentStructureModals() {
+  const navigate = useNavigate();
   const tree = useTournamentTree();
   const { dialog, closeDialog, tournamentId, tournamentName, divisions } = tree;
   const { bracketTypes, dialogPhase, handleGenerateBracket } = useTournamentStructureDialogs();
@@ -26,9 +30,7 @@ export default function TournamentStructureModals() {
       <CreateDivisionModal
         open={dialog.kind === "createDivision"}
         onClose={closeDialog}
-        onCreate={(name) => {
-          void tree.addDivision(name);
-        }}
+        onCreate={(name) => tree.addDivision(name)}
       />
 
       <CreatePhaseModal
@@ -36,10 +38,7 @@ export default function TournamentStructureModals() {
         onClose={closeDialog}
         divisions={divisions.map((division) => ({ id: division.id, name: division.name }))}
         divisionId={dialog.kind === "createPhase" ? dialog.divisionId : undefined}
-        onCreate={(name, divisionId) => {
-          void tree.addPhase(divisionId, name);
-          closeDialog();
-        }}
+        onCreate={(name, divisionId) => tree.addPhase(divisionId, name)}
       />
 
       <CreatePoolModal
@@ -47,10 +46,7 @@ export default function TournamentStructureModals() {
         phaseName={dialogPhase?.name ?? ""}
         suggestedName={nextPoolName(dialogPhase)}
         onClose={closeDialog}
-        onCreate={(name) => {
-          if (dialog.kind !== "createPool") return;
-          void tree.createPool(dialog.phaseId, name);
-        }}
+        onCreate={(name) => (dialog.kind === "createPool" ? tree.createPool(dialog.phaseId, name) : Promise.resolve())}
       />
 
       <GenerateBracketModal
@@ -69,8 +65,10 @@ export default function TournamentStructureModals() {
         onClose={closeDialog}
         fixedTournamentId={tournamentId ?? undefined}
         fixedTournamentName={tournamentName}
-        onImported={async () => {
+        onImported={async ({ tournamentId: importedTournamentId, divisionId }) => {
           await tree.refreshTree();
+          tree.expandNode(treeNodeKey("division", divisionId));
+          navigate(divisionPath(importedTournamentId, divisionId));
         }}
       />
 
@@ -79,10 +77,7 @@ export default function TournamentStructureModals() {
         noun={dialog.kind === "rename" ? dialog.noun : ""}
         currentName={dialog.kind === "rename" ? dialog.currentName : ""}
         onClose={closeDialog}
-        onRename={(name) => {
-          if (dialog.kind !== "rename") return;
-          void dialog.apply(name);
-        }}
+        onRename={(name) => (dialog.kind === "rename" ? dialog.apply(name) : Promise.resolve())}
       />
     </>
   );

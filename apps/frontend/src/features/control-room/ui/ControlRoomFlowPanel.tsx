@@ -16,7 +16,7 @@ import * as MatchesApi from "@/features/match/api/match.api";
 import { controlRoomInterruptionMessage, controlRoomStaleMessage, controlRoomStatusLabel } from "@/features/control-room/model/controlRoomStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import { useLongPress } from "@/shared/hooks/useLongPress";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 
@@ -212,37 +212,20 @@ function EditEntryTimeModal({
     onSave: (minutes: number) => Promise<void>;
 }) {
     const [minutes, setMinutes] = useState(entry?.expectedDurationMinutes ?? 30);
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (entry) setMinutes(entry.expectedDurationMinutes);
     }, [entry]);
 
     return (
-        <BaseModal
+        <FormModal
             open={entry !== null}
             onClose={onClose}
             title="Edit expected duration"
-            footer={
-                <div className="flex justify-end gap-2">
-                    <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
-                    <button
-                        type="button"
-                        className={btnPrimary}
-                        disabled={saving || minutes < 1 || minutes > 1440}
-                        onClick={async () => {
-                            setSaving(true);
-                            try {
-                                await onSave(minutes);
-                            } finally {
-                                setSaving(false);
-                            }
-                        }}
-                    >
-                        {saving ? "Saving…" : "Save time"}
-                    </button>
-                </div>
-            }
+            confirmText="Save time"
+            validate={() => (minutes >= 1 && minutes <= 1440 ? [] : ["A match lasts between 1 and 1440 minutes."])}
+            onConfirm={() => onSave(minutes)}
+            failureFallback="The expected duration could not be saved."
         >
             <label className="text-sm font-semibold text-ui-text">
                 {entry?.match.name}
@@ -251,8 +234,8 @@ function EditEntryTimeModal({
                     <span className="font-normal text-ui-text-mute">minutes</span>
                 </span>
             </label>
-            <p className="mt-3 text-sm text-ui-text-mute">Later expected start times are recalculated automatically. The planned schedule is not overwritten by live delay.</p>
-        </BaseModal>
+            <p className="text-sm text-ui-text-mute">Later expected start times are recalculated automatically. The planned schedule is not overwritten by live delay.</p>
+        </FormModal>
     );
 }
 

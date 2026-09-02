@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
 import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { Division, PhaseGroup, PhaseGroupAdvancementRuleInput } from "@/features/division/model/types";
@@ -28,7 +27,6 @@ export default function PoolAdvancementEditor({
   onClose,
 }: PoolAdvancementEditorProps) {
   const [rules, setRules] = useState<PhaseGroupAdvancementRuleInput[]>([]);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setRules(
@@ -43,18 +41,9 @@ export default function PoolAdvancementEditor({
     );
   }, [phaseGroup]);
 
-  const save = async () => {
-    setSaving(true);
-    try {
-      await updateAdvancementRulesForSource("phase_group", phaseGroup.id, rules);
-      toast.success("Pool advancement rules updated.");
-      onClose();
-    } catch {
-      toast.error("Error updating pool advancement rules.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  /* The rules are on screen under the dialog, so a save that worked needs no
+     sentence; one that did not keeps the dialog open and says so there. */
+  const save = () => updateAdvancementRulesForSource("phase_group", phaseGroup.id, rules);
 
   return (
     <AdvancementRulesModal
@@ -64,7 +53,6 @@ export default function PoolAdvancementEditor({
       rules={rules}
       division={division}
       allMatches={allMatches}
-      saving={saving}
       onChange={setRules}
       onSave={save}
       onCancel={onClose}

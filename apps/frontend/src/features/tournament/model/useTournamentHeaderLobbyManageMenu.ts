@@ -13,7 +13,6 @@ export function useTournamentHeaderLobbyManageMenu({
 }: UseTournamentHeaderLobbyManageMenuOptions) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [createLobbyModalOpen, setCreateLobbyModalOpen] = useState(false);
-  const [creatingLobby, setCreatingLobby] = useState(false);
   const [createLobbyName, setCreateLobbyName] = useState("");
   const [createLobbyPassword, setCreateLobbyPassword] = useState("");
 
@@ -28,36 +27,20 @@ export function useTournamentHeaderLobbyManageMenu({
     setCreateLobbyModalOpen(true);
   };
 
+  /* The lobby joins the list on the page behind, so nothing is announced; the
+     dialog holds the spinner, the failure, and its own closing. */
   const handleCreateLobby = async () => {
-    if (!canCreateLobby) {
-      toast.error("Connect to SyncStart before creating a lobby.");
-      return;
-    }
-
-    setCreatingLobby(true);
-    try {
-      await createLobby(tournamentId, {
-        name: createLobbyName.trim() || undefined,
-        password: createLobbyPassword,
-      });
-      setCreateLobbyName("");
-      setCreateLobbyPassword("");
-      setCreateLobbyModalOpen(false);
-      toast.success("Lobby created.");
-    } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to create lobby.";
-      toast.error(message);
-    } finally {
-      setCreatingLobby(false);
-    }
+    await createLobby(tournamentId, {
+      name: createLobbyName.trim() || undefined,
+      password: createLobbyPassword,
+    });
+    setCreateLobbyName("");
+    setCreateLobbyPassword("");
   };
 
   return {
     menuOpen,
     createLobbyModalOpen,
-    creatingLobby,
     createLobbyName,
     createLobbyPassword,
     setCreateLobbyModalOpen,

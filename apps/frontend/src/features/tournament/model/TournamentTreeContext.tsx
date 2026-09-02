@@ -230,7 +230,13 @@ export function TournamentTreeProvider({
      None of these draws its own result. The server decides what a phase or a
      pool is called when the request omits it, and it announces the tree it
      produced; the listener invalidates the overview, and the tree redraws from
-     the same read everybody else gets. */
+     the same read everybody else gets.
+
+     The ones a dialog drives — creating and renaming — do not report anything
+     of their own: the tree redrawing is the confirmation, and a failure is let
+     out so the dialog that asked can stay open and say so. `run` is for the
+     mutations invoked straight from the tree, which have no dialog to hold the
+     answer. */
 
   const run = useCallback(
     async (work: () => Promise<void>, success: string, failure: string) => {
@@ -246,44 +252,26 @@ export function TournamentTreeProvider({
 
   const addDivision = useCallback(
     async (name: string) => {
-      if (tournamentId === null) return;
-      await run(
-        async () => {
-          await createDivision(tournamentId, name);
-        },
-        "Division created.",
-        "Error creating division.",
-      );
+      if (tournamentId === null) throw new Error("No tournament is open.");
+      await createDivision(tournamentId, name);
     },
-    [run, tournamentId],
+    [tournamentId],
   );
 
   const addPhase = useCallback(
     async (divisionId: number, name: string) => {
-      await run(
-        async () => {
-          await createPhase(divisionId, name);
-        },
-        "Phase created.",
-        "Error creating phase.",
-      );
+      await createPhase(divisionId, name);
       expandNode(treeNodeKey("division", divisionId));
     },
-    [run, expandNode],
+    [expandNode],
   );
 
   const createPool = useCallback(
     async (phaseId: number, name: string) => {
-      await run(
-        async () => {
-          await createPhaseGroup(phaseId, { name, displayIdentifier: name });
-        },
-        "Pool created.",
-        "Error creating pool.",
-      );
+      await createPhaseGroup(phaseId, { name, displayIdentifier: name });
       expandNode(treeNodeKey("phase", phaseId));
     },
-    [run, expandNode],
+    [expandNode],
   );
 
   const removeDivision = useCallback(
@@ -328,41 +316,23 @@ export function TournamentTreeProvider({
 
   const renameDivisionNode = useCallback(
     async (divisionId: number, name: string) => {
-      await run(
-        async () => {
-          await renameDivision(divisionId, name);
-        },
-        "Division renamed.",
-        "Error renaming division.",
-      );
+      await renameDivision(divisionId, name);
     },
-    [run],
+    [],
   );
 
   const renamePhaseNode = useCallback(
     async (phaseId: number, name: string) => {
-      await run(
-        async () => {
-          await updatePhase(phaseId, { name });
-        },
-        "Phase renamed.",
-        "Error renaming phase.",
-      );
+      await updatePhase(phaseId, { name });
     },
-    [run],
+    [],
   );
 
   const renamePoolNode = useCallback(
     async (phaseGroupId: number, name: string) => {
-      await run(
-        async () => {
-          await updatePhaseGroup(phaseGroupId, { name, displayIdentifier: name });
-        },
-        "Pool renamed.",
-        "Error renaming pool.",
-      );
+      await updatePhaseGroup(phaseGroupId, { name, displayIdentifier: name });
     },
-    [run],
+    [],
   );
 
   const openDialog = useCallback((next: StructureDialog) => setDialog(next), []);

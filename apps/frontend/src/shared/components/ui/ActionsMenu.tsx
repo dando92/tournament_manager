@@ -2,8 +2,8 @@ import { ReactNode, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnDanger, btnSecondary } from "@/styles/buttonStyles";
+import ConfirmModal from "@/shared/components/ui/ConfirmModal";
+import { btnSecondary } from "@/styles/buttonStyles";
 
 export type ActionsMenuItem = {
   key: string;
@@ -27,7 +27,6 @@ type ActionsMenuProps = {
   title: string;
   items: ActionsMenuItem[];
   disabled?: boolean;
-  busy?: boolean;
   /** Replaces the trigger styling, for a menu that sits on a coloured surface. */
   triggerClassName?: string;
   /** Which edge the panel is anchored to. Use "left" for a trigger near the left of the page. */
@@ -38,27 +37,14 @@ export default function ActionsMenu({
   title,
   items,
   disabled = false,
-  busy = false,
   triggerClassName,
   align = "right",
 }: ActionsMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState<ActionsMenuItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const visibleItems = items.filter((item) => !item.hidden);
 
   if (visibleItems.length === 0) return null;
-
-  const runConfirmed = async () => {
-    if (!confirming) return;
-    setSubmitting(true);
-    try {
-      await confirming.onSelect();
-      setConfirming(null);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="relative shrink-0">
@@ -104,33 +90,16 @@ export default function ActionsMenu({
         </>
       )}
 
-      <BaseModal
+      <ConfirmModal
         open={Boolean(confirming)}
         onClose={() => setConfirming(null)}
         title={confirming?.confirm?.title ?? "Confirm deletion"}
-        maxWidth="max-w-md"
+        confirmText={confirming?.confirm?.confirmText ?? "Delete"}
+        onConfirm={() => confirming?.onSelect() ?? undefined}
+        failureFallback="That could not be done."
       >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-ui-text-soft">{confirming?.confirm?.message}</p>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setConfirming(null)}
-              className={`${btnSecondary} w-full text-sm sm:w-auto`}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={runConfirmed}
-              disabled={submitting || busy}
-              className={`${btnDanger} w-full text-sm sm:w-auto`}
-            >
-              {submitting || busy ? "Deleting..." : confirming?.confirm?.confirmText ?? "Delete"}
-            </button>
-          </div>
-        </div>
-      </BaseModal>
+        {confirming?.confirm?.message}
+      </ConfirmModal>
     </div>
   );
 }

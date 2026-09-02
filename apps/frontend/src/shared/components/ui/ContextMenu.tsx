@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import ConfirmModal from "@/shared/components/ui/ConfirmModal";
 import type { ActionsMenuItem } from "@/shared/components/ui/ActionsMenu";
-import { btnDanger, btnSecondary } from "@/styles/buttonStyles";
 
 /**
  * The menu a right click or a long press opens, anchored to the pointer.
@@ -45,7 +44,6 @@ export default function ContextMenu({ state, onClose }: { state: ContextMenuStat
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [confirming, setConfirming] = useState<ContextMenuItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   /* Measure first, place second: the panel's height depends on its items. */
   useLayoutEffect(() => {
@@ -72,17 +70,6 @@ export default function ContextMenu({ state, onClose }: { state: ContextMenuStat
       window.removeEventListener("scroll", onClose, true);
     };
   }, [state, onClose]);
-
-  const runConfirmed = async () => {
-    if (!confirming) return;
-    setSubmitting(true);
-    try {
-      await confirming.onSelect();
-      setConfirming(null);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <>
@@ -136,24 +123,16 @@ export default function ContextMenu({ state, onClose }: { state: ContextMenuStat
         </>
       )}
 
-      <BaseModal
+      <ConfirmModal
         open={Boolean(confirming)}
         onClose={() => setConfirming(null)}
         title={confirming?.confirm?.title ?? "Confirm deletion"}
-        maxWidth="max-w-md"
+        confirmText={confirming?.confirm?.confirmText ?? "Delete"}
+        onConfirm={() => confirming?.onSelect() ?? undefined}
+        failureFallback="That could not be done."
       >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-ui-text-soft">{confirming?.confirm?.message}</p>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={() => setConfirming(null)} className={`${btnSecondary} w-full text-sm sm:w-auto`}>
-              Cancel
-            </button>
-            <button type="button" onClick={runConfirmed} disabled={submitting} className={`${btnDanger} w-full text-sm sm:w-auto`}>
-              {submitting ? "Deleting..." : confirming?.confirm?.confirmText ?? "Delete"}
-            </button>
-          </div>
-        </div>
-      </BaseModal>
+        {confirming?.confirm?.message}
+      </ConfirmModal>
     </>
   );
 }

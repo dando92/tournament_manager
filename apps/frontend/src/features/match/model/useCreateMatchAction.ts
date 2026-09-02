@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
 import * as MatchesApi from "@/features/match/api/match.api";
 import { CreateMatchRequest } from "@/features/match/model/types";
 
@@ -13,9 +12,10 @@ import { CreateMatchRequest } from "@/features/match/model/types";
 export function useCreateMatchAction() {
   const [createMatchOpen, setCreateMatchOpen] = useState(false);
 
+  /* The list this page draws is where the new match appears, so nothing is
+     said here; a failure reaches the dialog that asked and stays there. */
   const createMatch = async (request: CreateMatchRequest) => {
     await MatchesApi.create(request);
-    toast.success("Match created.");
   };
 
   return {

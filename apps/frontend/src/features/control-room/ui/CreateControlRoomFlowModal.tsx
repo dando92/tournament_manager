@@ -5,8 +5,8 @@ import { getCreationData } from "@/features/control-room/api/control-room.api";
 import { controlRoomKeys } from "@/features/control-room/api/control-room.keys";
 import { defaultFlowStartValue, localDateTimeToIso } from "@/features/control-room/model/flowDateTime";
 import ControlRoomMatchAssignment, { type EditableFlowEntry } from "@/features/control-room/ui/ControlRoomMatchAssignment";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import FormModal from "@/shared/components/ui/FormModal";
+import { focusRing } from "@/styles/buttonStyles";
 
 type Props = {
     tournamentId: number;
@@ -22,48 +22,53 @@ export default function CreateControlRoomFlowModal({ tournamentId, open, onClose
     const [defaultDuration, setDefaultDuration] = useState(30);
     const [assigned, setAssigned] = useState<EditableFlowEntry[]>([]);
     const [unassigned, setUnassigned] = useState(query.data?.unassignedMatches ?? []);
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        if (!open || !query.data) return;
+        if (!open || !query.data) {
+            return;
+        }
+
+        setName('');
+        setWillStartAt(defaultFlowStartValue());
+        setDefaultDuration(30);
         setAssigned([]);
         setUnassigned(query.data.unassignedMatches);
     }, [open, query.data]);
 
-    async function create() {
-        if (!name.trim() || !willStartAt || assigned.length === 0) return;
-        setSaving(true);
-        try {
-            await onCreate({
-                name: name.trim(),
-                willStartAt: localDateTimeToIso(willStartAt),
-                defaultExpectedDurationMinutes: defaultDuration,
-                matchIds: assigned.map((entry) => entry.match.id),
-            });
-            setName("");
-            setWillStartAt(defaultFlowStartValue());
-            setDefaultDuration(30);
-            onClose();
-        } finally {
-            setSaving(false);
+    const validate = () => {
+        const errors: string[] = [];
+        if (!name.trim()) {
+            errors.push('A flow needs a name.');
         }
-    }
+        if (!willStartAt) {
+            errors.push('A flow needs a start time.');
+        }
+        if (assigned.length === 0) {
+            errors.push('Assign at least one match to the flow.');
+        }
+
+        return errors;
+    };
+
+    const create = () =>
+        onCreate({
+            name: name.trim(),
+            willStartAt: localDateTimeToIso(willStartAt),
+            defaultExpectedDurationMinutes: defaultDuration,
+            matchIds: assigned.map((entry) => entry.match.id),
+        });
 
     return (
-        <BaseModal
+        <FormModal
             open={open}
             onClose={onClose}
             title="Create control room flow"
+            confirmText="Create flow"
+            validate={validate}
+            onConfirm={create}
+            failureFallback="The flow could not be created."
             maxWidth="max-w-5xl"
             fitViewport
-            footer={
-                <div className="flex justify-end gap-2">
-                    <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
-                    <button type="button" className={btnPrimary} disabled={!name.trim() || !willStartAt || assigned.length === 0 || saving} onClick={create}>
-                        {saving ? "Creating…" : "Create flow"}
-                    </button>
-                </div>
-            }
         >
             {query.isLoading ? (
                 <p className="text-sm text-ui-text-mute">Loading available matches…</p>
@@ -74,7 +79,7 @@ export default function CreateControlRoomFlowModal({ tournamentId, open, onClose
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <label className="text-sm font-semibold text-ui-text">
                             Flow name
-                            <input value={name} onChange={(event) => setName(event.target.value)} className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
+                            <input data-autofocus value={name} onChange={(event) => setName(event.target.value)} className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
                         </label>
                         <label className="text-sm font-semibold text-ui-text">
                             Will start at
@@ -92,6 +97,6 @@ export default function CreateControlRoomFlowModal({ tournamentId, open, onClose
                     <ControlRoomMatchAssignment assigned={assigned} unassigned={unassigned} defaultExpectedDurationMinutes={defaultDuration} editableDurations={false} onAssignedChange={setAssigned} onUnassignedChange={setUnassigned} />
                 </div>
             )}
-        </BaseModal>
+        </FormModal>
     );
 }

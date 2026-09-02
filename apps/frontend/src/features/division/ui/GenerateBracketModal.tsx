@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { GenerateBracketRequest } from "@/features/division/model/types";
 
@@ -40,7 +39,6 @@ export default function GenerateBracketModal({
   const [phaseName, setPhaseName] = useState("");
   const [bracketType, setBracketType] = useState(bracketTypes[0] ?? "");
   const [playerPerMatch, setPlayerPerMatch] = useState(2);
-  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -51,44 +49,40 @@ export default function GenerateBracketModal({
     setPlayerPerMatch(2);
   }, [bracketTypes, currentDivisionId, divisions, open]);
 
-  const handleGenerate = async () => {
-    if (!divisionId || !bracketType) return;
-    setGenerating(true);
-    try {
-      await onGenerate({
-        divisionId,
-        phaseId: currentPhaseId,
-        phaseName: currentPhaseId ? undefined : phaseName.trim() || undefined,
-        bracketType,
-        playerPerMatch,
-      });
-      onClose();
-    } finally {
-      setGenerating(false);
+  const validate = () => {
+    const errors: string[] = [];
+    if (!divisionId) {
+      errors.push("Choose the division the bracket belongs to.");
     }
+    if (!bracketType) {
+      errors.push("Choose a bracket type.");
+    }
+    if (playerPerMatch < 2) {
+      errors.push("A match holds at least two players.");
+    }
+
+    return errors;
   };
 
+  const handleGenerate = () =>
+    onGenerate({
+      divisionId,
+      phaseId: currentPhaseId,
+      phaseName: currentPhaseId ? undefined : phaseName.trim() || undefined,
+      bracketType,
+      playerPerMatch,
+    });
+
   return (
-    <BaseModal
+    <FormModal
       open={open}
       onClose={onClose}
       title="Generate bracket"
+      confirmText="Generate"
+      validate={validate}
+      onConfirm={handleGenerate}
+      failureFallback="The bracket could not be generated."
       maxWidth="max-w-md"
-      footer={
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={`${btnSecondary} text-sm`}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || !divisionId || !bracketType}
-            className={`${btnPrimary} text-sm disabled:cursor-not-allowed`}
-          >
-            {generating ? "Generating..." : "Generate"}
-          </button>
-        </div>
-      }
     >
       <div className="flex flex-col gap-4">
         {currentPhaseId ? (
@@ -115,6 +109,7 @@ export default function GenerateBracketModal({
           <div>
             <label className="block text-sm font-medium mb-1">Phase name</label>
             <input
+              data-autofocus
               type="text"
               value={phaseName}
               onChange={(event) => setPhaseName(event.target.value)}
@@ -147,6 +142,6 @@ export default function GenerateBracketModal({
           />
         </div>
       </div>
-    </BaseModal>
+    </FormModal>
   );
 }

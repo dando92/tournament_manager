@@ -23,21 +23,21 @@ export default function ReadOnlyMatchCard({ division, match, allMatches }: Props
             onMatchUpdated={noop}
             onDeleteMatch={noop}
             onAddPlayersToMatch={noopAsync}
-            onAddRounds={noop}
-            onReplaceRoundSong={noop}
-            onDeleteRound={noop}
+            onAddRounds={noopAsync}
+            onReplaceRoundSong={noopAsync}
+            onDeleteRound={noopAsync}
             onAddHandScoredRound={noop}
             onChangePoints={noop}
-            onAddStandingToMatch={noop}
-            onEditMatchNotes={noop}
+            onAddStandingToMatch={noopAsync}
+            onEditMatchNotes={noopAsync}
             onUpdateMatchScoringSystem={noopAsync}
-            onEditStanding={noop}
-            onDeleteStanding={noop}
+            onEditStanding={noopAsync}
+            onDeleteStanding={noopAsync}
             onCreateTiebreak={noopAsync}
             onDeleteTiebreak={noop}
-            onSaveTiebreakScore={noop}
+            onSaveTiebreakScore={noopAsync}
             onSaveTiebreakPoints={noop}
-            onClearTiebreakStanding={noop}
+            onClearTiebreakStanding={noopAsync}
         />
     );
 }

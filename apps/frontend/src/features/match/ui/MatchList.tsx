@@ -89,7 +89,11 @@ export default function MatchList({
       onAddPlayersToMatch={(entrantIds) =>
         actions.updateMatchEntrants(match.id, entrantIds)
       }
-      onAddRounds={(sources) => sources.forEach((source) => actions.addRound(match.id, source))}
+      onAddRounds={async (sources) => {
+        for (const source of sources) {
+          await actions.addRound(match.id, source);
+        }
+      }}
       onReplaceRoundSong={actions.replaceRoundSong}
       onDeleteRound={actions.deleteRound}
       onAddHandScoredRound={() => actions.addRound(match.id)}

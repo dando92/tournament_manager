@@ -18,8 +18,7 @@ import { listSongs } from "@/features/song/api/song.api";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
-  onClose: () => void;
-  onCreate: (request: CreateMatchRequest) => void;
+  onCreate: (request: CreateMatchRequest) => Promise<void>;
   /** Where the modal was opened from, which is where the path starts. */
   divisionId?: number;
   phaseId?: number;
@@ -40,7 +39,6 @@ type UseCreateMatchModalOptions = {
  */
 export function useCreateMatchModal({
   open,
-  onClose,
   onCreate,
   divisionId,
   phaseId,
@@ -70,7 +68,17 @@ export function useCreateMatchModal({
   const pathLevels = useMemo(() => matchPathLevels(divisions), [divisions]);
   const pathValue = useMemo(() => matchPathValue(path), [path]);
   const setPathValue = useCallback((value: PathValue<number>) => setPath(matchPathFromValue(value)), []);
-  const canCreate = isCompleteMatchPath(path);
+  const validate = () => {
+    const errors: string[] = [];
+    if (!isCompleteMatchPath(path)) {
+      errors.push("Choose the pool the match belongs to.");
+    }
+    if (!name.trim()) {
+      errors.push("A match needs a name.");
+    }
+
+    return errors;
+  };
 
   /* Opening the modal is what resets it: the scope it was opened from is the
      path it starts on, and the picker completes whatever that leaves open.
@@ -155,13 +163,13 @@ export function useCreateMatchModal({
     setSelectedSongDifficulties((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isCompleteMatchPath(path)) return;
 
     const baseRequest = {
       phaseGroupId: path.phaseGroupId,
-      name,
-      subtitle,
+      name: name.trim(),
+      subtitle: subtitle.trim(),
       group: selectedGroupName,
       scoringSystem,
       entrantIds: selectedEntrants.map((entrant) => entrant.id),
@@ -178,8 +186,7 @@ export function useCreateMatchModal({
             levels: selectedSongDifficulties.join(","),
           } as CreateMatchRequest;
 
-    onCreate(request);
-    onClose();
+    await onCreate(request);
   };
 
   return {
@@ -198,7 +205,7 @@ export function useCreateMatchModal({
     songAddType,
     pathLevels,
     pathValue,
-    canCreate,
+    validate,
     setPathValue,
     setSelectedEntrants,
     setSelectedSongs,

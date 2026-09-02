@@ -3,9 +3,9 @@ import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
 import { isAdvancementSourceTarget, validateAdvancementRules } from "@/features/match/model/advancementRuleValidation";
 import { Division } from "@/features/division/model/types";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
-import { btnCreate, btnPrimary, btnSecondary, btnTrash } from "@/styles/buttonStyles";
+import { btnCreate, btnTrash } from "@/styles/buttonStyles";
 import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import { poolsAreVisible } from "@/features/division/model/poolVisibility";
 
@@ -16,9 +16,8 @@ type AdvancementRulesModalProps = {
     rules: AdvancementRuleInput[];
     division: Division;
     allMatches: Match[];
-    saving?: boolean;
     onChange: (rules: AdvancementRuleInput[]) => void;
-    onSave: () => void;
+    onSave: () => Promise<void>;
     onCancel: () => void;
 };
 
@@ -37,7 +36,6 @@ export default function AdvancementRulesModal({
     rules,
     division,
     allMatches,
-    saving = false,
     onChange,
     onSave,
     onCancel,
@@ -74,8 +72,6 @@ export default function AdvancementRulesModal({
         targetId: rule.targetId,
         targetSlot: rule.targetSlot,
     }));
-    const errors = validateAdvancementRules(draftRules, sourceKind, sourceId);
-    const canSave = errors.length === 0 && !saving;
 
     const updateRule = (index: number, nextRule: AdvancementRuleInput) => {
         onChange(draftRules.map((rule, currentIndex) => (currentIndex === index ? nextRule : rule)));
@@ -94,34 +90,23 @@ export default function AdvancementRulesModal({
         ]);
     };
 
-    const footer = (
-        <div className="-mx-4 -mb-4 flex flex-col gap-2 border-t border-ui-border bg-ui-surface px-4 py-3 sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:px-6">
-            <button
-                type="button"
-                className={`${btnCreate} w-full rounded border px-3 py-2 text-sm sm:w-auto`}
-                onClick={addRule}
-                disabled={saving}
-            >
-                <FontAwesomeIcon icon={faPlus} className="mr-2 text-xs" />
-                Add advancement
-            </button>
-            <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row-reverse">
-                <button type="button" className={`${btnPrimary} w-full text-sm sm:w-auto`} onClick={onSave} disabled={!canSave}>
-                    {saving ? "Saving..." : "Save rules"}
-                </button>
-                <button type="button" className={`${btnSecondary} w-full text-sm sm:w-auto`} onClick={onCancel} disabled={saving}>
-                    Cancel
-                </button>
-            </div>
-        </div>
+    const addAdvancement = (
+        <button type="button" className={`${btnCreate} w-full rounded border px-3 py-2 text-sm sm:w-auto`} onClick={addRule}>
+            <FontAwesomeIcon icon={faPlus} className="mr-2 text-xs" />
+            Add advancement
+        </button>
     );
 
     return (
-        <BaseModal
+        <FormModal
             open={open}
-            onClose={saving ? () => {} : onCancel}
+            onClose={onCancel}
             title={`Advancement from ${sourceLabel}`}
-            footer={footer}
+            confirmText="Save rules"
+            validate={() => validateAdvancementRules(draftRules, sourceKind, sourceId)}
+            onConfirm={onSave}
+            leadingActions={addAdvancement}
+            failureFallback="The advancement rules could not be saved."
             maxWidth="max-w-4xl"
             fitViewport
         >
@@ -138,7 +123,6 @@ export default function AdvancementRulesModal({
                             <div key={index} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1.5 py-2.5 text-sm leading-8 text-ui-text-soft">
                                     <InlineNumber
                                         value={rule.sourcePlacement}
-                                        disabled={saving}
                                         ariaLabel={`Rule ${index + 1} finishing place`}
                                         onChange={(sourcePlacement) => updateRule(index, { ...rule, sourcePlacement })}
                                     />
@@ -148,7 +132,6 @@ export default function AdvancementRulesModal({
                                         rule={rule}
                                         matchOptions={matchOptions}
                                         phaseGroupOptions={phaseGroupOptions}
-                                        disabled={saving}
                                         ariaLabel={`Rule ${index + 1} destination`}
                                         onChange={(targetKind, targetId) => updateRule(index, { ...rule, targetKind, targetId })}
                                     />
@@ -156,16 +139,14 @@ export default function AdvancementRulesModal({
                                         <span>in slot</span>
                                         <InlineNumber
                                             value={rule.targetSlot}
-                                            disabled={saving}
-                                            ariaLabel={`Rule ${index + 1} target slot`}
+                                                ariaLabel={`Rule ${index + 1} target slot`}
                                             onChange={(targetSlot) => updateRule(index, { ...rule, targetSlot })}
                                         />
                                         <button
                                             type="button"
                                             className={`${btnTrash} ml-auto shrink-0 sm:ml-1`}
                                             onClick={() => onChange(draftRules.filter((_, currentIndex) => currentIndex !== index))}
-                                            disabled={saving}
-                                            aria-label={`Delete advancement rule ${index + 1}`}
+                                                aria-label={`Delete advancement rule ${index + 1}`}
                                         >
                                             <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                         </button>
@@ -175,24 +156,17 @@ export default function AdvancementRulesModal({
                     </div>
                 )}
 
-                {errors.length > 0 && (
-                    <div className="mt-3 flex flex-col gap-1 rounded border border-state-failed/40 px-3 py-2 text-xs text-state-failed" role="alert">
-                        {errors.map((error) => <p key={error}>{error}</p>)}
-                    </div>
-                )}
             </div>
-        </BaseModal>
+        </FormModal>
     );
 }
 
 function InlineNumber({
     value,
-    disabled,
     ariaLabel,
     onChange,
 }: {
     value: number;
-    disabled: boolean;
     ariaLabel: string;
     onChange: (value: number) => void;
 }) {
@@ -205,7 +179,6 @@ function InlineNumber({
             onChange={(event) => onChange(Number(event.target.value))}
             className={numberInputClassName}
             aria-label={ariaLabel}
-            disabled={disabled}
         />
     );
 }
@@ -214,14 +187,12 @@ function InlineDestination({
     rule,
     matchOptions,
     phaseGroupOptions,
-    disabled,
     ariaLabel,
     onChange,
 }: {
     rule: AdvancementRuleInput;
     matchOptions: TargetOption[];
     phaseGroupOptions: TargetOption[];
-    disabled: boolean;
     ariaLabel: string;
     onChange: (kind: AdvancementCompetitionKind, id: number) => void;
 }) {
@@ -239,7 +210,6 @@ function InlineDestination({
                 onChange(kind as AdvancementCompetitionKind, Number(rawId));
             }}
             aria-label={ariaLabel}
-            disabled={disabled}
         >
             <option value="">Select destination</option>
             {matchOptions.length > 0 && (

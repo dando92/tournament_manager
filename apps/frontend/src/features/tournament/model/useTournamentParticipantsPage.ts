@@ -87,18 +87,16 @@ export function useTournamentParticipantsPage() {
     [participantSearch, participants],
   );
 
+  /* The dialogs below hold their own spinner, failure and closing; these do the work and nothing else. */
+
   async function handleRegister() {
-    if (!name.trim()) return;
     await registerMutation.mutateAsync({ playerName: name.trim() });
     setName("");
-    setParticipantsManageModal("none");
   }
 
   async function handleAddExistingPlayers() {
-    if (selectedPlayerIds.length === 0) return;
     await Promise.all(selectedPlayerIds.map((playerId) => registerMutation.mutateAsync({ playerId })));
     setSelectedPlayerIds([]);
-    setParticipantsManageModal("none");
   }
 
   async function handleRemove(participantId: number) {
@@ -124,6 +122,8 @@ export function useTournamentParticipantsPage() {
     }
   }
 
+  /* Names the pool already holds are not written again, so an import of only
+     those is a dialog that closes having correctly done nothing. */
   async function handleConfirmImport() {
     const entries = preview
       .filter((entry) => !entry.alreadyParticipant)
@@ -131,15 +131,12 @@ export function useTournamentParticipantsPage() {
         name: entry.name,
         playerId: entry.matchedPlayer?.id,
       }));
-    if (entries.length === 0) {
-      setParticipantsManageModal("none");
-      return;
+    if (entries.length > 0) {
+      await importMutation.mutateAsync(entries);
     }
 
-    await importMutation.mutateAsync(entries);
     setBulkText("");
     setPreview([]);
-    setParticipantsManageModal("none");
   }
 
   return {

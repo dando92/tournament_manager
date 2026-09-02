@@ -34,11 +34,16 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
   });
 
   /**
-   * One write, and what to say if it fails.
+   * One write taken straight from the page, and what to say if it fails.
    *
    * Nothing is applied here on success: the realtime invalidation refetches the
-   * list. A failure is reported and re-thrown, so a caller that has to undo
-   * something it drew optimistically still can.
+   * list. These are the writes with no dialog to hold the answer — a score
+   * typed into a cell, a round deleted from the table — so the failure is
+   * announced here and the original error re-thrown, which keeps the server's
+   * own sentence available to anyone above who can show it.
+   *
+   * The writes a dialog drives do not come through here. They report nothing,
+   * let the failure out, and the dialog that asked stays open and states it.
    */
   async function run(work: () => Promise<void>, failure: string): Promise<void> {
     try {
@@ -46,7 +51,7 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     } catch (error) {
       console.error(failure, error);
       toast.error(failure);
-      throw new Error(failure);
+      throw error;
     }
   }
 
@@ -61,38 +66,34 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
     actions: {
       list,
 
-      create: (request: CreateMatchRequest) =>
-        run(async () => {
-          await MatchesApi.create(request);
-          toast.success("Match created successfully.");
-        }, "Error creating match."),
+      /* ---- asked for in a dialog: it reports, this does not ---- */
 
-      editMatchNotes: (matchId: number, notes: string) =>
-        run(() => MatchesApi.editMatchNotes(matchId, notes), "Error editing match notes."),
+      create: (request: CreateMatchRequest) => MatchesApi.create(request),
+
+      editMatchNotes: (matchId: number, notes: string) => MatchesApi.editMatchNotes(matchId, notes),
+
+      updateMatchScoringSystem: (matchId: number, scoringSystem: string) =>
+        MatchesApi.updateMatchScoringSystem(matchId, scoringSystem),
+
+      updateMatchEntrants: (matchId: number, entrantIds: number[]) => MatchesApi.updateMatchEntrants(matchId, entrantIds),
+
+      replaceRoundSong: (roundId: number, source: RoundSourceRequest) => MatchesApi.replaceRoundSong(roundId, source),
+
+      /* ---- taken from the page ---- */
 
       renameMatch: (matchId: number, name: string) =>
         run(() => MatchesApi.renameMatch(matchId, name), "Error renaming match."),
 
-      updateMatchScoringSystem: (matchId: number, scoringSystem: string) =>
-        run(async () => {
-          await MatchesApi.updateMatchScoringSystem(matchId, scoringSystem);
-          toast.success("Scoring system updated.");
-        }, "Error updating match scoring system."),
-
       deleteMatch: (matchId: number) =>
         run(() => MatchesApi.deleteMatch(matchId), "Error deleting match."),
 
-      updateMatchEntrants: (matchId: number, entrantIds: number[]) =>
-        run(() => MatchesApi.updateMatchEntrants(matchId, entrantIds), "Error updating match players."),
-
+      /* Both of these are also reachable from a dialog, so until the page has
+         a banner of its own they report twice there rather than not at all. */
       addRound: (matchId: number, source: RoundSourceRequest = {}) =>
         run(() => MatchesApi.addRound(matchId, source), "Error adding a round to the match."),
 
       deleteRound: (roundId: number) =>
         run(() => MatchesApi.deleteRound(roundId), "Error deleting the round."),
-
-      replaceRoundSong: (roundId: number, source: RoundSourceRequest) =>
-        run(() => MatchesApi.replaceRoundSong(roundId, source), "Error replacing the song of the round."),
 
       /*
        * A cell in the table is a player and a round, and every callback in the

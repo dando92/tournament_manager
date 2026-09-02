@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 import { Song } from "@/features/song/model/types";
 import { createSong, listSongs } from "@/features/song/api/song.api";
 import { useSongImport } from "@/features/song/model/useSongImport";
@@ -56,19 +55,15 @@ export function useTournamentHeaderSongsManageMenu({
     void songImport.start();
   };
 
-  const handleCreateSong = (
+  /* The dialog holds the failure and the songs page shows the success, so
+     neither is announced from here. */
+  const handleCreateSong = async (
     title: string,
     difficulty: number,
     group: string,
     artist?: string,
   ) => {
-    createMutation.mutateAsync({ title, artist, difficulty, group })
-      .then(() => {
-        toast.success("Song created.");
-      })
-      .catch(() => {
-        toast.error("Failed to create song.");
-      });
+    await createMutation.mutateAsync({ title, artist, difficulty, group });
   };
 
   return {

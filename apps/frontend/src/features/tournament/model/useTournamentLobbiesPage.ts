@@ -50,7 +50,6 @@ export function useTournamentLobbiesPage({
   const [connectingServer, setConnectingServer] = useState(false);
   const [disconnectingServer, setDisconnectingServer] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [spectating, setSpectating] = useState(false);
   const [spectateModal, setSpectateModal] = useState<SpectateModalState>(closedSpectateModal);
 
   const refreshLobbies = useCallback(async () => {
@@ -223,7 +222,6 @@ export function useTournamentLobbiesPage({
   }
 
   function closeSpectateModal() {
-    if (spectating) return;
     setSpectateModal(closedSpectateModal);
   }
 
@@ -265,13 +263,9 @@ export function useTournamentLobbiesPage({
     }
   }
 
+  /* The lobby joins the list on this page either way, so the refresh runs
+     whatever happened; the dialog holds the spinner and the failure. */
   async function handleSpectateLobby() {
-    if (!spectateModal.lobbyCode.trim()) {
-      toast.error("Lobby code is required.");
-      return;
-    }
-
-    setSpectating(true);
     try {
       await spectateLobby(tournamentId, {
         name: spectateModal.lobbyName.trim() || spectateModal.lobbyCode.trim().toUpperCase(),
@@ -279,14 +273,7 @@ export function useTournamentLobbiesPage({
         password: spectateModal.password,
       });
       setSpectateModal(closedSpectateModal);
-      toast.success("Spectating lobby.");
-    } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to spectate lobby.";
-      toast.error(message);
     } finally {
-      setSpectating(false);
       refreshLobbies().catch(() => {});
     }
   }
@@ -323,7 +310,6 @@ export function useTournamentLobbiesPage({
     refreshLobbies,
     spectateModal,
     setSpectateModal,
-    spectating,
     openSpectateModal,
     closeSpectateModal,
     handleSpectateLobby,

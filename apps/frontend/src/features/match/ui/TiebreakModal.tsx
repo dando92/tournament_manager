@@ -3,9 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Match } from "@/features/match/model/types";
 import { listSongs } from "@/features/song/api/song.api";
 import { Song } from "@/features/song/model/types";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 
 type Props = {
@@ -21,7 +20,6 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
   const [mode, setMode] = useState<"song" | "manual">("song");
   const [songs, setSongs] = useState<Song[]>([]);
   const [songId, setSongId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
   const ties = match.resultState.ambiguousTies;
   const playersById = useMemo(() => new Map(
     match.entrants.flatMap((entrant) => entrant.participants ?? [])
@@ -34,7 +32,6 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
     if (!open) return;
     setTieIndex(0);
     setMode("song");
-    setSaving(false);
     listSongs(tournamentId)
       .then((catalog) => {
         setSongs(catalog);
@@ -47,31 +44,30 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
   }, [open, tournamentId]);
 
   const tie = ties[tieIndex] ?? null;
-  const footer = (
-    <div className="flex justify-end gap-2">
-      <button type="button" className={btnSecondary} onClick={onClose}>Cancel</button>
-      <button
-        type="button"
-        className={btnPrimary}
-        disabled={!tie || saving || (mode === "song" && songId === null)}
-        onClick={async () => {
-          if (!tie) return;
-          setSaving(true);
-          try {
-            await onCreate(tie.playerIds, mode === "song" ? songId ?? undefined : undefined);
-            onClose();
-          } finally {
-            setSaving(false);
-          }
-        }}
-      >
-        {saving ? "Creating…" : "Create tiebreak"}
-      </button>
-    </div>
-  );
+
+  const validate = () => {
+    const errors: string[] = [];
+    if (!tie) {
+      errors.push("There is no tied placement left to resolve.");
+    }
+    if (mode === "song" && songId === null) {
+      errors.push("Choose the song that breaks the tie.");
+    }
+
+    return errors;
+  };
 
   return (
-    <BaseModal open={open} onClose={onClose} title="Create tiebreak" footer={footer} maxWidth="max-w-lg">
+    <FormModal
+      open={open}
+      onClose={onClose}
+      title="Create tiebreak"
+      confirmText="Create tiebreak"
+      validate={validate}
+      onConfirm={() => onCreate(tie!.playerIds, mode === "song" ? songId ?? undefined : undefined)}
+      failureFallback="The tiebreak could not be created."
+      maxWidth="max-w-lg"
+    >
       <div className="flex flex-col gap-4 text-sm text-ui-text">
         {ties.length > 1 && (
           <label className="flex flex-col gap-1.5">
@@ -125,6 +121,6 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
           </label>
         )}
       </div>
-    </BaseModal>
+    </FormModal>
   );
 }

@@ -16,15 +16,13 @@ type Props = {
 export default function SearchTournamentModal({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
   const { data: tournaments = [] } = usePublicTournamentsQuery(open);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
 
+  /* The dialog hands the ref to its own focus trap, so opening lands in the
+     search field without racing the transition on a timer. */
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
-      setQuery("");
-    }
+    if (!open) setQuery("");
   }, [open]);
 
   const filtered = query.trim()
@@ -40,7 +38,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
   }
 
   return (
-    <BaseModal open={open} onClose={onClose} maxWidth="max-w-lg">
+    <BaseModal open={open} onClose={onClose} maxWidth="max-w-lg" initialFocus={inputRef}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-ui-text">Search tournaments</h3>
@@ -51,7 +49,7 @@ export default function SearchTournamentModal({ open, onClose }: Props) {
       <div className="flex items-center gap-3 border border-ui-border rounded-lg px-3 py-2 mb-5 focus-within:border-ui-border-strong transition-colors">
         <FontAwesomeIcon icon={faMagnifyingGlass} className="text-ui-text-mute shrink-0" />
         <input
-          ref={inputRef}
+          ref={inputRef as React.RefObject<HTMLInputElement>}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

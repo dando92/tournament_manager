@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, PropsWithChildren, ReactNode } from "react";
+import { Fragment, MutableRefObject, PropsWithChildren, ReactNode } from "react";
 
 type BaseModalProps = {
   open: boolean;
@@ -8,6 +8,10 @@ type BaseModalProps = {
   footer?: ReactNode;
   maxWidth?: string;
   fitViewport?: boolean;
+  /** Work is in flight: the dialog stays put until it ends. */
+  busy?: boolean;
+  /** What takes focus on open. Without it the header's close button does, being first in the DOM. */
+  initialFocus?: MutableRefObject<HTMLElement | null>;
 };
 
 export default function BaseModal({
@@ -17,11 +21,13 @@ export default function BaseModal({
   footer,
   maxWidth = "max-w-2xl",
   fitViewport = false,
+  busy = false,
+  initialFocus,
   children,
 }: PropsWithChildren<BaseModalProps>) {
   return (
     <Transition appear show={open} as={Fragment}>
-      <Dialog as="div" className="fixed inset-0 z-[9999] overflow-y-auto" onClose={onClose}>
+      <Dialog as="div" className="fixed inset-0 z-[9999] overflow-y-auto" onClose={onClose} initialFocus={initialFocus}>
         <div className={`relative flex min-h-full items-center justify-center text-center ${fitViewport ? "p-2 sm:p-4" : "p-4"}`}>
           <Dialog.Overlay className="fixed inset-0 backdrop-blur-lg bg-ui-text bg-opacity-60" />
           <Transition.Child
@@ -41,20 +47,30 @@ export default function BaseModal({
               }`}
             >
               {title && (
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center mb-4 pr-8">
                   <Dialog.Title as="h3" className="text-lg font-semibold text-ui-text">
                     {title}
                   </Dialog.Title>
-                  <button
-                    onClick={onClose}
-                    className="text-ui-text-mute hover:text-ui-text-soft text-xl font-bold"
-                  >
-                    ✕
-                  </button>
                 </div>
               )}
               {fitViewport ? <div className="min-h-0 overflow-x-hidden overflow-y-auto">{children}</div> : children}
               {footer && <div className="mt-4">{footer}</div>}
+              {/* Last in the DOM although it sits at the top: when the dialog has to
+                  guess where focus goes it takes the first focusable thing it finds,
+                  and that must be the first field rather than the way out. */}
+              {title && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={busy}
+                  aria-label="Close"
+                  className={`absolute text-ui-text-mute hover:text-ui-text-soft text-xl font-bold disabled:opacity-40 ${
+                    fitViewport ? "right-4 top-4 sm:right-6 sm:top-6" : "right-6 top-6"
+                  }`}
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </Transition.Child>
         </div>

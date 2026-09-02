@@ -17,7 +17,7 @@ import { phasePath } from "@/features/tournament/model/treeSelection";
 export function useTournamentStructureDialogs() {
   const navigate = useNavigate();
   const tree = useTournamentTree();
-  const { dialog, closeDialog, tournamentId } = tree;
+  const { dialog, tournamentId } = tree;
   const [bracketTypes, setBracketTypes] = useState<string[]>([]);
 
   /* Two dialogs act on a phase and both need what it already holds: the pool
@@ -46,7 +46,6 @@ export function useTournamentStructureDialogs() {
   async function handleGenerateBracket(request: GenerateBracketRequest) {
     const generated = await generateBracket(request);
     await tree.refreshTree();
-    closeDialog();
     tree.expandNode(treeNodeKey("division", request.divisionId));
     tree.expandNode(treeNodeKey("phase", generated.phaseId));
     navigate(phasePath(tournamentId ?? 0, request.divisionId, generated.phaseId));

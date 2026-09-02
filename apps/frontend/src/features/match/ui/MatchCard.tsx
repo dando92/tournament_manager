@@ -34,9 +34,9 @@ type MatchCardProps = {
   onMatchUpdated: () => void;
   onDeleteMatch: (matchId: number) => void;
   onAddPlayersToMatch: (entrantIds: number[]) => Promise<void>;
-  onAddRounds: (sources: RoundSourceRequest[]) => void;
-  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => void;
-  onDeleteRound: (roundId: number) => void;
+  onAddRounds: (sources: RoundSourceRequest[]) => Promise<void>;
+  onReplaceRoundSong: (roundId: number, source: RoundSourceRequest) => Promise<void>;
+  onDeleteRound: (roundId: number) => Promise<void>;
   /** Adds the round with no song, the one whose points are written by hand. */
   onAddHandScoredRound: () => Promise<void> | void;
   onChangePoints: (playerId: number, roundId: number, points: number) => void;
@@ -47,8 +47,8 @@ type MatchCardProps = {
     score: number,
     isFailed: boolean,
     scoreId?: number,
-  ) => void;
-  onEditMatchNotes: (matchId: number, notes: string) => void;
+  ) => Promise<void>;
+  onEditMatchNotes: (matchId: number, notes: string) => Promise<void>;
   onUpdateMatchScoringSystem: (matchId: number, scoringSystem: string) => Promise<void>;
   onRenameMatch?: (matchId: number, name: string) => void;
   onEditStanding: (
@@ -58,8 +58,8 @@ type MatchCardProps = {
     score: number,
     isFailed: boolean,
     scoreId?: number,
-  ) => void;
-  onDeleteStanding: (playerId: number, roundId: number) => void;
+  ) => Promise<void>;
+  onDeleteStanding: (playerId: number, roundId: number) => Promise<void>;
   onCreateTiebreak: (playerIds: number[], songId?: number) => Promise<void>;
   onDeleteTiebreak: (tiebreakId: number) => void;
   onSaveTiebreakScore: (
@@ -68,9 +68,9 @@ type MatchCardProps = {
     percentage: number,
     isFailed: boolean,
     scoreId?: number,
-  ) => void;
+  ) => Promise<void>;
   onSaveTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
-  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
+  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => Promise<void>;
   onUpdateMatchAdvancementRules?: (matchId: number, rules: MatchAdvancementRuleInput[]) => Promise<void>;
   onUpdateMatchActive?: (matchId: number, active: boolean) => Promise<void>;
   onReopenMatchResult?: (matchId: number) => Promise<void>;
@@ -148,7 +148,6 @@ export default function MatchCard({
   const [tiebreakModalOpen, setTiebreakModalOpen] = useState(false);
   const [removeItemsModal, setRemoveItemsModal] = useState<"players" | "songs" | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [savingAdvancementRules, setSavingAdvancementRules] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
   const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -208,19 +207,12 @@ export default function MatchCard({
     setAdvancementTargetMatches(null);
   }
 
+  /* The dialog holds the spinner and closes on its own; this only does the work. */
   async function saveEditMode() {
-    setSavingAdvancementRules(true);
-    try {
-      if (onUpdateMatchAdvancementRules) {
-        await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
-      }
-      onMatchUpdated();
-      setEditMode(false);
-      setPendingAdvancementRules([]);
-      setAdvancementTargetMatches(null);
-    } finally {
-      setSavingAdvancementRules(false);
+    if (onUpdateMatchAdvancementRules) {
+      await onUpdateMatchAdvancementRules(match.id, pendingAdvancementRules);
     }
+    onMatchUpdated();
   }
 
   function openAddSong() {
@@ -298,21 +290,19 @@ export default function MatchCard({
         onClose={() => setStandingModal(closedModal)}
         onDelete={standingModal.mode === "edit" ? () => {
           if (standingModal.target === "tiebreak") {
-            onClearTiebreakStanding(standingModal.roundId, standingModal.playerId);
-          } else {
-            onDeleteStanding(standingModal.playerId, standingModal.roundId);
+            return onClearTiebreakStanding(standingModal.roundId, standingModal.playerId);
           }
+          return onDeleteStanding(standingModal.playerId, standingModal.roundId);
         } : undefined}
         onSave={(playerId, roundId, pct, score, isFailed, scoreId) => {
           if (standingModal.target === "tiebreak") {
-            onSaveTiebreakScore(roundId, playerId, pct, isFailed, scoreId);
-            return;
+            return onSaveTiebreakScore(roundId, playerId, pct, isFailed, scoreId);
           }
           if (standingModal.mode === "add") {
-            onAddStandingToMatch(playerId, roundId, pct, score, isFailed, scoreId);
-          } else {
-            onEditStanding(playerId, roundId, pct, score, isFailed, scoreId);
+            return onAddStandingToMatch(playerId, roundId, pct, score, isFailed, scoreId);
           }
+
+          return onEditStanding(playerId, roundId, pct, score, isFailed, scoreId);
         }}
       />
       <TiebreakModal
@@ -357,7 +347,6 @@ export default function MatchCard({
         rules={pendingAdvancementRules}
         division={division}
         allMatches={advancementTargetMatches ?? allMatches}
-        saving={savingAdvancementRules}
         onChange={setPendingAdvancementRules}
         onSave={saveEditMode}
         onCancel={cancelEditMode}

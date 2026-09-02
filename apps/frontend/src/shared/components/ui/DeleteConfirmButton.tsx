@@ -2,8 +2,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import BaseModal from "@/shared/components/ui/BaseModal";
-import { btnDanger, btnSecondary, btnTrash } from "@/styles/buttonStyles";
+import ConfirmModal from "@/shared/components/ui/ConfirmModal";
+import { btnDanger, btnTrash } from "@/styles/buttonStyles";
 
 type DeleteConfirmButtonProps = {
   onConfirm: () => void | Promise<void>;
@@ -31,17 +31,6 @@ export default function DeleteConfirmButton({
   children,
 }: DeleteConfirmButtonProps) {
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleConfirm() {
-    setSubmitting(true);
-    try {
-      await onConfirm();
-      setOpen(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   return (
     <>
@@ -59,28 +48,16 @@ export default function DeleteConfirmButton({
         {children}
       </button>
 
-      <BaseModal open={open} onClose={() => setOpen(false)} title={confirmTitle} maxWidth="max-w-md">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-ui-text-soft">{confirmMessage}</p>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className={`${btnSecondary} w-full text-sm sm:w-auto`}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={submitting}
-              className={`${btnDanger} w-full text-sm sm:w-auto`}
-            >
-              {submitting ? "Deleting..." : confirmText}
-            </button>
-          </div>
-        </div>
-      </BaseModal>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={confirmTitle}
+        confirmText={confirmText}
+        onConfirm={onConfirm}
+        failureFallback="That could not be deleted."
+      >
+        {confirmMessage}
+      </ConfirmModal>
     </>
   );
 }

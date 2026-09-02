@@ -1,52 +1,43 @@
-import { useState, useEffect } from "react";
-import OkModal from "@/shared/components/ui/OkModal";
+import { useEffect, useState } from 'react';
+import FormModal from '@/shared/components/ui/FormModal';
 
 type CreateDivisionModalProps = {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (name: string) => void;
+    open: boolean;
+    onClose: () => void;
+    onCreate: (name: string) => Promise<void>;
 };
 
-export default function CreateDivisionModal({
-  open,
-  onClose,
-  onCreate,
-}: CreateDivisionModalProps) {
-  const [name, setName] = useState("");
+export default function CreateDivisionModal({ open, onClose, onCreate }: CreateDivisionModalProps) {
+    const [name, setName] = useState('');
 
-  useEffect(() => {
-    if (!open) return;
-    setName("");
-  }, [open]);
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
 
-  const onSubmit = () => {
-    if (!name.trim()) return;
-    onCreate(name.trim());
-    onClose();
-  };
+        setName('');
+    }, [open]);
 
-  return (
-    <OkModal
-      title="Create Division"
-      okText="Create division"
-      open={open}
-      onClose={onClose}
-      onOk={onSubmit}
-    >
-      <div className="flex flex-col gap-4 w-full">
-        <div>
-          <h3 className="mb-1">Name</h3>
-          <input
-            className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Division name"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
-          />
-        </div>
-      </div>
-    </OkModal>
-  );
+    return (
+        <FormModal
+            open={open}
+            title="Create Division"
+            confirmText="Create division"
+            validate={() => (name.trim() ? [] : ['A division needs a name.'])}
+            onConfirm={() => onCreate(name.trim())}
+            onClose={onClose}
+            failureFallback="The division could not be created."
+        >
+            <div>
+                <h3 className="mb-1">Name</h3>
+                <input
+                    className="w-full rounded-lg border border-ui-border-strong px-2 py-2"
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Division name"
+                />
+            </div>
+        </FormModal>
+    );
 }

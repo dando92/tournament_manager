@@ -7,10 +7,10 @@ import {
   faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { Navigate } from "react-router-dom";
-import BaseModal from "@/shared/components/ui/BaseModal";
+import FormModal from "@/shared/components/ui/FormModal";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
-import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import { btnSecondary } from "@/styles/buttonStyles";
 import { useTournamentParticipantsPage } from "@/features/tournament/model/useTournamentParticipantsPage";
 
 export default function ParticipantsPage() {
@@ -32,7 +32,6 @@ export default function ParticipantsPage() {
     setBulkText,
     preview,
     loadingPreview,
-    submitting,
     participantsLoading,
     profileExporting,
     manageModal,
@@ -142,83 +141,65 @@ export default function ParticipantsPage() {
         )}
       </div>
 
-      <BaseModal
+      <FormModal
         open={manageModal === "register"}
         onClose={closeManageModal}
         title="Register participant"
+        confirmText="Register"
+        validate={() => (name.trim() ? [] : ["A participant needs a gamer tag."])}
+        onConfirm={handleRegister}
+        failureFallback="The participant could not be registered."
         maxWidth="max-w-md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
-              Cancel
-            </button>
-            <button onClick={handleRegister} disabled={submitting || !name.trim()} className={`${btnPrimary} text-sm`}>
-              {submitting ? "Saving..." : "Register"}
-            </button>
-          </div>
-        }
       >
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Enter gamer tag"
-          autoFocus
           className="w-full rounded border border-ui-border-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent"
         />
-      </BaseModal>
+      </FormModal>
 
-      <BaseModal open={manageModal === "database"} onClose={closeManageModal} title="Add from player database" maxWidth="max-w-md">
-        <div className="flex flex-col gap-3">
-          {availablePlayers.length === 0 ? (
-            <p className="text-sm text-ui-text-mute italic">No available players.</p>
-          ) : (
-            <MultiSelect
-              options={availablePlayerOptions}
-              value={selectedPlayerOptions}
-              onChange={(selected) => setSelectedPlayerIds(selected.map((option) => option.value))}
-              placeholder="Select players..."
-            />
-          )}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAddExistingPlayers}
-              disabled={submitting || selectedPlayerIds.length === 0}
-              className={`${btnPrimary} text-sm`}
-            >
-              {submitting ? "Adding..." : `Add selected${selectedPlayerIds.length > 0 ? ` (${selectedPlayerIds.length})` : ""}`}
-            </button>
-          </div>
-        </div>
-      </BaseModal>
+      <FormModal
+        open={manageModal === "database"}
+        onClose={closeManageModal}
+        title="Add from player database"
+        confirmText={`Add selected${selectedPlayerIds.length > 0 ? ` (${selectedPlayerIds.length})` : ""}`}
+        validate={() => (selectedPlayerIds.length > 0 ? [] : ["Choose at least one player."])}
+        onConfirm={handleAddExistingPlayers}
+        failureFallback="The players could not be added."
+        maxWidth="max-w-md"
+      >
+        {availablePlayers.length === 0 ? (
+          <p className="text-sm text-ui-text-mute italic">No available players.</p>
+        ) : (
+          <MultiSelect
+            options={availablePlayerOptions}
+            value={selectedPlayerOptions}
+            onChange={(selected) => setSelectedPlayerIds(selected.map((option) => option.value))}
+            placeholder="Select players..."
+          />
+        )}
+      </FormModal>
 
-      <BaseModal
+      <FormModal
         open={manageModal === "import"}
         onClose={closeManageModal}
         title="Import participants"
-        maxWidth="max-w-2xl"
-        footer={
-          <div className="flex justify-between gap-2">
-            <button onClick={handlePreviewImport} disabled={loadingPreview || !bulkText.trim()} className={`${btnSecondary} text-sm`}>
-              {loadingPreview ? "Previewing..." : "Preview"}
-            </button>
-            <div className="flex gap-2">
-              <button onClick={closeManageModal} className={`${btnSecondary} text-sm`}>
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmImport}
-                disabled={submitting || preview.length === 0}
-                className={`${btnPrimary} text-sm`}
-              >
-                {submitting ? "Importing..." : "Confirm import"}
-              </button>
-            </div>
-          </div>
+        confirmText="Confirm import"
+        validate={() => (preview.length > 0 ? [] : ["Preview the names before importing them."])}
+        onConfirm={handleConfirmImport}
+        leadingActions={
+          <button
+            type="button"
+            onClick={handlePreviewImport}
+            disabled={loadingPreview || !bulkText.trim()}
+            className={`${btnSecondary} text-sm`}
+          >
+            {loadingPreview ? "Previewing..." : "Preview"}
+          </button>
         }
+        failureFallback="The participants could not be imported."
+        maxWidth="max-w-2xl"
       >
         <div className="flex flex-col gap-4">
           <textarea
@@ -248,7 +229,7 @@ export default function ParticipantsPage() {
             </div>
           )}
         </div>
-      </BaseModal>
+      </FormModal>
     </div>
   );
 }
