@@ -8,10 +8,14 @@ import {
 } from "./score-message";
 
 export type LegacyUdpHandlers = {
-  onSong(song: string): void;
-  onStart(song: string): void;
-  onScore(message: LegacyScoreMessage): void;
-  onFinalScore(message: LegacyScoreMessage, payload: string): void;
+  onSong(address: string, song: string): void;
+  onStart(address: string, song: string): void;
+  onScore(address: string, message: LegacyScoreMessage): void;
+  onFinalScore(
+    address: string,
+    message: LegacyScoreMessage,
+    payload: string,
+  ): void;
 };
 
 /**
@@ -22,6 +26,11 @@ export type LegacyUdpHandlers = {
  * is trusted: a datagram whose opcode is not part of the protocol, or whose
  * payload does not have the exact field count the cabinet writes, is logged and
  * dropped instead of reaching the lobby state.
+ *
+ * The source address is passed on with everything that reaches the lobby. A
+ * cabinet on the real SyncStart server is a machine identified by its socket,
+ * and a broadcast socket has no such thing per sender: the address is what
+ * tells one cabinet's `P1` from another's.
  */
 export class LegacyUdpServer {
   private readonly socket: Socket;
@@ -101,21 +110,21 @@ export class LegacyUdpServer {
           source: remote.address,
           song: payload,
         });
-        return this.handlers.onSong(payload);
+        return this.handlers.onSong(remote.address, payload);
       case LEGACY_OPCODE.start:
         this.logger.debug("Song starting", {
           source: remote.address,
           song: payload,
         });
-        return this.handlers.onStart(payload);
+        return this.handlers.onStart(remote.address, payload);
       case LEGACY_OPCODE.score:
         return this.dispatchScore(opcode, payload, remote, (message) =>
-          this.handlers.onScore(message),
+          this.handlers.onScore(remote.address, message),
         );
       case LEGACY_OPCODE.finalScore:
       case LEGACY_OPCODE.finalCourseScore:
         return this.dispatchScore(opcode, payload, remote, (message) =>
-          this.handlers.onFinalScore(message, payload),
+          this.handlers.onFinalScore(remote.address, message, payload),
         );
       default:
         this.logger.debug("Ignoring datagram", {

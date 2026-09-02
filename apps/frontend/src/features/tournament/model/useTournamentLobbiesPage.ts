@@ -147,7 +147,10 @@ export function useTournamentLobbiesPage({
       if (data.tournamentId !== tournamentId) return;
       setLobbyCardStates((prev) => {
         const existing = prev.get(data.lobbyId);
-        const players = (existing?.players ?? []).filter((player) => player.playerId !== data.playerId);
+        // A lobby holds several machines, and each names its own sides P1 and
+        // P2, so a player is that pair and not the side alone. This is the key
+        // LobbyStateInterpreter reports them under.
+        const players = (existing?.players ?? []).filter((player) => player.playerId !== data.playerId || player.playerName !== data.playerName);
         players.push({
           playerId: data.playerId,
           playerName: data.playerName,

@@ -11,6 +11,7 @@ export type BridgeConfig = {
   lobbyPassword: string;
   finalGraceMs: number;
   finalTimeoutMs: number;
+  machineIdleMs: number;
   logLevel: LogLevel;
 };
 
@@ -25,6 +26,17 @@ const LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
  * cabinet whose theme broadcasts no live scores only names its second player
  * when that player finishes. The timeout is the other end: somebody who started
  * and never finished must not hold a completed song forever.
+ *
+ * `machineIdleMs` is the third of them and belongs to the cabinets rather than
+ * the players: a machine leaves the real SyncStart server when its socket
+ * closes, and nothing closes on a broadcast socket, so a cabinet is considered
+ * gone once it has been quiet for this long. It is generous on purpose. A
+ * cabinet is quiet through every menu, every pack browse and every break
+ * between matches, and dropping one is only meant to describe a cabinet that
+ * has left the room. A cabinet dropped early is not lost — the next datagram
+ * registers it again, and legacy counters are cumulative, so one packet
+ * restores the whole player — but it would leave the lobby briefly claiming
+ * fewer machines than the room holds.
  */
 export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
   return {
@@ -45,6 +57,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     lobbyPassword: env.LOBBY_PASSWORD ?? "",
     finalGraceMs: positive(env.FINAL_GRACE_MS, 1500, "FINAL_GRACE_MS"),
     finalTimeoutMs: positive(env.FINAL_TIMEOUT_MS, 20000, "FINAL_TIMEOUT_MS"),
+    machineIdleMs: positive(env.MACHINE_IDLE_MS, 600000, "MACHINE_IDLE_MS"),
     logLevel: logLevel(env.LOG_LEVEL),
   };
 }

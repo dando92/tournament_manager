@@ -10,6 +10,8 @@ import { SyncStartCompatibilityServer } from "./syncstart/websocket-server";
  * The three parts are wired here and nowhere else: the UDP listener turns
  * datagrams into legacy messages, the lobby turns those into SyncStart
  * snapshots, and the WebSocket server publishes them to whoever is attached.
+ * Every message carries the address it came from, which is how the lobby tells
+ * the cabinets of the room apart.
  */
 async function main(): Promise<void> {
   const config = readConfig();
@@ -20,11 +22,11 @@ async function main(): Promise<void> {
     server.broadcast(state),
   );
   const udp = new LegacyUdpServer(config, logger, {
-    onSong: (song) => lobby.handleSong(song),
-    onStart: (song) => lobby.handleStart(song),
-    onScore: (message) => lobby.handleScore(message),
-    onFinalScore: (message, payload) =>
-      lobby.handleFinalScore(message, payload),
+    onSong: (address, song) => lobby.handleSong(address, song),
+    onStart: (address, song) => lobby.handleStart(address, song),
+    onScore: (address, message) => lobby.handleScore(address, message),
+    onFinalScore: (address, message, payload) =>
+      lobby.handleFinalScore(address, message, payload),
   });
   server = new SyncStartCompatibilityServer(config, logger, lobby, {
     selectSong: (songPath) => udp.selectSong(songPath),
