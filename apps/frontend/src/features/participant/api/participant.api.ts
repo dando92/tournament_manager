@@ -56,10 +56,11 @@ export async function listAvailableParticipantsForDivision(divisionId: number): 
   return response.data;
 }
 
-export async function addParticipantToDivision(divisionId: number, participantId: number): Promise<void> {
-  await axios.post(`divisions/${divisionId}/participants/${participantId}`);
+/* One call admits or withdraws a whole selection, and one name is a selection of one. */
+export async function addParticipantsToDivision(divisionId: number, participantIds: number[]): Promise<void> {
+  await axios.post(`divisions/${divisionId}/participants`, { participantIds });
 }
 
-export async function removeParticipantFromDivision(divisionId: number, participantId: number): Promise<void> {
-  await axios.delete(`divisions/${divisionId}/participants/${participantId}`);
+export async function removeParticipantsFromDivision(divisionId: number, participantIds: number[]): Promise<void> {
+  await axios.delete(`divisions/${divisionId}/participants`, { data: { participantIds } });
 }

@@ -54,6 +54,10 @@ type AvailableParticipantRow = ParticipantDto;
  * again — otherwise a removal is irreversible from the interface, which is what
  * it was.
  *
+ * The order is the order the participants were registered in, because that is
+ * the order the roster tab lists everybody in: the two lists it merges have to
+ * agree on it, and a participant id is the registration order.
+ *
  * This was the most expensive read left in the structure routes: it loaded the
  * division, its tournament, every participant of that tournament with its
  * player and account, and every entrant of the division with its participants,
@@ -76,7 +80,7 @@ const AVAILABLE_PARTICIPANTS_OF_DIVISION = `
             AND e."divisionId" = $1
             AND e."status" = 'active'
     )
-    ORDER BY LOWER(pl."playerName"), pa."id"
+    ORDER BY pa."id"
 `;
 
 /**

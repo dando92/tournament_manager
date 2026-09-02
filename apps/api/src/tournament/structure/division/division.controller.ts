@@ -7,7 +7,7 @@ import {
     GenerateBracketResultDto,
     ParticipantDto,
 } from '@tournament-manager/contracts';
-import { CreateDivisionDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './division.requests';
+import { CreateDivisionDto, DivisionParticipantsDto, GenerateDivisionBracketDto, UpdateDivisionDto, UpdateDivisionSeedingDto } from './division.requests';
 import { DivisionCommands } from '@tournament/structure/division/division.commands';
 import { DivisionQueries } from '@tournament/structure/division/division.queries';
 import { TreeQueries } from '@tournament/structure/tree.queries';
@@ -93,25 +93,34 @@ export class DivisionsController {
         return this.divisionQueries.availableParticipants(Number(id));
     }
 
-    @Post(':id/participants/:participantId')
+    /**
+     * Admits a list of participants, and answers with the entrants they became,
+     * in the order they were given.
+     *
+     * The roster tab writes through these two routes alone, whether a person
+     * clicked one name or selected thirty: a selection of one is still a
+     * selection, and one call per name would publish one division update per
+     * name to everybody watching.
+     */
+    @Post(':id/participants')
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
-    async addParticipantToDivision(
+    async addParticipantsToDivision(
         @Param('id') id: number,
-        @Param('participantId') participantId: number,
-    ): Promise<CreatedResourceDto> {
-        const [entrantId] = await this.divisionCommands.addParticipants(Number(id), [Number(participantId)]);
+        @Body(new ValidationPipe()) dto: DivisionParticipantsDto,
+    ): Promise<CreatedResourceDto[]> {
+        const entrantIds = await this.divisionCommands.addParticipants(Number(id), dto.participantIds);
 
-        return { id: entrantId };
+        return entrantIds.map((entrantId) => ({ id: entrantId }));
     }
 
-    @Delete(':id/participants/:participantId')
+    @Delete(':id/participants')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'division', location: 'params', field: 'id' })
-    async removeParticipantFromDivision(
+    async removeParticipantsFromDivision(
         @Param('id') id: number,
-        @Param('participantId') participantId: number,
+        @Body(new ValidationPipe()) dto: DivisionParticipantsDto,
     ): Promise<void> {
-        return this.divisionCommands.removeParticipant(Number(id), Number(participantId));
+        return this.divisionCommands.removeParticipants(Number(id), dto.participantIds);
     }
 
 }

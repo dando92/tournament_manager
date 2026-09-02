@@ -63,3 +63,15 @@ export class UpdateDivisionSeedingDto {
   @IsNumber({}, { each: true })
   entrantIds: number[];
 }
+
+/**
+ * Who joins or leaves a division. Always a list, even for one person: the
+ * roster tab admits and withdraws a selection, and one name is a selection of
+ * one.
+ */
+export class DivisionParticipantsDto {
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  participantIds: number[];
+}

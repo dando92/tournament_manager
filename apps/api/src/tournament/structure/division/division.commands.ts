@@ -101,9 +101,12 @@ export class DivisionCommands {
         return entrants.map((entrant) => entrant.id);
     }
 
-    async removeParticipant(divisionId: number, participantId: number): Promise<void> {
+    /** The mirror of `addParticipants`: one load and one save for the whole list. */
+    async removeParticipants(divisionId: number, participantIds: number[]): Promise<void> {
         const division = await this.store.loadOrFail(divisionId);
-        division.withdrawParticipant(participantId);
+        for (const participantId of participantIds) {
+            division.withdrawParticipant(participantId);
+        }
 
         await this.store.save(division);
         await this.publisher.emitDivisionUpdate(division.address);

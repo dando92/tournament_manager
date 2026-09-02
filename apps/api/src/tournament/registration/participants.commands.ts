@@ -113,7 +113,7 @@ export class ParticipantsCommands {
         if (!tournament?.hasParticipant(participantId)) return;
 
         for (const divisionId of await this.participants.divisionsOf(tournamentId, participantId)) {
-            await this.divisions.removeParticipant(divisionId, participantId);
+            await this.divisions.removeParticipants(divisionId, [participantId]);
         }
 
         tournament.unregister(participantId);

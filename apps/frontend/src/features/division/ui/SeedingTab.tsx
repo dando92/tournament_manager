@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
 import { toast } from "react-toastify";
-import EntrantMembershipRow from "@/features/division/ui/EntrantMembershipRow";
+import SeedingEntrantRow from "@/features/division/ui/SeedingEntrantRow";
 import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
 import { updateDivisionSeeding } from "@/features/division/api/division.api";
 import { Division } from "@/features/division/model/types";
@@ -106,10 +106,8 @@ export default function SeedingTab({ division, entrants: roster, canEdit }: Seed
                         {...draggableProvided.draggableProps}
                         {...draggableProvided.dragHandleProps}
                       >
-                        <EntrantMembershipRow
+                        <SeedingEntrantRow
                           name={entrant.name}
-                          present
-                          canEdit={false}
                           saving={saving}
                           seedNumber={draftEntrantIds.indexOf(entrantId) + 1}
                           draggable={reorderable}
