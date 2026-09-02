@@ -1,4 +1,5 @@
 import { btnDanger, btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import Select from "@/shared/components/ui/Select";
 import { useTournamentConfigurationPage } from "@/features/tournament/model/useTournamentConfigurationPage";
 import { scoringSystemLabel } from "@/features/match/model/scoringSystem";
 
@@ -120,7 +121,7 @@ export default function ConfigurationPage() {
             <span className="text-sm font-semibold text-ui-text">
               Default match scoring system
             </span>
-            <select
+            <Select
               value={form.defaultScoringSystem}
               onChange={(event) =>
                 setForm((current) => ({
@@ -128,7 +129,6 @@ export default function ConfigurationPage() {
                   defaultScoringSystem: event.target.value,
                 }))
               }
-              className="rounded border border-ui-border-strong px-3 py-2 text-sm"
               disabled={isClosed}
             >
               {scoringSystems.map((system) => (
@@ -136,7 +136,7 @@ export default function ConfigurationPage() {
                   {scoringSystemLabel(system)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
 

@@ -1,4 +1,5 @@
 import { useAccountInfoPage } from "@/features/auth/model/useAccountInfoPage";
+import Select from "@/shared/components/ui/Select";
 import { btnPrimary } from "@/styles/buttonStyles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faPen, faCamera } from "@fortawesome/free-solid-svg-icons";
@@ -160,16 +161,15 @@ export default function AccountInfoPage() {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-ui-text-mute">Nationality</label>
-                <select
+                <Select
                   value={nationality}
                   onChange={(e) => setNationality(e.target.value)}
-                  className="border rounded px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ui-accent bg-ui-surface"
                 >
                   <option value="">— Select nationality —</option>
                   {NATIONALITIES.map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-ui-text-mute">GrooveStats API Key</label>

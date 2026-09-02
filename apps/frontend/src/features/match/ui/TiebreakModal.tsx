@@ -4,6 +4,7 @@ import { Match } from "@/features/match/model/types";
 import { listSongs } from "@/features/song/api/song.api";
 import { Song } from "@/features/song/model/types";
 import BaseModal from "@/shared/components/ui/BaseModal";
+import Select from "@/shared/components/ui/Select";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 
@@ -75,8 +76,7 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
         {ties.length > 1 && (
           <label className="flex flex-col gap-1.5">
             <span className="font-semibold">Tied placement</span>
-            <select
-              className="rounded border border-ui-border-strong bg-ui-surface px-3 py-2"
+            <Select
               value={tieIndex}
               onChange={(event) => setTieIndex(Number(event.target.value))}
             >
@@ -85,7 +85,7 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
                   Places {candidate.fromPlacement}–{candidate.toPlacement}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
 
@@ -115,14 +115,13 @@ export default function TiebreakModal({ open, match, tournamentId, onClose, onCr
         {mode === "song" && (
           <label className="flex flex-col gap-1.5">
             <span className="font-semibold">Song</span>
-            <select
-              className="rounded border border-ui-border-strong bg-ui-surface px-3 py-2"
+            <Select
               value={songId ?? ""}
               onChange={(event) => setSongId(Number(event.target.value) || null)}
             >
               {songs.length === 0 && <option value="">No songs available</option>}
               {songs.map((song) => <option key={song.id} value={song.id}>{displaySongTitle(song.title)}</option>)}
-            </select>
+            </Select>
           </label>
         )}
       </div>

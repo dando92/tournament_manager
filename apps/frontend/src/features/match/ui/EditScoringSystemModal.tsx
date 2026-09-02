@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import OkModal from "@/shared/components/ui/OkModal";
+import Select from "@/shared/components/ui/Select";
 import { listScoringSystems } from "@/features/match/api/match.api";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { scoringSystemLabel } from "@/features/match/model/scoringSystem";
@@ -54,8 +55,7 @@ export default function EditScoringSystemModal({ open, match, onClose, onSave }:
         >
             <label className="flex flex-col gap-2 font-medium text-ui-text-soft">
                 Scoring system
-                <select
-                    className="rounded-lg border border-ui-border-strong bg-ui-surface px-3 py-2 text-ui-text outline-none focus:ring-2 focus:ring-ui-accent"
+                <Select
                     value={scoringSystem}
                     onChange={(event) => setScoringSystem(event.target.value)}
                     disabled={saving || systemsQuery.isLoading}
@@ -65,7 +65,7 @@ export default function EditScoringSystemModal({ open, match, onClose, onSave }:
                             {scoringSystemLabel(system)}
                         </option>
                     ))}
-                </select>
+                </Select>
             </label>
             {hasPlayedScores && <p className="mt-3 text-xs text-state-pending">Saving will recalculate the points of every completed song round.</p>}
             {systemsQuery.isError && <p className="mt-3 text-xs text-state-error">Unable to load scoring systems.</p>}

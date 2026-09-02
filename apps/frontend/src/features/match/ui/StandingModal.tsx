@@ -1,4 +1,5 @@
 import BaseModal from "@/shared/components/ui/BaseModal";
+import Select from "@/shared/components/ui/Select";
 import { useStandingModal } from "@/features/match/model/useStandingModal";
 import { btnPrimary } from "@/styles/buttonStyles";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
@@ -120,11 +121,11 @@ export default function StandingModal({
       <div className="flex flex-col gap-4">
         <div>
           <label className="block text-sm font-medium text-ui-text-soft">Registered score</label>
-          <select
+          <Select
+            className="mt-1"
             value={selectedScoreId}
             onChange={(event) => setSelectedScoreId(event.target.value)}
             disabled={loadingScores}
-            className="mt-1 block w-full px-3 py-2 border border-ui-border-strong rounded-md shadow-sm focus:outline-none focus:ring-ui-accent focus:border-ui-border-strong sm:text-sm"
           >
             <option value="">Manual score</option>
             {scoreOptions.map((score) => (
@@ -132,7 +133,7 @@ export default function StandingModal({
                 #{score.id} - {score.percentage.toFixed(2)}%{score.isFailed ? " failed" : ""}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {isRegisteredScoreMode && selectedScore ? (
           <div className="rounded-md border border-ui-border bg-ui-raised px-3 py-2 text-sm text-ui-text-soft">

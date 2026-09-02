@@ -1,5 +1,6 @@
 import { useLobbyControl } from "@/features/tournament/model/useLobbyControl";
-import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import Select from "@/shared/components/ui/Select";
+import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 
 export default function LobbyControlCard({ tournamentId }: { tournamentId: number }) {
@@ -21,11 +22,11 @@ export default function LobbyControlCard({ tournamentId }: { tournamentId: numbe
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                     <label className="text-sm font-semibold text-ui-text">
                         Lobby
-                        <select
+                        <Select
+                            className="mt-1 font-normal"
                             value={control.lobbyId}
                             onChange={(event) => control.setLobbyId(event.target.value)}
                             disabled={control.options.isLoading || lobbies.length === 0}
-                            className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal text-ui-text disabled:opacity-50 ${focusRing}`}
                         >
                             {lobbies.length === 0 && <option value="">No lobby available</option>}
                             {lobbies.map((lobby) => (
@@ -33,15 +34,15 @@ export default function LobbyControlCard({ tournamentId }: { tournamentId: numbe
                                     {lobby.name} ({lobby.lobbyCode})
                                 </option>
                             ))}
-                        </select>
+                        </Select>
                     </label>
                     <label className="text-sm font-semibold text-ui-text">
                         Song from active matches
-                        <select
+                        <Select
+                            className="mt-1 font-normal"
                             value={control.songId ?? ""}
                             onChange={(event) => control.setSongId(Number(event.target.value))}
                             disabled={control.options.isLoading || songs.length === 0}
-                            className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal text-ui-text disabled:opacity-50 ${focusRing}`}
                         >
                             {songs.length === 0 && <option value="">No song in an active match</option>}
                             {songs.map((song) => (
@@ -49,7 +50,7 @@ export default function LobbyControlCard({ tournamentId }: { tournamentId: numbe
                                     {displaySongTitle(song.title)}
                                 </option>
                             ))}
-                        </select>
+                        </Select>
                     </label>
                 </div>
             )}

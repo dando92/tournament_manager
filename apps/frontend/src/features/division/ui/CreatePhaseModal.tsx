@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import OkModal from "@/shared/components/ui/OkModal";
+import Select from "@/shared/components/ui/Select";
 
 type DivisionOption = {
   id: number;
@@ -43,8 +44,7 @@ export default function CreatePhaseModal({ open, onClose, onCreate, divisions, d
         {divisions && divisions.length > 0 && (
           <div>
             <h3 className="mb-1">Division</h3>
-            <select
-              className="w-full border border-ui-border-strong px-2 py-2 rounded-lg"
+            <Select
               value={selectedDivisionId}
               onChange={(e) => setSelectedDivisionId(Number(e.target.value))}
             >
@@ -53,7 +53,7 @@ export default function CreatePhaseModal({ open, onClose, onCreate, divisions, d
                   {division.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
         <div>

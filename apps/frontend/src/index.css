@@ -27,6 +27,27 @@
   textarea::placeholder {
     color: rgb(var(--ui-text-mute));
   }
+
+  /*
+   * The option list is a second surface, and the rule above does not reach it.
+   * Chromium paints the popup with the control's own background, so a select
+   * that is deliberately transparent - the advancement sentence uses one -
+   * leaves the list white while its options inherit the theme's light text.
+   * Painting the options themselves settles it wherever author colours reach
+   * the popup; where they do not, `color-scheme` already has.
+   *
+   * An `optgroup` is a heading rather than a choice, so it takes the muted
+   * text; its options set their own colour and are unaffected by that.
+   */
+  option {
+    background-color: rgb(var(--ui-surface));
+    color: rgb(var(--ui-text));
+  }
+
+  optgroup {
+    background-color: rgb(var(--ui-surface));
+    color: rgb(var(--ui-text-mute));
+  }
 }
 
 body {

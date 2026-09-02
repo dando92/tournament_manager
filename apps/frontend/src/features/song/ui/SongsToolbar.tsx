@@ -1,5 +1,6 @@
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Select from "@/shared/components/ui/Select";
 
 type Props = {
   packFilter: string;
@@ -18,21 +19,18 @@ export default function SongsToolbar({
 }: Props) {
   return (
     <div className="flex flex-col sm:flex-row gap-2">
-      <div className="relative sm:w-48 shrink-0">
-        <select
-          value={packFilter}
-          onChange={(event) => onPackFilterChange(event.target.value)}
-          className="w-full border border-ui-border-strong rounded-lg px-3 py-2 text-sm bg-ui-surface appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ui-accent"
-        >
-          <option value="">All packs</option>
-          {packOptions.map((group) => (
-            <option key={group} value={group}>
-              {group}
-            </option>
-          ))}
-        </select>
-        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-ui-text-mute text-xs">▼</span>
-      </div>
+      <Select
+        className="sm:w-48 shrink-0"
+        value={packFilter}
+        onChange={(event) => onPackFilterChange(event.target.value)}
+      >
+        <option value="">All packs</option>
+        {packOptions.map((group) => (
+          <option key={group} value={group}>
+            {group}
+          </option>
+        ))}
+      </Select>
 
       <div className="relative flex-1">
         <FontAwesomeIcon
