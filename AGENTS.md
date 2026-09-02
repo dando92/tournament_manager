@@ -6,6 +6,7 @@
 - `CLAUDE.md` must contain only the `@AGENTS.md` import stub, so Claude Code loads this file automatically. Never duplicate instruction text in `CLAUDE.md`.
 - Add every new project instruction, rule, or documentation index entry to `AGENTS.md` only.
 - Tool-specific instructions also belong here. Mark them with the tool they apply to, and let other agents ignore them.
+- Everything beyond `AGENTS.md`, `CLAUDE.md`, and ordinary product documentation (README, in-app help) lives outside this repository, in the external `tournament_manager-docs` repository cloned locally at `C:\.airepos\tournament_manager\`. See the global CLAUDE.md convention for how an agent locates that folder for any repository. The [Documentation Index](#documentation-index) below lists what it contains.
 
 ## Project Purpose
 
@@ -61,37 +62,29 @@ Tournament Manager is a self-contained, provider-independent application for man
   Do not run Prettier over an existing file when doing so would rewrite its
   established formatting.
 
-### graphify (Claude Code)
-
-This project has a knowledge graph at `graphify-out/` with god nodes, community structure, and cross-file relationships.
-
-- For codebase questions, first run `graphify query "<question>"` when `graphify-out/graph.json` exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than `GRAPH_REPORT.md` or raw grep output.
-- If `graphify-out/wiki/index.md` exists, use it for broad navigation instead of raw source browsing.
-- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review or when query, path, and explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-
 ## Documentation Index
 
-- [Backend architecture and coding rules](.ai/Backend.md)
-- [Target scalable architecture and migration rules](.ai/Architecture.md)
-- [Incremental architecture migration work plan](.ai/MigrationPlan.md)
-- [Migration execution status and next action](.ai/MigrationStatus.md)
-- [Local platform operations](.ai/LocalOperations.md)
-- [New PC setup guide](.ai/NewPcSetup.md)
-- [Continuous delivery and testing deployment](.ai/Deployment.md)
-- [Hosting options and deferred hosted target](.ai/HostingOptions.md)
-- [Current behavior and migration safety-net inventory](.ai/BaselineInventory.md)
-- [Deferred functional questions](.ai/FunctionalQuestions.md)
-- [Frontend architecture and coding rules](.ai/Frontend.md)
-- [Design system and design decisions](.ai/Design.md)
-- [Advancement rule editor and deferred quick-rule mode](.ai/AdvancementRuleEditor.md)
-- [SyncStart protocol refactoring decisions](.ai/SyncStartRefactoring.md)
-- [Legacy ITGmania SyncStart bridge](.ai/LegacySyncStartBridge.md)
-- [Scoring model refactoring plan and decisions](.ai/ScoringRefactoring.md)
-- [API and frontend structure refactoring plan and decisions](.ai/ApiRefactoring.md)
-- [Tournament Control Room flows and implementation plan](.ai/ControlRoom.md)
-- [Tournament overview timeline and timing model](.ai/TournamentTimeline.md)
-- [Match tiebreak calculation, placement resolution, and responsive presentation](.ai/Tiebreaks.md)
+Every file below lives in the external `tournament_manager-docs` repository, cloned locally at `C:\.airepos\tournament_manager\` — not in this repository.
+
+- `Backend.md` — Backend architecture and coding rules
+- `Architecture.md` — Application architecture and reliability rules
+- `LocalOperations.md` — Local platform operations
+- `NewPcSetup.md` — New PC setup guide
+- `Deployment.md` — Continuous delivery and testing deployment
+- `HostingOptions.md` — Hosting options and deferred hosted target
+- `FunctionalQuestions.md` — Deferred functional questions
+- `Frontend.md` — Frontend architecture and coding rules
+- `Design.md` — Design system and design decisions
+- `AdvancementRuleEditor.md` — Advancement rule editor and deferred quick-rule mode
+- `SyncStartRefactoring.md` — SyncStart protocol refactoring decisions
+- `LegacySyncStartBridge.md` — Legacy ITGmania SyncStart bridge
+- `ScoringRefactoring.md` — Scoring model refactoring plan and decisions
+- `ApiRefactoring.md` — API and frontend structure refactoring plan and decisions
+- `ControlRoom.md` — Tournament Control Room flows and implementation plan
+- `TournamentTimeline.md` — Tournament overview timeline and timing model
+- `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
+- `QueryAndSchemaOptimization.md` — Query style, index, and schema optimization plan
+- `LobbyManagerSeparation.md` — Lobby manager and community event hub integration plan and decisions
 
 ## Repository Architecture
 
@@ -109,14 +102,11 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `tools/syncstart-simulator`: Deterministic SyncStart protocol simulator for local runs and tests.
 - `tools/legacy-syncstart-bridge`: Compatibility adapter that presents a legacy UDP-broadcast ITGmania cabinet as a SyncStart lobby.
-- `.ai`: Project architecture, coding, and design decisions.
 
-The implemented structure and service boundaries are defined in `.ai/Architecture.md`.
+Project architecture, coding, and design decisions live in the external `tournament_manager-docs` repository — see [Documentation Index](#documentation-index).
 
-## Migration Commit Authorization
-
-Contributors and coding agents are authorized to create local Git commits during the migration without requesting separate confirmation for each commit. A commit may be created whenever it represents a coherent, reviewable checkpoint and the verification appropriate to its scope has passed. Do not commit known regressions, unrelated user changes, secrets, generated runtime data, or incomplete destructive transitions. Record the completed checkpoint and next action in `.ai/MigrationStatus.md` before or as part of the commit.
+The implemented structure and service boundaries are defined in `Architecture.md` there.
 
 ## Functional Question Tracking
 
-Record every discovered ambiguity, suspected behavior defect, and unresolved product rule in `.ai/FunctionalQuestions.md`. During the architecture migration, characterize existing behavior and link supporting tests, but do not silently decide a functional question. Functional changes are deferred until after the architectural migration unless the user explicitly prioritizes one earlier.
+Record every discovered ambiguity, suspected behavior defect, and unresolved product rule in `FunctionalQuestions.md`, in the external `tournament_manager-docs` repository (`C:\.airepos\tournament_manager\`). Characterize existing behavior and link supporting tests, but do not silently decide a functional question. Resolve functional changes only after the user approves the intended behavior.
