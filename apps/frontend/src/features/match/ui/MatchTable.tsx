@@ -1,6 +1,7 @@
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
 import { entrantPlayers } from "@/features/participant/model/entrant";
+import { byMatchStanding } from "@/features/match/model/matchPoints";
 import MatchRow from "@/features/match/ui/MatchRow";
 import PathRow from "@/features/match/ui/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
@@ -79,11 +80,6 @@ export default function MatchTable({
     });
   });
 
-  const getTotalPoints = (playerId: number) =>
-    match.rounds
-      .map((round) => (round.standings ?? []).find((s) => s.player.id === playerId))
-      .reduce((acc, standing) => acc + (standing?.points ?? 0), 0);
-
   const matchPlayers = entrantPlayers(match.entrants);
   const entrantIdByPlayerId = new Map(
     (match.entrants ?? [])
@@ -93,12 +89,7 @@ export default function MatchTable({
       })
       .filter((entry): entry is readonly [number, number] => Boolean(entry)),
   );
-  const orderByPlayerId = new Map(match.resultState.entries.map((entry, index) => [entry.playerId, index]));
-  const sortedPlayers = [...matchPlayers].sort((a, b) =>
-    (orderByPlayerId.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (orderByPlayerId.get(b.id) ?? Number.MAX_SAFE_INTEGER)
-      || getTotalPoints(b.id) - getTotalPoints(a.id)
-      || a.id - b.id,
-  );
+  const sortedPlayers = [...matchPlayers].sort(byMatchStanding(match));
   const sortedMatchResults = [...(match.matchResult?.playerPoints ?? [])].sort(
     (a, b) => a.placement - b.placement || a.playerId - b.playerId,
   );

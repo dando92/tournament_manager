@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { Match, Round } from "@/features/match/model/types";
+import { matchPointsOf } from "@/features/match/model/matchPoints";
 import { Player } from "@/features/participant/model/types";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import { btnCreateIcon } from "@/styles/buttonStyles";
@@ -75,10 +76,7 @@ export default function MatchRow({
   onChangeTiebreakPoints,
   onClearTiebreakStanding,
 }: MatchRowProps) {
-  const matchResultPoints = match.matchResult?.playerPoints?.find((entry) => entry.playerId === player.id)?.points;
-  const totalPoints = matchResultPoints ?? match.rounds
-    .map((r) => (r.standings ?? []).find((s) => s.player.id === player.id))
-    .reduce((acc, s) => acc + (s?.points ?? 0), 0);
+  const totalPoints = matchPointsOf(match, player.id);
   const canToggleRoute = Boolean(match.matchResult && routeTargetMatchId && onToggleRouteHighlight);
   const canClickCompletedRow = Boolean(match.matchResult && (canToggleRoute || canClearRouteHighlight));
 

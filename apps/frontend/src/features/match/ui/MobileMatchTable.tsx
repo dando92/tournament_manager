@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from "react";
 
 import { entrantPlayers } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
+import { byMatchStanding, matchPointsOf } from "@/features/match/model/matchPoints";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import OverflowMarquee from "@/shared/components/ui/OverflowMarquee";
@@ -36,12 +37,7 @@ export default function MobileMatchTable(props: Props) {
   const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
   const [manualEditor, setManualEditor] = useState<ManualEditor | null>(null);
   const [manualValue, setManualValue] = useState(0);
-  const players = useMemo(() => {
-    const order = new Map(match.resultState.entries.map((entry, index) => [entry.playerId, index]));
-    return entrantPlayers(match.entrants).sort((left, right) =>
-      (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER) || left.id - right.id,
-    );
-  }, [match]);
+  const players = useMemo(() => entrantPlayers(match.entrants).sort(byMatchStanding(match)), [match]);
   const metrics: Metric[] = [
     ...match.rounds.map((round, index): Metric => ({ kind: "round", id: round.id, label: round.song ? displaySongTitle(round.song.title) : `By hand ${index + 1}` })),
     { kind: "points", id: 0, label: "Points" },
@@ -63,9 +59,11 @@ export default function MobileMatchTable(props: Props) {
   }
 
   function cell(player: (typeof players)[number], metric: Metric) {
-    const result = match.resultState.entries.find((entry) => entry.playerId === player.id);
-    if (metric.kind === "points") return <span className="font-semibold">{result?.points ?? 0}</span>;
-    if (metric.kind === "placement") return <span className="font-semibold text-ui-text-soft">{result?.placement ?? "—"}</span>;
+    if (metric.kind === "points") return <span className="font-semibold">{matchPointsOf(match, player.id)}</span>;
+    if (metric.kind === "placement") {
+      const placement = match.resultState.entries.find((entry) => entry.playerId === player.id)?.placement;
+      return <span className="font-semibold text-ui-text-soft">{placement ?? "—"}</span>;
+    }
 
     if (metric.kind === "round") {
       const round = match.rounds.find((candidate) => candidate.id === metric.id)!;
@@ -182,7 +180,7 @@ export default function MobileMatchTable(props: Props) {
                   player={player}
                   expanded={expandedPlayerId === player.id}
                   onToggle={() => setExpandedPlayerId((current) => current === player.id ? null : player.id)}
-                  points={match.resultState.entries.find((entry) => entry.playerId === player.id)?.points ?? 0}
+                  points={matchPointsOf(match, player.id)}
                   placement={match.resultState.entries.find((entry) => entry.playerId === player.id)?.placement ?? null}
                   metrics={metrics.filter((metric) => metric.kind !== "points" && metric.kind !== "placement")}
                   renderCell={(metric) => cell(player, metric)}
