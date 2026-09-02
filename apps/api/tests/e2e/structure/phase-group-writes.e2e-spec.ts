@@ -164,7 +164,7 @@ describe('Phase group writes (e2e)', () => {
     expect(events[1].payload).toEqual({ tournamentId, divisionId, phaseId, phaseGroupId: expect.any(Number) });
   });
 
-  it('gives a new pool the first letter its phase does not already use', async () => {
+  it('numbers a new pool after the ones its phase already holds', async () => {
     const created = await request(app.getHttpServer()).post(`/phases/${phaseId}/phase-groups`).send({}).expect(201);
 
     const summary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
@@ -172,8 +172,8 @@ describe('Phase group writes (e2e)', () => {
       .flatMap((phase: { phaseGroups: Array<{ id: number; displayIdentifier: string }> }) => phase.phaseGroups)
       .find((candidate: { id: number }) => candidate.id === created.body.id);
 
-    expect(pool.displayIdentifier).toBe('C');
-    expect(pool.name).toBe('C');
+    expect(pool.displayIdentifier).toBe('Pool 3');
+    expect(pool.name).toBe('Pool 3');
   });
 
   it('announces the phase and the pool when one is renamed', async () => {
@@ -199,6 +199,29 @@ describe('Phase group writes (e2e)', () => {
       request(app.getHttpServer()).delete(`/phase-groups/${created.body.id}`).expect(404),
     );
     expect(again).toEqual([]);
+  });
+
+  /**
+   * A phase always holds a pool, and a phase holding one does not draw it, so
+   * the last one cannot be deleted: what somebody meant by that gesture is
+   * deleting the phase, and the phase has its own action.
+   */
+  it('refuses to leave a phase without a pool', async () => {
+    const lonely = await request(app.getHttpServer())
+      .post('/phases')
+      .send({ name: 'Top Cut', divisionId })
+      .expect(201);
+
+    const summary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+    const phase = summary.body.phases.find((candidate: { id: number }) => candidate.id === lonely.body.id);
+    expect(phase.phaseGroups).toHaveLength(1);
+
+    await request(app.getHttpServer()).delete(`/phase-groups/${phase.phaseGroups[0].id}`).expect(400);
+
+    const after = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+    expect(
+      after.body.phases.find((candidate: { id: number }) => candidate.id === lonely.body.id).phaseGroups,
+    ).toHaveLength(1);
   });
 
   /**

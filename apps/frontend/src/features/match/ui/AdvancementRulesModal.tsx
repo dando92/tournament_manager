@@ -1,10 +1,13 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
 import { isAdvancementSourceTarget, validateAdvancementRules } from "@/features/match/model/advancementRuleValidation";
 import { Division } from "@/features/division/model/types";
 import BaseModal from "@/shared/components/ui/BaseModal";
+import Select from "@/shared/components/ui/Select";
 import { btnCreate, btnPrimary, btnSecondary, btnTrash } from "@/styles/buttonStyles";
+import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
+import { poolsAreVisible } from "@/features/division/model/poolVisibility";
 
 type AdvancementRulesModalProps = {
     open: boolean;
@@ -25,7 +28,6 @@ type TargetOption = {
     label: string;
 };
 
-const inlineFieldClassName = "inline-flex min-h-7 items-center rounded bg-ui-raised px-1.5 py-0.5 font-medium text-ui-text transition-colors hover:bg-ui-selected focus-within:ring-2 focus-within:ring-state-running";
 const numberInputClassName = "min-h-8 w-14 rounded border border-ui-border-strong bg-ui-raised px-2 py-1 text-sm font-medium text-ui-text outline-none focus:ring-2 focus:ring-ui-accent";
 
 export default function AdvancementRulesModal({
@@ -40,11 +42,13 @@ export default function AdvancementRulesModal({
     onSave,
     onCancel,
 }: AdvancementRulesModalProps) {
+    /* A phase that does not draw its only pool is named on its own here too, so
+       a destination reads the way the tree and the breadcrumb spell it. */
     const phaseGroups = (division.phases ?? []).flatMap((phase) =>
         (phase.phaseGroups ?? []).map((phaseGroup) => ({
             kind: "phase_group" as const,
             id: phaseGroup.id,
-            label: `${phase.name} / ${phaseGroup.displayIdentifier?.trim() || phaseGroup.name}`,
+            label: poolsAreVisible(phase) ? `${phase.name} / ${phaseGroupLabel(phaseGroup)}` : phase.name,
         })),
     );
     const phaseGroupLabelById = new Map(phaseGroups.map((phaseGroup) => [phaseGroup.id, phaseGroup.label]));
@@ -222,39 +226,37 @@ function InlineDestination({
     onChange: (kind: AdvancementCompetitionKind, id: number) => void;
 }) {
     return (
-        <span className={`${inlineFieldClassName} min-w-0 max-w-full`}>
-            <select
-                value={rule.targetId > 0 ? `${rule.targetKind}:${rule.targetId}` : ""}
-                onChange={(event) => {
-                    if (!event.target.value) {
-                        onChange(rule.targetKind, 0);
-                        return;
-                    }
-                    const [kind, rawId] = event.target.value.split(":");
-                    onChange(kind as AdvancementCompetitionKind, Number(rawId));
-                }}
-                className="max-w-[calc(100vw-9rem)] min-w-0 appearance-none truncate bg-transparent p-0 font-medium text-ui-text outline-none sm:max-w-[32rem]"
-                aria-label={ariaLabel}
-                disabled={disabled}
-            >
-                <option value="">Select destination</option>
-                {matchOptions.length > 0 && (
-                    <optgroup label="Matches">
-                        {matchOptions.map((target) => (
-                            <option key={`match:${target.id}`} value={`match:${target.id}`}>{target.label}</option>
-                        ))}
-                    </optgroup>
-                )}
-                {phaseGroupOptions.length > 0 && (
-                    <optgroup label="Pools">
-                        {phaseGroupOptions.map((target) => (
-                            <option key={`phase_group:${target.id}`} value={`phase_group:${target.id}`}>{target.label}</option>
-                        ))}
-                    </optgroup>
-                )}
-            </select>
-            <FontAwesomeIcon icon={faChevronDown} className="ml-1.5 shrink-0 text-[10px] text-ui-text-mute" />
-        </span>
+        <Select
+            variant="inline"
+            className="min-w-0 max-w-[calc(100vw-9rem)] sm:max-w-[32rem]"
+            value={rule.targetId > 0 ? `${rule.targetKind}:${rule.targetId}` : ""}
+            onChange={(event) => {
+                if (!event.target.value) {
+                    onChange(rule.targetKind, 0);
+                    return;
+                }
+                const [kind, rawId] = event.target.value.split(":");
+                onChange(kind as AdvancementCompetitionKind, Number(rawId));
+            }}
+            aria-label={ariaLabel}
+            disabled={disabled}
+        >
+            <option value="">Select destination</option>
+            {matchOptions.length > 0 && (
+                <optgroup label="Matches">
+                    {matchOptions.map((target) => (
+                        <option key={`match:${target.id}`} value={`match:${target.id}`}>{target.label}</option>
+                    ))}
+                </optgroup>
+            )}
+            {phaseGroupOptions.length > 0 && (
+                <optgroup label="Pools">
+                    {phaseGroupOptions.map((target) => (
+                        <option key={`phase_group:${target.id}`} value={`phase_group:${target.id}`}>{target.label}</option>
+                    ))}
+                </optgroup>
+            )}
+        </Select>
     );
 }
 

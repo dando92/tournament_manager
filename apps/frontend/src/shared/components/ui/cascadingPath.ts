@@ -11,6 +11,8 @@
  * - A level with exactly one option is not a choice, so it settles itself. The
  *   next level then has an ancestor and may settle itself in turn, which is why
  *   the resolution is one pass over all of them rather than a per-level rule.
+ * - A level that asked to stay out of the way while it is not a choice is
+ *   settled all the same, and reported as one nobody has to be shown.
  * - What is not among the options is not a selection. An identifier that
  *   survives from an earlier parent is dropped by the same pass, so no caller
  *   has to remember to clear it.
@@ -36,6 +38,11 @@ export type PathLevel<TValue> = {
    * The array it receives holds one entry per ancestor level, in order.
    */
   getOptions: (ancestors: PathValue<TValue>) => PathOption<TValue>[];
+  /**
+   * Whether the level is worth drawing only when it offers a choice. A pool
+   * asks for this: a phase holding one does not name it anywhere else either.
+   */
+  implicitWhenSingle?: boolean;
 };
 
 /** A level as it is drawn: what it offers, what it holds, whether it can be used. */
@@ -43,6 +50,8 @@ export type PathLevelView<TValue> = {
   key: string;
   label: string;
   enabled: boolean;
+  /** False for a settled level that asked not to be drawn while it is not a choice. */
+  visible: boolean;
   options: PathOption<TValue>[];
   selected: PathOption<TValue> | null;
 };
@@ -72,6 +81,7 @@ export function describePath<TValue>(
       key: level.key,
       label: level.label,
       enabled: !blocked && options.length > 0,
+      visible: !level.implicitWhenSingle || options.length > 1,
       options,
       selected: selected ?? null,
     });

@@ -46,18 +46,28 @@ function decidedMatch(id: number, points: Array<{ entrant: Entrant; points: numb
 }
 
 describe('PhaseGroupAggregate.create', () => {
-  it('names the first pool of a phase after the first free letter', () => {
+  it('calls the pool a phase starts with nothing more than Pool', () => {
     const created = PhaseGroupAggregate.create({}, phase());
 
-    expect(created.entity.displayIdentifier).toBe('A');
-    expect(created.entity.name).toBe('A');
+    expect(created.entity.displayIdentifier).toBe('Pool');
+    expect(created.entity.name).toBe('Pool');
     expect(created.entity.state).toBe('pending');
   });
 
-  it('skips the letters already taken in the same phase', () => {
-    const created = PhaseGroupAggregate.create({}, phase([{ displayIdentifier: 'A' }, { displayIdentifier: 'B' }]));
+  it('numbers the pools that follow it, starting at the second', () => {
+    const created = PhaseGroupAggregate.create({}, phase([{ displayIdentifier: 'Pool' }]));
 
-    expect(created.entity.displayIdentifier).toBe('C');
+    expect(created.entity.displayIdentifier).toBe('Pool 2');
+    expect(created.entity.name).toBe('Pool 2');
+  });
+
+  it('passes over a number somebody has already given a pool', () => {
+    const created = PhaseGroupAggregate.create(
+      {},
+      phase([{ displayIdentifier: 'Pool' }, { name: 'Pool 3', displayIdentifier: 'Pool 3' }]),
+    );
+
+    expect(created.entity.displayIdentifier).toBe('Pool 4');
   });
 
   it('keeps an explicit identifier and name, so a start.gg import stays faithful', () => {

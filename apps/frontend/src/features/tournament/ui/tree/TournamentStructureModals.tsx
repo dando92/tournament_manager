@@ -1,10 +1,12 @@
 import CreateDivisionModal from "@/features/division/ui/CreateDivisionModal";
 import CreatePhaseModal from "@/features/division/ui/CreatePhaseModal";
+import CreatePoolModal from "@/features/division/ui/CreatePoolModal";
 import GenerateBracketModal from "@/features/division/ui/GenerateBracketModal";
 import StartggImportModal from "@/features/tournament/ui/StartggImportModal";
 import RenameModal from "@/shared/components/ui/RenameModal";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { useTournamentStructureDialogs } from "@/features/tournament/model/useTournamentStructureDialogs";
+import { nextPoolName } from "@/features/division/model/poolVisibility";
 
 /**
  * The dialogs that change the shape of a tournament.
@@ -17,7 +19,7 @@ import { useTournamentStructureDialogs } from "@/features/tournament/model/useTo
 export default function TournamentStructureModals() {
   const tree = useTournamentTree();
   const { dialog, closeDialog, tournamentId, tournamentName, divisions } = tree;
-  const { bracketTypes, handleGenerateBracket } = useTournamentStructureDialogs();
+  const { bracketTypes, dialogPhase, handleGenerateBracket } = useTournamentStructureDialogs();
 
   return (
     <>
@@ -40,11 +42,24 @@ export default function TournamentStructureModals() {
         }}
       />
 
+      <CreatePoolModal
+        open={dialog.kind === "createPool"}
+        phaseName={dialogPhase?.name ?? ""}
+        suggestedName={nextPoolName(dialogPhase)}
+        onClose={closeDialog}
+        onCreate={(name) => {
+          if (dialog.kind !== "createPool") return;
+          void tree.createPool(dialog.phaseId, name);
+        }}
+      />
+
       <GenerateBracketModal
         open={dialog.kind === "generateBracket"}
         onClose={closeDialog}
         divisions={divisions}
         currentDivisionId={dialog.kind === "generateBracket" ? dialog.divisionId : undefined}
+        currentPhaseId={dialog.kind === "generateBracket" ? dialog.phaseId : undefined}
+        currentPhaseName={dialogPhase?.name}
         bracketTypes={bracketTypes}
         onGenerate={handleGenerateBracket}
       />

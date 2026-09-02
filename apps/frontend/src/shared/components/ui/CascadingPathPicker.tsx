@@ -50,6 +50,12 @@ export default function CascadingPathPicker<TValue extends string | number>({
   className,
 }: CascadingPathPickerProps<TValue>) {
   const views = useMemo(() => describePath(levels, value), [levels, value]);
+  /* A level that settled itself and asked not to be drawn keeps its place in
+     the path, so an index here still addresses the level it came from. */
+  const drawn = useMemo(
+    () => views.map((view, index) => ({ view, index })).filter((entry) => entry.view.visible),
+    [views],
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<Array<HTMLButtonElement | null>>([]);
@@ -133,9 +139,9 @@ export default function CascadingPathPicker<TValue extends string | number>({
         className="flex items-center gap-1 overflow-x-auto p-1"
         style={{ maskImage: fade, WebkitMaskImage: fade }}
       >
-        {views.map((view, index) => (
+        {drawn.map(({ view, index }, position) => (
           <Fragment key={view.key}>
-            {index > 0 && (
+            {position > 0 && (
               <span aria-hidden className="select-none text-ui-border-strong">
                 /
               </span>

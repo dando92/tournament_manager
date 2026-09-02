@@ -43,7 +43,8 @@ export type StructureDialog =
   | { kind: "none" }
   | { kind: "createDivision" }
   | { kind: "createPhase"; divisionId?: number }
-  | { kind: "generateBracket"; divisionId?: number }
+  | { kind: "createPool"; phaseId: number }
+  | { kind: "generateBracket"; divisionId?: number; phaseId?: number }
   | { kind: "startggImport" }
   | { kind: "rename"; noun: string; currentName: string; apply: (name: string) => Promise<void> };
 
@@ -67,7 +68,7 @@ type TournamentTreeContextValue = {
   openDialog: (dialog: StructureDialog) => void;
   closeDialog: () => void;
 
-  createPool: (phaseId: number) => Promise<void>;
+  createPool: (phaseId: number, name: string) => Promise<void>;
   removeDivision: (divisionId: number) => Promise<void>;
   removePhase: (phaseId: number) => Promise<void>;
   removePool: (phaseGroupId: number) => Promise<void>;
@@ -272,10 +273,10 @@ export function TournamentTreeProvider({
   );
 
   const createPool = useCallback(
-    async (phaseId: number) => {
+    async (phaseId: number, name: string) => {
       await run(
         async () => {
-          await createPhaseGroup(phaseId, {});
+          await createPhaseGroup(phaseId, { name, displayIdentifier: name });
         },
         "Pool created.",
         "Error creating pool.",

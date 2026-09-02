@@ -427,6 +427,18 @@ export class StartggService {
             ),
         );
 
+        /* Every phase holds at least one pool, and a remote phase can arrive
+           without any: the local one is then given the pool a phase created by
+           hand starts with. A phase with none would be a branch the interface
+           cannot put a match into. */
+        await this.timeOperation('importEvent.ensurePhasesKeepAPool', async () => {
+            const phases = new Map([...localPhases.values(), fallbackPhase].map((phase) => [phase.id, phase]));
+            for (const phase of phases.values()) {
+                if (await this.phaseGroupQueries.defaultForPhase(phase.id)) continue;
+                await this.phaseGroupCommands.create(phase.id, {});
+            }
+        });
+
         await this.timeOperation(
             `importEvent.flushMappings count=${mappingCache.dirtyByExternalKey.size}`,
             () => this.flushMappingCache(mappingCache),

@@ -38,6 +38,7 @@ export async function generateBracket(request: GenerateBracketRequest): Promise<
   const response = await axios.post<GenerateBracketResultDto>(
     `divisions/${request.divisionId}/generate-bracket`,
     {
+      phaseId: request.phaseId,
       phaseName: request.phaseName,
       bracketType: request.bracketType,
       playerPerMatch: request.playerPerMatch,

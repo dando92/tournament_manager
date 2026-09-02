@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import BaseModal from "@/shared/components/ui/BaseModal";
+import Select from "@/shared/components/ui/Select";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { GenerateBracketRequest } from "@/features/division/model/types";
@@ -8,15 +9,28 @@ type Props = {
   open: boolean;
   divisions: TournamentDivisionOption[];
   currentDivisionId?: number;
+  /** The phase to build in, when the bracket was asked for from one. */
+  currentPhaseId?: number;
+  currentPhaseName?: string;
   bracketTypes: string[];
   onClose: () => void;
   onGenerate: (request: GenerateBracketRequest) => Promise<void>;
 };
 
+/**
+ * Generating a bracket, either into a phase or into one it brings with it.
+ *
+ * Asked for from a phase, the destination is settled and the dialog says so
+ * rather than offering a division and a phase name that would be ignored. The
+ * bracket then lands in that phase's own pool while it is still empty, so the
+ * usual case adds no node anybody has to read.
+ */
 export default function GenerateBracketModal({
   open,
   divisions,
   currentDivisionId,
+  currentPhaseId,
+  currentPhaseName,
   bracketTypes,
   onClose,
   onGenerate,
@@ -43,7 +57,8 @@ export default function GenerateBracketModal({
     try {
       await onGenerate({
         divisionId,
-        phaseName: phaseName.trim() || undefined,
+        phaseId: currentPhaseId,
+        phaseName: currentPhaseId ? undefined : phaseName.trim() || undefined,
         bracketType,
         playerPerMatch,
       });
@@ -76,11 +91,15 @@ export default function GenerateBracketModal({
       }
     >
       <div className="flex flex-col gap-4">
-        {!currentDivisionId && (
+        {currentPhaseId ? (
+          <p className="text-sm text-ui-text-mute">
+            The bracket is built in <span className="font-semibold text-ui-text">{currentPhaseName}</span>.
+          </p>
+        ) : null}
+        {!currentDivisionId && !currentPhaseId && (
           <div>
             <label className="block text-sm font-medium mb-1">Division</label>
-            <select
-              className="border rounded px-2 py-2 text-sm w-full"
+            <Select
               value={divisionId}
               onChange={(event) => setDivisionId(Number(event.target.value))}
             >
@@ -89,23 +108,24 @@ export default function GenerateBracketModal({
                   {division.name}
                 </option>
               ))}
-            </select>
+            </Select>
+          </div>
+        )}
+        {!currentPhaseId && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Phase name</label>
+            <input
+              type="text"
+              value={phaseName}
+              onChange={(event) => setPhaseName(event.target.value)}
+              placeholder="Bracket"
+              className="border rounded px-2 py-2 text-sm w-full"
+            />
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium mb-1">Phase name</label>
-          <input
-            type="text"
-            value={phaseName}
-            onChange={(event) => setPhaseName(event.target.value)}
-            placeholder="Bracket"
-            className="border rounded px-2 py-2 text-sm w-full"
-          />
-        </div>
-        <div>
           <label className="block text-sm font-medium mb-1">Bracket type</label>
-          <select
-            className="border rounded px-2 py-2 text-sm w-full"
+          <Select
             value={bracketType}
             onChange={(event) => setBracketType(event.target.value)}
           >
@@ -114,7 +134,7 @@ export default function GenerateBracketModal({
                 {candidate === "Manual" ? "First phase only" : candidate}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Players per match</label>

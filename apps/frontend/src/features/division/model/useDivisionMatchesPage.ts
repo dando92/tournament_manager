@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useDivisionPageContext } from "@/features/division/model/DivisionPageContext";
 import { PhaseGroup } from "@/features/division/model/types";
 import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
+import { poolLabelIn, poolsAreVisible } from "@/features/division/model/poolVisibility";
 import { useCreateMatchAction } from "@/features/match/model/useCreateMatchAction";
 import { useMatches } from "@/features/match/model/useMatches";
 import { Match, MatchHighlight } from "@/features/match/model/types";
@@ -13,6 +14,10 @@ export type PoolGroup = {
   pool: PhaseGroup;
   phaseId: number;
   phaseName: string;
+  /** What the header calls it: the phase's name while the pool is implicit. */
+  label: string;
+  /** Whether its phase draws it as a node of its own. */
+  poolVisible: boolean;
   matches: Match[];
 };
 
@@ -60,6 +65,8 @@ export function useDivisionMatchesPage() {
             pool,
             phaseId: phase.id,
             phaseName: phase.name,
+            label: poolLabelIn(phase, pool),
+            poolVisible: poolsAreVisible(phase),
             matches: (byPool.get(pool.id) ?? []).filter((match) =>
               matchMatchesQuery(match, query, phaseGroupLabel(pool), phase.name),
             ),

@@ -73,6 +73,30 @@ test('a level is usable only once its ancestors are settled', () => {
   assert.deepEqual(views[1].options.map((option) => option.value), ['a-1', 'a-2']);
 });
 
+test('a level that is only a choice when it forks stays out of the way', () => {
+  const implicit: PathLevel<string>[] = [levels[0], levels[1], { ...levels[2], implicitWhenSingle: true }];
+
+  /* One pool under the phase: settled, and nothing for anybody to read. */
+  assert.deepEqual(
+    describePath(implicit, ['a', 'a-2', null]).map((view) => view.visible),
+    [true, true, false],
+  );
+  /* Two of them: a choice again, and drawn again. */
+  assert.deepEqual(
+    describePath(implicit, ['a', 'a-1', null]).map((view) => view.visible),
+    [true, true, true],
+  );
+  /* Hiding it does not stop it settling: the path still reaches the pool. */
+  assert.deepEqual(resolvePath(implicit, ['a', 'a-2', null]), ['a', 'a-2', 'a-2-x']);
+});
+
+test('every level is drawn unless it asked otherwise', () => {
+  assert.deepEqual(
+    describePath(levels, ['a', 'a-2', null]).map((view) => view.visible),
+    [true, true, true],
+  );
+});
+
 test('a level with nothing to offer cannot be used', () => {
   const empty: PathLevel<string>[] = [levels[0], { ...levels[1], getOptions: () => [] }];
   assert.equal(describePath(empty, ['a', null])[1].enabled, false);
@@ -100,6 +124,15 @@ const divisions = [
     phases: [
       { id: 10, name: 'Qualifiers', matchCount: 0, phaseGroups: [{ id: 100, name: 'Pool A', displayIdentifier: 'A' }] },
       { id: 11, name: 'Bracket', matchCount: 0, phaseGroups: [] },
+      {
+        id: 12,
+        name: 'Groups',
+        matchCount: 0,
+        phaseGroups: [
+          { id: 120, name: 'Pool', displayIdentifier: 'Pool' },
+          { id: 121, name: 'Pool 2', displayIdentifier: 'Pool 2' },
+        ],
+      },
     ],
   },
   { id: 2, name: 'Rookie', phases: [] },
@@ -109,9 +142,16 @@ test('offers the phases of the chosen division and the pools of the chosen phase
   const matchLevels = matchPathLevels(divisions);
   const views = describePath(matchLevels, [1, 10, null]);
 
-  assert.deepEqual(views[1].options.map((option) => option.label), ['Qualifiers', 'Bracket']);
+  assert.deepEqual(views[1].options.map((option) => option.label), ['Qualifiers', 'Bracket', 'Groups']);
   assert.deepEqual(views[2].options.map((option) => option.label), ['A']);
   assert.equal(views[2].selected?.value, 100);
+});
+
+test('the destination names a pool only when the phase holds more than one', () => {
+  const matchLevels = matchPathLevels(divisions);
+
+  assert.equal(describePath(matchLevels, [1, 10, null])[2].visible, false);
+  assert.equal(describePath(matchLevels, [1, 12, null])[2].visible, true);
 });
 
 test('a division without phases leaves the rest of the path empty', () => {

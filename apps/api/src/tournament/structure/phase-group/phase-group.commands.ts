@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Entrant } from '@tournament-manager/persistence';
 
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
@@ -48,13 +48,40 @@ export class PhaseGroupCommands {
         await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
     }
 
+    /**
+     * A phase is never left without a pool: the last one goes when the phase
+     * itself does. A phase holding one pool does not draw it, so deleting that
+     * pool would ask somebody to remove a node they cannot see.
+     */
     async delete(phaseGroupId: number): Promise<void> {
         const phaseGroup = await this.store.load(phaseGroupId);
         if (!phaseGroup) return;
 
         const phaseAddress = phaseGroup.phaseAddress;
+        if (await this.store.countInPhase(phaseAddress.phaseId) <= 1) {
+            throw new BadRequestException('A phase keeps at least one pool. Delete the phase instead.');
+        }
+
         await this.store.remove(phaseGroup);
         await this.publisher.emitPhaseUpdate(phaseAddress);
+    }
+
+    /**
+     * The pool a generated bracket is built in.
+     *
+     * A phase created a moment ago holds one empty pool, and a bracket asked for
+     * in that phase belongs in it: creating a second one would leave the empty
+     * one beside it and make both visible, which is the node the phase was not
+     * supposed to show. Once the phase holds competition, the bracket takes a
+     * pool of its own.
+     */
+    async createForBracket(phaseId: number, bracketType: string): Promise<number> {
+        const reusable = await this.store.findEmptySolePool(phaseId);
+        if (!reusable) return this.create(phaseId, { bracketType });
+
+        await this.update(reusable.id, { bracketType });
+
+        return reusable.id;
     }
 
     /**

@@ -328,5 +328,69 @@ describe('Division writes (e2e)', () => {
       expect(matches.body.length).toBeGreaterThan(0);
       expect(matches.body[0].entrants.map((entrant: { id: number }) => entrant.id)).toEqual(seeded);
     });
+
+    /**
+     * A bracket asked for inside a phase is built in the pool that phase came
+     * with. Creating a second one would leave the empty one beside it and make
+     * both visible, which is the node the phase was not supposed to show.
+     */
+    it('builds a bracket in the empty pool of the phase it was asked for', async () => {
+      const phase = await request(app.getHttpServer())
+        .post('/phases')
+        .send({ name: 'Top Cut', divisionId })
+        .expect(201);
+
+      const summary = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+      const [existingPool] = summary.body.phases.find((candidate: { id: number }) => candidate.id === phase.body.id).phaseGroups;
+
+      const generated = await request(app.getHttpServer())
+        .post(`/divisions/${divisionId}/generate-bracket`)
+        .send({ phaseId: phase.body.id, bracketType: 'SingleElimination', playerPerMatch: 2 })
+        .expect(201);
+
+      expect(generated.body).toEqual({ phaseId: phase.body.id, phaseGroupId: existingPool.id });
+
+      const after = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+      const built = after.body.phases.find((candidate: { id: number }) => candidate.id === phase.body.id);
+      expect(built.phaseGroups).toHaveLength(1);
+      expect(built.phaseGroups[0].bracketType).toBe('SingleElimination');
+      expect(built.phaseGroups[0].matchCount).toBeGreaterThan(0);
+    });
+
+    /* A phase already holding competition keeps it: the bracket takes a pool of
+       its own, and both of them become nodes anybody can see. */
+    it('adds a pool when the phase it was asked for is no longer empty', async () => {
+      const phase = await request(app.getHttpServer())
+        .post('/phases')
+        .send({ name: 'Second Chance', divisionId })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/divisions/${divisionId}/generate-bracket`)
+        .send({ phaseId: phase.body.id, bracketType: 'SingleElimination', playerPerMatch: 2 })
+        .expect(201);
+
+      const second = await request(app.getHttpServer())
+        .post(`/divisions/${divisionId}/generate-bracket`)
+        .send({ phaseId: phase.body.id, bracketType: 'SingleElimination', playerPerMatch: 2 })
+        .expect(201);
+
+      const after = await request(app.getHttpServer()).get(`/divisions/${divisionId}/summary`).expect(200);
+      const built = after.body.phases.find((candidate: { id: number }) => candidate.id === phase.body.id);
+      expect(built.phaseGroups).toHaveLength(2);
+      expect(built.phaseGroups.map((pool: { id: number }) => pool.id)).toContain(second.body.phaseGroupId);
+    });
+
+    it('refuses a phase that belongs to another division', async () => {
+      const foreign = await request(app.getHttpServer())
+        .post('/phases')
+        .send({ name: 'Elsewhere', divisionId: bracketDivisionId })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/divisions/${divisionId}/generate-bracket`)
+        .send({ phaseId: foreign.body.id, bracketType: 'SingleElimination' })
+        .expect(404);
+    });
   });
 });

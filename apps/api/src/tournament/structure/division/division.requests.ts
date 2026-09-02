@@ -32,7 +32,13 @@ export class UpdateDivisionDto {
 }
 
 export class GenerateDivisionBracketDto {
-  @ApiProperty({ description: 'The generated phase name', example: 'Bracket', required: false })
+  @ApiProperty({ description: 'The phase to build the bracket in', example: 1, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  phaseId?: number;
+
+  @ApiProperty({ description: 'The generated phase name, when the bracket brings its own', example: 'Bracket', required: false })
   @IsOptional()
   @IsString()
   @Type(() => String)

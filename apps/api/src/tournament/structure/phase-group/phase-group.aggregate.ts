@@ -30,7 +30,7 @@ export type Placement = {
     sourceAdvancementRuleId?: number | null;
 };
 
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const DEFAULT_IDENTIFIER = 'Pool';
 const STATES: PhaseGroupState[] = ['pending', 'active', 'completed'];
 
 /**
@@ -58,9 +58,10 @@ export class PhaseGroupAggregate {
     /**
      * A pool that does not exist yet. Saving it gives it an id.
      *
-     * It takes the first free letter of the phase when nobody supplied one, and
-     * its name follows that letter for the same reason: a pool nobody named is
-     * still called something on the tree.
+     * It is called `Pool` when nobody supplied a name, and `Pool 2`, `Pool 3`
+     * and so on once the phase already holds one. A phase with a single pool
+     * does not draw it, so that first name is rarely read; the numbers start at
+     * the second because that is the first one anybody sees.
      */
     static create(details: PhaseGroupDetails, phase: Phase): PhaseGroupAggregate {
         const displayIdentifier = details.displayIdentifier?.trim() || PhaseGroupAggregate.nextIdentifier(phase);
@@ -237,13 +238,17 @@ export class PhaseGroupAggregate {
     }
 
     private static nextIdentifier(phase: Phase): string {
+        const pools = phase.phaseGroups ?? [];
+        if (pools.length === 0) return DEFAULT_IDENTIFIER;
+
         const taken = new Set(
-            (phase.phaseGroups ?? [])
-                .map((phaseGroup) => phaseGroup.displayIdentifier?.trim())
+            pools
+                .flatMap((phaseGroup) => [phaseGroup.displayIdentifier?.trim(), phaseGroup.name?.trim()])
                 .filter((identifier): identifier is string => Boolean(identifier)),
         );
-        const free = ALPHABET.find((candidate) => !taken.has(candidate));
+        let number = pools.length + 1;
+        while (taken.has(`${DEFAULT_IDENTIFIER} ${number}`)) number += 1;
 
-        return free ?? String(taken.size + 1);
+        return `${DEFAULT_IDENTIFIER} ${number}`;
     }
 }

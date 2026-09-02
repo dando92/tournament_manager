@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsRelations, Repository } from 'typeorm';
-import { Phase, PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
+import { Match, Phase, PhaseGroup, PhaseGroupEntrant } from '@tournament-manager/persistence';
 
 import { PhaseGroupAggregate } from '@tournament/structure/phase-group/phase-group.aggregate';
 
@@ -37,6 +37,8 @@ export class PhaseGroupStore {
         private readonly phaseGroups: Repository<PhaseGroup>,
         @InjectRepository(Phase)
         private readonly phases: Repository<Phase>,
+        @InjectRepository(Match)
+        private readonly matches: Repository<Match>,
     ) {}
 
     async load(id: number): Promise<PhaseGroupAggregate | null> {
@@ -65,6 +67,25 @@ export class PhaseGroupStore {
         if (!phase) throw new NotFoundException(`Phase with ID ${id} not found`);
 
         return phase;
+    }
+
+    /** How many pools the phase holds, because it may not be left without one. */
+    async countInPhase(phaseId: number): Promise<number> {
+        return this.phaseGroups.countBy({ phase: { id: phaseId } });
+    }
+
+    /**
+     * The pool a generated bracket may take over: the only one of its phase, and
+     * still empty. Anything else means the phase already holds competition that
+     * a bracket would have to sit beside rather than inside.
+     */
+    async findEmptySolePool(phaseId: number): Promise<PhaseGroup | null> {
+        const pools = await this.phaseGroups.findBy({ phase: { id: phaseId } });
+        if (pools.length !== 1) return null;
+
+        const matches = await this.matches.countBy({ phaseGroup: { id: pools[0].id } });
+
+        return matches === 0 ? pools[0] : null;
     }
 
     async save(phaseGroup: PhaseGroupAggregate): Promise<void> {

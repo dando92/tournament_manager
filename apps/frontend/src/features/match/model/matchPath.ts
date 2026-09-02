@@ -55,6 +55,9 @@ export function matchPathLevels(divisions: TournamentDivisionOption[]): PathLeve
     {
       key: "phaseGroup",
       label: "Pool",
+      /* A phase holding one pool does not draw it anywhere, so the destination
+         does not ask for it either: it settles on the only pool there is. */
+      implicitWhenSingle: true,
       getOptions: ([divisionId, phaseId]) =>
         (phasesOf(divisionId).find((phase) => phase.id === phaseId)?.phaseGroups ?? []).map((pool) => ({
           value: pool.id,

@@ -9,6 +9,7 @@ import {
 } from "@/features/tournament/model/treeSelection";
 import { TOURNAMENT_TREE_PAGES, DIVISION_TREE_PAGES } from "@/features/tournament/ui/tree/treePages";
 import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
+import { poolsAreVisible } from "@/features/division/model/poolVisibility";
 
 /**
  * Where you are, said once.
@@ -52,7 +53,11 @@ export default function TournamentBreadcrumb({ tournamentName }: { tournamentNam
     if (!phase) return trail;
     trail.push({ label: phase.name, to: phasePath(tournamentId, division.id, phase.id) });
 
-    const pool = (phase.phaseGroups ?? []).find((candidate) => candidate.id === selection.poolId);
+    /* A phase that does not draw its only pool does not name it here either:
+       the address may still carry the pool, the trail stops at the phase. */
+    const pool = poolsAreVisible(phase)
+      ? (phase.phaseGroups ?? []).find((candidate) => candidate.id === selection.poolId)
+      : undefined;
     if (pool) trail.push({ label: phaseGroupLabel(pool) });
 
     return trail;

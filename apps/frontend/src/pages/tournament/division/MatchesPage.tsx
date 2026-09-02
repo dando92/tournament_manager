@@ -2,7 +2,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useDivisionMatchesPage } from "@/features/division/model/useDivisionMatchesPage";
 import PoolAdvancementEditor from "@/features/division/ui/PoolAdvancementEditor";
-import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import MatchListRow from "@/features/match/ui/MatchListRow";
 import CreateMatchModal from "@/features/match/ui/CreateMatchModal";
@@ -79,7 +78,7 @@ export default function DivisionMatchesPage() {
         <EmptyState
           searching={page.searching}
           controls={controls}
-          hasPool={groups.length > 0}
+          hasPhase={groups.length > 0}
           onCreate={matchCreation.openCreateMatch}
         />
       ) : (
@@ -100,10 +99,10 @@ export default function DivisionMatchesPage() {
                       }`}
                     >
                       <StatusIcon status={poolStatus(group.pool)} className="h-3 w-3" />
-                      {phaseGroupLabel(group.pool)}
+                      {group.label}
                       {(groups.length > 1 || page.searching) && (
                         <span className="truncate font-medium normal-case tracking-normal">
-                          {division.name} / {group.phaseName}
+                          {group.poolVisible ? `${division.name} / ${group.phaseName}` : division.name}
                         </span>
                       )}
                       <span className="ml-auto font-medium normal-case tracking-normal tabular-nums">
@@ -166,21 +165,23 @@ export default function DivisionMatchesPage() {
 function EmptyState({
   searching,
   controls,
-  hasPool,
+  hasPhase,
   onCreate,
 }: {
   searching: boolean;
   controls: boolean;
-  hasPool: boolean;
+  hasPhase: boolean;
   onCreate: () => void;
 }) {
   if (searching) {
     return <p className="py-10 text-center text-sm text-ui-text-mute">No match found.</p>;
   }
-  if (!hasPool) {
+  /* A phase always brings a pool with it, so nothing to group by means nothing
+     to compete in: the branch is empty of phases, not of pools. */
+  if (!hasPhase) {
     return (
       <p className="py-10 text-center text-sm text-ui-text-mute">
-        {controls ? "No pool here yet. Right-click a phase in the tree to add one." : "No pool here yet."}
+        {controls ? "No phase here yet. Right-click a division in the tree to add one." : "No phase here yet."}
       </p>
     );
   }

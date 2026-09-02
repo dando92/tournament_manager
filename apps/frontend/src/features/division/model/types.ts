@@ -20,6 +20,8 @@ export type PhaseGroupAdvancementRuleInput = AdvancementRuleInput;
 
 export type GenerateBracketRequest = {
   divisionId: number;
+  /** The phase to build in; without one the bracket brings a new phase with it. */
+  phaseId?: number;
   phaseName?: string;
   bracketType: string;
   playerPerMatch: number;

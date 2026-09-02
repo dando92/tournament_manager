@@ -33,10 +33,12 @@ import {
   tournamentPagePath,
 } from "@/features/tournament/model/treeSelection";
 import { phaseGroupLabel } from "@/features/division/model/phaseGroupLabel";
+import { implicitPool, poolsAreVisible } from "@/features/division/model/poolVisibility";
 import ContextMenu, { useContextMenu, type ContextMenuItem } from "@/shared/components/ui/ContextMenu";
 import { treeNodeKey } from "@/shared/lib/treeState";
 import { usePermissions } from "@/features/auth/model/PermissionContext";
 import { useTournamentOverviewQuery } from "@/features/tournament/model/useTournamentOverviewQuery";
+import type { TournamentDivisionOptionPhase } from "@/features/tournament/model/types";
 
 /**
  * The tournament tree: the whole navigation of the application in one column.
@@ -183,12 +185,32 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
     },
   ];
 
-  const phaseMenu = (phaseId: number, name: string): ContextMenuItem[] => [
+  /* A phase holding one pool does not draw it, so the actions that belong to
+     that pool are offered here instead. They disappear from the phase the
+     moment a second pool makes both of them nodes of their own. */
+  const phaseMenu = (divisionId: number, phase: TournamentDivisionOptionPhase): ContextMenuItem[] => [
+    {
+      key: "bracket",
+      label: "Generate bracket",
+      icon: faSitemap,
+      onSelect: () => tree.openDialog({ kind: "generateBracket", divisionId, phaseId: phase.id }),
+    },
     {
       key: "pool",
       label: "New pool",
       icon: faPlus,
-      onSelect: () => tree.createPool(phaseId),
+      onSelect: () => tree.openDialog({ kind: "createPool", phaseId: phase.id }),
+    },
+    {
+      key: "advancement",
+      label: "Advancement rules",
+      icon: faSitemap,
+      hidden: !implicitPool(phase),
+      onSelect: () => {
+        const pool = implicitPool(phase);
+        if (!pool) return;
+        go(`${poolPath(tree.tournamentId ?? 0, divisionId, phase.id, pool.id)}?edit=advancement`);
+      },
     },
     {
       key: "rename",
@@ -198,8 +220,8 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
         tree.openDialog({
           kind: "rename",
           noun: "phase",
-          currentName: name,
-          apply: (next) => tree.renamePhaseNode(phaseId, next),
+          currentName: phase.name,
+          apply: (next) => tree.renamePhaseNode(phase.id, next),
         }),
     },
     {
@@ -207,9 +229,9 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
       label: "Delete phase",
       icon: faTrash,
       danger: true,
-      onSelect: () => tree.removePhase(phaseId),
+      onSelect: () => tree.removePhase(phase.id),
       confirm: {
-        message: `Delete phase "${name}"? Its pools and their matches are deleted with it, and this cannot be undone.`,
+        message: `Delete phase "${phase.name}"? Its pools and their matches are deleted with it, and this cannot be undone.`,
         confirmText: "Delete phase",
       },
     },
@@ -391,23 +413,27 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
 
                                   {division.phases.map((phase) => {
                                     const phaseKey = treeNodeKey("phase", phase.id);
-                                    const phaseExpanded = tree.isExpanded(phaseKey);
+                                    const poolsShown = poolsAreVisible(phase);
+                                    const phaseExpanded = poolsShown && tree.isExpanded(phaseKey);
                                     return (
                                       <div key={phase.id} className="flex flex-col gap-0.5">
                                         <TreeNode
                                           label={phase.name}
                                           depth={3}
                                           status={phaseStatus(phase)}
-                                          expandable
+                                          expandable={poolsShown}
                                           expanded={phaseExpanded}
-                                          selected={selection?.phaseId === phase.id && !selection.poolId}
+                                          /* With its pools hidden the phase is the
+                                             bottom rung, so it carries their count. */
+                                          count={poolsShown ? undefined : phase.matchCount}
+                                          selected={selection?.phaseId === phase.id && (!selection.poolId || !poolsShown)}
                                           onActivate={(deep) => {
-                                            tree.toggleNode(phaseKey, deep);
+                                            if (poolsShown) tree.toggleNode(phaseKey, deep);
                                             go(phasePath(tournament.id, division.id, phase.id));
                                           }}
                                           onOpenMenu={
                                             controls
-                                              ? (x, y) => openMenu(x, y, phase.name, phaseMenu(phase.id, phase.name))
+                                              ? (x, y) => openMenu(x, y, phase.name, phaseMenu(division.id, phase))
                                               : undefined
                                           }
                                         />

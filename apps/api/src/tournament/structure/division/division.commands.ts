@@ -17,6 +17,8 @@ export type UpdateDivisionInput = DivisionDetails & {
 };
 
 export type GenerateBracketInput = {
+    /** The phase to build in. Without one the bracket brings a new phase with it. */
+    phaseId?: number;
     phaseName?: string;
     bracketType: string;
     playerPerMatch?: number;
@@ -155,6 +157,11 @@ export class DivisionCommands {
      * Answers with the phase and the pool it built, for the same reason a
      * creation answers with an id: the caller navigates into them.
      *
+     * A bracket asked for inside an existing phase is built there, in that
+     * phase's own pool when it is still empty; asked for without one it brings a
+     * new phase with it. Only the second changes the division, which is why the
+     * save and its event are on that branch alone.
+     *
      * The phase and the pool publish their own events as they are created, and
      * so does every match the system builds, so nothing is published here.
      */
@@ -166,12 +173,16 @@ export class DivisionCommands {
         if (!system) throw new BadRequestException(`Unknown bracket type ${input.bracketType}`);
 
         const entrants = division.activeEntrants;
-        const phase = division.addPhase(input.phaseName?.trim() || `Bracket ${division.nextPhaseNumber}`);
+        const phase = input.phaseId
+            ? division.phase(input.phaseId)
+            : division.addPhase(input.phaseName?.trim() || `Bracket ${division.nextPhaseNumber}`);
 
-        await this.store.save(division);
-        await this.publisher.emitDivisionUpdate(division.address);
+        if (!input.phaseId) {
+            await this.store.save(division);
+            await this.publisher.emitDivisionUpdate(division.address);
+        }
 
-        const phaseGroupId = await this.phaseGroups.create(phase.id, { bracketType: input.bracketType });
+        const phaseGroupId = await this.phaseGroups.createForBracket(phase.id, input.bracketType);
         await system.generateForExistingPhaseGroup(phase, phaseGroupId, entrants, input.playerPerMatch ?? 2);
 
         return { phaseId: phase.id, phaseGroupId };
