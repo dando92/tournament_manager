@@ -51,15 +51,19 @@ Tournament Manager is a self-contained, provider-independent application for man
 - Preserve the existing formatting of every existing file. Make only the
   smallest formatting changes required around edited lines; never reformat a
   whole existing file as part of an unrelated functional change.
-- New files and newly introduced blocks use four-space indentation, double
-  quotes where Prettier controls quoting, semicolons, and trailing commas.
+- The API command files, `apps/api/src/**/*.commands.ts`, are the reference for
+  how code is written here. New code and refactored code follow them.
+- New files and newly introduced blocks use four-space indentation, single
+  quotes, semicolons, and trailing commas.
 - Keep imports, function declarations, function calls, and their parameters on
   one line whenever reasonably possible. When a line must wrap, keep related
   parameters grouped instead of placing every parameter on its own line.
 - Always put an `if` body on the following line and enclose it in braces. Do not
   use single-line `if` statements.
-- The repository-root Prettier configuration defines defaults for new files.
-  Do not run Prettier over an existing file when doing so would rewrite its
+- The repository-root Prettier configuration supplies the remaining defaults,
+  including the 160-column print width. Its `singleQuote: false` disagrees with
+  the reference files and is not followed; everything else matches them. Do not
+  run Prettier over an existing file when doing so would rewrite its
   established formatting.
 
 ## Documentation Index

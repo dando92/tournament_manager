@@ -9,10 +9,10 @@
  * the whole machine: the container build is a single pass over the monorepo
  * and it is the slowest step of every image.
  */
-import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { availableParallelism, totalmem } from "node:os";
-import { join } from "node:path";
+import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { availableParallelism, totalmem } from 'node:os';
+import { join } from 'node:path';
 
 const root = process.cwd();
 
@@ -28,14 +28,14 @@ const concurrency = Number(process.env.BUILD_CONCURRENCY) || Math.min(availableP
 // npm sets npm_execpath when it runs this script, which lets every build start
 // as a plain Node process instead of going through a platform-specific shell.
 const npmCli = process.env.npm_execpath;
-const command = npmCli ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
+const command = npmCli ? process.execPath : process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const commandPrefix = npmCli ? [npmCli] : [];
 
 function manifest(directory) {
-    return JSON.parse(readFileSync(join(root, directory, "package.json"), "utf8"));
+    return JSON.parse(readFileSync(join(root, directory, 'package.json'), 'utf8'));
 }
 
-const workspaces = manifest(".").workspaces.map((directory) => {
+const workspaces = manifest('.').workspaces.map((directory) => {
     const pkg = manifest(directory);
     return {
         directory,
@@ -56,8 +56,8 @@ const built = new Set(workspaces.filter((workspace) => !workspace.buildable).map
 function build(workspace) {
     return new Promise((resolve, reject) => {
         const startedAt = Date.now();
-        const options = { cwd: root, shell: !npmCli && process.platform === "win32", maxBuffer: 64 * 1024 * 1024 };
-        const args = [...commandPrefix, "run", "build", `--workspace=${workspace.name}`];
+        const options = { cwd: root, shell: !npmCli && process.platform === 'win32', maxBuffer: 64 * 1024 * 1024 };
+        const args = [...commandPrefix, 'run', 'build', `--workspace=${workspace.name}`];
         execFile(command, args, options, (error, stdout, stderr) => {
             const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
             if (error) {
@@ -104,7 +104,7 @@ await new Promise((resolve) => {
             return;
         }
         if (!failure && pending.size > 0) {
-            failure = new Error(`internal dependency cycle blocks: ${[...pending.keys()].join(", ")}`);
+            failure = new Error(`internal dependency cycle blocks: ${[...pending.keys()].join(', ')}`);
         }
         resolve();
     }

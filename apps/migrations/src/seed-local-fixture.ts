@@ -17,29 +17,28 @@ import { Tournament } from '@tournament-manager/persistence';
  * environment must never gain rows because a variable was left set somewhere.
  */
 export async function seedLocalFixture(dataSource: DataSource): Promise<void> {
-  if (process.env.LOCAL_FIXTURE_ENABLED !== 'true') return;
+    if (process.env.LOCAL_FIXTURE_ENABLED !== 'true') return;
 
-  const name =
-    process.env.LOCAL_FIXTURE_TOURNAMENT_NAME?.trim() || 'Local E2E Tournament';
-  const tournaments = dataSource.getRepository(Tournament);
-  const existing = await tournaments.findOneBy({ name });
-  if (existing) {
-    console.log(`Local fixture tournament "${name}" already exists.`);
-    return;
-  }
+    const name = process.env.LOCAL_FIXTURE_TOURNAMENT_NAME?.trim() || 'Local E2E Tournament';
+    const tournaments = dataSource.getRepository(Tournament);
+    const existing = await tournaments.findOneBy({ name });
+    if (existing) {
+        console.log(`Local fixture tournament "${name}" already exists.`);
+        return;
+    }
 
-  /*
-   * The column is not nullable and carries a public GrooveStats default, so an
-   * absent variable is written as the empty string rather than left to that
-   * default. Empty means "created without SyncStart", which is what an operator
-   * who leaves the variable blank asks for.
-   */
-  const tournament = tournaments.create({
-    name,
-    syncstartUrl: process.env.LOCAL_FIXTURE_SYNCSTART_URL ?? '',
-    availableSetupsCount: 2,
-    defaultScoringSystem: 'PlacementPointsWithFailZero',
-  });
-  const saved = await tournaments.save(tournament);
-  console.log(`Created local fixture tournament "${name}" (id ${saved.id}).`);
+    /*
+     * The column is not nullable and carries a public GrooveStats default, so an
+     * absent variable is written as the empty string rather than left to that
+     * default. Empty means "created without SyncStart", which is what an operator
+     * who leaves the variable blank asks for.
+     */
+    const tournament = tournaments.create({
+        name,
+        syncstartUrl: process.env.LOCAL_FIXTURE_SYNCSTART_URL ?? '',
+        availableSetupsCount: 2,
+        defaultScoringSystem: 'PlacementPointsWithFailZero',
+    });
+    const saved = await tournaments.save(tournament);
+    console.log(`Created local fixture tournament "${name}" (id ${saved.id}).`);
 }
