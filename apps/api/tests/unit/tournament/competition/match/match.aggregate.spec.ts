@@ -390,6 +390,57 @@ describe('MatchAggregate', () => {
       ]);
     });
 
+    it('leaves the tie unresolved while a hand-scored attempt states nothing', () => {
+      const first = player(101);
+      const second = player(102);
+      const tied = match(
+        [entrant(1, first.id), entrant(2, second.id)],
+        [handScoredRound([standing(200, first, undefined, 1), standing(201, second, undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+      tied.addTiebreak(null, [first, second]).id = 50;
+
+      expect(tied.resultState.status).toBe('tiebreak_required');
+      expect(() => tied.commit()).toThrow(BadRequestException);
+    });
+
+    it('settles a hand-scored attempt as soon as one point is stated', () => {
+      const first = player(101);
+      const second = player(102);
+      const tied = match(
+        [entrant(1, first.id), entrant(2, second.id)],
+        [handScoredRound([standing(200, first, undefined, 1), standing(201, second, undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+      tied.addTiebreak(null, [first, second]).id = 50;
+      tied.upsertTiebreakPoints(50, second.id, 1);
+
+      expect(tied.resultState.status).toBe('ready');
+
+      tied.commit();
+
+      expect(tied.entity.matchResult.playerPoints).toEqual([
+        { playerId: 102, points: 1, placement: 1 },
+        { playerId: 101, points: 1, placement: 2 },
+      ]);
+    });
+
+    it('refuses a second attempt while a hand-scored one is still empty', () => {
+      const first = player(101);
+      const second = player(102);
+      const tied = match(
+        [entrant(1, first.id), entrant(2, second.id)],
+        [handScoredRound([standing(200, first, undefined, 1), standing(201, second, undefined, 1)])],
+        null,
+        [advancementRule(1, 30), advancementRule(2, 40)],
+      );
+      tied.addTiebreak(null, [first, second]).id = 50;
+
+      expect(() => tied.addTiebreak(null, [first, second])).toThrow(BadRequestException);
+    });
+
     it('invalidates tiebreak evidence when ordinary scoring changes', () => {
       const first = player(101);
       const second = player(102);

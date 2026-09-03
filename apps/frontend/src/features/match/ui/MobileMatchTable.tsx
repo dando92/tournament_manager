@@ -2,7 +2,8 @@ import { type ReactNode, useMemo, useState } from "react";
 
 import { entrantPlayers } from "@/features/participant/model/entrant";
 import { Match } from "@/features/match/model/types";
-import { byMatchStanding, matchPointsOf } from "@/features/match/model/matchPoints";
+import { matchPointsOf } from "@/features/match/model/matchPoints";
+import { useStandingOrder } from "@/features/match/model/useStandingOrder";
 import { displaySongTitle } from "@/features/song/model/songTitle";
 import BaseModal from "@/shared/components/ui/BaseModal";
 import OverflowMarquee from "@/shared/components/ui/OverflowMarquee";
@@ -17,7 +18,6 @@ type Props = {
   onOpenAddTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string) => void;
   onOpenEditTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string, scoreId: number, percentage: number, isFailed: boolean) => void;
   onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
-  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
 };
 
 type Metric =
@@ -29,7 +29,6 @@ type Metric =
 type ManualEditor = {
   title: string;
   save: (value: number) => void;
-  clear?: () => void;
 };
 
 export default function MobileMatchTable(props: Props) {
@@ -37,7 +36,8 @@ export default function MobileMatchTable(props: Props) {
   const [expandedPlayerId, setExpandedPlayerId] = useState<number | null>(null);
   const [manualEditor, setManualEditor] = useState<ManualEditor | null>(null);
   const [manualValue, setManualValue] = useState(0);
-  const players = useMemo(() => entrantPlayers(match.entrants).sort(byMatchStanding(match)), [match]);
+  const roster = useMemo(() => entrantPlayers(match.entrants), [match.entrants]);
+  const players = useStandingOrder(match, roster);
   const metrics: Metric[] = [
     ...match.rounds.map((round, index): Metric => ({ kind: "round", id: round.id, label: round.song ? displaySongTitle(round.song.title) : `By hand ${index + 1}` })),
     { kind: "points", id: 0, label: "Points" },
@@ -49,9 +49,9 @@ export default function MobileMatchTable(props: Props) {
     { kind: "placement", id: 0, label: "Place" },
   ];
 
-  function editManual(title: string, value: number, save: (next: number) => void, clear?: () => void) {
+  function editManual(title: string, value: number, save: (next: number) => void) {
     setManualValue(value);
-    setManualEditor({ title, save, clear });
+    setManualEditor({ title, save });
   }
 
   function metricHeader(metric: Metric) {
@@ -108,15 +108,17 @@ export default function MobileMatchTable(props: Props) {
     const tiebreak = match.tiebreaks.find((candidate) => candidate.id === metric.id)!;
     const standing = tiebreak.standings.find((candidate) => candidate.player.id === player.id);
     if (!standing) return <span className="text-ui-text-mute">—</span>;
+    /* Stated points, edited exactly like those of a hand-scored round: zero is
+       where the attempt opened rather than a value somebody entered, so there
+       is nothing to clear. */
     if (!tiebreak.song) {
       const value = standing.manualPoints ?? 0;
       return props.controls && !tiebreak.invalidated ? (
         <button type="button" className="min-h-11 min-w-11 font-semibold" onClick={() =>
           editManual(`${player.playerName} · Tiebreak ${tiebreak.sequence}`, value, (next) =>
-            props.onChangeTiebreakPoints(tiebreak.id, player.id, next), standing.manualPoints === null ? undefined : () =>
-              props.onClearTiebreakStanding(tiebreak.id, player.id))
-        }>{standing.manualPoints ?? "—"}</button>
-      ) : <span>{standing.manualPoints ?? "—"}</span>;
+            props.onChangeTiebreakPoints(tiebreak.id, player.id, next))
+        }>{value}</button>
+      ) : <span>{value}</span>;
     }
     if (!standing.score) {
       return props.controls && !tiebreak.invalidated ? (
@@ -198,22 +200,12 @@ export default function MobileMatchTable(props: Props) {
         title={manualEditor?.title}
         maxWidth="max-w-sm"
         footer={(
-          <div className="flex flex-1 justify-between gap-2">
-            <div>
-              {manualEditor?.clear && (
-                <button type="button" className={btnSecondary} onClick={() => {
-                  manualEditor.clear?.();
-                  setManualEditor(null);
-                }}>Clear</button>
-              )}
-            </div>
-            <div className="flex gap-2">
+          <div className="flex flex-1 justify-end gap-2">
             <button type="button" className={btnSecondary} onClick={() => setManualEditor(null)}>Cancel</button>
             <button type="button" className={btnPrimary} onClick={() => {
               manualEditor?.save(manualValue);
               setManualEditor(null);
             }}>Save</button>
-            </div>
           </div>
         )}
       >

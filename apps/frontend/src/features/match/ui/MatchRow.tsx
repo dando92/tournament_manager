@@ -51,7 +51,6 @@ type MatchRowProps = {
     isFailed: boolean,
   ) => void;
   onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
-  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
 };
 
 export default function MatchRow({
@@ -74,7 +73,6 @@ export default function MatchRow({
   onOpenAddTiebreakStanding,
   onOpenEditTiebreakStanding,
   onChangeTiebreakPoints,
-  onClearTiebreakStanding,
 }: MatchRowProps) {
   const totalPoints = matchPointsOf(match, player.id);
   const canToggleRoute = Boolean(match.matchResult && routeTargetMatchId && onToggleRouteHighlight);
@@ -303,32 +301,34 @@ export default function MatchRow({
           );
         }
 
-        const points = standing.manualPoints;
+        /* Stated points, written exactly like those of a hand-scored round:
+           zero is where the attempt opened, not a value somebody entered, so
+           there is nothing to take back and no clear to offer. */
+        const points = standing.manualPoints ?? 0;
         return (
           <td key={tiebreak.id} className="border-l border-ui-border bg-ui-selected/40 px-2 py-2 text-center">
             {controls && !tiebreak.invalidated ? (
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-3">
                 <button
                   type="button"
-                  disabled={points === null || points <= 0}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border disabled:opacity-40"
-                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, Math.max(0, (points ?? 0) - 1))}
+                  disabled={points <= 0}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Decrease points"
+                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, Math.max(0, points - 1))}
                 >
                   <FontAwesomeIcon icon={faMinus} />
                 </button>
-                <span className="w-6 font-bold text-ui-text-soft">{points ?? "—"}</span>
+                <span className="w-8 text-center font-bold text-ui-text-soft">{points}</span>
                 <button
                   type="button"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border"
-                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, (points ?? 0) + 1)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-ui-border text-ui-text-soft hover:bg-ui-selected"
+                  title="Increase points"
+                  onClick={() => onChangeTiebreakPoints(tiebreak.id, player.id, points + 1)}
                 >
                   <FontAwesomeIcon icon={faPlus} />
                 </button>
-                {points !== null && (
-                  <button type="button" className="text-xs text-ui-text-mute" onClick={() => onClearTiebreakStanding(tiebreak.id, player.id)}>clear</button>
-                )}
               </div>
-            ) : <span className="font-bold text-ui-text-soft">{points ?? "—"}</span>}
+            ) : <span className="font-bold text-ui-text-soft">{points}</span>}
           </td>
         );
       })}

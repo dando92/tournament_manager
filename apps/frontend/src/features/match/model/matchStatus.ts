@@ -1,4 +1,5 @@
 import { entrantPlayers } from "@/features/participant/model/entrant";
+import { canCreateTiebreak } from "@/features/match/model/tiebreaks";
 import type { Match, MatchCommitState, Round } from "@/features/match/model/types";
 import type { Player } from "@/features/participant/model/types";
 import type { Status } from "@/shared/components/ui/status";
@@ -43,19 +44,26 @@ export function hasAllStandings(match: Match): boolean {
 /**
  * How far a match is from having a final result.
  *
- * Four steps rather than three, because "nothing in it yet" and "being played"
- * are not the same thing to anyone running a tournament — and the difference is
- * what tells you which of two unfinished matches to walk over to.
+ * More steps than the three a commit button needs, because "nothing in it yet"
+ * and "being played" are not the same thing to anyone running a tournament —
+ * and the difference is what tells you which of two unfinished matches to walk
+ * over to.
+ *
+ * A tie splits into two of them for the same reason. `tiebreakRequired` is a
+ * match waiting for somebody to open a tiebreak; `tiebreakInProgress` is one
+ * whose tiebreak is already on the table and waiting for its values. Both block
+ * the commit, and only the first is an action to offer.
  *
  * They map onto the status ring in order, so the glyph fills as the match moves
  * forward and the list still reads in greyscale. See .ai/Design.md.
  */
-export type MatchProgress = "empty" | "started" | "tiebreakRequired" | "readyToCommit" | "completed";
+export type MatchProgress = "empty" | "started" | "tiebreakRequired" | "tiebreakInProgress" | "readyToCommit" | "completed";
 
 const PROGRESS_STATUS: Record<MatchProgress, Status> = {
   empty: "idle",
   started: "running",
   tiebreakRequired: "pending",
+  tiebreakInProgress: "pending",
   readyToCommit: "pending",
   completed: "done",
 };
@@ -64,13 +72,19 @@ const PROGRESS_LABEL: Record<MatchProgress, string> = {
   empty: "Empty",
   started: "In progress",
   tiebreakRequired: "Tiebreak required",
+  tiebreakInProgress: "Tiebreak in progress",
   readyToCommit: "Ready to commit",
   completed: "Completed",
 };
 
 export function getMatchProgress(match: Match): MatchProgress {
   if (match.matchResult) return "completed";
-  if (match.resultState.status === "tiebreak_required") return "tiebreakRequired";
+  /* A tie nobody can open a tiebreak for is one whose tiebreak exists already:
+     asking for another would be refused, and the values it is waiting for are
+     in the table below. */
+  if (match.resultState.status === "tiebreak_required") {
+    return canCreateTiebreak(match) ? "tiebreakRequired" : "tiebreakInProgress";
+  }
   if (match.resultState.status === "ready") return "readyToCommit";
   if (match.rounds.length === 0) return "empty";
 
@@ -94,7 +108,7 @@ export function getMatchProgressLabel(progress: MatchProgress): string {
 export function getMatchCommitState(match: Match): MatchCommitState {
   const progress = getMatchProgress(match);
   if (progress === "completed") return "Completed";
-  if (progress === "tiebreakRequired") return "Tiebreak";
+  if (progress === "tiebreakRequired" || progress === "tiebreakInProgress") return "Tiebreak";
   return progress === "readyToCommit" ? "Pending" : "Disabled";
 }
 

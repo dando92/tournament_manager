@@ -1,7 +1,7 @@
 import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
 import { entrantPlayers } from "@/features/participant/model/entrant";
-import { byMatchStanding } from "@/features/match/model/matchPoints";
+import { useStandingOrder } from "@/features/match/model/useStandingOrder";
 import MatchRow from "@/features/match/ui/MatchRow";
 import PathRow from "@/features/match/ui/PathRow";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
@@ -41,7 +41,6 @@ type MatchTableProps = {
   onOpenAddTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string) => void;
   onOpenEditTiebreakStanding: (playerId: number, tiebreakId: number, playerName: string, songTitle: string, scoreId: number, percentage: number, isFailed: boolean) => void;
   onChangeTiebreakPoints: (tiebreakId: number, playerId: number, points: number) => void;
-  onClearTiebreakStanding: (tiebreakId: number, playerId: number) => void;
 };
 
 export default function MatchTable({
@@ -63,7 +62,6 @@ export default function MatchTable({
   onOpenAddTiebreakStanding,
   onOpenEditTiebreakStanding,
   onChangeTiebreakPoints,
-  onClearTiebreakStanding,
 }: MatchTableProps) {
   /* Only played standings appear here: a hand-scored one has no score to show,
      and its cell reads the points off the round instead. */
@@ -89,7 +87,7 @@ export default function MatchTable({
       })
       .filter((entry): entry is readonly [number, number] => Boolean(entry)),
   );
-  const sortedPlayers = [...matchPlayers].sort(byMatchStanding(match));
+  const sortedPlayers = useStandingOrder(match, matchPlayers);
   const sortedMatchResults = [...(match.matchResult?.playerPoints ?? [])].sort(
     (a, b) => a.placement - b.placement || a.playerId - b.playerId,
   );
@@ -283,7 +281,6 @@ export default function MatchTable({
                     onOpenAddTiebreakStanding={onOpenAddTiebreakStanding}
                     onOpenEditTiebreakStanding={onOpenEditTiebreakStanding}
                     onChangeTiebreakPoints={onChangeTiebreakPoints}
-                    onClearTiebreakStanding={onClearTiebreakStanding}
                   />
                 );
               })()
@@ -302,7 +299,6 @@ export default function MatchTable({
         onOpenAddTiebreakStanding={onOpenAddTiebreakStanding}
         onOpenEditTiebreakStanding={onOpenEditTiebreakStanding}
         onChangeTiebreakPoints={onChangeTiebreakPoints}
-        onClearTiebreakStanding={onClearTiebreakStanding}
       />
 
     </>

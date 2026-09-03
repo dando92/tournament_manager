@@ -432,11 +432,15 @@ export class MatchAggregate {
         tiebreak.sequence = this.tiebreaks.reduce((maximum, candidate) => Math.max(maximum, candidate.sequence), 0) + 1;
         tiebreak.invalidated = false;
         tiebreak.song = song;
+        /* A hand-scored attempt opens on zero the way a hand-scored round does:
+           nobody has stated anything yet, and the first point stated is what
+           makes the attempt an answer. A played attempt has no points of its
+           own — its evidence is the score of each run. */
         tiebreak.standings = players.map((player) => {
             const standing = new MatchTiebreakStanding();
             standing.player = player;
             standing.score = null;
-            standing.manualPoints = null;
+            standing.manualPoints = song ? null : 0;
 
             return standing;
         });
@@ -478,10 +482,12 @@ export class MatchAggregate {
         standing.manualPoints = points;
     }
 
+    /** Takes back what was entered, leaving the attempt as it opened. */
     clearTiebreakStanding(tiebreakId: number, playerId: number): void {
-        const standing = this.tiebreakStandingOf(this.tiebreakOf(tiebreakId), playerId);
+        const tiebreak = this.tiebreakOf(tiebreakId);
+        const standing = this.tiebreakStandingOf(tiebreak, playerId);
         standing.score = null;
-        standing.manualPoints = null;
+        standing.manualPoints = tiebreak.song ? null : 0;
     }
 
     /**
@@ -583,13 +589,24 @@ export class MatchAggregate {
         return this.advancementRules.filter((rule) => rule.sourceKind === 'match' && rule.sourceId === this.match.id);
     }
 
+    /**
+     * Whether an attempt has everything it is waiting for, under the rule its
+     * rounds already follow.
+     *
+     * A played attempt waits for every player, because a missing score is a run
+     * nobody entered. A hand-scored one waits for nobody in particular: the
+     * values are stated, so the first point stated settles it and zero
+     * everywhere means nothing has been stated yet. An attempt whose stated
+     * values do not separate anybody is settled and resolves nothing, which
+     * leaves the tie for the person who stated them to correct.
+     */
     private isTiebreakComplete(tiebreak: MatchTiebreak): boolean {
         const standings = tiebreak.standings ?? [];
         if (standings.length < 2) return false;
 
         return tiebreak.song
             ? standings.every((standing) => Boolean(standing.score))
-            : standings.every((standing) => standing.manualPoints !== null && standing.manualPoints !== undefined);
+            : standings.some((standing) => (standing.manualPoints ?? 0) > 0);
     }
 
     private tiebreakOf(tiebreakId: number): MatchTiebreak {

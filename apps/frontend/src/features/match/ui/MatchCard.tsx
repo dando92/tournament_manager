@@ -11,7 +11,7 @@ import MatchHeader from "@/features/match/ui/MatchHeader";
 import MatchEmptySlots from "@/features/match/ui/MatchEmptySlots";
 import MatchTable from "@/features/match/ui/MatchTable";
 import AdvancementRulesModal from "@/features/match/ui/AdvancementRulesModal";
-import { getMatchCommitState } from "@/features/match/model/matchStatus";
+import { getMatchCommitState, getMatchProgress } from "@/features/match/model/matchStatus";
 import { entrantPlayers } from "@/features/participant/model/entrant";
 import TiebreakModal from "@/features/match/ui/TiebreakModal";
 import RemoveMatchItemsModal from "@/features/match/ui/RemoveMatchItemsModal";
@@ -156,6 +156,7 @@ export default function MatchCard({
      with no song, which everyone looking at the match can see. */
   const handScoredRound = match.rounds.find((round) => round.song === null) ?? null;
   const isHighlighted = match.id === highlight.matchId;
+  const progress = getMatchProgress(match);
   const commitState = getMatchCommitState(match);
   const matchPlayers = entrantPlayers(match.entrants);
   const removablePlayers = (match.entrants ?? [])
@@ -311,6 +312,7 @@ export default function MatchCard({
         open={tiebreakModalOpen}
         match={match}
         tournamentId={tournamentId}
+        divisionId={division.id}
         onClose={() => setTiebreakModalOpen(false)}
         onCreate={onCreateTiebreak}
       />
@@ -380,7 +382,10 @@ export default function MatchCard({
         manualActivationAllowed={manualActivationAllowed}
       />
 
-      {controls && commitState === "Tiebreak" && (
+      {/* Offered only while there is a tie no attempt is addressing yet. Once
+          one is on the table the tiebreak column below is where the answer is
+          entered, and asking for another would be refused. */}
+      {controls && progress === "tiebreakRequired" && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2">
           <span className="text-sm text-ui-text-soft">A tied placement has different advancement destinations.</span>
           <button type="button" className={`${btnPrimary} text-sm`} onClick={() => setTiebreakModalOpen(true)}>
@@ -431,7 +436,6 @@ export default function MatchCard({
             setStandingModal({ open: true, mode: "edit", target: "tiebreak", playerId, roundId: tiebreakId, songId: match.tiebreaks.find((candidate) => candidate.id === tiebreakId)?.song?.id ?? 0, playerName, songTitle, initialScoreId: scoreId, initialPercentage: percentage, initialScore: 0, initialIsFailed: isFailed })
           }
           onChangeTiebreakPoints={onSaveTiebreakPoints}
-          onClearTiebreakStanding={onClearTiebreakStanding}
         />
       )}
     </div>
