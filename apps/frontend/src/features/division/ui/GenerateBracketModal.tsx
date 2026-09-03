@@ -3,6 +3,7 @@ import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { GenerateBracketRequest } from "@/features/division/model/types";
+import { readBracketType, writeBracketType } from "@/shared/lib/bracketPreferences";
 
 type Props = {
   open: boolean;
@@ -37,7 +38,7 @@ export default function GenerateBracketModal({
   const initialDivisionId = currentDivisionId ?? divisions[0]?.id ?? 0;
   const [divisionId, setDivisionId] = useState(initialDivisionId);
   const [phaseName, setPhaseName] = useState("");
-  const [bracketType, setBracketType] = useState(bracketTypes[0] ?? "");
+  const [bracketType, setBracketType] = useState(() => readBracketType(bracketTypes));
   const [playerPerMatch, setPlayerPerMatch] = useState(2);
 
   useEffect(() => {
@@ -45,7 +46,9 @@ export default function GenerateBracketModal({
     const nextDivisionId = currentDivisionId ?? divisions[0]?.id ?? 0;
     setDivisionId(nextDivisionId);
     setPhaseName("");
-    setBracketType(bracketTypes[0] ?? "");
+    /* The destination is where the dialog was opened from, so it is read again;
+       the kind of bracket is a habit, so it opens on the last one chosen. */
+    setBracketType(readBracketType(bracketTypes));
     setPlayerPerMatch(2);
   }, [bracketTypes, currentDivisionId, divisions, open]);
 
@@ -122,7 +125,10 @@ export default function GenerateBracketModal({
           <label className="block text-sm font-medium mb-1">Bracket type</label>
           <Select
             value={bracketType}
-            onChange={(event) => setBracketType(event.target.value)}
+            onChange={(event) => {
+              setBracketType(event.target.value);
+              writeBracketType(event.target.value);
+            }}
           >
             {bracketTypes.map((candidate) => (
               <option key={candidate} value={candidate}>

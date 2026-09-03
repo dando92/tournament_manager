@@ -16,6 +16,7 @@ import { getTournament } from "@/features/tournament/api/tournament.api";
 import { listScoringSystems } from "@/features/match/api/match.api";
 import { listSongs } from "@/features/song/api/song.api";
 import { useSongRoll } from "@/features/song/model/useSongRoll";
+import { readSongDialogChoices, writeSongDialogChoice } from "@/shared/lib/songDialogPreferences";
 
 type UseCreateMatchModalOptions = {
   open: boolean;
@@ -64,7 +65,7 @@ export function useCreateMatchModal({
   const [selectedSongs, setSelectedSongs] = useState<Song[]>([]);
   /* The draw reaches the pool through the division of the path the match is
      being created in, which the picker settles before anything is rolled. */
-  const roll = useSongRoll({ open, divisionId: path.divisionId ?? undefined, tournamentId });
+  const roll = useSongRoll({ open, divisionId: path.divisionId ?? undefined, tournamentId, songGroups });
 
   const pathLevels = useMemo(() => matchPathLevels(divisions), [divisions]);
   const pathValue = useMemo(() => matchPathValue(path), [path]);
@@ -96,8 +97,18 @@ export function useCreateMatchModal({
     });
     setSelectedEntrants([]);
     setSelectedSongs([]);
-    setSongAddType("title");
-  }, [divisions.length, divisionId, open, phaseGroupId, phaseId]);
+    /* The songs are this match's own, so they start empty; how they are chosen
+       is a habit, so the dialog opens the way it was last left. */
+    setSongAddType(readSongDialogChoices(tournamentId).mode);
+  }, [divisions.length, divisionId, open, phaseGroupId, phaseId, tournamentId]);
+
+  const chooseSongAddType = useCallback(
+    (value: "title" | "roll") => {
+      setSongAddType(value);
+      writeSongDialogChoice(tournamentId, "mode", value);
+    },
+    [tournamentId],
+  );
 
   useEffect(() => {
     if (!open || !path.divisionId) {
@@ -191,7 +202,7 @@ export function useCreateMatchModal({
     setScoringSystem,
     setName,
     setSubtitle,
-    setSongAddType,
+    setSongAddType: chooseSongAddType,
     handleSubmit,
   };
 }

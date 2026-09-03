@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Song } from '@/features/song/model/types';
 import { rollSongs } from '@/features/song/api/song.api';
 import { formatRollLevels, parseRollLevels } from '@/features/song/model/rollLevels';
-import { readAllowPlayed, writeAllowPlayed } from '@/shared/lib/songRollPreferences';
+import { readSongDialogChoices, writeSongDialogChoice } from '@/shared/lib/songDialogPreferences';
 
 /**
  * One card of a draw.
@@ -25,8 +25,10 @@ type UseSongRollOptions = {
     divisionId?: number;
     /** The match the draw is for, when it exists already. Its own songs are never drawn. */
     matchId?: number;
-    /** Only the remembered preference is keyed on it; the pool comes from the division. */
+    /** Only the remembered preferences are keyed on it; the pool comes from the division. */
     tournamentId?: number;
+    /** The packs the pool holds, which is what a remembered one is checked against. */
+    songGroups: string[];
 };
 
 let nextKey = 0;
@@ -43,7 +45,7 @@ let nextKey = 0;
  * The levels are one field because that is how people say them: `9-9-10-10` is
  * four cards, and the chips under the field are what was understood.
  */
-export function useSongRoll({ open, divisionId, matchId, tournamentId }: UseSongRollOptions) {
+export function useSongRoll({ open, divisionId, matchId, tournamentId, songGroups }: UseSongRollOptions) {
     const [levelsText, setLevelsText] = useState('');
     const [group, setGroup] = useState('');
     const [allowPlayed, setAllowPlayed] = useState(false);
@@ -55,24 +57,46 @@ export function useSongRoll({ open, divisionId, matchId, tournamentId }: UseSong
     const drawnSongIds = slots.flatMap((slot) => (slot.song ? [slot.song.id] : []));
 
     /* Opening the dialog is what resets the draw: cards from the last one are
-       not offers this one made. The remembered flag is read here rather than
-       held as initial state, because the dialog outlives the tournament it was
-       opened on. */
+       not offers this one made. What the draw is asked over — the pack and
+       whether played songs count — is the opposite: it is the same question
+       every time, so it opens on the last answer. Both are read here rather
+       than held as initial state, because the dialog outlives the tournament it
+       was opened on. */
     useEffect(() => {
         if (!open) {
             return;
         }
 
+        const choices = readSongDialogChoices(tournamentId);
         setLevelsText('');
         setSlots([]);
         setFailure(null);
         setRolling(false);
-        setAllowPlayed(readAllowPlayed(tournamentId));
+        setAllowPlayed(choices.allowPlayed);
+        setGroup(choices.rollPack);
     }, [open, tournamentId]);
+
+    /* The catalogue arrives after the dialog opens, so a remembered pack is
+       checked when the packs are known rather than when it is read: one this
+       pool no longer holds would narrow every draw to a pack nobody can see in
+       the field. It hangs on the catalogue alone, so an opening the catalogue
+       did not change never re-judges what was just read. */
+    useEffect(() => {
+        if (songGroups.length === 0) {
+            return;
+        }
+
+        setGroup((current) => (current !== '' && !songGroups.includes(current) ? '' : current));
+    }, [songGroups]);
 
     const chooseAllowPlayed = useCallback((value: boolean) => {
         setAllowPlayed(value);
-        writeAllowPlayed(tournamentId, value);
+        writeSongDialogChoice(tournamentId, 'allowPlayed', value);
+    }, [tournamentId]);
+
+    const chooseGroup = useCallback((value: string) => {
+        setGroup(value);
+        writeSongDialogChoice(tournamentId, 'rollPack', value);
     }, [tournamentId]);
 
     const draw = useCallback(async (request: { levels: number[]; excludeSongIds: number[] }) => {
@@ -193,7 +217,7 @@ export function useSongRoll({ open, divisionId, matchId, tournamentId }: UseSong
         drawnSongIds,
         canRoll: divisionId !== undefined && levels.length > 0 && !rolling,
         setLevelsText,
-        setGroup,
+        setGroup: chooseGroup,
         setAllowPlayed: chooseAllowPlayed,
         rollAll,
         rerollSlot,
