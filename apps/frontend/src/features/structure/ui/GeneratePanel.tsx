@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BracketType } from "@tournament-manager/brackets";
 import type { StructurePlan } from "@tournament-manager/contracts";
 
@@ -6,6 +6,7 @@ import Select from "@/shared/components/ui/Select";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 import { bracketTypes, generateBracketPlan } from "@/features/structure/model/generatorPlan";
 import { formatBracketType } from "@/features/division/model/bracketType";
+import { clearStructurePlanDraft, readStructurePlanDraft, writeStructurePlanDraft } from "@/shared/lib/structurePlanDraft";
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
 
 type Props = {
@@ -27,10 +28,20 @@ type Props = {
  */
 export default function GeneratePanel({ tournamentId, division, applying, onPreview, onApply, onClose }: Props) {
   const types = useMemo(bracketTypes, []);
-  const [bracketType, setBracketType] = useState<BracketType>(types[0]);
-  const [phaseName, setPhaseName] = useState("");
-  const [playerPerMatch, setPlayerPerMatch] = useState(2);
+  /* A draft survives a reload: nothing is written until Create, so losing the
+     answers to a page refresh loses work somebody did. */
+  const restored = useMemo(() => readStructurePlanDraft(tournamentId, division.id), [tournamentId, division.id]);
+  const [bracketType, setBracketType] = useState<BracketType>(
+    types.find((type) => type === restored?.bracketType) ?? types[0],
+  );
+  const [phaseName, setPhaseName] = useState(restored?.phaseName ?? "");
+  const [playerPerMatch, setPlayerPerMatch] = useState(restored?.playerPerMatch ?? 2);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(
+    () => writeStructurePlanDraft({ tournamentId, divisionId: division.id, bracketType, phaseName, playerPerMatch }),
+    [tournamentId, division.id, bracketType, phaseName, playerPerMatch],
+  );
 
   const generated = useMemo(() => {
     try {
@@ -129,6 +140,7 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
         <button
           type="button"
           onClick={() => {
+            clearStructurePlanDraft();
             onPreview(null);
             onClose();
           }}
@@ -142,6 +154,7 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
           onClick={async () => {
             if (!generated) return;
             if (await onApply(generated.plan)) {
+              clearStructurePlanDraft();
               onPreview(null);
               onClose();
             }

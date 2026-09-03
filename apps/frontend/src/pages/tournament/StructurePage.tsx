@@ -14,6 +14,7 @@ import GeneratePanel from "@/features/structure/ui/GeneratePanel";
 import PlanPreviewColumn from "@/features/structure/ui/PlanPreviewColumn";
 import AddSlot from "@/features/structure/ui/AddSlot";
 import { deleteMatch, renameMatch } from "@/features/match/api/match.api";
+import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { nextPoolName } from "@/features/division/model/poolVisibility";
 import { poolPath } from "@/features/tournament/model/treeSelection";
 import { btnSecondary, focusRing } from "@/styles/buttonStyles";
@@ -117,6 +118,30 @@ export default function StructurePage() {
             await deleteMatch(page.selection.id);
         }
         page.select(null);
+        await page.refresh();
+    }
+
+    /**
+     * A route can be taken away where it is read.
+     *
+     * The write replaces every rule leaving that pool, which is the shape the
+     * advancement route has always had: the rules of one source are saved
+     * together, so removing one is sending the others.
+     */
+    async function deleteRoute(ruleId: number): Promise<void> {
+        const pool = page.division?.phases.flatMap((phase) => phase.phaseGroups ?? []).find((candidate) => candidate.id === page.selection?.id);
+        if (!pool) return;
+
+        const remaining = (pool.advancementRules ?? [])
+            .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === pool.id && rule.id !== ruleId)
+            .map((rule) => ({
+                sourcePlacement: rule.sourcePlacement,
+                targetKind: rule.targetKind,
+                targetId: rule.targetId,
+                targetSlot: rule.targetSlot,
+            }));
+
+        await updateAdvancementRulesForSource("phase_group", pool.id, remaining);
         await page.refresh();
     }
 
@@ -275,6 +300,7 @@ export default function StructurePage() {
                         onRename={rename}
                         onDelete={remove}
                         onEditRoutes={openRouteEditor}
+                        onDeleteRoute={deleteRoute}
                         onClearSelection={() => page.select(null)}
                     />
                 )}

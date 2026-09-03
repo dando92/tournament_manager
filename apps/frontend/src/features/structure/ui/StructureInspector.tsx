@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import StatusIcon from "@/shared/components/ui/StatusIcon";
-import { btnDanger, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import { btnDanger, btnSecondary, btnTrash, focusRing } from "@/styles/buttonStyles";
 import { ordinal, type CanvasCard, type CanvasSelection } from "@/features/structure/model/structureCanvas";
 import type { Match } from "@/features/match/model/types";
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
@@ -16,6 +16,7 @@ type Props = {
   onRename: (name: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onEditRoutes: () => void;
+  onDeleteRoute: (ruleId: number) => Promise<void>;
   onClearSelection: () => void;
 };
 
@@ -35,6 +36,7 @@ export default function StructureInspector({
   onRename,
   onDelete,
   onEditRoutes,
+  onDeleteRoute,
   onClearSelection,
 }: Props) {
   const [name, setName] = useState(card?.name ?? "");
@@ -110,6 +112,14 @@ export default function StructureInspector({
                   <span className="rounded border border-ui-border bg-ui-raised px-1.5 font-semibold text-ui-text">{rule.targetName ?? "elsewhere"}</span>
                   <span>slot</span>
                   <span className="rounded border border-ui-border bg-ui-raised px-1.5 font-semibold text-ui-text">{rule.targetSlot}</span>
+                  <button
+                    type="button"
+                    aria-label={`Delete the route out of ${ordinal(rule.sourcePlacement)} place`}
+                    onClick={() => void onDeleteRoute(rule.id)}
+                    className={`${btnTrash} ml-auto shrink-0`}
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                  </button>
                 </li>
               ))}
             </ul>

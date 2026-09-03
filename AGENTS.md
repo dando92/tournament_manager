@@ -119,6 +119,7 @@ Open work:
 - `apps/realtime`: Independently deployable browser WebSocket, scoped fan-out, sequencing, and replaceable snapshot service.
 - `apps/frontend`: Current React and Vite web application.
 - `packages/scoring`: Scoring-system identifiers, pure score calculations, and their provider registry.
+- `packages/brackets`: Bracket-shape identifiers, pure bracket plan generation, and their provider registry.
 - `packages/contracts`: Transport-neutral SyncStart DTOs and internal HTTP request contracts.
 - `packages/live-messaging`: Event envelopes, validation, publisher/subscriber ports, NestJS tokens, and Redis or in-memory transports.
 - `packages/syncstart-protocol`: SyncStart WebSocket protocol client, lobby connection primitives, normalized protocol events, and deterministic simulator.
