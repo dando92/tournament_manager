@@ -241,11 +241,16 @@ const ADVANCEMENT_RULES_FROM_PHASE_GROUPS = `
     SELECT  ar."id"              AS "id",
             ar."sourceKind"      AS "sourceKind",
             ar."sourceId"        AS "sourceId",
+            spg."name"           AS "sourceName",
             ar."sourcePlacement" AS "sourcePlacement",
             ar."targetKind"      AS "targetKind",
             ar."targetId"        AS "targetId",
+            COALESCE(tm."name", tpg."name") AS "targetName",
             ar."targetSlot"      AS "targetSlot"
-    FROM     "advancement_rule" ar
+    FROM      "advancement_rule" ar
+    LEFT JOIN "phase_group" spg ON spg."id" = ar."sourceId"
+    LEFT JOIN "match" tm ON ar."targetKind" = 'match' AND tm."id" = ar."targetId"
+    LEFT JOIN "phase_group" tpg ON ar."targetKind" = 'phase_group' AND tpg."id" = ar."targetId"
     WHERE    ar."sourceKind" = 'phase_group' AND ar."sourceId" = ANY($1::int[])
     ORDER BY ar."sourceId", ar."sourcePlacement", ar."targetSlot", ar."id"
 `;

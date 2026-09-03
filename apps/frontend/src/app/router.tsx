@@ -12,7 +12,7 @@ const DivisionPage = lazy(() => import("@/pages/tournament/division/DivisionPage
 const DivisionMatchesPage = lazy(() => import("@/pages/tournament/division/MatchesPage"));
 const DivisionPlayersPage = lazy(() => import("@/pages/tournament/division/PlayersPage"));
 const DivisionSeedingPage = lazy(() => import("@/pages/tournament/division/SeedingPage"));
-const OverviewPage = lazy(() => import("@/pages/tournament/OverviewPage"));
+const SchedulePage = lazy(() => import("@/pages/tournament/SchedulePage"));
 const ParticipantsPage = lazy(() => import("@/pages/tournament/ParticipantsPage"));
 const SongsPage = lazy(() => import("@/pages/tournament/SongsPage"));
 const LobbiesPage = lazy(() => import("@/pages/tournament/LobbiesPage"));
@@ -55,8 +55,10 @@ export default function AppRouter() {
 
             <Route path="/tournament" element={<TournamentPage />} />
             <Route path="/tournament/:tournamentId" element={<KeyedTournamentPage />}>
-              <Route index element={<Navigate to="overview" replace />} />
-              <Route path="overview" element={<OverviewPage />} />
+              <Route index element={<Navigate to="schedule" replace />} />
+              <Route path="schedule" element={<SchedulePage />} />
+              {/* The board replaced the overview; a link somebody kept still lands on it. */}
+              <Route path="overview" element={<Navigate to="../schedule" replace />} />
               <Route path="participants" element={<ParticipantsPage />} />
               <Route path="songs" element={<SongsPage />} />
               <Route path="lobbies" element={<LobbiesPage />} />

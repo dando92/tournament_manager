@@ -47,7 +47,7 @@ export default function ParticipantsPage() {
   } = useTournamentParticipantsPage();
 
   if (!controls) {
-    return <Navigate to={`/tournament/${tournamentId}/overview`} replace />;
+    return <Navigate to={`/tournament/${tournamentId}/schedule`} replace />;
   }
 
   return (

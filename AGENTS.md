@@ -89,6 +89,8 @@ Every file below lives in the external `tournament_manager-docs` repository, clo
 - `ApiRefactoring.md` — API and frontend structure refactoring plan and decisions
 - `ControlRoom.md` — Tournament Control Room flows and implementation plan
 - `TournamentTimeline.md` — Tournament overview timeline and timing model
+- `ScheduleRestructuring.md` — Schedule board, shared schedule switcher, `flow` to `schedule` rename, and their plan
+- `mockups/schedule-restructure/` — Approved reference views for `ScheduleRestructuring.md`
 - `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
 - `QueryAndSchemaOptimization.md` — Query style, index, and schema optimization plan
 - `LobbyManagerSeparation.md` — Lobby manager and community event hub integration plan and decisions

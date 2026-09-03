@@ -58,13 +58,13 @@ import { TournamentLobbiesController } from './syncstart/tournament-lobbies.cont
 import { TournamentSyncStartBootstrap } from './syncstart/tournament-syncstart.bootstrap';
 import { TournamentSyncStartModule } from './syncstart/syncstart.module';
 import { TournamentSyncStartService } from './syncstart/tournament-syncstart.service';
-import { ControlRoomController } from './competition/control-room/control-room.controller';
-import { ControlRoomCommands } from './competition/control-room/control-room.commands';
-import { ControlRoomQueries } from './competition/control-room/control-room.queries';
-import { ControlRoomStore } from './competition/control-room/control-room.store';
-import { ControlRoomRunner } from './competition/control-room/control-room.runner';
-import { ControlRoomBootstrap } from './competition/control-room/control-room.bootstrap';
-import { ControlRoomMutationGuard } from './competition/control-room/control-room-mutation.guard';
+import { ScheduleController } from './competition/schedule/schedule.controller';
+import { ScheduleCommands } from './competition/schedule/schedule.commands';
+import { ScheduleQueries } from './competition/schedule/schedule.queries';
+import { ScheduleStore } from './competition/schedule/schedule.store';
+import { ScheduleRunner } from './competition/schedule/schedule.runner';
+import { ScheduleBootstrap } from './competition/schedule/schedule.bootstrap';
+import { ScheduleMutationGuard } from './competition/schedule/schedule-mutation.guard';
 import { AdvancementRollbackGuard } from './structure/advancement/advancement-rollback.guard';
 import { TiebreakController } from './competition/match/tiebreak.controller';
 
@@ -113,12 +113,12 @@ import { TiebreakController } from './competition/match/tiebreak.controller';
         TournamentQueries,
         TournamentCommands,
         TournamentStore,
-        ControlRoomCommands,
-        ControlRoomQueries,
-        ControlRoomStore,
-        ControlRoomRunner,
-        ControlRoomBootstrap,
-        ControlRoomMutationGuard,
+        ScheduleCommands,
+        ScheduleQueries,
+        ScheduleStore,
+        ScheduleRunner,
+        ScheduleBootstrap,
+        ScheduleMutationGuard,
         AdvancementRollbackGuard,
         TournamentAccessGuard,
         TournamentOpenGuard,
@@ -142,7 +142,7 @@ import { TiebreakController } from './competition/match/tiebreak.controller';
         RoundsController,
         TiebreakController,
         BracketController,
-        ControlRoomController,
+        ScheduleController,
     ],
 })
 export class TournamentModule {}

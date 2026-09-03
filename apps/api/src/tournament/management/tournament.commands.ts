@@ -5,7 +5,7 @@ import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { TournamentAggregate, TournamentDetails } from '@tournament/management/tournament.aggregate';
 import { TournamentStore } from '@tournament/management/tournament.store';
 import { TournamentSyncStartService } from '@tournament/syncstart/tournament-syncstart.service';
-import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
 
 export type CreateTournamentInput = TournamentDetails & {
     name: string;
@@ -34,7 +34,7 @@ export class TournamentCommands {
         private readonly publisher: UiUpdatePublisher,
         private readonly accounts: AccountCommands,
         private readonly syncStart: TournamentSyncStartService,
-        private readonly controlRoom: ControlRoomRunner,
+        private readonly controlRoom: ScheduleRunner,
     ) {}
 
     /** Answers with the new tournament id: the caller navigates into what it made. */

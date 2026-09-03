@@ -4,17 +4,17 @@ import type { MatchDto } from "@tournament-manager/contracts";
 
 import { focusRing } from "@/styles/buttonStyles";
 
-export type EditableFlowEntry = {
+export type EditableScheduleEntry = {
     match: MatchDto;
     expectedDurationMinutes: number;
 };
 
 type Props = {
-    assigned: EditableFlowEntry[];
+    assigned: EditableScheduleEntry[];
     unassigned: MatchDto[];
     defaultExpectedDurationMinutes: number;
     editableDurations?: boolean;
-    onAssignedChange: (entries: EditableFlowEntry[]) => void;
+    onAssignedChange: (entries: EditableScheduleEntry[]) => void;
     onUnassignedChange: (matches: MatchDto[]) => void;
 };
 
@@ -93,16 +93,16 @@ function AssignedColumn({
     onRemove,
     editableDurations,
 }: {
-    entries: EditableFlowEntry[];
-    onChange: (entries: EditableFlowEntry[]) => void;
-    onRemove: (entry: EditableFlowEntry) => void;
+    entries: EditableScheduleEntry[];
+    onChange: (entries: EditableScheduleEntry[]) => void;
+    onRemove: (entry: EditableScheduleEntry) => void;
     editableDurations: boolean;
 }) {
     return (
         <Droppable droppableId="assigned">
             {(provided) => (
                 <section className="rounded-lg border border-ui-border bg-ui-raised p-3">
-                    <ColumnTitle title="Flow order" count={entries.length} />
+                    <ColumnTitle title="Schedule order" count={entries.length} />
                     <div ref={provided.innerRef} {...provided.droppableProps} className="flex min-h-40 flex-col gap-2">
                         {entries.map((entry, index) => (
                             <Draggable key={entry.match.id} draggableId={`match-${entry.match.id}`} index={index}>

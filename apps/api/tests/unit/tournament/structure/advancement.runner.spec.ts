@@ -8,7 +8,7 @@ import { AdvancementRunner } from '@tournament/structure/advancement/advancement
 import { MatchAggregate } from '@match/match.aggregate';
 import { ScoringSystemProvider } from '@tournament-manager/scoring';
 import { MatchStore } from '@match/match.store';
-import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
 
 function entrant(id: number, playerId: number): Entrant {
   return {
@@ -82,7 +82,7 @@ describe('AdvancementRunner', () => {
     phaseGroupStore as unknown as PhaseGroupStore,
     publisher as unknown as UiUpdatePublisher,
     { getScoringSystem: () => ({ recalc: jest.fn() }) } as unknown as ScoringSystemProvider,
-    controlRoom as unknown as ControlRoomRunner,
+    controlRoom as unknown as ScheduleRunner,
   );
 
   /** What the store handed back, which is what the save was called with. */

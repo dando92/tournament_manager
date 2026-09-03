@@ -1,5 +1,12 @@
 import type { AdvancementRuleDto, MatchPlacementTieDto, MatchResultEntryDto } from "@tournament-manager/contracts";
 
+/**
+ * What placement resolution needs of a rule: where it leaves from and where it
+ * goes. The names the projection resolves are for a reader, so asking for the
+ * whole DTO here would force every caller holding entities to carry them.
+ */
+export type AdvancementRouting = Pick<AdvancementRuleDto, "sourceKind" | "sourceId" | "sourcePlacement" | "targetKind" | "targetId" | "targetSlot">;
+
 export type TiebreakPlacementInput = {
     id: number;
     sequence: number;
@@ -28,7 +35,7 @@ type PlacementGroup = MatchResultEntryDto[];
 export function resolvePlacements(
     pointEntries: Array<{ playerId: number; points: number }>,
     tiebreaks: TiebreakPlacementInput[],
-    advancementRules: AdvancementRuleDto[],
+    advancementRules: AdvancementRouting[],
 ): PlacementResolution {
     let groups = pointGroups(pointEntries);
 
@@ -95,7 +102,7 @@ function compareEvidence(
     return Number(right?.value ?? 0) - Number(left?.value ?? 0);
 }
 
-function materialize(groups: PlacementGroup[], rules: AdvancementRuleDto[]): PlacementResolution {
+function materialize(groups: PlacementGroup[], rules: AdvancementRouting[]): PlacementResolution {
     const outgoing = rules.filter((rule) => rule.sourceKind === "match");
     const ruleByPlacement = new Map(outgoing.map((rule) => [rule.sourcePlacement, rule]));
     const entries: MatchResultEntryDto[] = [];
@@ -126,6 +133,6 @@ function materialize(groups: PlacementGroup[], rules: AdvancementRuleDto[]): Pla
     return { entries, ambiguousTies };
 }
 
-function outcomeOf(rule: AdvancementRuleDto | undefined): string {
+function outcomeOf(rule: AdvancementRouting | undefined): string {
     return rule ? `${rule.targetKind}:${rule.targetId}:${rule.targetSlot}` : "none";
 }

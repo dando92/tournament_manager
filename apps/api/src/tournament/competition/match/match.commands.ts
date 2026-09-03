@@ -11,9 +11,9 @@ import { StartggReportStatus } from '@tournament-manager/contracts';
 import { RoundSourceDto } from '@match/match.requests';
 import { parseLevels, SongRoller } from '@tournament/catalog/song-roller';
 import { AdvancementRuleStore } from '@tournament/structure/advancement/advancement-rule.store';
-import { ControlRoomMutationGuard } from '@tournament/competition/control-room/control-room-mutation.guard';
-import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
-import { ControlRoomStore } from '@tournament/competition/control-room/control-room.store';
+import { ScheduleMutationGuard } from '@tournament/competition/schedule/schedule-mutation.guard';
+import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
+import { ScheduleStore } from '@tournament/competition/schedule/schedule.store';
 import { AdvancementRollbackGuard } from '@tournament/structure/advancement/advancement-rollback.guard';
 
 export type CreateMatchInput = MatchDetails & {
@@ -70,9 +70,9 @@ export class MatchCommands {
         private readonly advancementRules: AdvancementRuleStore,
         private readonly songRoller: SongRoller,
         private readonly startgg: StartggMatchReporter,
-        private readonly controlRoom: ControlRoomRunner,
-        private readonly controlRoomGuard: ControlRoomMutationGuard,
-        private readonly controlRoomStore: ControlRoomStore,
+        private readonly controlRoom: ScheduleRunner,
+        private readonly scheduleGuard: ScheduleMutationGuard,
+        private readonly scheduleStore: ScheduleStore,
         private readonly advancementRollbackGuard: AdvancementRollbackGuard,
     ) {}
 
@@ -91,13 +91,13 @@ export class MatchCommands {
         return match.id;
     }
 
-    async update(matchId: number, input: UpdateMatchInput, confirmControlRoomStop = false): Promise<void> {
+    async update(matchId: number, input: UpdateMatchInput, confirmScheduleStop = false): Promise<void> {
         let match = await this.store.loadOrFail(matchId);
         let before = match.poolState;
         const membershipChanged = input.entrantIds !== undefined || input.phaseGroupId !== undefined;
         const removesEntrants = input.entrantIds !== undefined && match.entrants.some((entrant) => !input.entrantIds.includes(entrant.id));
         if (removesEntrants || input.phaseGroupId !== undefined) {
-            await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+            await this.scheduleGuard.protectRollback(matchId, confirmScheduleStop);
             match = await this.store.loadOrFail(matchId);
             before = match.poolState;
         }
@@ -128,23 +128,23 @@ export class MatchCommands {
         }
     }
 
-    async delete(matchId: number, confirmControlRoomStop = false): Promise<void> {
+    async delete(matchId: number, confirmScheduleStop = false): Promise<void> {
         const match = await this.store.load(matchId);
         if (!match) return;
 
-        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
-        const flowId = await this.controlRoomStore.flowIdForMatch(matchId);
+        await this.scheduleGuard.protectRollback(matchId, confirmScheduleStop);
+        const scheduleId = await this.scheduleStore.scheduleIdForMatch(matchId);
 
         const address = match.address;
         await this.advancementRules.deleteInvolvingMatch(matchId);
         await this.store.remove(match);
-        if (flowId) await this.controlRoom.recalculate(flowId);
+        if (scheduleId) await this.controlRoom.recalculate(scheduleId);
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 
     async setActive(matchId: number, active: boolean): Promise<void> {
         const match = await this.store.loadOrFail(matchId);
-        await this.controlRoomGuard.assertManualActivationAllowed(match.address.tournamentId);
+        await this.scheduleGuard.assertManualActivationAllowed(match.address.tournamentId);
         match.activate(active);
 
         await this.store.save(match);
@@ -172,11 +172,11 @@ export class MatchCommands {
         await this.saveAndAnnounceMembership(match);
     }
 
-    async addRound(matchId: number, source: RoundSourceDto, confirmControlRoomStop = false): Promise<void> {
+    async addRound(matchId: number, source: RoundSourceDto, confirmScheduleStop = false): Promise<void> {
         let match = await this.store.loadOrFail(matchId);
         let before = match.poolState;
         if (before.awaitingCommit) {
-            await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+            await this.scheduleGuard.protectRollback(matchId, confirmScheduleStop);
             match = await this.store.loadOrFail(matchId);
             before = match.poolState;
         }
@@ -188,9 +188,9 @@ export class MatchCommands {
         await this.announce(match, before);
     }
 
-    async removeRound(roundId: number, confirmControlRoomStop = false): Promise<void> {
+    async removeRound(roundId: number, confirmScheduleStop = false): Promise<void> {
         const matchId = await this.store.locateRound(roundId);
-        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+        await this.scheduleGuard.protectRollback(matchId, confirmScheduleStop);
         const match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         match.assertEditable();
@@ -206,9 +206,9 @@ export class MatchCommands {
      * the standings under it were scored on the song that is leaving. Both halves
      * are one change to one aggregate, so they are one load and one save.
      */
-    async replaceRoundSong(roundId: number, source: RoundSourceDto, confirmControlRoomStop = false): Promise<void> {
+    async replaceRoundSong(roundId: number, source: RoundSourceDto, confirmScheduleStop = false): Promise<void> {
         const matchId = await this.store.locateRound(roundId);
-        await this.controlRoomGuard.protectRollback(matchId, confirmControlRoomStop);
+        await this.scheduleGuard.protectRollback(matchId, confirmScheduleStop);
         const match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         match.assertEditable();
@@ -237,12 +237,12 @@ export class MatchCommands {
         await this.announce(match, before);
     }
 
-    async upsertPoints(roundId: number, playerId: number, points: number, confirmControlRoomStop = false): Promise<void> {
+    async upsertPoints(roundId: number, playerId: number, points: number, confirmScheduleStop = false): Promise<void> {
         const matchId = await this.store.locateRound(roundId);
         let match = await this.store.loadOrFail(matchId);
         let before = match.poolState;
         if (points === 0 && before.awaitingCommit) {
-            await this.controlRoomGuard.protectRollback(match.id, confirmControlRoomStop);
+            await this.scheduleGuard.protectRollback(match.id, confirmScheduleStop);
             match = await this.store.loadOrFail(matchId);
             before = match.poolState;
         }
@@ -254,12 +254,12 @@ export class MatchCommands {
         await this.announce(match, before);
     }
 
-    async removeStanding(roundId: number, playerId: number, confirmControlRoomStop = false): Promise<void> {
+    async removeStanding(roundId: number, playerId: number, confirmScheduleStop = false): Promise<void> {
         const matchId = await this.store.locateRound(roundId);
         let match = await this.store.loadOrFail(matchId);
         let before = match.poolState;
         if (before.awaitingCommit) {
-            await this.controlRoomGuard.protectRollback(match.id, confirmControlRoomStop);
+            await this.scheduleGuard.protectRollback(match.id, confirmScheduleStop);
             match = await this.store.loadOrFail(matchId);
             before = match.poolState;
         }
@@ -358,12 +358,12 @@ export class MatchCommands {
         return startggReport;
     }
 
-    async reopenResult(matchId: number, confirmControlRoomStop = false): Promise<void> {
+    async reopenResult(matchId: number, confirmScheduleStop = false): Promise<void> {
         let match = await this.store.loadOrFail(matchId);
         if (match.isCompleted) {
             await this.advancementRollbackGuard.assertMatchCanReopen(match);
         }
-        await this.controlRoomGuard.prepareResultReopen(matchId, confirmControlRoomStop);
+        await this.scheduleGuard.prepareResultReopen(matchId, confirmScheduleStop);
         match = await this.store.loadOrFail(matchId);
         const before = match.poolState;
         if (match.isCompleted) await this.advancement.revertFromMatch(match);

@@ -173,9 +173,12 @@ function getIncomingAdvancementSourceRules(match: Match, matches: Match[], phase
 }
 
 function getSourceRuleLabel(rule: AdvancementRule, matches: Match[], phaseGroups: PhaseGroup[]): string {
-  const sourceName = rule.sourceKind === "match"
+  /* The projection resolves the source's name, which is what lets a bracket name
+     a source that sits in another pool. The two lookups stay as the fallback for
+     a rule whose source no longer exists. */
+  const sourceName = rule.sourceName ?? (rule.sourceKind === "match"
     ? matches.find((match) => match.id === rule.sourceId)?.name ?? `Match ${rule.sourceId}`
-    : phaseGroups.find((phaseGroup) => phaseGroup.id === rule.sourceId)?.name ?? `Phase group ${rule.sourceId}`;
+    : phaseGroups.find((phaseGroup) => phaseGroup.id === rule.sourceId)?.name ?? `Phase group ${rule.sourceId}`);
 
   return `${toOrdinal(rule.sourcePlacement)} from ${sourceName}`;
 }

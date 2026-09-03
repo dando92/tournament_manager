@@ -206,11 +206,17 @@ const ADVANCEMENT_RULES_FOR_MATCHES = `
     SELECT  ar."id"              AS "id",
             ar."sourceKind"      AS "sourceKind",
             ar."sourceId"        AS "sourceId",
+            COALESCE(sm."name", spg."name") AS "sourceName",
             ar."sourcePlacement" AS "sourcePlacement",
             ar."targetKind"      AS "targetKind",
             ar."targetId"        AS "targetId",
+            COALESCE(tm."name", tpg."name") AS "targetName",
             ar."targetSlot"      AS "targetSlot"
-    FROM     "advancement_rule" ar
+    FROM      "advancement_rule" ar
+    LEFT JOIN "match" sm ON ar."sourceKind" = 'match' AND sm."id" = ar."sourceId"
+    LEFT JOIN "phase_group" spg ON ar."sourceKind" = 'phase_group' AND spg."id" = ar."sourceId"
+    LEFT JOIN "match" tm ON ar."targetKind" = 'match' AND tm."id" = ar."targetId"
+    LEFT JOIN "phase_group" tpg ON ar."targetKind" = 'phase_group' AND tpg."id" = ar."targetId"
     WHERE    (ar."sourceKind" = 'match' AND ar."sourceId" = ANY($1::int[]))
         OR   (ar."targetKind" = 'match' AND ar."targetId" = ANY($1::int[]))
     ORDER BY ar."sourceId", ar."sourcePlacement", ar."targetSlot", ar."id"
@@ -421,7 +427,7 @@ export class MatchQueries {
 
     /**
      * A named set of matches, for the callers that already know which ones they
-     * are answering about. The control room reads its flows this way rather
+     * are answering about. The schedule page reads its entries this way rather
      * than projecting every match of the tournament to resolve a handful.
      */
     async byIds(ids: number[]): Promise<MatchDto[]> {

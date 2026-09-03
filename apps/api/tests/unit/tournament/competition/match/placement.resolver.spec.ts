@@ -1,10 +1,7 @@
-import { AdvancementRuleDto } from "@tournament-manager/contracts";
+import { AdvancementRouting, resolvePlacements, TiebreakPlacementInput } from "@match/placement.resolver";
 
-import { resolvePlacements, TiebreakPlacementInput } from "@match/placement.resolver";
-
-function rule(sourcePlacement: number, targetId: number, targetSlot = sourcePlacement): AdvancementRuleDto {
+function rule(sourcePlacement: number, targetId: number, targetSlot = sourcePlacement): AdvancementRouting {
     return {
-        id: sourcePlacement,
         sourceKind: "match",
         sourceId: 10,
         sourcePlacement,

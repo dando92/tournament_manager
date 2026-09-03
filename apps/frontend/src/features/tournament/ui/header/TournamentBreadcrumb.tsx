@@ -31,7 +31,7 @@ export default function TournamentBreadcrumb({ tournamentName }: { tournamentNam
     if (!selection) return [];
 
     const { tournamentId } = selection;
-    const trail: Crumb[] = [{ label: tournamentName || "Tournament", to: tournamentPagePath(tournamentId, "overview") }];
+    const trail: Crumb[] = [{ label: tournamentName || "Tournament", to: tournamentPagePath(tournamentId, "schedule") }];
 
     if (selection.page) {
       const page = TOURNAMENT_TREE_PAGES.find((candidate) => candidate.key === selection.page);

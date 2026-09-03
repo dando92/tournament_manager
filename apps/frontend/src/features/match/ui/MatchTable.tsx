@@ -218,12 +218,14 @@ export default function MatchTable({
               const sourcePhaseGroup = typedSourceKind === "phase_group"
                 ? phaseGroups.find((phaseGroup) => phaseGroup.id === sourceId) ?? null
                 : null;
-              const name = sourceMatch?.name ?? sourcePhaseGroup?.name ?? (
+              const rulesFromSource = incomingRules.filter((rule) => rule.sourceKind === typedSourceKind && rule.sourceId === sourceId);
+              /* The rule carries the source's name, so a source outside this pool is
+                 named too. The lookup remains for a source this view happens to hold
+                 under a name the projection could not resolve. */
+              const name = rulesFromSource[0]?.sourceName ?? sourceMatch?.name ?? sourcePhaseGroup?.name ?? (
                 typedSourceKind === "match" ? `Match ${sourceId}` : `Pool ${sourceId}`
               );
-              const positions = incomingRules
-                .filter((rule) => rule.sourceKind === typedSourceKind && rule.sourceId === sourceId)
-                .map((rule) => rule.sourcePlacement);
+              const positions = rulesFromSource.map((rule) => rule.sourcePlacement);
 
               // Fallback: if no positions found, still show one row
               const rows = positions.length > 0 ? positions : [1];

@@ -1,53 +1,53 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getEditor } from "@/features/control-room/api/control-room.api";
-import { controlRoomKeys } from "@/features/control-room/api/control-room.keys";
-import { localDateTimeToIso, toLocalDateTimeValue } from "@/features/control-room/model/flowDateTime";
-import ControlRoomMatchAssignment, { type EditableFlowEntry } from "@/features/control-room/ui/ControlRoomMatchAssignment";
+import { getEditor } from "@/features/schedule/api/schedule.api";
+import { scheduleKeys } from "@/features/schedule/api/schedule.keys";
+import { localDateTimeToIso, toLocalDateTimeValue } from "@/features/schedule/model/scheduleDateTime";
+import ControlRoomMatchAssignment, { type EditableScheduleEntry } from "@/features/control-room/ui/ControlRoomMatchAssignment";
 import FormModal from "@/shared/components/ui/FormModal";
 import { btnDanger, focusRing } from "@/styles/buttonStyles";
 
 type Props = {
-    flowId: number | null;
+    scheduleId: number | null;
     onClose: () => void;
     onSave: (
-        flowId: number,
+        scheduleId: number,
         version: number,
         entries: Array<{ matchId: number; expectedDurationMinutes: number }>,
         name: string,
         willStartAt: string,
         original: { name: string; willStartAt: string },
     ) => Promise<void>;
-    onDelete: (flowId: number) => Promise<void>;
+    onDelete: (scheduleId: number) => Promise<void>;
 };
 
-export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }: Props) {
-    const query = useQuery({ queryKey: controlRoomKeys.editor(flowId ?? 0), queryFn: () => getEditor(flowId ?? 0), enabled: flowId !== null });
+export default function ControlRoomEditor({ scheduleId, onClose, onSave, onDelete }: Props) {
+    const query = useQuery({ queryKey: scheduleKeys.editor(scheduleId ?? 0), queryFn: () => getEditor(scheduleId ?? 0), enabled: scheduleId !== null });
     const [name, setName] = useState("");
     const [willStartAt, setWillStartAt] = useState("");
-    const [assigned, setAssigned] = useState<EditableFlowEntry[]>([]);
+    const [assigned, setAssigned] = useState<EditableScheduleEntry[]>([]);
     const [unassigned, setUnassigned] = useState(query.data?.unassignedMatches ?? []);
 
     useEffect(() => {
         if (!query.data) return;
-        setName(query.data.flow.name);
-        setWillStartAt(toLocalDateTimeValue(query.data.flow.willStartAt));
-        setAssigned(query.data.flow.entries.map((entry) => ({ match: entry.match, expectedDurationMinutes: entry.expectedDurationMinutes })));
+        setName(query.data.schedule.name);
+        setWillStartAt(toLocalDateTimeValue(query.data.schedule.willStartAt));
+        setAssigned(query.data.schedule.entries.map((entry) => ({ match: entry.match, expectedDurationMinutes: entry.expectedDurationMinutes })));
         setUnassigned(query.data.unassignedMatches);
     }, [query.data]);
 
     const validate = () => {
         if (!query.data) {
-            return ['This flow is not loaded yet.'];
+            return ['This schedule is not loaded yet.'];
         }
 
         const errors: string[] = [];
         if (!name.trim()) {
-            errors.push('A flow needs a name.');
+            errors.push('A schedule needs a name.');
         }
         if (!willStartAt) {
-            errors.push('A flow needs a start time.');
+            errors.push('A schedule needs a start time.');
         }
 
         return errors;
@@ -55,47 +55,47 @@ export default function ControlRoomEditor({ flowId, onClose, onSave, onDelete }:
 
     const save = () =>
         onSave(
-            query.data!.flow.id,
-            query.data!.flow.version,
+            query.data!.schedule.id,
+            query.data!.schedule.version,
             assigned.map((entry) => ({ matchId: entry.match.id, expectedDurationMinutes: entry.expectedDurationMinutes })),
             name.trim(),
             localDateTimeToIso(willStartAt),
-            { name: query.data!.flow.name, willStartAt: query.data!.flow.willStartAt },
+            { name: query.data!.schedule.name, willStartAt: query.data!.schedule.willStartAt },
         );
 
-    const deleteFlow = (
+    const deleteSchedule = (
         <button
             type="button"
             className={btnDanger}
             disabled={!query.data}
-            onClick={() => query.data && window.confirm(`Delete flow "${query.data.flow.name}"?`) && onDelete(query.data.flow.id).then(onClose)}
+            onClick={() => query.data && window.confirm(`Delete schedule "${query.data.schedule.name}"?`) && onDelete(query.data.schedule.id).then(onClose)}
         >
-            Delete flow
+            Delete schedule
         </button>
     );
 
     return (
         <FormModal
-            open={flowId !== null}
+            open={scheduleId !== null}
             onClose={onClose}
-            title="Edit control room flow"
-            confirmText="Save flow"
+            title="Edit schedule"
+            confirmText="Save schedule"
             validate={validate}
             onConfirm={save}
-            leadingActions={deleteFlow}
-            failureFallback="The flow could not be saved."
+            leadingActions={deleteSchedule}
+            failureFallback="The schedule could not be saved."
             maxWidth="max-w-5xl"
             fitViewport
         >
             {query.isLoading ? (
-                <p className="text-sm text-ui-text-mute">Loading flow…</p>
+                <p className="text-sm text-ui-text-mute">Loading schedule…</p>
             ) : query.isError ? (
-                <p className="text-sm text-state-failed">Unable to open this flow for editing.</p>
+                <p className="text-sm text-state-failed">Unable to open this schedule for editing.</p>
             ) : (
                 <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <label className="text-sm font-semibold text-ui-text">
-                            Flow name
+                            Schedule name
                             <input data-autofocus value={name} onChange={(event) => setName(event.target.value)} className={`mt-1 block w-full rounded border border-ui-border bg-ui-canvas px-3 py-2 font-normal ${focusRing}`} />
                         </label>
                         <label className="text-sm font-semibold text-ui-text">

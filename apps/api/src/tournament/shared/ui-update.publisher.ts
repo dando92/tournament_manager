@@ -52,9 +52,9 @@ export class UiUpdatePublisher {
     return this.publish('ui.match-changed', address.tournamentId, address);
   }
 
-  emitControlRoomFlowUpdate(tournamentId: number | null | undefined, flowId: number | null | undefined): Promise<void> {
-    if (!tournamentId || !flowId) return Promise.resolve();
-    return this.publish('ui.control-room-flow-changed', tournamentId, { tournamentId, flowId });
+  emitScheduleUpdate(tournamentId: number | null | undefined, scheduleId: number | null | undefined): Promise<void> {
+    if (!tournamentId || !scheduleId) return Promise.resolve();
+    return this.publish('ui.schedule-changed', tournamentId, { tournamentId, scheduleId });
   }
 
   emitPhaseGroupUpdate(address: PhaseGroupAddress): Promise<void> {

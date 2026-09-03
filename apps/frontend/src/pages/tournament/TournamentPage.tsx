@@ -22,7 +22,7 @@ export default function TournamentPage() {
 
   if (selectedTournamentId === null) {
     const last = getSelectedTournament();
-    return <Navigate to={last ? `/tournament/${last.id}/overview` : "/"} replace />;
+    return <Navigate to={last ? `/tournament/${last.id}/schedule` : "/"} replace />;
   }
 
   return <TournamentShell tournamentId={selectedTournamentId} />;

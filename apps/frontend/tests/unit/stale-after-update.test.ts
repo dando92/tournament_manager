@@ -7,7 +7,7 @@ import { tournamentKeys } from '../../src/features/tournament/api/tournament.key
 import { participantKeys } from '../../src/features/participant/api/participant.keys.ts';
 import { songKeys } from '../../src/features/song/api/song.keys.ts';
 import { lobbyControlKeys } from '../../src/features/tournament/api/lobbies.api.ts';
-import { controlRoomKeys } from '../../src/features/control-room/api/control-room.keys.ts';
+import { scheduleKeys } from '../../src/features/schedule/api/schedule.keys.ts';
 
 const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
 
@@ -16,7 +16,7 @@ test('a match event stales its lists and the active-song lobby controls', () => 
     matchKeys.byPhaseGroup(4),
     matchKeys.byDivision(2),
     lobbyControlKeys.options(1),
-    controlRoomKeys.all(1),
+    scheduleKeys.all(1),
   ]);
 });
 
@@ -64,10 +64,10 @@ test('a song event stales only the tournament song catalogue', () => {
   ]);
 });
 
-test('a control room event stales its flow list, editor, and lobby options', () => {
-  assert.deepEqual(staleAfterUpdate({ event: 'ControlRoomFlowUpdate', data: { tournamentId: 1, flowId: 9 } }), [
-    controlRoomKeys.all(1),
-    controlRoomKeys.editor(9),
+test('a schedule event stales its schedule list, editor, and lobby options', () => {
+  assert.deepEqual(staleAfterUpdate({ event: 'ScheduleUpdate', data: { tournamentId: 1, scheduleId: 9 } }), [
+    scheduleKeys.all(1),
+    scheduleKeys.editor(9),
     lobbyControlKeys.options(1),
   ]);
 });

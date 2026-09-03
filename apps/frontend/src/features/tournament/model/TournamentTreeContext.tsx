@@ -283,7 +283,7 @@ export function TournamentTreeProvider({
         "Division deleted.",
         "Error deleting division.",
       );
-      if (tournamentId !== null) navigate(`/tournament/${tournamentId}/overview`);
+      if (tournamentId !== null) navigate(`/tournament/${tournamentId}/schedule`);
     },
     [run, navigate, tournamentId],
   );

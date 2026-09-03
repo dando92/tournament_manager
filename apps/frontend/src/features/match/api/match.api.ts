@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Match, Score, CommitMatchResultResponse, CreateMatchRequest, RoundSourceRequest } from "@/features/match/model/types";
 
-const confirmationHeaders = { "x-confirm-control-room-stop": "true" };
+const confirmationHeaders = { "x-confirm-schedule-stop": "true" };
 
 export class AdvancementRollbackBlockedError extends Error {}
 
@@ -11,8 +11,8 @@ async function withControlRoomStopConfirmation(request: (confirmed: boolean) => 
     return true;
   } catch (error) {
     const response = (error as { response?: { data?: { code?: string; message?: string } } })?.response;
-    if (response?.data?.code !== "CONTROL_ROOM_FLOW_STOP_CONFIRMATION_REQUIRED") throw error;
-    if (!window.confirm(`${response.data.message ?? "This change will stop a running control room flow."} Continue?`)) return false;
+    if (response?.data?.code !== "SCHEDULE_STOP_CONFIRMATION_REQUIRED") throw error;
+    if (!window.confirm(`${response.data.message ?? "This change will stop a running schedule."} Continue?`)) return false;
     await request(true);
     return true;
   }

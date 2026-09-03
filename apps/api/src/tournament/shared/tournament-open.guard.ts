@@ -18,7 +18,7 @@ export type TournamentEntityReference =
   | 'match'
   | 'round'
   | 'song'
-  | 'control-room-flow'
+  | 'schedule'
   | 'advancement-source';
 
 export interface TournamentMutationReference {
@@ -55,7 +55,7 @@ const TOURNAMENT_OF: Record<
   match: `SELECT t."id" AS id, t."status" AS status FROM "competition_address" ca JOIN "tournament" t ON t."id" = ca."tournamentId" WHERE ca."matchId" = $1`,
   round: `SELECT t."id" AS id, t."status" AS status FROM "round" r JOIN "competition_address" ca ON ca."matchId" = r."matchId" JOIN "tournament" t ON t."id" = ca."tournamentId" WHERE r."id" = $1`,
   song: `SELECT t."id" AS id, t."status" AS status FROM "song" s JOIN "tournament" t ON t."id" = s."tournamentId" WHERE s."id" = $1`,
-  'control-room-flow': `SELECT t."id" AS id, t."status" AS status FROM "control_room_flow" flow JOIN "tournament" t ON t."id" = flow."tournamentId" WHERE flow."id" = $1`,
+  'schedule': `SELECT t."id" AS id, t."status" AS status FROM "schedule" s JOIN "tournament" t ON t."id" = s."tournamentId" WHERE s."id" = $1`,
 };
 
 export const RequireOpenTournament = (reference: TournamentMutationReference) =>

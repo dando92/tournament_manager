@@ -5,7 +5,7 @@ import { MatchQueries } from '@match/match.queries';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import { AdvancementRuleStore } from './advancement-rule.store';
-import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
 import { assertValidAdvancementRules } from './advancement-rule.validation';
 
 /**
@@ -25,7 +25,7 @@ export class AdvancementRuleCommands {
     private readonly matchQueries: MatchQueries,
     private readonly phaseGroupQueries: PhaseGroupQueries,
     private readonly publisher: UiUpdatePublisher,
-    private readonly controlRoom: ControlRoomRunner,
+    private readonly controlRoom: ScheduleRunner,
   ) {}
 
   async updateForSource(

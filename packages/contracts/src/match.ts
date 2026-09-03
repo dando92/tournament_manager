@@ -66,14 +66,29 @@ export type MatchResultDto = {
     playerPoints: MatchResultEntryDto[];
 };
 
-/** Where an entrant comes from, or where the winner of a match goes next. */
+/**
+ * Where an entrant comes from, or where the winner of a match goes next.
+ *
+ * The two names are the source's and the target's, resolved by the query that
+ * reads the rule. They are names and not sentences: `Winner of Pool C R4` is
+ * composed by whoever renders it, from the placement and the name, because a
+ * rendered label in a shared contract is presentation no reader can reword.
+ *
+ * They are resolved here rather than by the client because a client can only
+ * name what it has already loaded. That holds inside a pool, whose matches
+ * arrive together, and fails on any view whose sources sit elsewhere in the
+ * tournament — which is what made the schedule board read the whole tournament
+ * to name four cards. Null when the rule points at a row that no longer exists.
+ */
 export type AdvancementRuleDto = {
     id: number;
     sourceKind: AdvancementCompetitionKind;
     sourceId: number;
+    sourceName: string | null;
     sourcePlacement: number;
     targetKind: AdvancementCompetitionKind;
     targetId: number;
+    targetName: string | null;
     targetSlot: number;
 };
 

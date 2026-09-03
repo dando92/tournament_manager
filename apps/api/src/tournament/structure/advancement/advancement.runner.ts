@@ -7,7 +7,7 @@ import { MatchStore } from '@match/match.store';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { AdvancementRuleStore } from './advancement-rule.store';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
-import { ControlRoomRunner } from '@tournament/competition/control-room/control-room.runner';
+import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
 
 /** The entrants one rule moves into one pool. */
 type PoolPlacement = {
@@ -42,7 +42,7 @@ export class AdvancementRunner {
         private readonly publisher: UiUpdatePublisher,
         @Inject()
         private readonly scoringSystems: ScoringSystemProvider,
-        private readonly controlRoom: ControlRoomRunner,
+        private readonly controlRoom: ScheduleRunner,
     ) {}
 
     async advanceFromMatch(match: MatchAggregate): Promise<void> {

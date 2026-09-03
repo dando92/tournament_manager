@@ -27,7 +27,7 @@ export class RoundsController {
     replaceSong(
         @Param('roundId') roundId: number,
         @Body(new ValidationPipe()) dto: RoundSourceDto,
-        @Headers('x-confirm-control-room-stop') confirmation?: string,
+        @Headers('x-confirm-schedule-stop') confirmation?: string,
     ): Promise<void> {
         return this.matchCommands.replaceRoundSong(Number(roundId), dto, confirmation === 'true');
     }
@@ -35,7 +35,7 @@ export class RoundsController {
     @Delete(':roundId')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'round', location: 'params', field: 'roundId' })
-    removeRound(@Param('roundId') roundId: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+    removeRound(@Param('roundId') roundId: number, @Headers('x-confirm-schedule-stop') confirmation?: string): Promise<void> {
         return this.matchCommands.removeRound(Number(roundId), confirmation === 'true');
     }
 
@@ -57,7 +57,7 @@ export class RoundsController {
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
         @Body(new ValidationPipe()) dto: UpsertPointsDto,
-        @Headers('x-confirm-control-room-stop') confirmation?: string,
+        @Headers('x-confirm-schedule-stop') confirmation?: string,
     ): Promise<void> {
         return this.matchCommands.upsertPoints(Number(roundId), Number(playerId), dto.points, confirmation === 'true');
     }
@@ -68,7 +68,7 @@ export class RoundsController {
     removeStanding(
         @Param('roundId') roundId: number,
         @Param('playerId') playerId: number,
-        @Headers('x-confirm-control-room-stop') confirmation?: string,
+        @Headers('x-confirm-schedule-stop') confirmation?: string,
     ): Promise<void> {
         return this.matchCommands.removeStanding(Number(roundId), Number(playerId), confirmation === 'true');
     }

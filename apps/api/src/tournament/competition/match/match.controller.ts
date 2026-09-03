@@ -52,21 +52,21 @@ export class MatchesController {
     @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+    update(@Param('id') id: number, @Body(new ValidationPipe()) dto: UpdateMatchDto, @Headers('x-confirm-schedule-stop') confirmation?: string): Promise<void> {
         return this.matchCommands.update(Number(id), dto, confirmation === 'true');
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'id' })
-    remove(@Param('id') id: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+    remove(@Param('id') id: number, @Headers('x-confirm-schedule-stop') confirmation?: string): Promise<void> {
         return this.matchCommands.delete(Number(id), confirmation === 'true');
     }
 
     @Post(':matchId/rounds')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+    addRound(@Param('matchId') matchId: number, @Body(new ValidationPipe()) dto: RoundSourceDto, @Headers('x-confirm-schedule-stop') confirmation?: string): Promise<void> {
         return this.matchCommands.addRound(Number(matchId), dto, confirmation === 'true');
     }
 
@@ -92,7 +92,7 @@ export class MatchesController {
     @Delete(':matchId/result')
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: 'match', location: 'params', field: 'matchId' })
-    reopenMatchResult(@Param('matchId') matchId: number, @Headers('x-confirm-control-room-stop') confirmation?: string): Promise<void> {
+    reopenMatchResult(@Param('matchId') matchId: number, @Headers('x-confirm-schedule-stop') confirmation?: string): Promise<void> {
         return this.matchCommands.reopenResult(Number(matchId), confirmation === 'true');
     }
 }

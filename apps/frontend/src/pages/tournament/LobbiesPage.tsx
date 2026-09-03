@@ -18,7 +18,7 @@ export default function LobbiesPage() {
   } = useTournamentLobbiesContext();
 
   if (!controls) {
-    return <Navigate to={`/tournament/${tournamentId}/overview`} replace />;
+    return <Navigate to={`/tournament/${tournamentId}/schedule`} replace />;
   }
 
   return (
