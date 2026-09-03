@@ -33,6 +33,7 @@ const SCOPE_PREDICATE: Record<TreeScope, string> = {
 type StructureRow = {
     divisionId: number;
     divisionName: string;
+    divisionStructureVersion: number;
     phaseId: number | null;
     phaseName: string | null;
     phaseGroupId: number | null;
@@ -46,6 +47,7 @@ type StructureRow = {
 const structureInScope = (predicate: string): string => `
     SELECT  d."id"                  AS "divisionId",
             d."name"                AS "divisionName",
+            d."structureVersion"    AS "divisionStructureVersion",
             ph."id"                 AS "phaseId",
             ph."name"               AS "phaseName",
             pg."id"                 AS "phaseGroupId",
@@ -268,6 +270,7 @@ export class TreeQueries {
         const division: DivisionSummaryDto = {
             id: row.divisionId,
             name: row.divisionName,
+            structureVersion: row.divisionStructureVersion,
             entrantCount,
             matchCount: 0,
             phases: [],

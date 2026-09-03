@@ -43,6 +43,10 @@ export interface TournamentDivisionOptionPhase {
 export interface TournamentDivisionOption {
   id: number;
   name: string;
+  /** The version a structure plan built against this division is checked against. */
+  structureVersion: number;
+  /** Entrants still competing, which is what a generated bracket is built from. */
+  entrantCount: number;
   phases: TournamentDivisionOptionPhase[];
 }
 

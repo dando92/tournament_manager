@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   faClockRotateLeft,
-  faDownload,
   faGear,
   faPenToSquare,
   faPlus,
@@ -104,20 +103,6 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
         onSelect: () => go(tournamentPagePath(tournament.id, "configuration")),
       },
       {
-        key: "startgg",
-        label: "Import from Start.gg",
-        icon: faDownload,
-        hidden: !controls || !isCurrent,
-        onSelect: () => tree.openDialog({ kind: "startggImport" }),
-      },
-      {
-        key: "bracket",
-        label: "Generate bracket",
-        icon: faSitemap,
-        hidden: !controls || !isCurrent,
-        onSelect: () => tree.openDialog({ kind: "generateBracket" }),
-      },
-      {
         key: "division",
         label: "New division",
         icon: faPlus,
@@ -155,12 +140,6 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
       onSelect: () => tree.openDialog({ kind: "createPhase", divisionId }),
     },
     {
-      key: "bracket",
-      label: "Generate bracket",
-      icon: faSitemap,
-      onSelect: () => tree.openDialog({ kind: "generateBracket", divisionId }),
-    },
-    {
       key: "rename",
       label: "Rename division",
       icon: faPenToSquare,
@@ -189,12 +168,6 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
      that pool are offered here instead. They disappear from the phase the
      moment a second pool makes both of them nodes of their own. */
   const phaseMenu = (divisionId: number, phase: TournamentDivisionOptionPhase): ContextMenuItem[] => [
-    {
-      key: "bracket",
-      label: "Generate bracket",
-      icon: faSitemap,
-      onSelect: () => tree.openDialog({ kind: "generateBracket", divisionId, phaseId: phase.id }),
-    },
     {
       key: "pool",
       label: "New pool",

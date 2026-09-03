@@ -2,6 +2,7 @@ node_modules/
 **/node_modules/
 .npm-cache/
 **/dist/
+**/dist-esm/
 **/coverage/
 
 .env

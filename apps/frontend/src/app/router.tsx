@@ -13,6 +13,7 @@ const DivisionMatchesPage = lazy(() => import("@/pages/tournament/division/Match
 const DivisionPlayersPage = lazy(() => import("@/pages/tournament/division/PlayersPage"));
 const DivisionSeedingPage = lazy(() => import("@/pages/tournament/division/SeedingPage"));
 const SchedulePage = lazy(() => import("@/pages/tournament/SchedulePage"));
+const StructurePage = lazy(() => import("@/pages/tournament/StructurePage"));
 const ParticipantsPage = lazy(() => import("@/pages/tournament/ParticipantsPage"));
 const SongsPage = lazy(() => import("@/pages/tournament/SongsPage"));
 const LobbiesPage = lazy(() => import("@/pages/tournament/LobbiesPage"));
@@ -59,6 +60,7 @@ export default function AppRouter() {
               <Route path="schedule" element={<SchedulePage />} />
               {/* The board replaced the overview; a link somebody kept still lands on it. */}
               <Route path="overview" element={<Navigate to="../schedule" replace />} />
+              <Route path="structure" element={<StructurePage />} />
               <Route path="participants" element={<ParticipantsPage />} />
               <Route path="songs" element={<SongsPage />} />
               <Route path="lobbies" element={<LobbiesPage />} />

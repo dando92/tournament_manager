@@ -5,6 +5,7 @@ import {
   faListOl,
   faMusic,
   faCalendarDays,
+  faSitemap,
   faTowerBroadcast,
   faUsers,
   faSliders,
@@ -31,6 +32,7 @@ export type TreePage = {
 
 export const TOURNAMENT_TREE_PAGES: readonly TreePage[] = [
   { key: "schedule", label: "Schedule", icon: faCalendarDays },
+  { key: "structure", label: "Structure", icon: faSitemap, requiresControl: true },
   { key: "participants", label: "Participants", icon: faUsers, requiresControl: true },
   { key: "songs", label: "Songs", icon: faMusic },
   { key: "lobbies", label: "Lobbies", icon: faDesktop, requiresControl: true },

@@ -17,6 +17,8 @@ export function toDivisionOptions(overview: TournamentOverview): TournamentDivis
   return overview.divisions.map((division) => ({
     id: division.id,
     name: division.name,
+    structureVersion: division.structureVersion,
+    entrantCount: division.entrantCount,
     phases: division.phases.map((phase) => ({
       id: phase.id,
       name: phase.name,

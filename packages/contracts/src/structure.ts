@@ -58,6 +58,14 @@ export type DivisionPhaseDto = {
 export type DivisionSummaryDto = {
     id: number;
     name: string;
+    /**
+     * How many times the shape of this division has changed.
+     *
+     * A structure plan records the version it read and is refused if it has
+     * moved, so a preview left open while somebody else edits is rebuilt
+     * rather than written against rows it never saw.
+     */
+    structureVersion: number;
     /** Entrants still competing. A withdrawn one is in the roster and not in this count. */
     entrantCount: number;
     matchCount: number;

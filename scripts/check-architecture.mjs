@@ -183,7 +183,7 @@ const allowedDependencies = new Map([
     ],
     ['@tournament-manager/syncstart', ['@tournament-manager/contracts', '@tournament-manager/live-messaging', '@tournament-manager/syncstart-protocol']],
     ['@tournament-manager/realtime', ['@tournament-manager/contracts', '@tournament-manager/live-messaging']],
-    ['tournament-viewer', ['@tournament-manager/contracts']],
+    ['tournament-viewer', ['@tournament-manager/contracts', '@tournament-manager/brackets']],
 ]);
 
 for (const workspace of [
