@@ -1,20 +1,14 @@
 import type { EntrantType } from './vocabulary';
 
 /**
- * What a start.gg import would do, and what it did.
+ * How a start.gg row reconciles against what is already here.
  *
- * The preview is a plan: every row carries the action the import will take and
- * the local row it matched, so the person confirming sees the writes before
- * they happen.
+ * Each row carries the action the import will take and the local row it
+ * matched, in the vocabulary of the reconciliation itself. The preview no
+ * longer answers with these: it answers with a StructurePlan, which is the
+ * shape every producer of structure shares. They stay because they are what
+ * the reconciliation computes before it is generalised.
  */
-
-export type StartggImportEventDto = {
-    id: string;
-    name: string;
-    slug: string;
-    tournament?: { id: string; name: string; slug?: string | null } | null;
-    phases: Array<{ id: string; name: string }>;
-};
 
 export type StartggImportParticipantPlanDto = {
     externalId: string;
@@ -55,23 +49,6 @@ export type StartggImportCountsDto = {
     entrants: number;
     phases: number;
     matches: number;
-};
-
-export type StartggImportPreviewResponseDto = {
-    event: StartggImportEventDto;
-    targetTournamentId: number | null;
-    mode: string;
-    division: {
-        externalId: string;
-        name: string;
-        action: string;
-        localDivisionId: number | null;
-    };
-    counts: StartggImportCountsDto;
-    participants: StartggImportParticipantPlanDto[];
-    entrants: StartggImportEntrantPlanDto[];
-    phases: StartggImportPhasePlanDto[];
-    matches: StartggImportMatchPlanDto[];
 };
 
 export type StartggImportResponseDto = {

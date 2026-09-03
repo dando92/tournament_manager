@@ -12,8 +12,11 @@ import {
     StartggImportMatchPlanDto,
     StartggImportParticipantPlanDto,
     StartggImportPhasePlanDto,
-    StartggImportPreviewResponseDto,
     StartggImportResponseDto,
+    type PlanAction,
+    type PlanLinkEvidence,
+    type PlanNode,
+    type StructurePlan,
 } from '@tournament-manager/contracts';
 import {
     Division,
@@ -101,7 +104,7 @@ export class StartggService {
         private readonly externalMappingRepository: Repository<ExternalMapping>,
     ) {}
 
-    async previewImport(dto: StartggImportPreviewDto, user?: AuthUser): Promise<StartggImportPreviewResponseDto> {
+    async previewImport(dto: StartggImportPreviewDto, user?: AuthUser): Promise<StructurePlan> {
         const previewStartedAt = Date.now();
         this.logger.log(`[timing] start previewImport eventSlug=${dto.eventSlug} targetTournamentId=${dto.targetTournamentId ?? 'none'}`);
         if (!dto.targetTournamentId) {
@@ -247,39 +250,136 @@ export class StartggService {
             };
         }));
 
-        const result: StartggImportPreviewResponseDto = {
-            event: {
-                id: snapshot.id,
-                name: snapshot.name,
-                slug: snapshot.slug,
-                tournament: snapshot.tournament ?? null,
-                phases: snapshot.phases.map((phase) => ({
-                    id: phase.id,
-                    name: phase.name,
-                })),
-            },
-            targetTournamentId: dto.targetTournamentId ?? null,
-            mode: dto.mode ?? 'create-division',
-            division: {
-                externalId: snapshot.id,
-                name: snapshot.name,
-                action: mappedDivision ? 'mapped' : 'create-division',
-                localDivisionId: mappedDivision?.id ?? null,
-            },
-            counts: {
-                participants: participantPlan.length,
-                entrants: entrantPlan.length,
-                phases: phasePlan.length,
-                matches: matchPlan.length,
-            },
-            participants: participantPlan,
-            entrants: entrantPlan,
-            phases: phasePlan,
-            matches: matchPlan,
-        };
+        const result = this.planOf(snapshot, dto, mappedDivision, { participantPlan, entrantPlan, phasePlan, matchPlan });
 
         this.logger.log(`[timing] complete previewImport eventSlug=${dto.eventSlug} durationMs=${Date.now() - previewStartedAt}`);
         return result;
+    }
+
+    /**
+     * The reconciliation, as the plan every producer of structure answers with.
+     *
+     * The rows above already carried the two facts that matter — what applying
+     * will do to each of them, and the local row each one matched — in a
+     * vocabulary of their own: `mapped`, `match-existing-participant`,
+     * `create-player-and-participant`. That vocabulary is start.gg's, and it is
+     * kept here where the reconciliation happens; what leaves is the general
+     * shape, so the same renderer draws an import, a generated bracket and a
+     * single pool somebody typed.
+     *
+     * Nothing composes a sentence for the reader. `action` says what happens,
+     * `linkEvidence` says whether a link was a stored mapping or a name that
+     * looked the same, and the words belong to whoever is drawing them.
+     */
+    private planOf(
+        snapshot: StartggEventSnapshot,
+        dto: StartggImportPreviewDto,
+        mappedDivision: Division | null,
+        rows: {
+            participantPlan: StartggImportParticipantPlanDto[];
+            entrantPlan: StartggImportEntrantPlanDto[];
+            phasePlan: StartggImportPhasePlanDto[];
+            matchPlan: StartggImportMatchPlanDto[];
+        },
+    ): StructurePlan {
+        const divisionLocalId = 'division';
+        const nodes: PlanNode[] = [
+            {
+                localId: divisionLocalId,
+                kind: 'division',
+                action: mappedDivision ? 'link' : 'create',
+                localRowId: mappedDivision?.id ?? null,
+                linkEvidence: mappedDivision ? 'mapping' : null,
+                external: { provider: 'startgg', externalType: 'event', externalId: snapshot.id },
+                name: snapshot.name,
+            },
+        ];
+
+        for (const participant of rows.participantPlan) {
+            nodes.push({
+                localId: `participant:${participant.externalId}`,
+                kind: 'participant',
+                action: this.planActionOf(participant.action),
+                localRowId: participant.localParticipantId,
+                linkEvidence: this.planLinkEvidenceOf(participant.action),
+                needsAttention: participant.action === 'unscoped-preview' ? 'no-tournament-scope' : null,
+                external: { provider: 'startgg', externalType: 'participant', externalId: participant.externalId },
+                name: participant.gamerTag,
+                localPlayerId: participant.localPlayerId,
+            });
+        }
+
+        for (const entrant of rows.entrantPlan) {
+            nodes.push({
+                localId: `entrant:${entrant.externalId}`,
+                kind: 'entrant',
+                parentLocalId: divisionLocalId,
+                action: this.planActionOf(entrant.action),
+                localRowId: entrant.localEntrantId,
+                linkEvidence: this.planLinkEvidenceOf(entrant.action),
+                external: { provider: 'startgg', externalType: 'entrant', externalId: entrant.externalId },
+                name: entrant.name,
+                entrantType: entrant.type,
+                seedNum: entrant.seedNum,
+                participantLocalIds: entrant.participantExternalIds.map((externalId) => `participant:${externalId}`),
+            });
+        }
+
+        for (const phase of rows.phasePlan) {
+            nodes.push({
+                localId: `phase:${phase.externalId}`,
+                kind: 'phase',
+                parentLocalId: divisionLocalId,
+                action: this.planActionOf(phase.action),
+                localRowId: phase.localPhaseId,
+                linkEvidence: this.planLinkEvidenceOf(phase.action),
+                external: { provider: 'startgg', externalType: 'phase', externalId: phase.externalId },
+                name: phase.name,
+            });
+        }
+
+        for (const match of rows.matchPlan) {
+            nodes.push({
+                localId: `match:${match.externalId}`,
+                kind: 'match',
+                parentLocalId: `phase:${match.phaseExternalId}`,
+                action: this.planActionOf(match.action),
+                localRowId: match.localMatchId,
+                linkEvidence: this.planLinkEvidenceOf(match.action),
+                external: { provider: 'startgg', externalType: 'set', externalId: match.externalId },
+                name: match.name,
+                entrantLocalIds: match.entrantExternalIds.map((externalId) => `entrant:${externalId}`),
+            });
+        }
+
+        return {
+            tournamentId: dto.targetTournamentId!,
+            source: { kind: 'startgg', eventSlug: snapshot.slug, eventName: snapshot.name, readAt: new Date().toISOString() },
+            /* The version an applied plan is checked against is `structureVersion`
+               on the division, which the schema does not carry yet. Until it does,
+               a plan states that it depends on nothing rather than claiming a
+               basis it cannot have measured. */
+            basedOn: [],
+            nodes,
+            /* A start.gg event carries the bracket inside a phase but not the
+               advancement between phases, so an imported structure arrives
+               unwired and the routes are drawn afterwards. */
+            routes: [],
+        };
+    }
+
+    /** What applying does. The vocabulary above says why; this says what. */
+    private planActionOf(action: string): PlanAction {
+        return action === 'mapped' || action.startsWith('match-') ? 'link' : 'create';
+    }
+
+    /** A stored mapping is certain; a name that looked the same is a guess worth showing. */
+    private planLinkEvidenceOf(action: string): PlanLinkEvidence | null {
+        if (action === 'mapped') {
+            return 'mapping';
+        }
+
+        return action.startsWith('match-') ? 'name' : null;
     }
 
     async importEvent(dto: StartggImportDto, user?: AuthUser): Promise<StartggImportResponseDto> {

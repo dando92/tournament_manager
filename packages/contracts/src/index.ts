@@ -8,6 +8,7 @@ export * from './realtime';
 export * from './startgg-import';
 export * from './stats';
 export * from './structure';
+export * from './structure-plan';
 export * from './syncstart';
 export * from './tournament';
 export * from './vocabulary';

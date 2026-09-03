@@ -14,8 +14,10 @@ export type {
   TournamentRefDto as TournamentRef,
   TournamentConfigurationDto as TournamentConfiguration,
   TournamentOverviewDto as TournamentOverview,
-  StartggImportPreviewResponseDto as StartggImportPreviewResponse,
   StartggImportResponseDto as StartggImportResponse,
+  StructurePlan,
+  PlanNode,
+  PlanNodeKind,
 } from "@tournament-manager/contracts";
 
 export type StartggImportMode = "create-division";

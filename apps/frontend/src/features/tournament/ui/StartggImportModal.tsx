@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/shared/components/ui/StatusIcon";
-import type { Status } from "@/shared/components/ui/status";
 import FormModal from "@/shared/components/ui/FormModal";
 import { apiErrorMessage } from "@/shared/lib/apiError";
 import { btnSecondary } from "@/styles/buttonStyles";
@@ -8,7 +7,8 @@ import {
   importStartggEvent,
   previewStartggImport,
 } from "@/features/tournament/api/startgg.api";
-import { StartggImportPreviewResponse } from "@/features/tournament/model/types";
+import type { PlanNode, StructurePlan } from "@/features/tournament/model/types";
+import { planActionLabel, planActionStatus, planCounts, planNodesOfKind } from "@/features/tournament/model/structurePlan";
 
 type Props = {
   open: boolean;
@@ -18,36 +18,9 @@ type Props = {
   onImported?: (result: { tournamentId: number; divisionId: number }) => Promise<void> | void;
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  mapped: "Mapped",
-  "match-existing-participant": "Match existing participant",
-  "create-participant": "Create participant",
-  "create-player-and-participant": "Create player + participant",
-  "match-existing-entrant": "Match existing entrant",
-  "create-entrant": "Create entrant",
-  "create-team-entrant": "Create team entrant",
-  "create-phase": "Create phase",
-  "create-match": "Create match",
-  "create-division": "Create division",
-  "unscoped-preview": "Preview only",
-};
-
-function formatAction(action: string) {
-  return ACTION_LABELS[action] ?? action;
-}
-
-/** What the import did to a row, told by the same glyph the rest of the app uses. */
-function actionStatus(action: string): Status {
-  if (action === "mapped" || action.startsWith("match-")) return "done";
-  if (action.startsWith("create")) return "running";
-  if (action.includes("blocked")) return "failed";
-  return "idle";
-}
-
-function ActionBadge({ action }: { action: string }) {
-  return (
-    <StatusBadge status={actionStatus(action)} label={formatAction(action)} />
-  );
+/** What the plan does to a row, told by the same glyph the rest of the app uses. */
+function ActionBadge({ node }: { node: PlanNode }) {
+  return <StatusBadge status={planActionStatus(node)} label={planActionLabel(node)} />;
 }
 
 export default function StartggImportModal({
@@ -58,7 +31,7 @@ export default function StartggImportModal({
   onImported,
 }: Props) {
   const [eventSlug, setEventSlug] = useState("");
-  const [preview, setPreview] = useState<StartggImportPreviewResponse | null>(null);
+  const [preview, setPreview] = useState<StructurePlan | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
@@ -77,7 +50,6 @@ export default function StartggImportModal({
 
   async function handlePreview() {
     if (!eventSlug.trim() || !fixedTournamentId) return;
-
     setLoadingPreview(true);
     setPreviewError(null);
     try {
@@ -113,6 +85,13 @@ export default function StartggImportModal({
       {loadingPreview ? "Previewing..." : "Preview"}
     </button>
   );
+
+  const event = preview?.source.kind === "startgg" ? preview.source : null;
+  const division = preview ? planNodesOfKind(preview, "division")[0] : undefined;
+  const participants = preview ? planNodesOfKind(preview, "participant") : [];
+  const entrants = preview ? planNodesOfKind(preview, "entrant") : [];
+  const phases = preview ? planNodesOfKind(preview, "phase") : [];
+  const matches = preview ? planNodesOfKind(preview, "match") : [];
 
   return (
     <FormModal
@@ -154,28 +133,30 @@ export default function StartggImportModal({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-ui-text-mute">Event</p>
-                  <h3 className="text-lg font-semibold text-ui-text">{preview.event.name}</h3>
-                  <p className="text-sm text-ui-text-mute">{preview.event.slug}</p>
+                  <h3 className="text-lg font-semibold text-ui-text">{event?.eventName}</h3>
+                  <p className="text-sm text-ui-text-mute">{event?.eventSlug}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm text-ui-text-soft">
-                  <span>Participants: {preview.counts.participants}</span>
-                  <span>Entrants: {preview.counts.entrants}</span>
-                  <span>Phases: {preview.counts.phases}</span>
-                  <span>Matches: {preview.counts.matches}</span>
+                  <span>Participants: {planCounts(preview, "participant").total}</span>
+                  <span>Entrants: {planCounts(preview, "entrant").total}</span>
+                  <span>Phases: {planCounts(preview, "phase").total}</span>
+                  <span>Matches: {planCounts(preview, "match").total}</span>
                 </div>
               </div>
             </div>
 
-            <section className="rounded border border-ui-border p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-semibold text-ui-text">Division</h4>
-                  <p className="text-sm text-ui-text-mute">Local division target for this event import.</p>
+            {division && (
+              <section className="rounded border border-ui-border p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold text-ui-text">Division</h4>
+                    <p className="text-sm text-ui-text-mute">Local division target for this event import.</p>
+                  </div>
+                  <ActionBadge node={division} />
                 </div>
-                <ActionBadge action={preview.division.action} />
-              </div>
-              <p className="text-sm text-ui-text">{preview.division.name}</p>
-            </section>
+                <p className="text-sm text-ui-text">{division.name}</p>
+              </section>
+            )}
 
             <section className="rounded border border-ui-border p-4">
               <div className="mb-3">
@@ -183,13 +164,13 @@ export default function StartggImportModal({
                 <p className="text-sm text-ui-text-mute">How each imported player identity will resolve locally.</p>
               </div>
               <div className="grid gap-2">
-                {preview.participants.map((participant) => (
-                  <div key={participant.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                {participants.map((participant) => (
+                  <div key={participant.localId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                     <div>
-                      <p className="font-medium text-ui-text">{participant.gamerTag}</p>
-                      <p className="text-xs text-ui-text-mute">start.gg participant {participant.externalId}</p>
+                      <p className="font-medium text-ui-text">{participant.name}</p>
+                      <p className="text-xs text-ui-text-mute">start.gg participant {participant.external?.externalId}</p>
                     </div>
-                    <ActionBadge action={participant.action} />
+                    <ActionBadge node={participant} />
                   </div>
                 ))}
               </div>
@@ -201,16 +182,16 @@ export default function StartggImportModal({
                 <p className="text-sm text-ui-text-mute">Event entrants, including singles and team cases.</p>
               </div>
               <div className="grid gap-2">
-                {preview.entrants.map((entrant) => (
-                  <div key={entrant.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                {entrants.map((entrant) => (
+                  <div key={entrant.localId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                     <div>
                       <p className="font-medium text-ui-text">{entrant.name}</p>
                       <p className="text-xs text-ui-text-mute">
-                        {entrant.type} entrant
-                        {entrant.seedNum !== null ? ` • seed ${entrant.seedNum}` : ""}
+                        {entrant.entrantType} entrant
+                        {entrant.seedNum ? ` • seed ${entrant.seedNum}` : ""}
                       </p>
                     </div>
-                    <ActionBadge action={entrant.action} />
+                    <ActionBadge node={entrant} />
                   </div>
                 ))}
               </div>
@@ -223,10 +204,10 @@ export default function StartggImportModal({
                   <p className="text-sm text-ui-text-mute">Phase structure to create or reuse.</p>
                 </div>
                 <div className="grid gap-2">
-                  {preview.phases.map((phase) => (
-                    <div key={phase.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                  {phases.map((phase) => (
+                    <div key={phase.localId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                       <span className="font-medium text-ui-text">{phase.name}</span>
-                      <ActionBadge action={phase.action} />
+                      <ActionBadge node={phase} />
                     </div>
                   ))}
                 </div>
@@ -238,14 +219,14 @@ export default function StartggImportModal({
                   <p className="text-sm text-ui-text-mute">Imported sets that will become local matches.</p>
                 </div>
                 <div className="grid gap-2">
-                  {preview.matches.slice(0, 12).map((match) => (
-                    <div key={match.externalId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
+                  {matches.slice(0, 12).map((match) => (
+                    <div key={match.localId} className="flex items-center justify-between gap-3 rounded bg-ui-raised px-3 py-2 text-sm">
                       <span className="font-medium text-ui-text">{match.name}</span>
-                      <ActionBadge action={match.action} />
+                      <ActionBadge node={match} />
                     </div>
                   ))}
-                  {preview.matches.length > 12 && (
-                    <p className="text-xs text-ui-text-mute">Showing 12 of {preview.matches.length} matches in preview.</p>
+                  {matches.length > 12 && (
+                    <p className="text-xs text-ui-text-mute">Showing 12 of {matches.length} matches in preview.</p>
                   )}
                 </div>
               </section>

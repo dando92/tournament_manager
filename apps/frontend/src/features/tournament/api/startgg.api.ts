@@ -1,15 +1,15 @@
 import axios from "axios";
 import {
   StartggImportPreviewRequest,
-  StartggImportPreviewResponse,
   StartggImportResponse,
+  StructurePlan,
 } from "@/features/tournament/model/types";
 
 export async function previewStartggImport(
   tournamentId: number,
   payload: Omit<StartggImportPreviewRequest, "targetTournamentId">,
-): Promise<StartggImportPreviewResponse> {
-  const response = await axios.post<StartggImportPreviewResponse>(`tournaments/${tournamentId}/startgg/import-preview`, payload);
+): Promise<StructurePlan> {
+  const response = await axios.post<StructurePlan>(`tournaments/${tournamentId}/startgg/import-preview`, payload);
   return response.data;
 }
 
