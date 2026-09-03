@@ -16,6 +16,7 @@ FROM node:22-alpine AS manifests
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/scoring/package.json packages/scoring/package.json
+COPY packages/brackets/package.json packages/brackets/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/persistence/package.json packages/persistence/package.json
 COPY packages/live-messaging/package.json packages/live-messaging/package.json
@@ -64,6 +65,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=runtime-dependencies /app ./
 COPY --from=build /app/packages/scoring/dist packages/scoring/dist
+COPY --from=build /app/packages/brackets/dist packages/brackets/dist
 COPY --from=build /app/packages/contracts/dist packages/contracts/dist
 COPY --from=build /app/packages/persistence/dist packages/persistence/dist
 COPY --from=build /app/packages/live-messaging/dist packages/live-messaging/dist

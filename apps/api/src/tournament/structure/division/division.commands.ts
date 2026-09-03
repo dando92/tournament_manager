@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { GenerateBracketResultDto } from '@tournament-manager/contracts';
 
 import { BracketCommands } from '@bracket/bracket.commands';
@@ -172,9 +172,6 @@ export class DivisionCommands {
         const division = await this.store.loadOrFail(divisionId);
         division.assertCanGenerateBracket();
 
-        const system = this.bracketSystems.getBracketSystem(input.bracketType);
-        if (!system) throw new BadRequestException(`Unknown bracket type ${input.bracketType}`);
-
         const entrants = division.activeEntrants;
         const phase = input.phaseId
             ? division.phase(input.phaseId)
@@ -186,7 +183,13 @@ export class DivisionCommands {
         }
 
         const phaseGroupId = await this.phaseGroups.createForBracket(phase.id, input.bracketType);
-        await system.generateForExistingPhaseGroup(phase, phaseGroupId, entrants, input.playerPerMatch ?? 2);
+        await this.bracketSystems.generate({
+            phaseGroupId,
+            entrants,
+            bracketType: input.bracketType,
+            playerPerMatch: input.playerPerMatch ?? 2,
+            scoringSystem: division.defaultScoringSystem,
+        });
 
         return { phaseId: phase.id, phaseGroupId };
     }

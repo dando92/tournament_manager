@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Division, Entrant, Participant, Phase, Tournament } from '@tournament-manager/persistence';
+import type { ScoringSystemType } from '@tournament-manager/scoring';
 
 /** Where a division sits, and therefore where the events it produces are routed. */
 export type DivisionAddress = {
@@ -61,6 +62,18 @@ export class DivisionAggregate {
     /** The number a generated phase takes in its name, when nobody supplied one. */
     get nextPhaseNumber(): number {
         return (this.division.phases?.length ?? 0) + 1;
+    }
+
+    /**
+     * What a match created here is scored by.
+     *
+     * A generated match used to be scored by a literal written into the
+     * generator, so a bracket ignored the setting a hand-made match honoured
+     * — see FQ-051. The tournament is already in the loaded graph, so reading
+     * it costs nothing.
+     */
+    get defaultScoringSystem(): ScoringSystemType {
+        return this.division.tournament.defaultScoringSystem;
     }
 
     /**

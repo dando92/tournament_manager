@@ -6,6 +6,8 @@ export function formatBracketType(bracketType: string | null | undefined): strin
     case "DoubleElimination":
     case "DOUBLE_ELIMINATION":
       return "Double elimination";
+    case "Manual":
+      return "First phase only";
     case "RoundRobin":
     case "ROUND_ROBIN":
       return "Round robin";

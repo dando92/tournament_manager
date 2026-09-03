@@ -3,6 +3,7 @@ import FormModal from "@/shared/components/ui/FormModal";
 import Select from "@/shared/components/ui/Select";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { GenerateBracketRequest } from "@/features/division/model/types";
+import { formatBracketType } from "@/features/division/model/bracketType";
 import { readBracketType, writeBracketType } from "@/shared/lib/bracketPreferences";
 
 type Props = {
@@ -126,7 +127,7 @@ export default function GenerateBracketModal({
             }}
             options={bracketTypes.map((candidate) => ({
               value: candidate,
-              label: candidate === "Manual" ? "First phase only" : candidate,
+              label: formatBracketType(candidate) ?? candidate,
             }))}
           />
         </div>

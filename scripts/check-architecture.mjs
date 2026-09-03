@@ -164,6 +164,7 @@ if (/type=raw,value=(latest|testing)/.test(deliveryWorkflow)) {
 const allowedDependencies = new Map([
     ['@tournament-manager/contracts', ['@tournament-manager/scoring']],
     ['@tournament-manager/scoring', []],
+    ['@tournament-manager/brackets', []],
     ['@tournament-manager/persistence', ['@tournament-manager/scoring']],
     ['@tournament-manager/live-messaging', ['@tournament-manager/contracts']],
     ['@tournament-manager/syncstart-protocol', ['@tournament-manager/contracts']],
@@ -173,6 +174,7 @@ const allowedDependencies = new Map([
         '@tournament-manager/api',
         [
             '@tournament-manager/scoring',
+            '@tournament-manager/brackets',
             '@tournament-manager/contracts',
             '@tournament-manager/live-messaging',
             '@tournament-manager/persistence',
@@ -187,6 +189,7 @@ const allowedDependencies = new Map([
 for (const workspace of [
     'packages/contracts',
     'packages/scoring',
+    'packages/brackets',
     'packages/persistence',
     'packages/live-messaging',
     'packages/syncstart-protocol',
@@ -257,7 +260,11 @@ if (/^\s+dockerfile: (?!Dockerfile$)/m.test(localCompose)) {
     errors.push('local Compose services must build targets of the root Dockerfile');
 }
 
-for (const path of [...filesBelow(join(root, 'packages', 'contracts', 'src')), ...filesBelow(join(root, 'packages', 'scoring', 'src'))]) {
+for (const path of [
+    ...filesBelow(join(root, 'packages', 'contracts', 'src')),
+    ...filesBelow(join(root, 'packages', 'scoring', 'src')),
+    ...filesBelow(join(root, 'packages', 'brackets', 'src')),
+]) {
     const source = readFileSync(path, 'utf8');
     if (/from\s+['"](?:typeorm|redis|@nestjs\/)/.test(source)) {
         errors.push(`domain contract/application code imports infrastructure: ${relative(root, path)}`);
