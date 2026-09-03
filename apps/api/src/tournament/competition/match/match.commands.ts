@@ -15,6 +15,7 @@ import { ScheduleMutationGuard } from '@tournament/competition/schedule/schedule
 import { ScheduleRunner } from '@tournament/competition/schedule/schedule.runner';
 import { ScheduleStore } from '@tournament/competition/schedule/schedule.store';
 import { AdvancementRollbackGuard } from '@tournament/structure/advancement/advancement-rollback.guard';
+import { StructureVersionStore } from '@tournament/structure/structure-version.store';
 
 export type CreateMatchInput = MatchDetails & {
     phaseGroupId: number;
@@ -74,6 +75,7 @@ export class MatchCommands {
         private readonly scheduleGuard: ScheduleMutationGuard,
         private readonly scheduleStore: ScheduleStore,
         private readonly advancementRollbackGuard: AdvancementRollbackGuard,
+        private readonly versions: StructureVersionStore,
     ) {}
 
     /** Answers with the new match id: the bracket systems build structures out of them. */
@@ -86,6 +88,7 @@ export class MatchCommands {
         songs.forEach((song) => match.addRound(song));
 
         await this.store.save(match);
+        await this.versions.bump(match.address.divisionId);
         await this.publisher.emitPhaseGroupUpdate(match.address);
 
         return match.id;
@@ -123,6 +126,7 @@ export class MatchCommands {
            pool it touched, whichever way its own standings went. The pool it
            left is named by the address the match had before it moved. */
         if (membershipChanged) {
+            await this.versions.bump(match.address.divisionId);
             await this.publisher.emitPhaseGroupUpdate(match.address);
             if (origin.phaseGroupId !== match.address.phaseGroupId) await this.publisher.emitPhaseGroupUpdate(origin);
         }
@@ -139,6 +143,7 @@ export class MatchCommands {
         await this.advancementRules.deleteInvolvingMatch(matchId);
         await this.store.remove(match);
         if (scheduleId) await this.controlRoom.recalculate(scheduleId);
+        await this.versions.bump(address.divisionId);
         await this.publisher.emitPhaseGroupUpdate(address);
     }
 

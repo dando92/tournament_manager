@@ -4,6 +4,7 @@ import { Entrant } from '@tournament-manager/persistence';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupAggregate, PhaseGroupDetails } from '@tournament/structure/phase-group/phase-group.aggregate';
 import { PhaseGroupStore } from '@tournament/structure/phase-group/phase-group.store';
+import { StructureVersionStore } from '@tournament/structure/structure-version.store';
 
 /**
  * Every change a pool undergoes.
@@ -25,6 +26,7 @@ export class PhaseGroupCommands {
     constructor(
         private readonly store: PhaseGroupStore,
         private readonly publisher: UiUpdatePublisher,
+        private readonly versions: StructureVersionStore,
     ) {}
 
     /** Answers with the new pool id: the caller builds a bracket in what it made. */
@@ -33,6 +35,7 @@ export class PhaseGroupCommands {
         const phaseGroup = PhaseGroupAggregate.create(details, phase);
 
         await this.store.save(phaseGroup);
+        await this.versions.bump(phaseGroup.address.divisionId);
         await this.publisher.emitPhaseUpdate(phaseGroup.phaseAddress);
         await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
 
@@ -44,6 +47,7 @@ export class PhaseGroupCommands {
         phaseGroup.describe(details);
 
         await this.store.save(phaseGroup);
+        await this.versions.bump(phaseGroup.address.divisionId);
         await this.publisher.emitPhaseUpdate(phaseGroup.phaseAddress);
         await this.publisher.emitPhaseGroupUpdate(phaseGroup.address);
     }
@@ -63,6 +67,7 @@ export class PhaseGroupCommands {
         }
 
         await this.store.remove(phaseGroup);
+        await this.versions.bump(phaseAddress.divisionId);
         await this.publisher.emitPhaseUpdate(phaseAddress);
     }
 

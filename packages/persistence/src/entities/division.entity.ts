@@ -21,6 +21,17 @@ export class Division {
   @Column()
   name: string;
 
+  /**
+   * How many times the shape of this division has changed.
+   *
+   * A structure plan records the version it was computed against and is refused
+   * if it has moved, so a preview left open while somebody else edits cannot be
+   * written against rows it never saw. Scores do not move it: a result is not a
+   * change of shape.
+   */
+  @Column({ default: 0 })
+  structureVersion: number;
+
   @OneToMany(() => Phase, (phase) => phase.division, { cascade: true })
   phases: Phase[];
 

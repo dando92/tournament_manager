@@ -6,6 +6,7 @@ import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { DivisionAggregate, DivisionDetails } from '@tournament/structure/division/division.aggregate';
 import { DivisionStore } from '@tournament/structure/division/division.store';
 import { PhaseGroupCommands } from '@tournament/structure/phase-group/phase-group.commands';
+import { StructureVersionStore } from '@tournament/structure/structure-version.store';
 
 export type CreateDivisionInput = DivisionDetails & {
     name: string;
@@ -45,6 +46,7 @@ export class DivisionCommands {
         private readonly publisher: UiUpdatePublisher,
         private readonly phaseGroups: PhaseGroupCommands,
         private readonly bracketSystems: BracketCommands,
+        private readonly versions: StructureVersionStore,
     ) {}
 
     /** Answers with the new division id: the caller navigates into what it made. */
@@ -134,6 +136,7 @@ export class DivisionCommands {
         const phase = division.addPhase(name);
 
         await this.store.save(division);
+        await this.versions.bump(division.id);
         await this.publisher.emitDivisionUpdate(division.address);
         if (withDefaultPhaseGroup) await this.phaseGroups.create(phase.id, {});
 
@@ -145,6 +148,7 @@ export class DivisionCommands {
         division.renamePhase(phaseId, name);
 
         await this.store.save(division);
+        await this.versions.bump(division.id);
         await this.publisher.emitDivisionUpdate(division.address);
     }
 
@@ -153,6 +157,7 @@ export class DivisionCommands {
         division.removePhase(phaseId);
 
         await this.store.save(division);
+        await this.versions.bump(division.id);
         await this.publisher.emitDivisionUpdate(division.address);
     }
 
@@ -183,6 +188,7 @@ export class DivisionCommands {
             await this.publisher.emitDivisionUpdate(division.address);
         }
 
+        await this.versions.bump(division.id);
         const phaseGroupId = await this.phaseGroups.createForBracket(phase.id, input.bracketType);
         await this.bracketSystems.generate({
             phaseGroupId,

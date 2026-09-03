@@ -21,6 +21,10 @@ import { PhasesController } from './structure/division/phase.controller';
 import { AdvancementRuleCommands } from './structure/advancement/advancement-rule.commands';
 import { AdvancementRuleStore } from './structure/advancement/advancement-rule.store';
 import { DivisionCommands } from './structure/division/division.commands';
+import { StructurePlanCommands } from './structure/plan/structure-plan.commands';
+import { StructurePlanController } from './structure/plan/structure-plan.controller';
+import { StructurePlanStore } from './structure/plan/structure-plan.store';
+import { StructureVersionStore } from './structure/structure-version.store';
 import { DivisionStore } from './structure/division/division.store';
 import { PhaseGroupCommands } from './structure/phase-group/phase-group.commands';
 import { PhaseGroupQueries } from './structure/phase-group/phase-group.queries';
@@ -92,6 +96,9 @@ import { TournamentStatsController } from './stats/stats.controller';
         PlayerQueries,
         PlayerStore,
         DivisionCommands,
+        StructurePlanCommands,
+        StructurePlanStore,
+        StructureVersionStore,
         DivisionStore,
         ParticipantsCommands,
         PhaseGroupCommands,
@@ -145,6 +152,7 @@ import { TournamentStatsController } from './stats/stats.controller';
         RoundsController,
         TiebreakController,
         BracketController,
+        StructurePlanController,
         ScheduleController,
         TournamentStatsController,
     ],
