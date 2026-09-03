@@ -171,6 +171,7 @@ export class DivisionCommands {
     async generateBracket(divisionId: number, input: GenerateBracketInput): Promise<GenerateBracketResultDto> {
         const division = await this.store.loadOrFail(divisionId);
         division.assertCanGenerateBracket();
+        this.bracketSystems.assertKnown(input.bracketType);
 
         const entrants = division.activeEntrants;
         const phase = input.phaseId

@@ -41,11 +41,20 @@ export class BracketCommands {
         return this.generators.getAll();
     }
 
-    async generate(command: GenerateBracketCommand): Promise<void> {
-        const generator = this.generators.getGenerator(command.bracketType);
-        if (!generator) {
-            throw new BadRequestException(`Unknown bracket type ${command.bracketType}`);
+    /**
+     * Asked before anything is written, because the caller creates the phase and
+     * the pool the bracket lands in: a shape nobody implements has to be refused
+     * while refusing it still costs nothing.
+     */
+    assertKnown(bracketType: string): void {
+        if (!this.generators.getGenerator(bracketType)) {
+            throw new BadRequestException(`Unknown bracket type ${bracketType}`);
         }
+    }
+
+    async generate(command: GenerateBracketCommand): Promise<void> {
+        this.assertKnown(command.bracketType);
+        const generator = this.generators.getGenerator(command.bracketType)!;
 
         const plan = generator.generate({ entrantCount: command.entrants.length, playerPerMatch: command.playerPerMatch });
 
