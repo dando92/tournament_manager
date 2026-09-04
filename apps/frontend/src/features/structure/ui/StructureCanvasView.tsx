@@ -17,12 +17,12 @@ type Props = {
   mode: CanvasMode;
   selection: CanvasSelection;
   onSelect: (selection: CanvasSelection) => void;
-  onAddCard: (phaseId: number, name: string, keepGoing: boolean) => Promise<void>;
-  onAddPhase: (name: string, keepGoing: boolean) => Promise<void>;
+  onAddCard: (phaseId: number, name: string, keepGoing: boolean) => void;
+  onAddPhase: (name: string, keepGoing: boolean) => void;
   /** The placement chip that is armed, waiting for a target to be clicked. */
   armed: ArmedPlacement | null;
   onArm: (armed: ArmedPlacement | null) => void;
-  onDropRoute: (target: CanvasCard) => Promise<void>;
+  onDropRoute: (target: CanvasCard) => void;
   suggestedCardName: (phaseId: number) => string;
   suggestedPhaseName: string;
 };
@@ -95,12 +95,14 @@ export default function StructureCanvasView({
               <button
                 key={card.key}
                 type="button"
-                onClick={() => (armed ? void onDropRoute(card) : onSelect({ kind: card.kind, id: card.id }))}
+                onClick={() => (armed ? onDropRoute(card) : onSelect({ kind: card.kind, id: card.id }))}
                 className={`absolute flex flex-col rounded-lg border px-2.5 py-2 text-left shadow-card transition-colors ${
                   isSelected(card) || isArmedSource(card)
                     ? "border-ui-border-strong bg-ui-selected shadow-[inset_3px_0_0_0_rgb(var(--ui-accent))]"
                     : "border-ui-border bg-ui-surface hover:bg-ui-raised"
-                } ${isTarget(card) ? "ring-2 ring-ui-accent" : ""}`}
+                } ${card.pending ? "border-dashed border-ui-border-strong bg-transparent shadow-none" : ""} ${
+                  isTarget(card) ? "ring-2 ring-ui-accent" : ""
+                }`}
                 style={{ top: card.top, left: card.left, width: card.width, height: card.height }}
               >
                 <span className="flex items-center gap-2">

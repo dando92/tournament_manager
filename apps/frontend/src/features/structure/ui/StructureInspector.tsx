@@ -4,7 +4,7 @@ import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import AddSlot from "@/features/structure/ui/AddSlot";
-import { btnDanger, btnSecondary, btnTrash, focusRing } from "@/styles/buttonStyles";
+import { btnDanger, btnTrash, focusRing } from "@/styles/buttonStyles";
 import { ordinal, type CanvasCard, type CanvasSelection } from "@/features/structure/model/structureCanvas";
 import type { Match } from "@/features/match/model/types";
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
@@ -14,11 +14,10 @@ type Props = {
   selection: CanvasSelection;
   card: CanvasCard | undefined;
   matches: Match[];
-  onAddMatch: (poolId: number, poolName: string, name: string) => Promise<void>;
-  onRename: (name: string) => Promise<void>;
-  onDelete: () => Promise<void>;
-  onEditRoutes: () => void;
-  onDeleteRoute: (ruleId: number) => Promise<void>;
+  onAddMatch: (poolId: number, name: string) => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+  onDeleteRoute: (targetKind: "pool" | "match", targetId: number, slot: number) => void;
   onClearSelection: () => void;
 };
 
@@ -27,8 +26,9 @@ type Props = {
  *
  * The panel replaces the dialogs one noun at a time used to need: the name is a
  * field rather than a rename dialog, the routes are the sentence the advancement
- * editor already draws, and the danger action sits at the bottom behind its own
- * confirmation. Nothing here opens a window over the canvas, which is the point.
+ * editor already draws, and taking one away is done where it is read. Nothing
+ * here opens a window over the canvas, and nothing here writes: every edit goes
+ * into the draft the page commits in one go.
  */
 export default function StructureInspector({
   division,
@@ -38,7 +38,6 @@ export default function StructureInspector({
   onAddMatch,
   onRename,
   onDelete,
-  onEditRoutes,
   onDeleteRoute,
   onClearSelection,
 }: Props) {
@@ -81,7 +80,7 @@ export default function StructureInspector({
         value={name}
         aria-label="Name"
         onChange={(event) => setName(event.target.value)}
-        onBlur={() => name.trim() && name.trim() !== card.name && void onRename(name.trim())}
+        onBlur={() => name.trim() && name.trim() !== card.name && onRename(name.trim())}
         onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
         className={`mt-1.5 w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
       />
@@ -118,7 +117,7 @@ export default function StructureInspector({
                   <button
                     type="button"
                     aria-label={`Delete the route out of ${ordinal(rule.sourcePlacement)} place`}
-                    onClick={() => void onDeleteRoute(rule.id)}
+                    onClick={() => onDeleteRoute(rule.targetKind === "match" ? "match" : "pool", rule.targetId, rule.targetSlot)}
                     className={`${btnTrash} ml-auto shrink-0`}
                   >
                     <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
@@ -127,10 +126,6 @@ export default function StructureInspector({
               ))}
             </ul>
           )}
-          <button type="button" onClick={onEditRoutes} className={`${btnSecondary} mt-2 w-full text-xs`}>
-            Edit routes
-          </button>
-
           {/* A match is added where it belongs, which is inside a pool. The
               column adds pools; nothing on the canvas has to guess which pool a
               new match was meant for. */}
@@ -148,7 +143,7 @@ export default function StructureInspector({
             <AddSlot
               noun="Match"
               suggestedName={`Match ${poolMatches.length + 1}`}
-              onCreate={(name) => onAddMatch(pool.id, pool.name, name)}
+              onCreate={async (name) => onAddMatch(pool.id, name)}
               className="mt-1.5 h-9"
             />
           )}
@@ -170,11 +165,11 @@ export default function StructureInspector({
       )}
 
       <div className="mt-auto flex items-center gap-2 border-t border-ui-separator pt-3.5">
-        <button type="button" onClick={() => void onDelete()} className={`${btnDanger} text-xs`}>
+        <button type="button" onClick={onDelete} className={`${btnDanger} text-xs`}>
           <FontAwesomeIcon icon={faTrash} className="mr-1.5 text-[10px]" />
           Delete {selection.kind === "pool" ? "pool" : "match"}
         </button>
-        <span className="ml-auto text-[12px] text-ui-text-mute">Saved as you go</span>
+        <span className="ml-auto text-[12px] text-ui-text-mute">Saved on Commit</span>
       </div>
     </aside>
   );

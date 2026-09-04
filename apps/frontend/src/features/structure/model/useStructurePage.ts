@@ -1,10 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import type { StructurePlan } from "@tournament-manager/contracts";
 
 import { applyStructurePlan } from "@/features/structure/api/structure-plan.api";
 import { buildStructureCanvas, type CanvasMode, type CanvasSelection } from "@/features/structure/model/structureCanvas";
+import {
+    changeCount,
+    emptyDraft,
+    indexStructure,
+    projectStructure,
+    toStructurePlan,
+    type StructureDraft,
+} from "@/features/structure/model/structureDraft";
+import { clearStructureDraft, readStructureDraft, writeStructureDraft } from "@/shared/lib/structureDraftStore";
 import { listByDivision } from "@/features/match/api/match.api";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
@@ -20,9 +29,11 @@ import type { TournamentDivisionOption } from "@/features/tournament/model/types
  * button walks the selections you made, and a link opens on the phase you were
  * looking at rather than on the first one.
  *
- * The structure itself is the tree's own query. The page does not load a second
- * copy of it, so a pool renamed here changes in the sidebar without either of
- * them arranging it.
+ * What is being built lives in a draft. Every gesture on the canvas edits it
+ * and nothing on the page writes; the canvas draws the division as the draft
+ * would leave it, and Commit sends the lot as one plan. The structure itself is
+ * still the tree's own query, so a pool this page writes changes in the sidebar
+ * without either of them arranging it.
  */
 export function useStructurePage(tournamentId: number, divisions: TournamentDivisionOption[]) {
     const queryClient = useQueryClient();
@@ -33,9 +44,29 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
 
     const divisionId = Number(params.get("division")) || divisions[0]?.id || 0;
     const division = divisions.find((candidate) => candidate.id === divisionId);
+    const structureVersion = division?.structureVersion ?? 0;
     const mode: CanvasMode = params.get("mode") === "routes" ? "routes" : "build";
 
     const selection = readSelection(params.get("select"));
+
+    const [draft, setDraft] = useState<StructureDraft>(() => readStructureDraft(tournamentId, divisionId) ?? emptyDraft(tournamentId, divisionId));
+
+    /* A draft belongs to one division, so moving to another takes up whatever
+       was left there and leaves this one where it was. */
+    useEffect(() => {
+        if (draft.tournamentId === tournamentId && draft.divisionId === divisionId) {
+            return;
+        }
+        setDraft(readStructureDraft(tournamentId, divisionId) ?? emptyDraft(tournamentId, divisionId));
+    }, [tournamentId, divisionId, draft.tournamentId, draft.divisionId]);
+
+    useEffect(() => {
+        if (changeCount(draft) > 0) {
+            writeStructureDraft(draft);
+        } else {
+            clearStructureDraft();
+        }
+    }, [draft]);
 
     /* The matches are read in both modes. Routing draws them, and building
        needs their rules anyway: a route out of a match is still a route out of
@@ -47,9 +78,11 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
         queryFn: () => listByDivision(divisionId),
     });
 
+    const projected = useMemo(() => projectStructure(division, matches.data ?? [], draft), [division, matches.data, draft]);
+
     const canvas = useMemo(
-        () => buildStructureCanvas({ division, matches: matches.data ?? [], mode, selection }),
-        [division, matches.data, mode, selection],
+        () => buildStructureCanvas({ division: projected.division, matches: projected.matches, mode, selection, pending: projected.pending }),
+        [projected, mode, selection],
     );
 
     function setParam(key: string, value: string | null): void {
@@ -97,20 +130,52 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
         }
     }
 
+    /**
+     * The whole draft, in one plan, in one transaction.
+     *
+     * The draft is only let go once the write has landed: a plan the applier
+     * refused is still the work somebody did, and throwing it away because the
+     * server said no is the one thing that would make this worse than writing
+     * as you go.
+     */
+    async function commit(): Promise<boolean> {
+        if (!division || changeCount(draft) === 0) {
+            return true;
+        }
+
+        const tree = indexStructure(division, matches.data ?? [], draft);
+        const written = await apply(toStructurePlan(draft, division.name, tree, structureVersion));
+        if (written) {
+            setDraft(emptyDraft(tournamentId, divisionId));
+            select(null);
+        }
+
+        return written;
+    }
+
+    function select(next: CanvasSelection): void {
+        setParam("select", next ? `${next.kind}:${next.id}` : null);
+    }
+
     return {
-        division,
+        division: projected.division,
         divisionId,
         mode,
         selection,
         canvas,
-        matches: matches.data ?? [],
+        matches: projected.matches,
         loadingMatches: matches.isLoading,
         applying,
         error,
+        draft,
+        changes: changeCount(draft),
+        edit: (next: (current: StructureDraft) => StructureDraft) => setDraft(next),
+        commit,
+        discard: () => setDraft(emptyDraft(tournamentId, divisionId)),
         dismissError: () => setError(null),
         selectDivision: (id: number) => setParam("division", String(id)),
         setMode: (next: CanvasMode) => setParam("mode", next),
-        select: (next: CanvasSelection) => setParam("select", next ? `${next.kind}:${next.id}` : null),
+        select,
         apply,
         refresh,
         tree,

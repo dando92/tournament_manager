@@ -9,7 +9,7 @@ type AddSlotProps = {
   noun: string;
   suggestedName: string;
   disabled?: boolean;
-  onCreate: (name: string, keepGoing: boolean) => Promise<void>;
+  onCreate: (name: string, keepGoing: boolean) => Promise<void> | void;
   className?: string;
   style?: React.CSSProperties;
 };

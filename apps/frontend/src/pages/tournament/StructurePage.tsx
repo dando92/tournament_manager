@@ -1,33 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import type { PlanNode, StructurePlan } from "@tournament-manager/contracts";
+import type { StructurePlan } from "@tournament-manager/contracts";
 
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { useStructurePage } from "@/features/structure/model/useStructurePage";
-import { routePlan, singleNodePlan } from "@/features/structure/model/generatorPlan";
+import { addNode, clearSlot, drawRoute, indexStructure, removeNode, renameNode } from "@/features/structure/model/structureDraft";
 import StructureCanvasView from "@/features/structure/ui/StructureCanvasView";
 import StructureInspector from "@/features/structure/ui/StructureInspector";
 import GeneratePanel from "@/features/structure/ui/GeneratePanel";
 import PlanPreviewColumn from "@/features/structure/ui/PlanPreviewColumn";
 import AddSlot from "@/features/structure/ui/AddSlot";
-import { deleteMatch, renameMatch } from "@/features/match/api/match.api";
-import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { nextPoolName } from "@/features/division/model/poolVisibility";
-import { poolPath } from "@/features/tournament/model/treeSelection";
-import { btnSecondary, focusRing } from "@/styles/buttonStyles";
+import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 import type { ArmedPlacement, CanvasCard } from "@/features/structure/model/structureCanvas";
 
 /**
- * The whole shape of a division, on one page.
+ * The whole shape of a division, on one page, written once.
  *
  * It replaces six dialogs that each knew one noun and none of which showed the
  * thing being changed: the dashed slots create, the panel edits whatever is
  * selected, and a route is drawn between two cards that are both on screen. The
  * header counts what is wrong rather than what exists, because a missing route
  * is the one thing no dialog could ever have reported.
+ *
+ * Nothing here writes. Every gesture edits a draft, the canvas draws the
+ * division as that draft would leave it, and Commit sends the whole change as
+ * one plan in one transaction. What is on the canvas and not yet in the
+ * database is drawn with the dashed outline, which is what the design system
+ * already means by a thing that is not there yet.
  *
  * Below `lg` this redirects to the tree, which keeps its single-row creations
  * on every size. The rule is that the tree creates rows and this page creates
@@ -36,7 +38,6 @@ import type { ArmedPlacement, CanvasCard } from "@/features/structure/model/stru
 export default function StructurePage() {
     const { tournamentId, divisions, controls, hasStartggApiKey } = useTournamentPageContext();
     const tree = useTournamentTree();
-    const navigate = useNavigate();
     const page = useStructurePage(tournamentId, divisions);
     const [preview, setPreview] = useState<StructurePlan | null>(null);
     const [panel, setPanel] = useState<"inspector" | "generate">("inspector");
@@ -65,111 +66,51 @@ export default function StructurePage() {
      * becomes a target, and the second click makes the rule. Click-click rather
      * than drag, because the canvas scrolls between the two ends.
      */
-    async function dropRoute(target: CanvasCard): Promise<void> {
-        if (!armed || !page.division) return;
+    function dropRoute(target: CanvasCard): void {
+        if (!armed) return;
 
-        const sourceName = nameOf(armed.kind, armed.id);
-        if (!sourceName) return;
-
-        const source: PlanNode = { localId: "source", kind: planKind(armed.kind), action: "link", localRowId: armed.id, name: sourceName };
-        const destination: PlanNode = { localId: "target", kind: planKind(target.kind), action: "link", localRowId: target.id, name: target.name };
-        const nextSlot = target.kind === "match" ? (target.slots.find((slot) => !slot.from)?.slot ?? target.slots.length + 1) : armed.placement;
-
-        await page.apply(
-            routePlan(tournamentId, [source, destination], {
-                sourceLocalId: "source",
-                sourcePlacement: armed.placement,
-                targetLocalId: "target",
-                targetSlot: nextSlot,
+        const slot = target.kind === "match" ? (target.slots.find((entry) => !entry.from)?.slot ?? target.slots.length + 1) : armed.placement;
+        page.edit((draft) =>
+            drawRoute(draft, {
+                sourceKind: armed.kind,
+                sourceId: armed.id,
+                placement: armed.placement,
+                targetKind: target.kind,
+                targetId: target.id,
+                slot,
             }),
         );
         setArmed(null);
     }
 
     /** What a card in a column is: the pool. A match is added from its pool. */
-    async function addPool(phaseId: number, name: string): Promise<void> {
-        await tree.createPool(phaseId, name);
-        await page.refresh();
+    function addPool(phaseId: number, name: string): void {
+        page.edit((draft) => addNode(draft, "pool", phaseId, name));
     }
 
-    async function addMatch(poolId: number, poolName: string, name: string): Promise<void> {
-        await page.apply(
-            singleNodePlan(
-                tournamentId,
-                { localId: "match", kind: "match", parentLocalId: "pool", action: "create", name },
-                [{ localId: "pool", kind: "phaseGroup", action: "link", localRowId: poolId, name: poolName }],
-            ),
-        );
+    function addMatch(poolId: number, name: string): void {
+        page.edit((draft) => addNode(draft, "match", poolId, name));
     }
 
-    function nameOf(kind: "pool" | "match", id: number): string | undefined {
-        if (kind === "match") {
-            return page.matches.find((match) => match.id === id)?.name;
-        }
-
-        return page.division?.phases.flatMap((phase) => phase.phaseGroups ?? []).find((pool) => pool.id === id)?.name;
+    function addPhase(name: string): void {
+        page.edit((draft) => addNode(draft, "phase", page.divisionId, name));
     }
 
-    async function addPhase(name: string): Promise<void> {
-        if (!page.division) return;
-        await tree.addPhase(page.division.id, name);
-        await page.refresh();
-    }
-
-    async function rename(name: string): Promise<void> {
+    function rename(name: string): void {
         if (!page.selection) return;
-        if (page.selection.kind === "pool") {
-            await tree.renamePoolNode(page.selection.id, name);
-        } else {
-            await renameMatch(page.selection.id, name);
-        }
-        await page.refresh();
+        page.edit((draft) => renameNode(draft, page.selection!, name));
     }
 
-    async function remove(): Promise<void> {
+    function remove(): void {
         if (!page.selection) return;
-        if (page.selection.kind === "pool") {
-            await tree.removePool(page.selection.id);
-        } else {
-            await deleteMatch(page.selection.id);
-        }
+        const selected = page.selection;
+        page.edit((draft) => removeNode(draft, selected, indexStructure(page.division, page.matches, draft)));
         page.select(null);
-        await page.refresh();
     }
 
-    /**
-     * A route can be taken away where it is read.
-     *
-     * The write replaces every rule leaving that pool, which is the shape the
-     * advancement route has always had: the rules of one source are saved
-     * together, so removing one is sending the others.
-     */
-    async function deleteRoute(ruleId: number): Promise<void> {
-        const pool = page.division?.phases.flatMap((phase) => phase.phaseGroups ?? []).find((candidate) => candidate.id === page.selection?.id);
-        if (!pool) return;
-
-        const remaining = (pool.advancementRules ?? [])
-            .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === pool.id && rule.id !== ruleId)
-            .map((rule) => ({
-                sourcePlacement: rule.sourcePlacement,
-                targetKind: rule.targetKind,
-                targetId: rule.targetId,
-                targetSlot: rule.targetSlot,
-            }));
-
-        await updateAdvancementRulesForSource("phase_group", pool.id, remaining);
-        await page.refresh();
-    }
-
-    /**
-     * The rules of a pool are also a sentence, and that editor is the path from a
-     * phone and from a keyboard. It is not a leftover: an alternative to pointing
-     * at two cards has to exist, so the panel opens the same one.
-     */
-    function openRouteEditor(): void {
-        const phase = page.division?.phases.find((candidate) => (candidate.phaseGroups ?? []).some((pool) => pool.id === page.selection?.id));
-        if (!page.division || !phase || page.selection?.kind !== "pool") return;
-        navigate(`${poolPath(tournamentId, page.division.id, phase.id, page.selection.id)}?edit=advancement`);
+    /** A route is taken away where it is read, by emptying the slot it filled. */
+    function deleteRoute(targetKind: "pool" | "match", targetId: number, slot: number): void {
+        page.edit((draft) => clearSlot(draft, { targetKind, targetId, slot }));
     }
 
     if (!controls) {
@@ -181,6 +122,11 @@ export default function StructurePage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <h1 className="text-2xl font-bold tracking-tight text-ui-text">Structure</h1>
                 <div className="flex flex-wrap items-center gap-2.5">
+                    {page.changes > 0 && (
+                        <span className="rounded-full border border-ui-border-strong px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ui-text-mute">
+                            {page.changes} {page.changes === 1 ? "change" : "changes"} not saved
+                        </span>
+                    )}
                     {page.canvas.danglingPlacements > 0 && (
                         <span className="rounded-full border border-state-pending/40 bg-state-pending/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ui-text-mute">
                             {page.canvas.danglingPlacements} {page.canvas.danglingPlacements === 1 ? "placement goes" : "placements go"} nowhere
@@ -219,6 +165,19 @@ export default function StructurePage() {
                         className={`${btnSecondary} text-xs`}
                     >
                         Import…
+                    </button>
+                    {/* One structure, one write. Everything above edits a draft
+                        and this is the only thing on the page that saves. */}
+                    <button type="button" disabled={page.changes === 0} onClick={() => void page.discard()} className={`${btnSecondary} text-xs`}>
+                        Discard
+                    </button>
+                    <button
+                        type="button"
+                        disabled={page.changes === 0 || page.applying}
+                        onClick={() => void page.commit()}
+                        className={`${btnPrimary} text-xs`}
+                    >
+                        {page.applying ? "Committing…" : "Commit"}
                     </button>
                 </div>
             </div>
@@ -289,8 +248,8 @@ export default function StructurePage() {
                         mode={page.mode}
                         selection={page.selection}
                         onSelect={page.select}
-                        onAddCard={addPool}
-                        onAddPhase={addPhase}
+                        onAddCard={(phaseId, name) => addPool(phaseId, name)}
+                        onAddPhase={(name) => addPhase(name)}
                         armed={armed}
                         onArm={setArmed}
                         onDropRoute={dropRoute}
@@ -318,7 +277,6 @@ export default function StructurePage() {
                         onAddMatch={addMatch}
                         onRename={rename}
                         onDelete={remove}
-                        onEditRoutes={openRouteEditor}
                         onDeleteRoute={deleteRoute}
                         onClearSelection={() => page.select(null)}
                     />
@@ -330,9 +288,4 @@ export default function StructurePage() {
 
 function selectionKey(selection: ReturnType<typeof useStructurePage>["selection"]): string | null {
     return selection ? `${selection.kind}:${selection.id}` : null;
-}
-
-/** What the canvas calls a pool, and what a plan calls the same thing. */
-function planKind(kind: "pool" | "match"): PlanNode["kind"] {
-    return kind === "pool" ? "phaseGroup" : "match";
 }

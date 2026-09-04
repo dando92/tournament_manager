@@ -87,6 +87,8 @@ export type CanvasCard = {
     width: number;
     /** The pool a nested match hangs under, which is what a route falls back to. */
     poolId: number;
+    /** Drawn but not written: the draft would make it, and Commit has not run. */
+    pending: boolean;
 };
 
 export type CanvasColumn = {
@@ -128,6 +130,8 @@ export type StructureCanvasInput = {
     matches: Match[];
     mode: CanvasMode;
     selection: CanvasSelection;
+    /** The card keys a draft would create, drawn as not there yet. */
+    pending?: Set<string>;
     /** How many placements a pool is expected to send on, when nothing says. */
     advancingPlaces?: number;
 };
@@ -164,9 +168,11 @@ export function buildStructureCanvas(input: StructureCanvasInput): StructureCanv
     const matchesByPool = groupMatchesByPool(input.matches);
     const advancingPlaces = input.advancingPlaces ?? 2;
 
+    const pending = input.pending ?? new Set<string>();
+
     const columns = phases.map((phase, index) => {
         const left = index * (COLUMN_WIDTH + COLUMN_GAP);
-        const cards = input.mode === "routes" ? routingCards(phase, matchesByPool) : poolCards(phase, matchesByPool, advancingPlaces);
+        const cards = input.mode === "routes" ? routingCards(phase, matchesByPool, pending) : poolCards(phase, matchesByPool, advancingPlaces, pending);
         const last = cards.at(-1);
 
         return {
@@ -216,11 +222,11 @@ function sized(card: Omit<CanvasCard, "top" | "height">, top: number): CanvasCar
     return { ...card, top, height: cardHeight(card) };
 }
 
-function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, advancingPlaces: number): CanvasCard[] {
+function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, advancingPlaces: number, pending: Set<string>): CanvasCard[] {
     let top = FIRST_CARD_TOP;
 
     return (phase.phaseGroups ?? []).map((pool) => {
-        const card = sized(poolCard(pool, matchesByPool, placementChips(pool, advancingPlaces)), top);
+        const card = sized(poolCard(pool, matchesByPool, placementChips(pool, advancingPlaces), pending), top);
         top += card.height + CARD_GAP;
 
         return card;
@@ -235,17 +241,17 @@ function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<numb
  * to the next. Drawing one at a time is what made a route disappear when the
  * view changed rather than when the rule did.
  */
-function routingCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>): CanvasCard[] {
+function routingCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, pending: Set<string>): CanvasCard[] {
     const cards: CanvasCard[] = [];
     let top = FIRST_CARD_TOP;
 
     for (const pool of phase.phaseGroups ?? []) {
-        const card = sized(poolCard(pool, matchesByPool, routedChips(poolRulesOf(pool))), top);
+        const card = sized(poolCard(pool, matchesByPool, routedChips(poolRulesOf(pool)), pending), top);
         cards.push(card);
         top += card.height + NESTED_GAP;
 
         for (const match of matchesByPool.get(pool.id) ?? []) {
-            const nested = sized(matchCard(match, pool), top);
+            const nested = sized(matchCard(match, pool, pending), top);
             cards.push(nested);
             top += nested.height + NESTED_GAP;
         }
@@ -256,7 +262,12 @@ function routingCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<n
     return cards;
 }
 
-function poolCard(pool: PhaseGroup, matchesByPool: Map<number, Match[]>, chips: PlacementChip[]): Omit<CanvasCard, "top" | "height"> {
+function poolCard(
+    pool: PhaseGroup,
+    matchesByPool: Map<number, Match[]>,
+    chips: PlacementChip[],
+    pending: Set<string>,
+): Omit<CanvasCard, "top" | "height"> {
     return {
         key: poolKey(pool.id),
         kind: "pool",
@@ -269,10 +280,11 @@ function poolCard(pool: PhaseGroup, matchesByPool: Map<number, Match[]>, chips: 
         left: 0,
         width: COLUMN_WIDTH,
         poolId: pool.id,
+        pending: pending.has(poolKey(pool.id)),
     };
 }
 
-function matchCard(match: Match, pool: PhaseGroup): Omit<CanvasCard, "top" | "height"> {
+function matchCard(match: Match, pool: PhaseGroup, pending: Set<string>): Omit<CanvasCard, "top" | "height"> {
     return {
         key: matchKey(match.id),
         kind: "match",
@@ -285,6 +297,7 @@ function matchCard(match: Match, pool: PhaseGroup): Omit<CanvasCard, "top" | "he
         left: NEST_INDENT,
         width: COLUMN_WIDTH - NEST_INDENT,
         poolId: pool.id,
+        pending: pending.has(matchKey(match.id)),
     };
 }
 
