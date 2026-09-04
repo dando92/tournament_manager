@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { toast } from "react-toastify";
 import { useAuthContext } from "@/features/auth/model/AuthContext";
 import { updateAccountProfile } from "@/features/auth/api/account.api";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 /**
  * The signed-in account as its own page edits it.
@@ -13,6 +13,7 @@ import { updateAccountProfile } from "@/features/auth/api/account.api";
  */
 export function useAccountInfoPage() {
   const { state, actions } = useAuthContext();
+  const { report, dismiss } = usePageNotices();
   const { account } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,8 +41,9 @@ export function useAccountInfoPage() {
       setProfilePicture(base64);
       await updateAccountProfile(account.id, { profilePicture: base64 });
       await actions.loadCurrentUser();
+      dismiss("Failed to update profile picture.");
     } catch {
-      toast.error("Failed to update profile picture.");
+      report("Failed to update profile picture.");
     } finally {
       setSavingPicture(false);
     }
@@ -54,8 +56,9 @@ export function useAccountInfoPage() {
       await updateAccountProfile(account.id, { playerName, nationality, grooveStatsApi });
       await actions.loadCurrentUser();
       setEditingProfile(false);
+      dismiss("Failed to update profile.");
     } catch {
-      toast.error("Failed to update profile.");
+      report("Failed to update profile.");
     } finally {
       setSaving(false);
     }

@@ -1,19 +1,29 @@
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 import { AdminAccount } from "@/features/auth/model/types";
 import { listAccounts, updateAccountFlags } from "@/features/auth/api/account.api";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 type AccountFlag = "isAdmin" | "isTournamentCreator";
 
-/** Every account and the two flags an administrator may set on it. */
+const UPDATE_FAILED = "Failed to update the account.";
+
+/**
+ * Every account and the two flags an administrator may set on it.
+ *
+ * A list that would not load is missing content rather than a refused action,
+ * so it is answered where the list would have been. Setting a flag is an action
+ * taken on the page, so its failure goes to the page notice slot.
+ */
 export function useManageRolesPage() {
+  const { report, dismiss } = usePageNotices();
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failedToLoad, setFailedToLoad] = useState(false);
 
   useEffect(() => {
     listAccounts()
       .then(setAccounts)
-      .catch(() => toast.error("Failed to load accounts."))
+      .catch(() => setFailedToLoad(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -21,10 +31,11 @@ export function useManageRolesPage() {
     try {
       const updated = await updateAccountFlags(accountId, { [flag]: value });
       setAccounts((current) => current.map((account) => (account.id === accountId ? updated : account)));
+      dismiss(UPDATE_FAILED);
     } catch {
-      toast.error("Failed to update.");
+      report(UPDATE_FAILED);
     }
   }
 
-  return { accounts, loading, changeFlag };
+  return { accounts, loading, failedToLoad, changeFlag };
 }

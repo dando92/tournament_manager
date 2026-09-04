@@ -1,33 +1,24 @@
 import { useReducer } from "react";
 import { authReducer, initialState } from "@/features/auth/model/authReducer";
 import * as AuthApi from "@/features/auth/api/auth.api";
-import { toast } from "react-toastify";
 
 export function useAuth() {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  /* Neither of these reports anything: the form that asked is still on screen
+     with everything typed in it, and it states its own failure there. */
   async function login(username: string, password: string) {
-    try {
-      const { access_token } = await AuthApi.login(username, password);
-      localStorage.setItem("access_token", access_token);
+    const { access_token } = await AuthApi.login(username, password);
+    localStorage.setItem("access_token", access_token);
 
-      const account = await AuthApi.fetchMe();
-      dispatch({ type: "onLogin", payload: { token: access_token, account } });
-      return account;
-    } catch (error) {
-      toast.error("Login failed. Check your credentials.");
-      throw error;
-    }
+    const account = await AuthApi.fetchMe();
+    dispatch({ type: "onLogin", payload: { token: access_token, account } });
+    return account;
   }
 
   async function register(username: string, email: string, password: string, playerName?: string) {
-    try {
-      await AuthApi.register(username, email, password, playerName);
-      return await login(username, password);
-    } catch (error) {
-      toast.error("Registration failed.");
-      throw error;
-    }
+    await AuthApi.register(username, email, password, playerName);
+    return await login(username, password);
   }
 
   async function loadCurrentUser() {

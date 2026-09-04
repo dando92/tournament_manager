@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { importSongs } from "@/features/song/api/song.api";
 import {
   DirectoryPickerUnsupportedError,
@@ -9,6 +8,7 @@ import {
 import { scanSongsDirectory } from "@/features/song/model/songImport/scan";
 import { buildImportRows } from "@/features/song/model/songImport/stepmaniaParser";
 import type { ChartMode, ScanResult } from "@/features/song/model/songImport/types";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 /**
  * Importing an ITGmania songs folder, from the picker to the pool.
@@ -20,7 +20,8 @@ import type { ChartMode, ScanResult } from "@/features/song/model/songImport/typ
  * going back to the disk.
  *
  * Closing the picker is not a failure and says nothing; every other way this
- * can go wrong is stated, either in the dialog or as a toast.
+ * can go wrong is stated, either in the dialog or — for what goes wrong before
+ * there is a dialog — in the page notice slot.
  */
 
 export type ScanProgress = { packs: number; songs: number; charts: number };
@@ -49,6 +50,7 @@ function messageOf(error: unknown, fallback: string): string {
 
 export function useSongImport({ tournamentId }: Options) {
   const navigate = useNavigate();
+  const { report } = usePageNotices();
   const [state, setState] = useState<SongImportState>({ status: "idle" });
   const [chartMode, setChartMode] = useState<ChartMode>("all");
   const lastProgressAt = useRef(0);
@@ -63,11 +65,11 @@ export function useSongImport({ tournamentId }: Options) {
       directory = await pickSongsDirectory();
     } catch (error) {
       if (error instanceof DirectoryPickerUnsupportedError) {
-        toast.error(error.message);
+        report(error.message);
         return;
       }
 
-      toast.error(messageOf(error, "Could not open that folder."));
+      report(messageOf(error, "Could not open that folder."));
       return;
     }
 
@@ -95,7 +97,7 @@ export function useSongImport({ tournamentId }: Options) {
     } catch (error) {
       setState({ status: "failed", message: messageOf(error, "That folder could not be read.") });
     }
-  }, []);
+  }, [report]);
 
   const confirm = useCallback(async () => {
     if (state.status !== "ready") return;

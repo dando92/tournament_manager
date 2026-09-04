@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
 import type { Participant } from "@/features/participant/model/types";
 import {
     createItgmaniaProfilesArchive,
     itgmaniaArchiveFileName,
     playersForItgmaniaProfiles,
 } from "@/features/participant/model/itgmaniaProfiles";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 type Options = {
     tournamentName: string;
@@ -13,6 +13,7 @@ type Options = {
 };
 
 export function useItgmaniaProfileExport({ tournamentName, participants }: Options) {
+    const { report, dismiss } = usePageNotices();
     const [exporting, setExporting] = useState(false);
 
     const exportProfiles = async () => {
@@ -21,8 +22,9 @@ export function useItgmaniaProfileExport({ tournamentName, participants }: Optio
             const players = playersForItgmaniaProfiles(participants);
             const archive = await createItgmaniaProfilesArchive(players);
             downloadArchive(archive, itgmaniaArchiveFileName(tournamentName));
+            dismiss("Failed to export ITGmania profiles.");
         } catch {
-            toast.error("Failed to export ITGmania profiles.");
+            report("Failed to export ITGmania profiles.");
         } finally {
             setExporting(false);
         }
