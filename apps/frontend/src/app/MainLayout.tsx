@@ -69,7 +69,10 @@ export default function MainLayout() {
           </ResizableSidebar>
 
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <ToastContainer style={{ zIndex: 99999 }} />
+            {/* One message reaches this: a run that arrived from a cabinet and
+                was not saved. It sits at the bottom, away from the controls and
+                clear of the mobile navigation, because nobody asked for it. */}
+            <ToastContainer position="bottom-right" className="!bottom-20 md:!bottom-4" style={{ zIndex: 99999 }} />
             <main className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
               <PageNotices />
               <Suspense fallback={null}>

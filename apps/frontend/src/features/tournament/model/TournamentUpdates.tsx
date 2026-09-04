@@ -21,6 +21,10 @@ const UI_UPDATE_INVALIDATION_DEBOUNCE_MS = 150;
  * says a run arrived from a cabinet and was not saved, which is addressed to
  * whoever can go and fix it. `canEdit` is the same value the tree is given, so
  * the two agree on who is operating the tournament.
+ *
+ * This is the only toast left in the application, and the only one a toast is
+ * right for: nobody asked for it, and it arrives while they are doing something
+ * else. Everything a person does themselves is reported where they did it.
  */
 export function TournamentUpdatesProvider({
   tournamentId,
