@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 import Sidebar from "@/shared/components/layout/Sidebar";
 import ResizableSidebar from "@/shared/components/layout/ResizableSidebar";
 import { MobileBottomNav } from "@/shared/components/layout/MobileNav";
+import PageNotices from "@/shared/components/ui/PageNotices";
 import { TournamentUpdatesProvider } from "@/features/tournament/model/TournamentUpdates";
 import { TournamentTreeProvider } from "@/features/tournament/model/TournamentTreeContext";
 import { getSelectedTournament, getSidebarTournaments } from "@/shared/lib/recentTournaments";
@@ -70,6 +71,7 @@ export default function MainLayout() {
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <ToastContainer style={{ zIndex: 99999 }} />
             <main className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
+              <PageNotices />
               <Suspense fallback={null}>
                 <Outlet />
               </Suspense>

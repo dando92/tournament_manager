@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/features/auth/model/AuthContext";
 import { PermissionProvider } from "@/features/auth/model/PermissionContext";
+import { PageNoticeProvider } from "@/shared/context/PageNoticeContext";
 import { apiUrl } from "@/shared/runtime-config";
 
 /**
@@ -41,7 +42,9 @@ export default function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <PermissionProvider>{children}</PermissionProvider>
+          <PermissionProvider>
+            <PageNoticeProvider>{children}</PageNoticeProvider>
+          </PermissionProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
