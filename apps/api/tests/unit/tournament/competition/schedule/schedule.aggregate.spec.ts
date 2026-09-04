@@ -93,6 +93,7 @@ describe("schedule eligibility", () => {
         playerIds: [1, 2],
         roundCount: 1,
         requiredEntrantCount: 2,
+        pendingRuleCount: 0,
         isCurrentEntry: false,
     };
 
@@ -105,9 +106,27 @@ describe("schedule eligibility", () => {
     it("reports the reasons an entry states about itself", () => {
         expect(evaluateLocalEligibility({ ...playable, playerIds: [] })).toMatchObject({ kind: "stale", code: "NO_ENTRANTS" });
         expect(evaluateLocalEligibility({ ...playable, playerIds: [1] })).toMatchObject({ kind: "stale", code: "NOT_ENOUGH_ENTRANTS" });
-        expect(evaluateLocalEligibility({ ...playable, requiredEntrantCount: 3 })).toMatchObject({ kind: "stale", code: "UNRESOLVED_ENTRANTS" });
+        expect(evaluateLocalEligibility({ ...playable, requiredEntrantCount: 3, pendingRuleCount: 1 })).toMatchObject({
+            kind: "stale",
+            code: "UNRESOLVED_ENTRANTS",
+        });
         expect(evaluateLocalEligibility({ ...playable, roundCount: 0 })).toMatchObject({ kind: "stale", code: "NO_ROUNDS" });
         expect(evaluateLocalEligibility({ ...playable, active: true })).toMatchObject({ kind: "stale", code: "MATCH_ALREADY_ACTIVE" });
+    });
+
+    /* The same shortage twice, and only the second is somebody's mistake: a
+       seat a rule is still going to fill is a wait, one no rule names at all is
+       a schedule that would sit there for good. See FQ-054. */
+    it("separates a shortage that will resolve from one that cannot", () => {
+        expect(evaluateLocalEligibility({ ...playable, requiredEntrantCount: 4, pendingRuleCount: 2 })).toMatchObject({
+            kind: "stale",
+            code: "UNRESOLVED_ENTRANTS",
+        });
+        expect(evaluateLocalEligibility({ ...playable, requiredEntrantCount: 4, pendingRuleCount: 1 })).toMatchObject({
+            kind: "stale",
+            code: "UNFILLABLE_ENTRANT_SLOTS",
+            details: { entrantCount: 2, requiredEntrantCount: 4, reachableEntrantCount: 3 },
+        });
     });
 
     /* The overlap is a question about the tournament rather than about the

@@ -8,6 +8,7 @@ export type ScheduleStaleCode =
     | "NO_ENTRANTS"
     | "NOT_ENOUGH_ENTRANTS"
     | "UNRESOLVED_ENTRANTS"
+    | "UNFILLABLE_ENTRANT_SLOTS"
     | "NO_ROUNDS"
     | "MATCH_ALREADY_ACTIVE"
     | "ENTRANTS_ALREADY_ACTIVE"
@@ -20,6 +21,13 @@ export type ScheduleStaleDetails = {
     matchName?: string;
     entrantCount?: number;
     requiredEntrantCount?: number;
+    /**
+     * The most entrants the match can still reach: the ones it holds plus the
+     * advancement rules that have not delivered yet. Below `requiredEntrantCount`
+     * it says the wait cannot end on its own, which is what separates
+     * `UNFILLABLE_ENTRANT_SLOTS` from `UNRESOLVED_ENTRANTS`.
+     */
+    reachableEntrantCount?: number;
     blockingMatchIds?: number[];
     blockingPlayerIds?: number[];
 };

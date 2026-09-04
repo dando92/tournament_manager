@@ -58,6 +58,7 @@ type ScheduleEntryRow = {
     roundCount: number;
     playerIds: number[] | null;
     requiredEntrantCount: number;
+    pendingRuleCount: number;
 };
 
 /**
@@ -69,6 +70,12 @@ type ScheduleEntryRow = {
  * address. It used to be the seven-relation graph of every match of the
  * schedule, hydrated in full to answer, normally, one question about one of
  * them, followed by two more queries per entry inside the loop.
+ *
+ * `pendingRuleCount` is how many of the rules that seat this match have not
+ * delivered yet — their source is not `completed`, so somebody is still going
+ * to arrive through them. With the entrants already seated it bounds how full
+ * the match can still get, which is what tells a wait that will end from one
+ * that cannot.
  *
  * `m."state"` is the column batch S introduced: `completed` and `ready` are the
  * two the schedule reads, and nothing here re-derives them. See
@@ -93,7 +100,8 @@ const SCHEDULE_ENTRY_SNAPSHOTS = `
                 ca."phaseGroupId"   AS "phaseGroupId",
                 COALESCE(rounds."count", 0)::int AS "roundCount",
                 players."ids" AS "playerIds",
-                GREATEST(COALESCE(slots."required", 0), 2)::int AS "requiredEntrantCount"
+                GREATEST(COALESCE(slots."required", 0), 2)::int AS "requiredEntrantCount",
+                COALESCE(slots."pending", 0)::int AS "pendingRuleCount"
     FROM        "schedule_entry" entry
     LEFT JOIN   "match" m ON m."id" = entry."matchId"
     LEFT JOIN   "competition_address" ca ON ca."matchId" = m."id"
@@ -115,8 +123,15 @@ const SCHEDULE_ENTRY_SNAPSHOTS = `
                     ) seat
                 ) players ON TRUE
     LEFT JOIN   LATERAL (
-                    SELECT  MAX(target."targetSlot") AS "required"
+                    SELECT  MAX(target."targetSlot") AS "required",
+                            COUNT(*) FILTER (WHERE NOT COALESCE(source."settled", FALSE)) AS "pending"
                     FROM    "advancement_rule" target
+                    LEFT JOIN LATERAL (
+                        SELECT  CASE target."sourceKind"
+                                    WHEN 'match' THEN (SELECT sm."state" = 'completed' FROM "match" sm WHERE sm."id" = target."sourceId")
+                                    WHEN 'phase_group' THEN (SELECT pg."state" = 'completed' FROM "phase_group" pg WHERE pg."id" = target."sourceId")
+                                END AS "settled"
+                    ) source ON TRUE
                     WHERE   target."targetKind" = 'match' AND target."targetId" = m."id"
                 ) slots ON TRUE
     WHERE       entry."scheduleId" = $1
@@ -457,6 +472,7 @@ export class ScheduleRunner {
                 playerIds: (row.playerIds ?? []).map(Number),
                 roundCount: Number(row.roundCount),
                 requiredEntrantCount: Number(row.requiredEntrantCount),
+                pendingRuleCount: Number(row.pendingRuleCount),
                 isCurrentEntry: entryId === currentEntryId,
             },
         };

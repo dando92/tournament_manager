@@ -9,6 +9,10 @@ const staleMessages: Record<ScheduleStaleCode, (schedule: ScheduleDto) => string
     NO_ENTRANTS: (schedule) => `${schedule.staleDetails?.matchName ?? "The current match"} has no players.`,
     NOT_ENOUGH_ENTRANTS: (schedule) => `${schedule.staleDetails?.matchName ?? "The current match"} has only one player.`,
     UNRESOLVED_ENTRANTS: (schedule) => `${schedule.staleDetails?.matchName ?? "The current match"} is waiting for more entrants.`,
+    UNFILLABLE_ENTRANT_SLOTS: (schedule) =>
+        `${schedule.staleDetails?.matchName ?? "The current match"} expects ${schedule.staleDetails?.requiredEntrantCount ?? "more"} players`
+        + ` and can reach ${schedule.staleDetails?.reachableEntrantCount ?? "fewer"}: the advancement rules that send players here leave a seat`
+        + ` nothing will fill. Renumber those rules, or add the missing player by hand.`,
     NO_ROUNDS: (schedule) => `${schedule.staleDetails?.matchName ?? "The current match"} has no rounds configured.`,
     MATCH_ALREADY_ACTIVE: (schedule) => `${schedule.staleDetails?.matchName ?? "The current match"} was activated outside this schedule.`,
     ENTRANTS_ALREADY_ACTIVE: () => "One or more players are still active in another match.",
@@ -19,6 +23,18 @@ const staleMessages: Record<ScheduleStaleCode, (schedule: ScheduleDto) => string
 
 export function scheduleStaleMessage(schedule: ScheduleDto): string | null {
     return schedule.staleCode ? staleMessages[schedule.staleCode](schedule) : null;
+}
+
+/**
+ * Whether the schedule is held up by something that will not resolve itself.
+ *
+ * Most stale reasons are a wait: the tournament has to move before the entry
+ * can. This one cannot end on its own — the rules that seat the match ask for a
+ * seat none of them fills — so it is reported as a failure rather than as
+ * patience, and reads red rather than amber wherever a schedule is drawn.
+ */
+export function isScheduleBlocked(schedule: ScheduleDto): boolean {
+    return schedule.staleCode === "UNFILLABLE_ENTRANT_SLOTS";
 }
 
 export function scheduleInterruptionMessage(schedule: ScheduleDto): string | null {

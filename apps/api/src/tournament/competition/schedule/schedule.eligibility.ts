@@ -9,6 +9,8 @@ export type ScheduleMatchSnapshot = {
     playerIds: number[];
     roundCount: number;
     requiredEntrantCount: number;
+    /** Incoming advancement rules whose source is not settled, so still to deliver. */
+    pendingRuleCount: number;
     isCurrentEntry: boolean;
 };
 
@@ -44,6 +46,18 @@ export function evaluateLocalEligibility(match: ScheduleMatchSnapshot): Schedule
         return { kind: "stale", code: "NOT_ENOUGH_ENTRANTS", details };
     }
     if (match.playerIds.length < match.requiredEntrantCount) {
+        /* A wait that can end and one that cannot are the same shortage, and
+           only the second is somebody's mistake. Every rule that still has a
+           source to play will seat one more entrant; once they are counted and
+           the match still falls short, no rule is coming and the schedule would
+           sit here until a person adds a player by hand or repairs the rules.
+           `requiredEntrantCount` is the highest slot the rules name, so a set
+           that skips a slot number asks for a seat nothing fills — see FQ-054. */
+        const reachable = match.playerIds.length + match.pendingRuleCount;
+        if (reachable < match.requiredEntrantCount) {
+            return { kind: "stale", code: "UNFILLABLE_ENTRANT_SLOTS", details: { ...details, reachableEntrantCount: reachable } };
+        }
+
         return { kind: "stale", code: "UNRESOLVED_ENTRANTS", details };
     }
     if (match.roundCount === 0) {

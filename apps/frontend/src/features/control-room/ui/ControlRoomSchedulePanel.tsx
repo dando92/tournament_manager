@@ -14,7 +14,7 @@ import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import MatchListRow from "@/features/match/ui/MatchListRow";
 import { rowOfSummary } from "@/features/match/model/matchRow";
 import * as MatchesApi from "@/features/match/api/match.api";
-import { scheduleInterruptionMessage, scheduleStaleMessage, scheduleStatusLabel } from "@/features/schedule/model/scheduleStatus";
+import { isScheduleBlocked, scheduleInterruptionMessage, scheduleStaleMessage, scheduleStatusLabel } from "@/features/schedule/model/scheduleStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
 import FormModal from "@/shared/components/ui/FormModal";
@@ -43,8 +43,11 @@ export default function ControlRoomSchedulePanel(props: Props) {
     const [timingEntry, setTimingEntry] = useState<ScheduleDto["entries"][number] | null>(null);
     const selected = schedule.entries.find((entry) => entry.id === selectedEntryId) ?? null;
     const staleMessage = scheduleStaleMessage(schedule);
+    const blocked = isScheduleBlocked(schedule);
     const interruptionMessage = scheduleInterruptionMessage(schedule);
-    const status = schedule.status === "completed" ? "done" : schedule.staleCode ? "pending" : schedule.status === "running" ? "running" : "idle";
+    const status = schedule.status === "completed"
+        ? "done"
+        : blocked ? "failed" : schedule.staleCode ? "pending" : schedule.status === "running" ? "running" : "idle";
 
     useEffect(() => {
         setSelectedEntryId((current) => schedule.entries.some((entry) => entry.id === current) ? current : schedule.currentEntryId ?? schedule.entries[0]?.id ?? null);
@@ -80,9 +83,17 @@ export default function ControlRoomSchedulePanel(props: Props) {
                 <ScheduleActions {...props} />
             </div>
 
+            {/* Amber is patience and red is a fault. A schedule waiting on a
+                match somebody still has to play is the first; one asking for a
+                seat its rules never fill is the second, and drawing them alike
+                is what let this one read as normal for as long as it did. */}
             {staleMessage && (
-                <div className="mt-4 rounded border border-state-pending/30 bg-state-pending/10 px-3 py-2 text-sm text-ui-text-soft">
-                    <strong className="text-ui-text">Waiting:</strong> {staleMessage}
+                <div
+                    className={`mt-4 rounded border px-3 py-2 text-sm text-ui-text-soft ${
+                        blocked ? "border-state-failed/40 bg-state-failed/10" : "border-state-pending/30 bg-state-pending/10"
+                    }`}
+                >
+                    <strong className="text-ui-text">{blocked ? "Blocked:" : "Waiting:"}</strong> {staleMessage}
                 </div>
             )}
 

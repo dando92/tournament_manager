@@ -230,6 +230,60 @@ describe("Control Room (e2e)", () => {
         await request(app.getHttpServer()).delete(`/schedules/${scheduleId}/archive`).expect(204);
     });
 
+    /* Two shortages that look the same on a board and are not. The first ends
+       when somebody plays the match that feeds the seat; the second cannot end
+       at all, because the rules that seat the target name slots 1, 3 and 4 and
+       nothing will ever fill slot 2 — the count the schedule waits for is the
+       highest slot named, so a gap asks for a seat that does not exist. It is
+       reported as a failure rather than as patience. See FQ-054. */
+    it("tells a shortage the tournament will resolve from one the rules never can", async () => {
+        const seated = [await addEntrant("Golf"), await addEntrant("Hotel"), await addEntrant("India")];
+        const pendingFeeder = await createMatch("Feeder still to play", entrants.slice(0, 2));
+        const waiting = await createMatch("Waiting for a seat", seated);
+        await request(app.getHttpServer())
+            .put(`/advancement-rules/sources/match/${pendingFeeder.id}`)
+            .send({ rules: [{ sourcePlacement: 1, targetKind: "match", targetId: waiting.id, targetSlot: 4 }] })
+            .expect(204);
+
+        const waitingScheduleId = await createSchedule("Cabinet waiting on a feeder", [waiting.id]);
+        await request(app.getHttpServer()).post(`/schedules/${waitingScheduleId}/start`).expect(204);
+        expect((await request(app.getHttpServer()).get(`/schedules/${waitingScheduleId}`).expect(200)).body).toMatchObject({
+            status: "running",
+            staleCode: "UNRESOLVED_ENTRANTS",
+            staleDetails: { entrantCount: 3, requiredEntrantCount: 4 },
+        });
+
+        const settledFeeder = await createMatch("Feeder already played", [
+            await addEntrant("Juliett"),
+            await addEntrant("Kilo"),
+            await addEntrant("Lima"),
+            await addEntrant("Mike"),
+        ]);
+        const gapped = await createMatch("Target with an unfilled slot", []);
+        await request(app.getHttpServer())
+            .put(`/advancement-rules/sources/match/${settledFeeder.id}`)
+            .send({
+                rules: [
+                    { sourcePlacement: 1, targetKind: "match", targetId: gapped.id, targetSlot: 1 },
+                    { sourcePlacement: 3, targetKind: "match", targetId: gapped.id, targetSlot: 3 },
+                    { sourcePlacement: 4, targetKind: "match", targetId: gapped.id, targetSlot: 4 },
+                ],
+            })
+            .expect(204);
+        await score(settledFeeder);
+        await request(app.getHttpServer()).put(`/matches/${settledFeeder.id}/result`).expect(200);
+        expect((await readMatch(gapped.id)).entrants).toHaveLength(3);
+
+        const gappedScheduleId = await createSchedule("Cabinet that cannot proceed", [gapped.id]);
+        await request(app.getHttpServer()).post(`/schedules/${gappedScheduleId}/start`).expect(204);
+        expect((await request(app.getHttpServer()).get(`/schedules/${gappedScheduleId}`).expect(200)).body).toMatchObject({
+            status: "running",
+            staleCode: "UNFILLABLE_ENTRANT_SLOTS",
+            staleDetails: { matchId: gapped.id, entrantCount: 3, requiredEntrantCount: 4, reachableEntrantCount: 3 },
+        });
+        expect((await readMatch(gapped.id)).active).toBe(false);
+    });
+
     it("requires confirmation before a rollback stops a running schedule", async () => {
         const match = await createMatch("Rollback", entrants.slice(2, 4));
         const scheduleId = await createSchedule("Rollback schedule", [match.id]);

@@ -1,6 +1,7 @@
 import type { ScheduleDto } from "@tournament-manager/contracts";
 
 import { buildScheduleTimeline, timingStatusLabel } from "@/features/schedule/model/scheduleTiming";
+import { isScheduleBlocked } from "@/features/schedule/model/scheduleStatus";
 import type { Status } from "@/shared/components/ui/status";
 
 /**
@@ -45,6 +46,9 @@ function statusOf(schedule: ScheduleDto): Status {
     if (schedule.status === "completed") {
         return "done";
     }
+    if (isScheduleBlocked(schedule)) {
+        return "failed";
+    }
     if (schedule.staleCode) {
         return "pending";
     }
@@ -55,6 +59,9 @@ function statusOf(schedule: ScheduleDto): Status {
 function stateLabelOf(schedule: ScheduleDto): string {
     if (schedule.status === "completed") {
         return schedule.archivedAt ? "Archived" : "Completed";
+    }
+    if (isScheduleBlocked(schedule)) {
+        return "Blocked";
     }
     if (schedule.staleCode) {
         return "Waiting";
