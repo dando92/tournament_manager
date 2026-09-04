@@ -92,6 +92,7 @@ How the system works, and what was decided:
 - `LegacySyncStartBridge.md` — Legacy ITGmania SyncStart bridge
 - `mockups/schedule-restructure/` — Approved reference views behind the schedule board and Control Room
 - `mockups/structure-builder/` — Approved reference views behind the Structure page
+- `mockups/page-notice/` — Approved reference views behind the page notice slot and the five destinations a message can have
 
 Operations:
 
