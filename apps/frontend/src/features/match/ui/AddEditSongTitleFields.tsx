@@ -1,6 +1,5 @@
 import { Song } from "@/features/song/model/types";
-import Select from "react-select";
-import { selectPortalStyles } from "@/styles/selectStyles";
+import Select from "@/shared/components/ui/Select";
 import MultiSelect, { MultiSelectOption } from "@/shared/components/ui/MultiSelect";
 import { displaySongLabel } from "@/features/song/model/songTitle";
 
@@ -32,11 +31,9 @@ export default function AddEditSongTitleFields({
         <h3 className="mb-2">Select pack</h3>
         <Select
           options={songGroups.map((group) => ({ value: group, label: group }))}
-          placeholder="Select pack..."
-          value={selectedGroupName ? { value: selectedGroupName, label: selectedGroupName } : null}
-          onChange={(selected) => onGroupChange(selected?.value ?? "")}
-          menuPortalTarget={document.body}
-          styles={selectPortalStyles}
+          placeholder="Select pack…"
+          value={selectedGroupName}
+          onChange={onGroupChange}
         />
       </div>
 

@@ -44,12 +44,12 @@ export default function SongRollPanel({ roll, songGroups }: SongRollPanelProps) 
             <div className="flex flex-wrap items-end gap-3 py-2">
                 <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
                     <span className="text-xs font-semibold uppercase tracking-wider text-ui-text-mute">Pack</span>
-                    <Select className="w-full sm:w-[240px]" value={roll.group} onChange={(event) => roll.setGroup(event.target.value)}>
-                        <option value="">All packs</option>
-                        {songGroups.map((group) => (
-                            <option key={group} value={group}>{group}</option>
-                        ))}
-                    </Select>
+                    <Select
+                        className="w-full sm:w-[240px]"
+                        value={roll.group}
+                        onChange={roll.setGroup}
+                        options={[{ value: '', label: 'All packs' }, ...songGroups.map((group) => ({ value: group, label: group }))]}
+                    />
                 </label>
 
                 <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">

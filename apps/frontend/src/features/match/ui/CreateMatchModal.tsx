@@ -1,6 +1,5 @@
 import FormModal from "@/shared/components/ui/FormModal";
-import Select from "react-select";
-import { selectPortalStyles } from "@/styles/selectStyles";
+import Select from "@/shared/components/ui/Select";
 import { CreateMatchRequest } from "@/features/match/model/types";
 import CreateMatchSongFields from "@/features/match/ui/CreateMatchSongFields";
 import { useCreateMatchModal } from "@/features/match/model/useCreateMatchModal";
@@ -68,11 +67,9 @@ export default function CreateMatchModal(props: CreateMatchModalProps) {
           <h3>Scoring system</h3>
           <Select
             options={state.scoringSystems.map((system) => ({ value: system, label: scoringSystemLabel(system) }))}
-            placeholder="Select scoring system..."
-            value={state.scoringSystem ? { value: state.scoringSystem, label: scoringSystemLabel(state.scoringSystem) } : null}
-            onChange={(selected) => state.setScoringSystem(selected?.value ?? "")}
-            menuPortalTarget={document.body}
-            styles={selectPortalStyles}
+            placeholder="Select scoring system…"
+            value={state.scoringSystem}
+            onChange={state.setScoringSystem}
           />
         </div>
         <div className="w-full">

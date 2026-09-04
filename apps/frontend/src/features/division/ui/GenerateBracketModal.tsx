@@ -98,14 +98,9 @@ export default function GenerateBracketModal({
             <label className="block text-sm font-medium mb-1">Division</label>
             <Select
               value={divisionId}
-              onChange={(event) => setDivisionId(Number(event.target.value))}
-            >
-              {divisions.map((division) => (
-                <option key={division.id} value={division.id}>
-                  {division.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setDivisionId}
+              options={divisions.map((division) => ({ value: division.id, label: division.name }))}
+            />
           </div>
         )}
         {!currentPhaseId && (
@@ -125,17 +120,15 @@ export default function GenerateBracketModal({
           <label className="block text-sm font-medium mb-1">Bracket type</label>
           <Select
             value={bracketType}
-            onChange={(event) => {
-              setBracketType(event.target.value);
-              writeBracketType(event.target.value);
+            onChange={(nextType) => {
+              setBracketType(nextType);
+              writeBracketType(nextType);
             }}
-          >
-            {bracketTypes.map((candidate) => (
-              <option key={candidate} value={candidate}>
-                {candidate === "Manual" ? "First phase only" : candidate}
-              </option>
-            ))}
-          </Select>
+            options={bracketTypes.map((candidate) => ({
+              value: candidate,
+              label: candidate === "Manual" ? "First phase only" : candidate,
+            }))}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Players per match</label>

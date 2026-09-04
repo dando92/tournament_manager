@@ -29,6 +29,7 @@ export default {
           separator: "rgb(var(--ui-separator) / <alpha-value>)",
           "border-strong": "rgb(var(--ui-border-strong) / <alpha-value>)",
           accent: "rgb(var(--ui-accent) / <alpha-value>)",
+          "accent-contrast": "rgb(var(--ui-accent-contrast) / <alpha-value>)",
           text: "rgb(var(--ui-text) / <alpha-value>)",
           "text-soft": "rgb(var(--ui-text-soft) / <alpha-value>)",
           "text-mute": "rgb(var(--ui-text-mute) / <alpha-value>)",

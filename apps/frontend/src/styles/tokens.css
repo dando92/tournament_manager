@@ -22,6 +22,7 @@
   --ui-separator: 220 222 225;
   --ui-border-strong: 168 173 180;
   --ui-accent: 95 133 142;
+  --ui-accent-contrast: 255 255 255;
   --ui-text: 32 38 44;
   --ui-text-soft: 95 105 116;
   --ui-text-mute: 95 105 116;
@@ -81,6 +82,7 @@
     --ui-separator: 36 41 46;
     --ui-border-strong: 67 75 84;
     --ui-accent: 95 133 142;
+    --ui-accent-contrast: 255 255 255;
     --ui-text: 239 240 242;
     --ui-text-soft: 169 173 179;
     --ui-text-mute: 143 149 156;
@@ -117,6 +119,7 @@
   --ui-separator: 36 41 46;
   --ui-border-strong: 67 75 84;
   --ui-accent: 95 133 142;
+  --ui-accent-contrast: 255 255 255;
   --ui-text: 239 240 242;
   --ui-text-soft: 169 173 179;
   --ui-text-mute: 143 149 156;

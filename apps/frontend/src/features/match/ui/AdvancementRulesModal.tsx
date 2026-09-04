@@ -200,33 +200,24 @@ function InlineDestination({
         <Select
             variant="inline"
             className="min-w-0 max-w-[calc(100vw-9rem)] sm:max-w-[32rem]"
-            value={rule.targetId > 0 ? `${rule.targetKind}:${rule.targetId}` : ""}
-            onChange={(event) => {
-                if (!event.target.value) {
+            value={rule.targetId > 0 ? `${rule.targetKind}:${rule.targetId}` : ''}
+            onChange={(destination) => {
+                if (!destination) {
                     onChange(rule.targetKind, 0);
                     return;
                 }
-                const [kind, rawId] = event.target.value.split(":");
+                const [kind, rawId] = destination.split(':');
                 onChange(kind as AdvancementCompetitionKind, Number(rawId));
             }}
+            options={[
+                { value: '', label: 'Select destination' },
+                ...(matchOptions.length > 0 ? [{ label: 'Matches', options: matchOptions.map((target) => ({ value: `match:${target.id}`, label: target.label })) }] : []),
+                ...(phaseGroupOptions.length > 0
+                    ? [{ label: 'Pools', options: phaseGroupOptions.map((target) => ({ value: `phase_group:${target.id}`, label: target.label })) }]
+                    : []),
+            ]}
             aria-label={ariaLabel}
-        >
-            <option value="">Select destination</option>
-            {matchOptions.length > 0 && (
-                <optgroup label="Matches">
-                    {matchOptions.map((target) => (
-                        <option key={`match:${target.id}`} value={`match:${target.id}`}>{target.label}</option>
-                    ))}
-                </optgroup>
-            )}
-            {phaseGroupOptions.length > 0 && (
-                <optgroup label="Pools">
-                    {phaseGroupOptions.map((target) => (
-                        <option key={`phase_group:${target.id}`} value={`phase_group:${target.id}`}>{target.label}</option>
-                    ))}
-                </optgroup>
-            )}
-        </Select>
+        />
     );
 }
 

@@ -117,16 +117,16 @@ export default function StandingModal({
           <Select
             className="mt-1"
             value={selectedScoreId}
-            onChange={(event) => setSelectedScoreId(event.target.value)}
+            onChange={setSelectedScoreId}
+            options={[
+              { value: "", label: "Manual score" },
+              ...scoreOptions.map((score) => ({
+                value: String(score.id),
+                label: `#${score.id} - ${score.percentage.toFixed(2)}%${score.isFailed ? " failed" : ""}`,
+              })),
+            ]}
             disabled={loadingScores}
-          >
-            <option value="">Manual score</option>
-            {scoreOptions.map((score) => (
-              <option key={score.id} value={score.id}>
-                #{score.id} - {score.percentage.toFixed(2)}%{score.isFailed ? " failed" : ""}
-              </option>
-            ))}
-          </Select>
+          />
         </div>
         {isRegisteredScoreMode && selectedScore ? (
           <div className="rounded-md border border-ui-border bg-ui-raised px-3 py-2 text-sm text-ui-text-soft">

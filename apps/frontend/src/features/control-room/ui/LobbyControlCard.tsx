@@ -25,32 +25,22 @@ export default function LobbyControlCard({ tournamentId }: { tournamentId: numbe
                         <Select
                             className="mt-1 font-normal"
                             value={control.lobbyId}
-                            onChange={(event) => control.setLobbyId(event.target.value)}
+                            onChange={(lobbyId) => control.setLobbyId(lobbyId)}
+                            options={lobbies.map((lobby) => ({ value: lobby.id, label: `${lobby.name} (${lobby.lobbyCode})` }))}
+                            placeholder="No lobby available"
                             disabled={control.options.isLoading || lobbies.length === 0}
-                        >
-                            {lobbies.length === 0 && <option value="">No lobby available</option>}
-                            {lobbies.map((lobby) => (
-                                <option key={lobby.id} value={lobby.id}>
-                                    {lobby.name} ({lobby.lobbyCode})
-                                </option>
-                            ))}
-                        </Select>
+                        />
                     </label>
                     <label className="text-sm font-semibold text-ui-text">
                         Song from active matches
                         <Select
                             className="mt-1 font-normal"
-                            value={control.songId ?? ""}
-                            onChange={(event) => control.setSongId(Number(event.target.value))}
+                            value={control.songId}
+                            onChange={(songId) => control.setSongId(songId)}
+                            options={songs.map((song) => ({ value: song.id, label: displaySongTitle(song.title) }))}
+                            placeholder="No song in an active match"
                             disabled={control.options.isLoading || songs.length === 0}
-                        >
-                            {songs.length === 0 && <option value="">No song in an active match</option>}
-                            {songs.map((song) => (
-                                <option key={song.id} value={song.id}>
-                                    {displaySongTitle(song.title)}
-                                </option>
-                            ))}
-                        </Select>
+                        />
                     </label>
                 </div>
             )}

@@ -55,13 +55,11 @@ export default function CreatePhaseModal({ open, onClose, onCreate, divisions, d
             {divisions && divisions.length > 0 && (
                 <div>
                     <h3 className="mb-1">Division</h3>
-                    <Select value={selectedDivisionId} onChange={(event) => setSelectedDivisionId(Number(event.target.value))}>
-                        {divisions.map((division) => (
-                            <option key={division.id} value={division.id}>
-                                {division.name}
-                            </option>
-                        ))}
-                    </Select>
+                    <Select
+                        value={selectedDivisionId}
+                        onChange={setSelectedDivisionId}
+                        options={divisions.map((division) => ({ value: division.id, label: division.name }))}
+                    />
                 </div>
             )}
             <div>

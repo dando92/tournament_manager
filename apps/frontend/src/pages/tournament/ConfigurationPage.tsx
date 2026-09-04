@@ -123,20 +123,10 @@ export default function ConfigurationPage() {
             </span>
             <Select
               value={form.defaultScoringSystem}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  defaultScoringSystem: event.target.value,
-                }))
-              }
+              onChange={(defaultScoringSystem) => setForm((current) => ({ ...current, defaultScoringSystem }))}
+              options={scoringSystems.map((system) => ({ value: system, label: scoringSystemLabel(system) }))}
               disabled={isClosed}
-            >
-              {scoringSystems.map((system) => (
-                <option key={system} value={system}>
-                  {scoringSystemLabel(system)}
-                </option>
-              ))}
-            </Select>
+            />
           </label>
         </div>
 

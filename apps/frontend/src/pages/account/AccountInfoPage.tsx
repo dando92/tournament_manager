@@ -163,13 +163,9 @@ export default function AccountInfoPage() {
                 <label className="text-xs text-ui-text-mute">Nationality</label>
                 <Select
                   value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                >
-                  <option value="">— Select nationality —</option>
-                  {NATIONALITIES.map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </Select>
+                  onChange={setNationality}
+                  options={[{ value: "", label: "— Select nationality —" }, ...NATIONALITIES.map((n) => ({ value: n, label: n }))]}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-ui-text-mute">GrooveStats API Key</label>

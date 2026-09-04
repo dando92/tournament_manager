@@ -1,71 +1,107 @@
-import type { ReactNode, SelectHTMLAttributes } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { useMemo } from 'react';
+import ReactSelect from 'react-select';
+import { DROPDOWN_COMPONENTS } from '@/shared/components/ui/dropdownParts';
+import { selectStyles, type SelectVariant } from '@/styles/selectStyles';
 
 /**
  * The one dropdown.
  *
- * A native `<select>` is the right control for a single choice from a known
- * list: the platform already draws it well, and on a phone it is a wheel rather
- * than a panel nothing here would have built. What it does not do is follow the
- * theme on its own, so every call site had restyled it - a dozen of them, each
- * with its own border, padding and arrow, one of them a literal `▼` character.
- * This is that treatment, decided once.
+ * A single choice from a known list used to be a native `<select>`, on the
+ * grounds that the platform draws it well. It draws the closed box well; the
+ * list it opens is the one thing on the page no stylesheet reaches, so the same
+ * screen could show a themed field, a themed panel from `MultiSelect`, and a
+ * system list from the browser, side by side. Converging them was worth the one
+ * thing it costs: a phone gives this a panel rather than its wheel.
  *
- * Two things are deliberate. The arrow is ours, drawn beside a control set to
- * `appearance-none`, because the user agent's own arrow takes a colour we do
- * not control. And the surface belongs to the wrapper while the select inside
- * it stays transparent, which is what lets a long label truncate instead of
- * widening the box.
- *
- * The option list is not styled here and cannot be: the browser draws it
- * outside the page. It is themed once in the base layer of `index.css`.
+ * What the three placements are, and what the panel looks like, is decided once
+ * in `styles/selectStyles.ts`. This file is what a call site sees: options in, a
+ * value out, no event to unwrap and no number to parse back out of a string.
  */
+
+export type { SelectVariant };
+
+export type SelectOption<TValue extends string | number = string> = {
+    value: TValue;
+    label: string;
+    isDisabled?: boolean;
+};
+
+/** A run of options under a heading, for a list that answers with two kinds of thing. */
+export type SelectOptionGroup<TValue extends string | number = string> = {
+    label: string;
+    options: SelectOption<TValue>[];
+};
+
+export type SelectOptions<TValue extends string | number = string> = (SelectOption<TValue> | SelectOptionGroup<TValue>)[];
 
 /**
- * `field` is a form control in a labelled column, `compact` a toolbar control
- * next to other small chrome, and `inline` a value inside a sentence, on the
- * raised surface the advancement editor uses for its editable words.
+ * Below this many options a search field is noise: the whole list is on the
+ * screen and the arrow keys already reach it. Above it, typing is the only
+ * reasonable way in - a pool holds hundreds of songs.
  */
-export type SelectVariant = 'field' | 'compact' | 'inline';
+const SEARCHABLE_FROM = 8;
 
-type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> & {
+function isGroup<TValue extends string | number>(entry: SelectOption<TValue> | SelectOptionGroup<TValue>): entry is SelectOptionGroup<TValue> {
+    return 'options' in entry;
+}
+
+/** Every option the list holds, groups flattened, in the order they are shown. */
+function flattenOptions<TValue extends string | number>(options: SelectOptions<TValue>): SelectOption<TValue>[] {
+    return options.flatMap((entry) => (isGroup(entry) ? entry.options : [entry]));
+}
+
+type SelectProps<TValue extends string | number> = {
+    options: SelectOptions<TValue>;
+    /** The chosen value. Nothing chosen shows the placeholder. */
+    value: TValue | null | undefined;
+    onChange: (value: TValue) => void;
     variant?: SelectVariant;
+    placeholder?: string;
+    disabled?: boolean;
     /** Applied to the control's box, so width and max width belong here. */
     className?: string;
-    children: ReactNode;
+    title?: string;
+    'aria-label'?: string;
+    inputId?: string;
 };
 
-/*
- * A field is block-level so it fills the column it is labelled in, the way the
- * form controls beside it do. A toolbar or sentence control is not: it sits
- * next to other words and must be sized by its own content.
- */
-const WRAPPER_BASE = 'items-center gap-1.5 rounded transition-colors focus-within:ring-2 focus-within:ring-ui-accent';
+export default function Select<TValue extends string | number = string>({
+    options,
+    value,
+    onChange,
+    variant = 'field',
+    placeholder = 'Select…',
+    disabled = false,
+    className,
+    title,
+    'aria-label': ariaLabel,
+    inputId,
+}: SelectProps<TValue>) {
+    const styles = useMemo(() => selectStyles<SelectOption<TValue>, false, SelectOptionGroup<TValue>>(variant), [variant]);
+    const flat = useMemo(() => flattenOptions(options), [options]);
+    const selected = useMemo(() => flat.find((option) => option.value === value) ?? null, [flat, value]);
 
-const WRAPPER_VARIANTS: Record<SelectVariant, string> = {
-    field: 'flex border border-ui-border-strong bg-ui-surface px-3 py-2 text-sm text-ui-text',
-    compact: 'inline-flex border border-ui-border bg-ui-surface px-2 py-1 text-xs text-ui-text-soft',
-    inline: 'inline-flex min-h-7 bg-ui-raised px-1.5 py-0.5 text-sm font-medium text-ui-text hover:bg-ui-selected',
-};
-
-const CONTROL = 'w-full min-w-0 cursor-pointer appearance-none truncate bg-transparent p-0 text-inherit outline-none disabled:cursor-not-allowed';
-
-const CHEVRON_VARIANTS: Record<SelectVariant, string> = {
-    field: 'shrink-0 text-xs text-ui-text-mute',
-    compact: 'shrink-0 text-[10px] text-ui-text-mute',
-    inline: 'shrink-0 text-[10px] text-ui-text-mute',
-};
-
-export default function Select({ variant = 'field', className, children, ...controlProps }: SelectProps) {
-    const box = [WRAPPER_BASE, WRAPPER_VARIANTS[variant], controlProps.disabled ? 'opacity-50' : '', className ?? ''].filter(Boolean).join(' ');
+    /* A field fills the column it is labelled in; a toolbar control and a word
+       inside the advancement sentence are sized by their own content and have to
+       stay on the line they were written on. */
+    const box = [variant === 'field' ? 'block' : 'inline-block align-middle', className ?? ''].filter(Boolean).join(' ');
 
     return (
-        <span className={box}>
-            <select {...controlProps} className={CONTROL}>
-                {children}
-            </select>
-            <FontAwesomeIcon icon={faChevronDown} className={CHEVRON_VARIANTS[variant]} />
+        <span className={box} title={title}>
+            <ReactSelect<SelectOption<TValue>, false, SelectOptionGroup<TValue>>
+                options={options}
+                value={selected}
+                onChange={(option) => option && onChange(option.value)}
+                isDisabled={disabled}
+                isSearchable={flat.length >= SEARCHABLE_FROM}
+                placeholder={placeholder}
+                aria-label={ariaLabel}
+                inputId={inputId}
+                menuPortalTarget={document.body}
+                menuPlacement="auto"
+                styles={styles}
+                components={DROPDOWN_COMPONENTS}
+            />
         </span>
     );
 }

@@ -18,7 +18,7 @@
  * with scrollbars and date pickers, from the root.
  */
 @layer base {
-  :where(input:not([type="radio"]):not([type="checkbox"]), textarea, select) {
+  :where(input:not([type="radio"]):not([type="checkbox"]), textarea) {
     background-color: rgb(var(--ui-surface));
     color: rgb(var(--ui-text));
   }
@@ -29,24 +29,26 @@
   }
 
   /*
-   * The option list is a second surface, and the rule above does not reach it.
-   * Chromium paints the popup with the control's own background, so a select
-   * that is deliberately transparent - the advancement sentence uses one -
-   * leaves the list white while its options inherit the theme's light text.
-   * Painting the options themselves settles it wherever author colours reach
-   * the popup; where they do not, `color-scheme` already has.
-   *
-   * An `optgroup` is a heading rather than a choice, so it takes the muted
-   * text; its options set their own colour and are unaffected by that.
+   * The controls the user agent fills in itself: checkbox, radio, range. Left
+   * alone they arrive in the browser's own blue, which is a colour nobody chose
+   * and the one `state-running` already means. `accent-color` hands them the
+   * interface's accent instead, and the user agent keeps drawing the mark on
+   * top - including choosing a mark that can be read against it. A filled
+   * checkbox is a selection, so this is the accent doing the job it already
+   * has, not a new one.
    */
-  option {
-    background-color: rgb(var(--ui-surface));
-    color: rgb(var(--ui-text));
+  :root {
+    accent-color: rgb(var(--ui-accent));
   }
 
-  optgroup {
-    background-color: rgb(var(--ui-surface));
-    color: rgb(var(--ui-text-mute));
+  /*
+   * Selected text. The user agent's highlight is a system blue that belongs to
+   * neither theme, and selecting text is the plainest selection there is. A
+   * tint rather than a fill, so the words keep the colour they were being read
+   * in and the rule holds on every surface, the dark live screen included.
+   */
+  ::selection {
+    background-color: rgb(var(--ui-accent) / 0.35);
   }
 }
 

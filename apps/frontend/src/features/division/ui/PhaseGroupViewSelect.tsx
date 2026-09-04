@@ -21,13 +21,8 @@ export default function PhaseGroupViewSelect({ mode, options, onChange }: PhaseG
       variant="compact"
       title="How to display the matches of this pool on this device"
       value={mode}
-      onChange={(event) => onChange(event.target.value as PoolViewMode)}
-    >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {VIEW_LABELS[option]}
-        </option>
-      ))}
-    </Select>
+      onChange={(next) => onChange(next as PoolViewMode)}
+      options={options.map((option) => ({ value: option, label: VIEW_LABELS[option] }))}
+    />
   );
 }

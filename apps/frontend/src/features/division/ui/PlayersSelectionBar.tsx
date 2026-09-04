@@ -47,7 +47,7 @@ export default function PlayersSelectionBar({
             >
                 <span
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[10px] ${
-                        allVisibleSelected ? 'border-ui-accent bg-ui-accent text-white' : 'border-ui-border-strong'
+                        allVisibleSelected ? 'border-ui-accent bg-ui-accent text-ui-accent-contrast' : 'border-ui-border-strong'
                     }`}
                     aria-hidden
                 >

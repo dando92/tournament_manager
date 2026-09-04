@@ -22,15 +22,9 @@ export default function SongsToolbar({
       <Select
         className="sm:w-48 shrink-0"
         value={packFilter}
-        onChange={(event) => onPackFilterChange(event.target.value)}
-      >
-        <option value="">All packs</option>
-        {packOptions.map((group) => (
-          <option key={group} value={group}>
-            {group}
-          </option>
-        ))}
-      </Select>
+        onChange={onPackFilterChange}
+        options={[{ value: "", label: "All packs" }, ...packOptions.map((group) => ({ value: group, label: group }))]}
+      />
 
       <div className="relative flex-1">
         <FontAwesomeIcon

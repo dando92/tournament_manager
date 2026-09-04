@@ -107,14 +107,12 @@ export default function TiebreakModal({ open, match, tournamentId, divisionId, o
             <span className="font-semibold">Tied placement</span>
             <Select
               value={tieIndex}
-              onChange={(event) => setTieIndex(Number(event.target.value))}
-            >
-              {ties.map((candidate, index) => (
-                <option key={candidate.playerIds.join("-")} value={index}>
-                  Places {candidate.fromPlacement}–{candidate.toPlacement}
-                </option>
-              ))}
-            </Select>
+              onChange={setTieIndex}
+              options={ties.map((candidate, index) => ({
+                value: index,
+                label: `Places ${candidate.fromPlacement}–${candidate.toPlacement}`,
+              }))}
+            />
           </label>
         )}
 
@@ -149,12 +147,11 @@ export default function TiebreakModal({ open, match, tournamentId, divisionId, o
           <label className="flex flex-col gap-1.5">
             <span className="font-semibold">Song</span>
             <Select
-              value={songId ?? ""}
-              onChange={(event) => setSongId(Number(event.target.value) || null)}
-            >
-              {songs.length === 0 && <option value="">No songs available</option>}
-              {songs.map((song) => <option key={song.id} value={song.id}>{displaySongTitle(song.title)}</option>)}
-            </Select>
+              value={songId}
+              onChange={setSongId}
+              options={songs.map((song) => ({ value: song.id, label: displaySongTitle(song.title) }))}
+              placeholder="No songs available"
+            />
           </label>
         )}
 

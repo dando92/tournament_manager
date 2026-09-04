@@ -47,13 +47,12 @@ export default function EditScoringSystemModal({ open, match, onClose, onSave }:
         >
             <label className="flex flex-col gap-2 font-medium text-ui-text-soft">
                 Scoring system
-                <Select value={scoringSystem} onChange={(event) => setScoringSystem(event.target.value)} disabled={systemsQuery.isLoading}>
-                    {(systemsQuery.data ?? [match.scoringSystem]).map((system) => (
-                        <option key={system} value={system}>
-                            {scoringSystemLabel(system)}
-                        </option>
-                    ))}
-                </Select>
+                <Select
+                    value={scoringSystem}
+                    onChange={setScoringSystem}
+                    options={(systemsQuery.data ?? [match.scoringSystem]).map((system) => ({ value: system, label: scoringSystemLabel(system) }))}
+                    disabled={systemsQuery.isLoading}
+                />
                 {/* A list that failed to load is missing content, not a refused confirmation, so it stays where the content would have been. */}
                 {systemsQuery.isError && <span className="text-xs font-normal text-state-failed">Unable to load scoring systems.</span>}
             </label>

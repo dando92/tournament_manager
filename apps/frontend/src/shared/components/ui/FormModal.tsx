@@ -54,9 +54,13 @@ type FormModalProps = {
  * checkbox, comes first because the sentence reads that way, not because it is
  * what you came to change. Typing is what a dialog is opened to do, so the
  * caret goes where typing happens and the rest is reached by Tab.
+ *
+ * A dropdown is excluded by its combobox role rather than by its tag: since the
+ * choosers were converged onto one control, the box you open is a text input
+ * the browser would otherwise hand the caret to.
  */
 const TYPED_FIELDS =
-    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]), textarea, [contenteditable="true"]';
+    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([role="combobox"]), textarea, [contenteditable="true"]';
 
 /** The fallback for a dialog that asks for a choice rather than for words. */
 const ANY_FIELD = 'input:not([type="hidden"]), select, textarea, [contenteditable="true"]';
@@ -147,8 +151,8 @@ export default function FormModal({
      *
      * The button that submits lives in the footer, outside the form it belongs
      * to, and a browser's own implicit submission is not dependable across the
-     * controls used here — a native select, a react-select, a list of
-     * checkboxes. So the form says it plainly. A textarea keeps Enter for its
+     * controls used here — a dropdown, a list of checkboxes. So the form says
+     * it plainly. A textarea keeps Enter for its
      * newline, and anything that already handled the key — a combobox picking
      * the highlighted option — has marked the event and is left alone.
      */

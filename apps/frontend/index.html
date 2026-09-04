@@ -7,19 +7,33 @@
     <title>Tournament Manager</title>
     <script>
       /*
-       * Applies the stored theme before the first paint, so a dark-theme device
-       * never flashes the light theme while the bundle loads.
+       * Applies the stored appearance before the first paint, so a dark-theme
+       * device never flashes the light theme, and a customised accent never
+       * flashes the default one, while the bundle loads.
        *
-       * The key and the values are duplicated from
-       * src/shared/services/themePreference.ts on purpose: this has to run
-       * before any module is fetched, so it cannot import them. Keep them in
-       * step. "system" stores nothing to apply here — the media query in
-       * tokens.css handles it.
+       * The keys, the values and the contrast rule are duplicated from
+       * src/shared/lib/themePreference.ts and src/shared/lib/accentColor.ts on
+       * purpose: this has to run before any module is fetched, so it cannot
+       * import them. Keep them in step. "system" and the default accent store
+       * nothing to apply here — the media query and tokens.css handle them.
        */
       try {
         var storedTheme = localStorage.getItem("theme_preference");
         if (storedTheme === "light" || storedTheme === "dark") {
           document.documentElement.dataset.theme = storedTheme;
+        }
+
+        var storedAccent = localStorage.getItem("accent_color");
+        if (/^#[0-9a-fA-F]{6}$/.test(storedAccent || "")) {
+          var channels = [1, 3, 5].map(function (index) {
+            return parseInt(storedAccent.slice(index, index + 2), 16);
+          });
+          var luminance = [0.2126, 0.7152, 0.0722].reduce(function (total, weight, index) {
+            var value = channels[index] / 255;
+            return total + weight * (value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4));
+          }, 0);
+          document.documentElement.style.setProperty("--ui-accent", channels.join(" "));
+          document.documentElement.style.setProperty("--ui-accent-contrast", luminance > 0.4 ? "0 0 0" : "255 255 255");
         }
       } catch (error) {
         /* Storage can be unavailable; the operating system preference applies. */

@@ -80,8 +80,14 @@ function NavButton({
     <button
       type="button"
       onClick={onClick}
+      /* Where you are is an accent bar here too, on the edge the bar is against:
+         the sidebar puts it on the left of the item, this puts it on top. It is
+         drawn as an inset shadow rather than a border so the active button does
+         not stand 3px shorter than the four beside it. */
       className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs transition-colors ${
-        active ? "font-semibold text-ui-text" : "text-ui-text-mute hover:text-ui-text"
+        active
+          ? "font-semibold text-ui-text shadow-[inset_0_3px_0_0_rgb(var(--ui-accent))]"
+          : "text-ui-text-mute hover:text-ui-text"
       }`}
     >
       <FontAwesomeIcon icon={icon} className="text-xl" />
