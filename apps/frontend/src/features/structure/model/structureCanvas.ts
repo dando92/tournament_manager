@@ -13,6 +13,11 @@ import { getMatchProgress, getMatchProgressStatus } from "@/features/match/model
  * it answers with rectangles and paths, which is what makes the arithmetic —
  * where a card lands, where an edge leaves and arrives, how wide the canvas has
  * to be — something that can be read and tested on its own.
+ *
+ * The same geometry serves both modes. Building shows a division as its pools;
+ * routing shows the matches under them, because a route runs between whichever
+ * two of those the person drawing it means. Nothing about the columns, the
+ * cards or the curves changes with the mode — only what is on the canvas does.
  */
 
 export const COLUMN_WIDTH = 236;
@@ -21,7 +26,10 @@ export const HEADER_HEIGHT = 54;
 export const CARD_GAP = 10;
 export const SLOT_HEIGHT = 38;
 export const ADD_COLUMN_WIDTH = 46;
+/** How far a match sits inside the pool it belongs to, when both are drawn. */
+export const NEST_INDENT = 14;
 const FIRST_CARD_TOP = HEADER_HEIGHT + CARD_GAP;
+const NESTED_GAP = 6;
 
 /*
  * What one line inside a card is worth.
@@ -43,7 +51,16 @@ const CHIP_BLOCK_GAP = 6;
 /** Four short placement chips fit across a column before one wraps. */
 const CHIPS_PER_ROW = 4;
 
-export type CanvasDensity = "pools" | "matches";
+/**
+ * What the canvas is for at this moment.
+ *
+ * Building is about what exists: pools under phases, and a dashed slot at the
+ * end of every list. Routing is about what leads where — the matches come out
+ * from under their pool, the placements and the slots come forward, and the
+ * slots that would add another card go away, because adding one is not what
+ * anybody is doing there.
+ */
+export type CanvasMode = "build" | "routes";
 
 /** A chip on a card: one finishing place, and where it goes if anywhere. */
 export type PlacementChip = {
@@ -61,10 +78,15 @@ export type CanvasCard = {
     /** Lines under the name, in the order they are drawn. */
     meta: string[];
     chips: PlacementChip[];
-    /** Slots of a match and where each one comes from, in the match density. */
+    /** Slots of a match and where each one comes from. */
     slots: { slot: number; from: string | null }[];
     top: number;
     height: number;
+    /** Where the card starts inside its column, and how wide it is from there. */
+    left: number;
+    width: number;
+    /** The pool a nested match hangs under, which is what a route falls back to. */
+    poolId: number;
 };
 
 export type CanvasColumn = {
@@ -98,10 +120,13 @@ export type StructureCanvas = {
 
 export type CanvasSelection = { kind: "pool" | "match"; id: number } | null;
 
+/** The placement a route is being drawn from, waiting for somewhere to land. */
+export type ArmedPlacement = { kind: "pool" | "match"; id: number; placement: number };
+
 export type StructureCanvasInput = {
     division: TournamentDivisionOption | undefined;
     matches: Match[];
-    density: CanvasDensity;
+    mode: CanvasMode;
     selection: CanvasSelection;
     /** How many placements a pool is expected to send on, when nothing says. */
     advancingPlaces?: number;
@@ -118,9 +143,9 @@ export function ordinal(placement: number): string {
  *
  * The first line of `meta` rides the name row, so only the rest of it costs a
  * line. Everything else stacks: the slots a match is waiting on, and the
- * placements a pool sends on, four to a row.
+ * placements it sends on, four to a row.
  */
-export function cardHeight(card: Pick<CanvasCard, 'meta' | 'chips' | 'slots'>): number {
+export function cardHeight(card: Pick<CanvasCard, "meta" | "chips" | "slots">): number {
     let height = CARD_PADDING_Y * 2 + NAME_ROW;
 
     height += Math.max(card.meta.length - 1, 0) * META_ROW;
@@ -137,33 +162,26 @@ export function cardHeight(card: Pick<CanvasCard, 'meta' | 'chips' | 'slots'>): 
 export function buildStructureCanvas(input: StructureCanvasInput): StructureCanvas {
     const phases = input.division?.phases ?? [];
     const matchesByPool = groupMatchesByPool(input.matches);
-    const anchors = new Map<string, { x: number; y: number; right: number }>();
+    const advancingPlaces = input.advancingPlaces ?? 2;
 
     const columns = phases.map((phase, index) => {
         const left = index * (COLUMN_WIDTH + COLUMN_GAP);
-        const cards =
-            input.density === "matches"
-                ? matchCards(phase, matchesByPool)
-                : poolCards(phase, matchesByPool, input.advancingPlaces ?? 2);
-
-        for (const card of cards) {
-            anchors.set(card.key, { x: left, y: card.top + card.height / 2, right: left + COLUMN_WIDTH });
-        }
-
+        const cards = input.mode === "routes" ? routingCards(phase, matchesByPool) : poolCards(phase, matchesByPool, advancingPlaces);
         const last = cards.at(-1);
+
         return {
             phaseId: phase.id,
             name: phase.name,
             status: phaseStatus(phase),
-            meta: phaseMeta(phase, input.density),
+            meta: phaseMeta(phase),
             left,
             cards,
             slotTop: last ? last.top + last.height + CARD_GAP : FIRST_CARD_TOP,
-            slotLabel: input.density === "matches" ? "Match" : "Pool",
+            slotLabel: "Pool",
         };
     });
 
-    const edges = buildEdges(input, anchors);
+    const edges = buildEdges(input, anchorsOf(columns));
     const contentHeight = Math.max(...columns.map((column) => column.slotTop + SLOT_HEIGHT), FIRST_CARD_TOP + SLOT_HEIGHT);
     const addColumnLeft = columns.length * (COLUMN_WIDTH + COLUMN_GAP);
 
@@ -173,7 +191,7 @@ export function buildStructureCanvas(input: StructureCanvasInput): StructureCanv
         width: addColumnLeft + ADD_COLUMN_WIDTH,
         height: contentHeight,
         addColumnLeft,
-        danglingPlacements: countDangling(phases, input.advancingPlaces ?? 2),
+        danglingPlacements: countDangling(phases, advancingPlaces),
     };
 }
 
@@ -186,35 +204,88 @@ function groupMatchesByPool(matches: Match[]): Map<number, Match[]> {
     return byPool;
 }
 
-function phaseMeta(phase: TournamentDivisionOptionPhase, density: CanvasDensity): string {
+function phaseMeta(phase: TournamentDivisionOptionPhase): string {
     const pools = phase.phaseGroups ?? [];
     const poolPart = `${pools.length} ${pools.length === 1 ? "pool" : "pools"}`;
-    const matchPart = `${phase.matchCount} ${phase.matchCount === 1 ? "match" : "matches"}`;
 
-    return density === "matches" ? matchPart : `${poolPart} · ${matchPart}`;
+    return `${poolPart} · ${phase.matchCount} ${phase.matchCount === 1 ? "match" : "matches"}`;
+}
+
+/** A card at rest, told where it sits and asked how tall that makes it. */
+function sized(card: Omit<CanvasCard, "top" | "height">, top: number): CanvasCard {
+    return { ...card, top, height: cardHeight(card) };
 }
 
 function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, advancingPlaces: number): CanvasCard[] {
     let top = FIRST_CARD_TOP;
 
     return (phase.phaseGroups ?? []).map((pool) => {
-        const card: CanvasCard = {
-            key: poolKey(pool.id),
-            kind: "pool",
-            id: pool.id,
-            name: pool.name,
-            status: poolStatus(pool),
-            meta: [`${pool.matchCount} ${pool.matchCount === 1 ? "match" : "matches"}`, poolProgress(pool, matchesByPool)],
-            chips: placementChips(pool, advancingPlaces),
-            slots: [],
-            top,
-            height: 0,
-        };
-        card.height = cardHeight(card);
+        const card = sized(poolCard(pool, matchesByPool, placementChips(pool, advancingPlaces)), top);
         top += card.height + CARD_GAP;
 
         return card;
     });
+}
+
+/**
+ * A pool and the matches inside it, which is what a route runs between.
+ *
+ * Both granularities are on the canvas at once because both are ends of a real
+ * rule: the winners of a pool go to a bracket, and the winner of one match goes
+ * to the next. Drawing one at a time is what made a route disappear when the
+ * view changed rather than when the rule did.
+ */
+function routingCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>): CanvasCard[] {
+    const cards: CanvasCard[] = [];
+    let top = FIRST_CARD_TOP;
+
+    for (const pool of phase.phaseGroups ?? []) {
+        const card = sized(poolCard(pool, matchesByPool, routedChips(poolRulesOf(pool))), top);
+        cards.push(card);
+        top += card.height + NESTED_GAP;
+
+        for (const match of matchesByPool.get(pool.id) ?? []) {
+            const nested = sized(matchCard(match, pool), top);
+            cards.push(nested);
+            top += nested.height + NESTED_GAP;
+        }
+
+        top += CARD_GAP - NESTED_GAP;
+    }
+
+    return cards;
+}
+
+function poolCard(pool: PhaseGroup, matchesByPool: Map<number, Match[]>, chips: PlacementChip[]): Omit<CanvasCard, "top" | "height"> {
+    return {
+        key: poolKey(pool.id),
+        kind: "pool",
+        id: pool.id,
+        name: pool.name,
+        status: poolStatus(pool),
+        meta: [`${pool.matchCount} ${pool.matchCount === 1 ? "match" : "matches"}`, poolProgress(pool, matchesByPool)],
+        chips,
+        slots: [],
+        left: 0,
+        width: COLUMN_WIDTH,
+        poolId: pool.id,
+    };
+}
+
+function matchCard(match: Match, pool: PhaseGroup): Omit<CanvasCard, "top" | "height"> {
+    return {
+        key: matchKey(match.id),
+        kind: "match",
+        id: match.id,
+        name: match.name,
+        status: getMatchProgressStatus(getMatchProgress(match)),
+        meta: [],
+        chips: routedChips((match.advancementRules ?? []).filter((rule) => rule.sourceKind === "match" && rule.sourceId === match.id)),
+        slots: matchSlots(match),
+        left: NEST_INDENT,
+        width: COLUMN_WIDTH - NEST_INDENT,
+        poolId: pool.id,
+    };
 }
 
 function poolProgress(pool: PhaseGroup, matchesByPool: Map<number, Match[]>): string {
@@ -234,42 +305,32 @@ function poolProgress(pool: PhaseGroup, matchesByPool: Map<number, Match[]>): st
  * error — it is a thing not decided yet, which is exactly what a dash says.
  */
 function placementChips(pool: PhaseGroup, advancingPlaces: number): PlacementChip[] {
-    const routed = new Set((pool.advancementRules ?? []).filter((rule) => rule.sourceKind === "phase_group").map((rule) => rule.sourcePlacement));
+    const routed = new Set(poolRulesOf(pool).map((rule) => rule.sourcePlacement));
     const places = new Set<number>([...routed]);
     for (let placement = 1; placement <= advancingPlaces; placement++) {
         places.add(placement);
     }
 
-    return [...places]
-        .sort((left, right) => left - right)
-        .map((placement) => ({ placement, label: ordinal(placement), routed: routed.has(placement) }));
+    return [...places].sort((left, right) => left - right).map((placement) => ({ placement, label: ordinal(placement), routed: routed.has(placement) }));
 }
 
-function matchCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>): CanvasCard[] {
-    let top = FIRST_CARD_TOP;
-    const cards: CanvasCard[] = [];
+/**
+ * The places already routed, plus one dashed handle for the next of them.
+ *
+ * A match has no expected number of places to send on the way a pool does: a
+ * two-player match has a loser, and in a single elimination bracket the loser
+ * is meant to go nowhere. Offering every place would report a whole bracket as
+ * unfinished, so what is offered is what is used, plus one more.
+ */
+function routedChips(rules: { sourcePlacement: number }[]): PlacementChip[] {
+    const routed = [...new Set(rules.map((rule) => rule.sourcePlacement))].sort((left, right) => left - right);
+    const next = (routed.at(-1) ?? 0) + 1;
 
-    for (const pool of phase.phaseGroups ?? []) {
-        for (const match of matchesByPool.get(pool.id) ?? []) {
-            const card: CanvasCard = {
-                key: matchKey(match.id),
-                kind: "match",
-                id: match.id,
-                name: match.name,
-                status: getMatchProgressStatus(getMatchProgress(match)),
-                meta: [pool.name],
-                chips: [],
-                slots: matchSlots(match),
-                top,
-                height: 0,
-            };
-            card.height = cardHeight(card);
-            cards.push(card);
-            top += card.height + CARD_GAP;
-        }
-    }
+    return [...routed.map((placement) => ({ placement, label: ordinal(placement), routed: true })), { placement: next, label: ordinal(next), routed: false }];
+}
 
-    return cards;
+function poolRulesOf(pool: PhaseGroup): NonNullable<PhaseGroup["advancementRules"]> {
+    return (pool.advancementRules ?? []).filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === pool.id);
 }
 
 /**
@@ -295,33 +356,65 @@ function matchSlots(match: Match): { slot: number; from: string | null }[] {
     });
 }
 
+type Anchor = { left: number; right: number; y: number };
+
+function anchorsOf(columns: CanvasColumn[]): Map<string, Anchor> {
+    const anchors = new Map<string, Anchor>();
+
+    for (const column of columns) {
+        for (const card of column.cards) {
+            anchors.set(card.key, { left: column.left + card.left, right: column.left + card.left + card.width, y: card.top + card.height / 2 });
+        }
+    }
+
+    return anchors;
+}
+
+type CanvasRule = { sourceKind: "pool" | "match"; sourceId: number; targetKind: "pool" | "match"; targetId: number };
+
 /**
  * The routes, as curves that leave the right edge of a card and arrive at the
  * left edge of another. Both ends are horizontal, so a route reads as a flow
  * from one column into the next however far apart the two cards are vertically.
+ *
+ * Every rule is drawn in every mode. A rule whose end is not a card on this
+ * canvas — a match, while the canvas is showing pools — is drawn to the pool
+ * that holds it, so a route disappears when the rule does and not when the view
+ * changes.
  */
-function buildEdges(input: StructureCanvasInput, anchors: Map<string, { x: number; y: number; right: number }>): CanvasEdge[] {
+function buildEdges(input: StructureCanvasInput, anchors: Map<string, Anchor>): CanvasEdge[] {
     const edges: CanvasEdge[] = [];
     const seen = new Set<string>();
+    const poolOfMatch = new Map(input.matches.map((match) => [match.id, match.phaseGroupId]));
 
-    const rules = input.density === "matches" ? matchRules(input.matches) : poolRules(input.division);
-    for (const rule of rules) {
-        const source = anchors.get(rule.sourceKey);
-        const target = anchors.get(rule.targetKey);
-        if (!source || !target) {
+    function anchorOf(kind: "pool" | "match", id: number): Anchor | undefined {
+        const own = anchors.get(kind === "pool" ? poolKey(id) : matchKey(id));
+        if (own || kind === "pool") {
+            return own;
+        }
+
+        const poolId = poolOfMatch.get(id);
+
+        return poolId === undefined ? undefined : anchors.get(poolKey(poolId));
+    }
+
+    for (const rule of allRules(input)) {
+        const source = anchorOf(rule.sourceKind, rule.sourceId);
+        const target = anchorOf(rule.targetKind, rule.targetId);
+        if (!source || !target || source === target) {
             continue;
         }
 
-        const key = `${rule.sourceKey}->${rule.targetKey}`;
+        const key = `${rule.sourceKind}:${rule.sourceId}->${rule.targetKind}:${rule.targetId}`;
         if (seen.has(key)) {
             continue;
         }
         seen.add(key);
 
-        const midpoint = source.right + (target.x - source.right) / 2;
+        const midpoint = source.right + (target.left - source.right) / 2;
         edges.push({
             key,
-            path: `M ${source.right} ${source.y} C ${midpoint} ${source.y}, ${midpoint} ${target.y}, ${target.x} ${target.y}`,
+            path: `M ${source.right} ${source.y} C ${midpoint} ${source.y}, ${midpoint} ${target.y}, ${target.left} ${target.y}`,
             highlighted: touchesSelection(input.selection, rule),
         });
     }
@@ -329,54 +422,47 @@ function buildEdges(input: StructureCanvasInput, anchors: Map<string, { x: numbe
     return edges;
 }
 
-type CanvasRule = { sourceKey: string; targetKey: string; sourceId: number; targetId: number; kind: "pool" | "match" };
+/** Every rule the division holds, whichever end of it the canvas is drawing. */
+function allRules(input: StructureCanvasInput): CanvasRule[] {
+    const pools = (input.division?.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
 
-function poolRules(division: TournamentDivisionOption | undefined): CanvasRule[] {
-    const pools = (division?.phases ?? []).flatMap((phase) => phase.phaseGroups ?? []);
-
-    return pools.flatMap((pool) =>
-        (pool.advancementRules ?? [])
-            .filter((rule) => rule.sourceKind === "phase_group" && rule.sourceId === pool.id)
-            .map((rule) => ({
-                sourceKey: poolKey(pool.id),
-                /* A route into a match is drawn to the pool that holds it while
-                   the pools are what is on screen: the match is not a card yet. */
-                targetKey: rule.targetKind === "phase_group" ? poolKey(rule.targetId) : matchKey(rule.targetId),
-                sourceId: pool.id,
-                targetId: rule.targetId,
-                kind: "pool" as const,
-            })),
+    const fromPools = pools.flatMap((pool) =>
+        poolRulesOf(pool).map((rule) => ({
+            sourceKind: "pool" as const,
+            sourceId: pool.id,
+            targetKind: rule.targetKind === "phase_group" ? ("pool" as const) : ("match" as const),
+            targetId: rule.targetId,
+        })),
     );
-}
 
-function matchRules(matches: Match[]): CanvasRule[] {
-    return matches.flatMap((match) =>
+    const fromMatches = input.matches.flatMap((match) =>
         (match.advancementRules ?? [])
             .filter((rule) => rule.sourceKind === "match" && rule.sourceId === match.id)
             .map((rule) => ({
-                sourceKey: matchKey(match.id),
-                targetKey: rule.targetKind === "match" ? matchKey(rule.targetId) : poolKey(rule.targetId),
+                sourceKind: "match" as const,
                 sourceId: match.id,
+                targetKind: rule.targetKind === "phase_group" ? ("pool" as const) : ("match" as const),
                 targetId: rule.targetId,
-                kind: "match" as const,
             })),
     );
+
+    return [...fromPools, ...fromMatches];
 }
 
 function touchesSelection(selection: CanvasSelection, rule: CanvasRule): boolean {
     if (!selection) {
         return false;
     }
-    const key = selection.kind === "pool" ? poolKey(selection.id) : matchKey(selection.id);
 
-    return rule.sourceKey === key || rule.targetKey === key;
+    return (rule.sourceKind === selection.kind && rule.sourceId === selection.id) || (rule.targetKind === selection.kind && rule.targetId === selection.id);
 }
 
 /**
  * How many places lead nowhere across the whole division.
  *
  * It is the one number no dialog could ever produce, because no dialog sees
- * more than the node it was opened on.
+ * more than the node it was opened on. It counts pools: a match sends on what
+ * it is asked to send on, and a bracket is not unfinished for having losers.
  */
 function countDangling(phases: TournamentDivisionOptionPhase[], advancingPlaces: number): number {
     const pools = phases.flatMap((phase) => phase.phaseGroups ?? []);

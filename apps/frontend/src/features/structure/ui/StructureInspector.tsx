@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import StatusIcon from "@/shared/components/ui/StatusIcon";
+import AddSlot from "@/features/structure/ui/AddSlot";
 import { btnDanger, btnSecondary, btnTrash, focusRing } from "@/styles/buttonStyles";
 import { ordinal, type CanvasCard, type CanvasSelection } from "@/features/structure/model/structureCanvas";
 import type { Match } from "@/features/match/model/types";
@@ -13,6 +14,7 @@ type Props = {
   selection: CanvasSelection;
   card: CanvasCard | undefined;
   matches: Match[];
+  onAddMatch: (poolId: number, poolName: string, name: string) => Promise<void>;
   onRename: (name: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onEditRoutes: () => void;
@@ -33,6 +35,7 @@ export default function StructureInspector({
   selection,
   card,
   matches,
+  onAddMatch,
   onRename,
   onDelete,
   onEditRoutes,
@@ -128,12 +131,11 @@ export default function StructureInspector({
             Edit routes
           </button>
 
+          {/* A match is added where it belongs, which is inside a pool. The
+              column adds pools; nothing on the canvas has to guess which pool a
+              new match was meant for. */}
           <div className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Matches</div>
-          {poolMatches.length === 0 ? (
-            <p className="mt-1.5 text-[12px] text-ui-text-mute">
-              {card.meta[0]}. Switch to the match density to see them.
-            </p>
-          ) : (
+          {poolMatches.length > 0 && (
             <ul className="mt-1.5 flex flex-col divide-y divide-ui-separator">
               {poolMatches.map((match) => (
                 <li key={match.id} className="py-1.5 text-[12px] text-ui-text">
@@ -141,6 +143,14 @@ export default function StructureInspector({
                 </li>
               ))}
             </ul>
+          )}
+          {pool && (
+            <AddSlot
+              noun="Match"
+              suggestedName={`Match ${poolMatches.length + 1}`}
+              onCreate={(name) => onAddMatch(pool.id, pool.name, name)}
+              className="mt-1.5 h-9"
+            />
           )}
         </>
       )}

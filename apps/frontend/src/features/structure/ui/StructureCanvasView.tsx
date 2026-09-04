@@ -5,20 +5,23 @@ import {
   COLUMN_WIDTH,
   HEADER_HEIGHT,
   SLOT_HEIGHT,
+  type ArmedPlacement,
   type CanvasCard,
+  type CanvasMode,
   type CanvasSelection,
   type StructureCanvas,
 } from "@/features/structure/model/structureCanvas";
 
 type Props = {
   canvas: StructureCanvas;
+  mode: CanvasMode;
   selection: CanvasSelection;
   onSelect: (selection: CanvasSelection) => void;
   onAddCard: (phaseId: number, name: string, keepGoing: boolean) => Promise<void>;
   onAddPhase: (name: string, keepGoing: boolean) => Promise<void>;
   /** The placement chip that is armed, waiting for a target to be clicked. */
-  armed: { poolId: number; placement: number } | null;
-  onArm: (armed: { poolId: number; placement: number } | null) => void;
+  armed: ArmedPlacement | null;
+  onArm: (armed: ArmedPlacement | null) => void;
   onDropRoute: (target: CanvasCard) => Promise<void>;
   suggestedCardName: (phaseId: number) => string;
   suggestedPhaseName: string;
@@ -36,6 +39,7 @@ type Props = {
  */
 export default function StructureCanvasView({
   canvas,
+  mode,
   selection,
   onSelect,
   onAddCard,
@@ -47,6 +51,11 @@ export default function StructureCanvasView({
   suggestedPhaseName,
 }: Props) {
   const isSelected = (card: CanvasCard) => selection?.kind === card.kind && selection.id === card.id;
+  const isArmedSource = (card: CanvasCard) => armed?.kind === card.kind && armed.id === card.id;
+  /* Everywhere a route can land says so with a ring. The accent is selection
+     and aiming is a kind of selection, so it is the right borrowing; the dash
+     is not, because a dash means a thing that is not there yet. */
+  const isTarget = (card: CanvasCard) => Boolean(armed) && !isArmedSource(card);
 
   return (
     <div className="relative overflow-x-auto pb-4">
@@ -64,7 +73,7 @@ export default function StructureCanvasView({
               fill="none"
               strokeWidth={edge.highlighted ? 1.8 : 1.3}
               markerEnd="url(#structure-arrow)"
-              className={edge.highlighted ? "stroke-ui-accent" : "stroke-ui-border-strong"}
+              className={`${edge.highlighted ? "stroke-ui-accent" : "stroke-ui-border-strong"} ${mode === "routes" ? "" : "opacity-40"}`}
             />
           ))}
         </svg>
@@ -87,14 +96,12 @@ export default function StructureCanvasView({
                 key={card.key}
                 type="button"
                 onClick={() => (armed ? void onDropRoute(card) : onSelect({ kind: card.kind, id: card.id }))}
-                className={`absolute left-0 flex w-full flex-col rounded-lg border px-2.5 py-2 text-left shadow-card transition-colors ${
-                  isSelected(card)
+                className={`absolute flex flex-col rounded-lg border px-2.5 py-2 text-left shadow-card transition-colors ${
+                  isSelected(card) || isArmedSource(card)
                     ? "border-ui-border-strong bg-ui-selected shadow-[inset_3px_0_0_0_rgb(var(--ui-accent))]"
-                    : armed
-                      ? "border-dashed border-ui-accent bg-ui-surface"
-                      : "border-ui-border bg-ui-surface hover:bg-ui-raised"
-                }`}
-                style={{ top: card.top, height: card.height }}
+                    : "border-ui-border bg-ui-surface hover:bg-ui-raised"
+                } ${isTarget(card) ? "ring-2 ring-ui-accent" : ""}`}
+                style={{ top: card.top, left: card.left, width: card.width, height: card.height }}
               >
                 <span className="flex items-center gap-2">
                   <StatusIcon status={card.status} />
@@ -125,20 +132,16 @@ export default function StructureCanvasView({
                         title={chip.routed ? `${chip.label} of ${card.name}` : `${chip.label} of ${card.name} goes nowhere yet`}
                         onClick={(event) => {
                           event.stopPropagation();
-                          onArm(
-                            armed?.poolId === card.id && armed.placement === chip.placement
-                              ? null
-                              : { poolId: card.id, placement: chip.placement },
-                          );
+                          onArm(isArmedSource(card) && armed?.placement === chip.placement ? null : { kind: card.kind, id: card.id, placement: chip.placement });
                         }}
                         onKeyDown={(event) => {
                           if (event.key !== "Enter" && event.key !== " ") return;
                           event.preventDefault();
                           event.stopPropagation();
-                          onArm({ poolId: card.id, placement: chip.placement });
+                          onArm({ kind: card.kind, id: card.id, placement: chip.placement });
                         }}
-                        className={`rounded-full border px-1.5 text-[10px] font-bold ${
-                          armed?.poolId === card.id && armed.placement === chip.placement
+                        className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
+                          isArmedSource(card) && armed?.placement === chip.placement
                             ? "border-ui-accent bg-ui-accent/10 text-ui-accent"
                             : chip.routed
                               ? "border-ui-border bg-ui-raised text-ui-text-mute"
@@ -153,23 +156,27 @@ export default function StructureCanvasView({
               </button>
             ))}
 
-            <AddSlot
-              noun={column.slotLabel}
-              suggestedName={suggestedCardName(column.phaseId)}
-              onCreate={(name, keepGoing) => onAddCard(column.phaseId, name, keepGoing)}
-              className="absolute left-0"
-              style={{ top: column.slotTop, height: SLOT_HEIGHT, width: COLUMN_WIDTH }}
-            />
+            {mode === "build" && (
+              <AddSlot
+                noun={column.slotLabel}
+                suggestedName={suggestedCardName(column.phaseId)}
+                onCreate={(name, keepGoing) => onAddCard(column.phaseId, name, keepGoing)}
+                className="absolute left-0"
+                style={{ top: column.slotTop, height: SLOT_HEIGHT, width: COLUMN_WIDTH }}
+              />
+            )}
           </div>
         ))}
 
-        <AddSlot
-          noun="Phase"
-          suggestedName={suggestedPhaseName}
-          onCreate={onAddPhase}
-          className="absolute top-0"
-          style={{ left: canvas.addColumnLeft, width: ADD_COLUMN_WIDTH, height: HEADER_HEIGHT }}
-        />
+        {mode === "build" && (
+          <AddSlot
+            noun="Phase"
+            suggestedName={suggestedPhaseName}
+            onCreate={onAddPhase}
+            className="absolute top-0"
+            style={{ left: canvas.addColumnLeft, width: ADD_COLUMN_WIDTH, height: HEADER_HEIGHT }}
+          />
+        )}
       </div>
     </div>
   );

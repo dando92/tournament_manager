@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { StructurePlan } from "@tournament-manager/contracts";
 
 import { applyStructurePlan } from "@/features/structure/api/structure-plan.api";
-import { buildStructureCanvas, type CanvasDensity, type CanvasSelection } from "@/features/structure/model/structureCanvas";
+import { buildStructureCanvas, type CanvasMode, type CanvasSelection } from "@/features/structure/model/structureCanvas";
 import { listByDivision } from "@/features/match/api/match.api";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
@@ -15,7 +15,7 @@ import type { TournamentDivisionOption } from "@/features/tournament/model/types
 /**
  * What the Structure page holds.
  *
- * The division, the density and the selection live in the address bar, which is
+ * The division, the mode and the selection live in the address bar, which is
  * what makes a view of a structure a thing you can send somebody: the back
  * button walks the selections you made, and a link opens on the phase you were
  * looking at rather than on the first one.
@@ -33,21 +33,23 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
 
     const divisionId = Number(params.get("division")) || divisions[0]?.id || 0;
     const division = divisions.find((candidate) => candidate.id === divisionId);
-    const density: CanvasDensity = params.get("density") === "matches" ? "matches" : "pools";
+    const mode: CanvasMode = params.get("mode") === "routes" ? "routes" : "build";
 
     const selection = readSelection(params.get("select"));
 
-    /* Matches are read only in the density that draws them: the pool density
-       already carries every count and rule it needs from the tree's projection. */
+    /* The matches are read in both modes. Routing draws them, and building
+       needs their rules anyway: a route out of a match is still a route out of
+       the division, and it used to vanish from the canvas when the view changed
+       rather than when the rule did. */
     const matches = useQuery({
         queryKey: matchKeys.byDivision(divisionId),
-        enabled: density === "matches" && divisionId > 0,
+        enabled: divisionId > 0,
         queryFn: () => listByDivision(divisionId),
     });
 
     const canvas = useMemo(
-        () => buildStructureCanvas({ division, matches: matches.data ?? [], density, selection }),
-        [division, matches.data, density, selection],
+        () => buildStructureCanvas({ division, matches: matches.data ?? [], mode, selection }),
+        [division, matches.data, mode, selection],
     );
 
     function setParam(key: string, value: string | null): void {
@@ -98,7 +100,7 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
     return {
         division,
         divisionId,
-        density,
+        mode,
         selection,
         canvas,
         matches: matches.data ?? [],
@@ -107,7 +109,7 @@ export function useStructurePage(tournamentId: number, divisions: TournamentDivi
         error,
         dismissError: () => setError(null),
         selectDivision: (id: number) => setParam("division", String(id)),
-        setDensity: (next: CanvasDensity) => setParam("density", next),
+        setMode: (next: CanvasMode) => setParam("mode", next),
         select: (next: CanvasSelection) => setParam("select", next ? `${next.kind}:${next.id}` : null),
         apply,
         refresh,

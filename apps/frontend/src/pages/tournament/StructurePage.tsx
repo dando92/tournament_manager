@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -18,7 +18,7 @@ import { updateAdvancementRulesForSource } from "@/features/match/api/advancemen
 import { nextPoolName } from "@/features/division/model/poolVisibility";
 import { poolPath } from "@/features/tournament/model/treeSelection";
 import { btnSecondary, focusRing } from "@/styles/buttonStyles";
-import type { CanvasCard } from "@/features/structure/model/structureCanvas";
+import type { ArmedPlacement, CanvasCard } from "@/features/structure/model/structureCanvas";
 
 /**
  * The whole shape of a division, on one page.
@@ -40,12 +40,25 @@ export default function StructurePage() {
     const page = useStructurePage(tournamentId, divisions);
     const [preview, setPreview] = useState<StructurePlan | null>(null);
     const [panel, setPanel] = useState<"inspector" | "generate">("inspector");
-    const [armed, setArmed] = useState<{ poolId: number; placement: number } | null>(null);
+    const [armed, setArmed] = useState<ArmedPlacement | null>(null);
     const [importNotice, setImportNotice] = useState(false);
 
     const selectedCard = page.canvas.columns.flatMap((column) => column.cards).find((card) => card.key === selectionKey(page.selection));
 
     const handlePreview = useCallback((plan: StructurePlan | null) => setPreview(plan), []);
+
+    /* Aiming is a mode the page is in, so the key that leaves every other mode
+       leaves this one. Without it the only way out is to click the same chip
+       again, and by then the canvas has usually scrolled away from it. */
+    useEffect(() => {
+        if (!armed) {
+            return;
+        }
+        const disarm = (event: KeyboardEvent) => event.key === "Escape" && setArmed(null);
+        window.addEventListener("keydown", disarm);
+
+        return () => window.removeEventListener("keydown", disarm);
+    }, [armed]);
 
     /**
      * A route is drawn rather than typed: a placement chip is armed, every card
@@ -55,17 +68,11 @@ export default function StructurePage() {
     async function dropRoute(target: CanvasCard): Promise<void> {
         if (!armed || !page.division) return;
 
-        const sourcePool = page.division.phases.flatMap((phase) => phase.phaseGroups ?? []).find((pool) => pool.id === armed.poolId);
-        if (!sourcePool) return;
+        const sourceName = nameOf(armed.kind, armed.id);
+        if (!sourceName) return;
 
-        const source: PlanNode = { localId: "source", kind: "phaseGroup", action: "link", localRowId: armed.poolId, name: sourcePool.name };
-        const destination: PlanNode = {
-            localId: "target",
-            kind: target.kind === "pool" ? "phaseGroup" : "match",
-            action: "link",
-            localRowId: target.id,
-            name: target.name,
-        };
+        const source: PlanNode = { localId: "source", kind: planKind(armed.kind), action: "link", localRowId: armed.id, name: sourceName };
+        const destination: PlanNode = { localId: "target", kind: planKind(target.kind), action: "link", localRowId: target.id, name: target.name };
         const nextSlot = target.kind === "match" ? (target.slots.find((slot) => !slot.from)?.slot ?? target.slots.length + 1) : armed.placement;
 
         await page.apply(
@@ -79,22 +86,28 @@ export default function StructurePage() {
         setArmed(null);
     }
 
-    async function addCard(phaseId: number, name: string): Promise<void> {
-        if (page.density === "matches") {
-            const pool = page.division?.phases.find((phase) => phase.id === phaseId)?.phaseGroups?.[0];
-            if (!pool) return;
-            await page.apply(
-                singleNodePlan(
-                    tournamentId,
-                    { localId: "match", kind: "match", parentLocalId: "pool", action: "create", name },
-                    [{ localId: "pool", kind: "phaseGroup", action: "link", localRowId: pool.id, name: pool.name }],
-                ),
-            );
-            return;
-        }
-
+    /** What a card in a column is: the pool. A match is added from its pool. */
+    async function addPool(phaseId: number, name: string): Promise<void> {
         await tree.createPool(phaseId, name);
         await page.refresh();
+    }
+
+    async function addMatch(poolId: number, poolName: string, name: string): Promise<void> {
+        await page.apply(
+            singleNodePlan(
+                tournamentId,
+                { localId: "match", kind: "match", parentLocalId: "pool", action: "create", name },
+                [{ localId: "pool", kind: "phaseGroup", action: "link", localRowId: poolId, name: poolName }],
+            ),
+        );
+    }
+
+    function nameOf(kind: "pool" | "match", id: number): string | undefined {
+        if (kind === "match") {
+            return page.matches.find((match) => match.id === id)?.name;
+        }
+
+        return page.division?.phases.flatMap((phase) => phase.phaseGroups ?? []).find((pool) => pool.id === id)?.name;
     }
 
     async function addPhase(name: string): Promise<void> {
@@ -173,17 +186,22 @@ export default function StructurePage() {
                             {page.canvas.danglingPlacements} {page.canvas.danglingPlacements === 1 ? "placement goes" : "placements go"} nowhere
                         </span>
                     )}
+                    {/* One canvas, two things to be doing on it: laying out the
+                        shape, and saying where its finishers go. */}
                     <span className="inline-flex overflow-hidden rounded-lg border border-ui-border bg-ui-surface">
-                        {(["pools", "matches"] as const).map((density) => (
+                        {([
+                            { mode: "build", label: "Build" },
+                            { mode: "routes", label: "Routes" },
+                        ] as const).map((choice) => (
                             <button
-                                key={density}
+                                key={choice.mode}
                                 type="button"
-                                onClick={() => page.setDensity(density)}
-                                className={`${focusRing} px-3 py-1.5 text-xs font-semibold capitalize ${
-                                    page.density === density ? "bg-ui-selected text-ui-text shadow-[inset_0_-3px_0_0_rgb(var(--ui-accent))]" : "text-ui-text-mute"
+                                onClick={() => page.setMode(choice.mode)}
+                                className={`${focusRing} px-3 py-1.5 text-xs font-semibold ${
+                                    page.mode === choice.mode ? "bg-ui-selected text-ui-text shadow-[inset_0_-3px_0_0_rgb(var(--ui-accent))]" : "text-ui-text-mute"
                                 }`}
                             >
-                                {density}
+                                {choice.label}
                             </button>
                         ))}
                     </span>
@@ -268,18 +286,15 @@ export default function StructurePage() {
                 <div className="min-w-0 flex-1">
                     <StructureCanvasView
                         canvas={page.canvas}
+                        mode={page.mode}
                         selection={page.selection}
                         onSelect={page.select}
-                        onAddCard={addCard}
+                        onAddCard={addPool}
                         onAddPhase={addPhase}
                         armed={armed}
                         onArm={setArmed}
                         onDropRoute={dropRoute}
-                        suggestedCardName={(phaseId) =>
-                            page.density === "matches"
-                                ? `Match ${(page.division?.phases.find((phase) => phase.id === phaseId)?.matchCount ?? 0) + 1}`
-                                : nextPoolName(page.division?.phases.find((phase) => phase.id === phaseId))
-                        }
+                        suggestedCardName={(phaseId) => nextPoolName(page.division?.phases.find((phase) => phase.id === phaseId))}
                         suggestedPhaseName={`Phase ${(page.division?.phases.length ?? 0) + 1}`}
                     />
                     {preview && <PlanPreviewColumn plan={preview} />}
@@ -300,6 +315,7 @@ export default function StructurePage() {
                         selection={page.selection}
                         card={selectedCard}
                         matches={page.matches}
+                        onAddMatch={addMatch}
                         onRename={rename}
                         onDelete={remove}
                         onEditRoutes={openRouteEditor}
@@ -314,4 +330,9 @@ export default function StructurePage() {
 
 function selectionKey(selection: ReturnType<typeof useStructurePage>["selection"]): string | null {
     return selection ? `${selection.kind}:${selection.id}` : null;
+}
+
+/** What the canvas calls a pool, and what a plan calls the same thing. */
+function planKind(kind: "pool" | "match"): PlanNode["kind"] {
+    return kind === "pool" ? "phaseGroup" : "match";
 }
