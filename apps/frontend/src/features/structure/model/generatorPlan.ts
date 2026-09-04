@@ -12,6 +12,7 @@ import type { PlanNode, PlanRoute, StructurePlan } from "@tournament-manager/con
 export type GenerateRequest = {
     tournamentId: number;
     divisionId: number;
+    divisionName: string;
     structureVersion: number;
     /** The phase to build in, or a name for the one the bracket brings with it. */
     phaseId?: number;
@@ -37,7 +38,7 @@ export function generateBracketPlan(request: GenerateRequest, entrantCount: numb
     const nodes: PlanNode[] = [];
 
     const divisionLocalId = "division";
-    nodes.push({ localId: divisionLocalId, kind: "division", action: "link", localRowId: request.divisionId, name: "" });
+    nodes.push({ localId: divisionLocalId, kind: "division", action: "link", localRowId: request.divisionId, name: request.divisionName });
 
     const phaseLocalId = "phase";
     nodes.push({

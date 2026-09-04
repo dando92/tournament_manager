@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsObject, ValidateNested } from 'class-validator';
-import type { PlanBasis, PlanNode, PlanRoute, PlanSource, StructurePlan } from '@tournament-manager/contracts';
+import { IsArray, IsInt, IsObject, IsOptional, ValidateNested } from 'class-validator';
+import type { PlanBasis, PlanNode, PlanRoute, PlanSlot, PlanSource, StructurePlan } from '@tournament-manager/contracts';
 
 /**
  * The envelope of a plan, checked by the pipe.
@@ -31,4 +31,10 @@ export class ApplyStructurePlanDto implements StructurePlan {
     @ValidateNested({ each: true })
     @Type(() => Object)
     routes: PlanRoute[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => Object)
+    clearedSlots?: PlanSlot[];
 }

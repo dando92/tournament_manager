@@ -1,4 +1,4 @@
-import type { PlanNode, PlanRoute, StructurePlan } from '@tournament-manager/contracts';
+import type { PlanNode, PlanRoute, PlanSlot, StructurePlan } from '@tournament-manager/contracts';
 
 import { orderedForWriting, validateStructurePlan } from '@tournament/structure/plan/structure-plan.validation';
 
@@ -12,8 +12,8 @@ function node(partial: Partial<PlanNode> & Pick<PlanNode, 'localId' | 'kind'>): 
     return { action: 'create', name: partial.localId, ...partial };
 }
 
-function plan(nodes: PlanNode[], routes: PlanRoute[] = []): StructurePlan {
-    return { tournamentId: 1, source: { kind: 'manual' }, basedOn: [], nodes, routes };
+function plan(nodes: PlanNode[], routes: PlanRoute[] = [], clearedSlots: PlanSlot[] = []): StructurePlan {
+    return { tournamentId: 1, source: { kind: 'manual' }, basedOn: [], nodes, routes, clearedSlots };
 }
 
 const division = node({ localId: 'd', kind: 'division', name: 'Open' });
@@ -60,13 +60,50 @@ describe('validateStructurePlan', () => {
             ]),
         );
 
-        expect(errors).toEqual([expect.stringContaining('links to nothing'), expect.stringContaining('both creates and names')]);
+        expect(errors).toEqual([expect.stringContaining('links nothing'), expect.stringContaining('both creates and names')]);
+    });
+
+    /* A linked node is the row it names, and the name it carries is the name
+       that row should have, so renaming is an edit to a link and not an action
+       of its own. A plan built from a canvas is mostly links. */
+    it('asks a linked node for the name its row should have', () => {
+        const errors = validateStructurePlan(plan([node({ localId: 'd', kind: 'division', action: 'link', localRowId: 4, name: '' })]));
+
+        expect(errors).toEqual([expect.stringContaining('has no name')]);
+    });
+
+    it('asks a removed node for the row and not for a name', () => {
+        const errors = validateStructurePlan(
+            plan([
+                node({ localId: 'a', kind: 'division', action: 'remove', localRowId: 4, name: '' }),
+                node({ localId: 'b', kind: 'division', action: 'remove', name: '' }),
+            ]),
+        );
+
+        expect(errors).toEqual([expect.stringContaining('b removes nothing')]);
     });
 
     it('refuses writing into something the plan leaves out', () => {
         const errors = validateStructurePlan(plan([{ ...division, action: 'skip' }, phase]));
 
-        expect(errors).toEqual([expect.stringContaining('which the plan leaves out')]);
+        expect(errors).toEqual([expect.stringContaining('does not leave standing')]);
+    });
+
+    it('refuses writing into something the plan removes', () => {
+        const errors = validateStructurePlan(plan([{ ...division, action: 'remove', localRowId: 4 }, phase]));
+
+        expect(errors).toEqual([expect.stringContaining('does not leave standing')]);
+    });
+
+    it('refuses a route into something the plan removes', () => {
+        const errors = validateStructurePlan(
+            plan(
+                [division, phase, pool, { ...match, action: 'remove', localRowId: 9 }],
+                [{ sourceLocalId: 'g', sourcePlacement: 1, targetLocalId: 'm', targetSlot: 1 }],
+            ),
+        );
+
+        expect(errors).toEqual([expect.stringContaining('does not leave one of them standing')]);
     });
 
     it('refuses a match that advances into itself', () => {
@@ -108,6 +145,27 @@ describe('validateStructurePlan', () => {
         );
 
         expect(errors).toEqual([expect.stringContaining('places start at one'), expect.stringContaining('slots start at one')]);
+    });
+
+    it('refuses emptying a slot on something the plan does not carry', () => {
+        const errors = validateStructurePlan(plan([division, phase, pool], [], [{ targetLocalId: 'gone', targetSlot: 1 }]));
+
+        expect(errors).toEqual([expect.stringContaining('which the plan does not carry')]);
+    });
+
+    /* Whichever way the applier ran the two, one of the intentions would be
+       lost, so the contradiction is reported rather than resolved. */
+    it('refuses a slot that is both emptied and filled', () => {
+        const second = node({ localId: 'm2', kind: 'match', parentLocalId: 'g', name: 'Round 2' });
+        const errors = validateStructurePlan(
+            plan(
+                [division, phase, pool, match, second],
+                [{ sourceLocalId: 'm', sourcePlacement: 1, targetLocalId: 'm2', targetSlot: 1 }],
+                [{ targetLocalId: 'm2', targetSlot: 1 }],
+            ),
+        );
+
+        expect(errors).toEqual([expect.stringContaining('both emptied and filled')]);
     });
 });
 

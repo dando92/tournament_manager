@@ -12,12 +12,22 @@ import {
     PhaseGroup,
     Tournament,
 } from '@tournament-manager/persistence';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager, type EntityTarget, In } from 'typeorm';
 
 /** What the applier hands back: every node's row, and the divisions it moved. */
 export type AppliedPlan = {
     rowIdByLocalId: Record<string, number>;
     divisionIds: number[];
+};
+
+/** The four rows a plan writes, seen as the one column every one of them has. */
+type NamedRow = { id: number; name: string };
+
+const ENTITY_OF: Record<string, EntityTarget<NamedRow> | undefined> = {
+    division: Division as EntityTarget<NamedRow>,
+    phase: Phase as EntityTarget<NamedRow>,
+    phaseGroup: PhaseGroup as EntityTarget<NamedRow>,
+    match: Match as EntityTarget<NamedRow>,
 };
 
 const LOCAL_TYPE_OF: Record<string, ExternalMappingLocalType> = {
@@ -54,13 +64,20 @@ export class StructurePlanStore {
             const rowIdByLocalId: Record<string, number> = {};
             const divisionIds = new Set<number>();
             const created: PlanNode[] = [];
+            const removed: PlanNode[] = [];
 
             for (const node of ordered) {
                 if (node.action === 'skip') {
                     continue;
                 }
+                if (node.action === 'remove') {
+                    rowIdByLocalId[node.localId] = await this.assertLinkable(manager, node, tournamentId);
+                    removed.push(node);
+                    continue;
+                }
                 if (node.action === 'link') {
                     rowIdByLocalId[node.localId] = await this.assertLinkable(manager, node, tournamentId);
+                    await this.rename(manager, node, rowIdByLocalId[node.localId]);
                     continue;
                 }
 
@@ -68,6 +85,8 @@ export class StructurePlanStore {
                 created.push(node);
             }
 
+            /* The versions are read before anything is deleted: a removed row
+               cannot say afterwards which division it moved. */
             for (const node of ordered) {
                 const divisionId = await this.divisionOf(manager, node, rowIdByLocalId);
                 if (divisionId) {
@@ -75,6 +94,8 @@ export class StructurePlanStore {
                 }
             }
 
+            await this.removeRows(manager, removed, rowIdByLocalId);
+            await this.clearSlots(manager, plan, rowIdByLocalId);
             await this.writeRoutes(manager, plan, rowIdByLocalId);
             await this.writeMappings(manager, created, rowIdByLocalId);
 
@@ -103,6 +124,69 @@ export class StructurePlanStore {
         }
 
         return rowId;
+    }
+
+    /**
+     * The name a linked node carries, when it is not the one the row has.
+     *
+     * Renaming is an edit to a link rather than an action of its own, so a page
+     * that renames four pools and adds a phase sends one plan and writes it in
+     * one transaction, the way it would have if it had created them.
+     */
+    private async rename(manager: EntityManager, node: PlanNode, rowId: number): Promise<void> {
+        const name = node.name.trim();
+        const entity = ENTITY_OF[node.kind];
+        if (!entity) {
+            return;
+        }
+
+        const current = await manager.findOne(entity, { where: { id: rowId }, select: { id: true, name: true } });
+        if (!current || current.name === name) {
+            return;
+        }
+
+        await manager.update(entity, { id: rowId }, { name });
+    }
+
+    /**
+     * The rows the plan takes away.
+     *
+     * Children go with their parent through the foreign keys, but an
+     * advancement rule names its ends by kind and id rather than by a
+     * reference, so nothing would take those away on its own: a removed pool
+     * would leave rules pointing at a row that is not there.
+     */
+    private async removeRows(manager: EntityManager, removed: PlanNode[], rowIdByLocalId: Record<string, number>): Promise<void> {
+        for (const node of removed) {
+            const rowId = rowIdByLocalId[node.localId];
+            const entity = ENTITY_OF[node.kind];
+            if (!entity) {
+                continue;
+            }
+
+            const kind = node.kind === 'match' ? 'match' : 'phase_group';
+            if (node.kind === 'match' || node.kind === 'phaseGroup') {
+                await manager.delete(AdvancementRule, { sourceKind: kind, sourceId: rowId });
+                await manager.delete(AdvancementRule, { targetKind: kind, targetId: rowId });
+            }
+
+            await manager.delete(entity, { id: rowId });
+        }
+    }
+
+    /** The slots the plan empties, which is a route taken away and not replaced. */
+    private async clearSlots(manager: EntityManager, plan: StructurePlan, rowIdByLocalId: Record<string, number>): Promise<void> {
+        const kindOf = new Map(plan.nodes.map((node) => [node.localId, node.kind]));
+
+        for (const slot of plan.clearedSlots ?? []) {
+            const targetId = rowIdByLocalId[slot.targetLocalId];
+            if (!targetId) {
+                continue;
+            }
+
+            const targetKind = kindOf.get(slot.targetLocalId) === 'match' ? 'match' : 'phase_group';
+            await manager.delete(AdvancementRule, { targetKind, targetId, targetSlot: slot.targetSlot });
+        }
     }
 
     private async tournamentOf(manager: EntityManager, node: PlanNode, rowId: number): Promise<number | null> {

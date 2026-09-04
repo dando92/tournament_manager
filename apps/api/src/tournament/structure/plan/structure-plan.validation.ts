@@ -1,4 +1,4 @@
-import type { PlanNode, PlanNodeKind, StructurePlan } from '@tournament-manager/contracts';
+import type { PlanAction, PlanNode, PlanNodeKind, StructurePlan } from '@tournament-manager/contracts';
 
 /**
  * Whether a plan can be written at all.
@@ -25,6 +25,9 @@ const PARENT_OF: Record<PlanNodeKind, PlanNodeKind | null> = {
 /** The kinds a route may join. A pool advances; a participant does not. */
 const ROUTABLE: PlanNodeKind[] = ['phaseGroup', 'match'];
 
+/** The actions that leave a row standing when the plan has been written. */
+const SURVIVES: PlanAction[] = ['create', 'link'];
+
 export function validateStructurePlan(plan: StructurePlan): string[] {
     const errors: string[] = [];
     const byLocalId = new Map<string, PlanNode>();
@@ -42,6 +45,7 @@ export function validateStructurePlan(plan: StructurePlan): string[] {
     }
 
     errors.push(...validateRoutes(plan, byLocalId));
+    errors.push(...validateClearedSlots(plan, byLocalId));
 
     return errors;
 }
@@ -49,12 +53,15 @@ export function validateStructurePlan(plan: StructurePlan): string[] {
 function validateNode(node: PlanNode, byLocalId: Map<string, PlanNode>): string[] {
     const errors: string[] = [];
 
-    if (!node.name?.trim() && node.action !== 'skip') {
+    /* A name is what a plan writes, so it is asked for where it will be written.
+       A linked node carries one because renaming is an edit to the link rather
+       than an action of its own; a skipped or removed row is not being named. */
+    if (!node.name?.trim() && SURVIVES.includes(node.action)) {
         errors.push(`${node.localId} has no name.`);
     }
 
-    if (node.action === 'link' && !node.localRowId) {
-        errors.push(`${node.localId} links to nothing: a linked node names the row it is.`);
+    if (node.action !== 'create' && node.action !== 'skip' && !node.localRowId) {
+        errors.push(`${node.localId} ${node.action}s nothing: it names no row.`);
     }
 
     if (node.action === 'create' && node.localRowId) {
@@ -83,8 +90,8 @@ function validateNode(node: PlanNode, byLocalId: Map<string, PlanNode>): string[
         errors.push(`${node.localId} is a ${node.kind} and cannot hang from a ${parent.kind}.`);
     }
 
-    if (parent.action === 'skip' && node.action !== 'skip') {
-        errors.push(`${node.localId} would be written into ${parent.localId}, which the plan leaves out.`);
+    if (!SURVIVES.includes(parent.action) && SURVIVES.includes(node.action)) {
+        errors.push(`${node.localId} would be written into ${parent.localId}, which the plan does not leave standing.`);
     }
 
     return errors;
@@ -110,8 +117,8 @@ function validateRoutes(plan: StructurePlan, byLocalId: Map<string, PlanNode>): 
             errors.push(`A route joins a ${source.kind} to a ${target.kind}, and only pools and matches advance.`);
             continue;
         }
-        if (source.action === 'skip' || target.action === 'skip') {
-            errors.push(`A route joins ${source.localId} to ${target.localId}, and the plan leaves one of them out.`);
+        if (!SURVIVES.includes(source.action) || !SURVIVES.includes(target.action)) {
+            errors.push(`A route joins ${source.localId} to ${target.localId}, and the plan does not leave one of them standing.`);
             continue;
         }
         if (route.sourcePlacement < 1) {
@@ -126,6 +133,39 @@ function validateRoutes(plan: StructurePlan, byLocalId: Map<string, PlanNode>): 
             errors.push(`Two routes claim slot ${route.targetSlot} of ${target.localId}.`);
         }
         claimed.add(key);
+    }
+
+    return errors;
+}
+
+/**
+ * The slots a plan empties, which are the routes it takes away.
+ *
+ * Emptying a slot and filling it in the same plan is a contradiction rather
+ * than an order of operations, so it is refused instead of resolved: whichever
+ * way the applier ran them, one of the two intentions would be silently lost.
+ */
+function validateClearedSlots(plan: StructurePlan, byLocalId: Map<string, PlanNode>): string[] {
+    const errors: string[] = [];
+    const filled = new Set(plan.routes.map((route) => `${route.targetLocalId}#${route.targetSlot}`));
+
+    for (const slot of plan.clearedSlots ?? []) {
+        const target = byLocalId.get(slot.targetLocalId);
+        if (!target) {
+            errors.push(`A slot is emptied on ${slot.targetLocalId}, which the plan does not carry.`);
+            continue;
+        }
+        if (!ROUTABLE.includes(target.kind)) {
+            errors.push(`A slot is emptied on ${target.localId}, and only pools and matches have slots.`);
+            continue;
+        }
+        if (slot.targetSlot < 1) {
+            errors.push(`A slot emptied on ${target.localId} is numbered ${slot.targetSlot}, and slots start at one.`);
+            continue;
+        }
+        if (filled.has(`${slot.targetLocalId}#${slot.targetSlot}`)) {
+            errors.push(`Slot ${slot.targetSlot} of ${target.localId} is both emptied and filled.`);
+        }
     }
 
     return errors;

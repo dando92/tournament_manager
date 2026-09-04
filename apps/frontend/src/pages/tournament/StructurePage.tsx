@@ -55,13 +55,16 @@ export default function StructurePage() {
     async function dropRoute(target: CanvasCard): Promise<void> {
         if (!armed || !page.division) return;
 
-        const source: PlanNode = { localId: "source", kind: "phaseGroup", action: "link", localRowId: armed.poolId, name: "" };
+        const sourcePool = page.division.phases.flatMap((phase) => phase.phaseGroups ?? []).find((pool) => pool.id === armed.poolId);
+        if (!sourcePool) return;
+
+        const source: PlanNode = { localId: "source", kind: "phaseGroup", action: "link", localRowId: armed.poolId, name: sourcePool.name };
         const destination: PlanNode = {
             localId: "target",
             kind: target.kind === "pool" ? "phaseGroup" : "match",
             action: "link",
             localRowId: target.id,
-            name: "",
+            name: target.name,
         };
         const nextSlot = target.kind === "match" ? (target.slots.find((slot) => !slot.from)?.slot ?? target.slots.length + 1) : armed.placement;
 
@@ -84,7 +87,7 @@ export default function StructurePage() {
                 singleNodePlan(
                     tournamentId,
                     { localId: "match", kind: "match", parentLocalId: "pool", action: "create", name },
-                    [{ localId: "pool", kind: "phaseGroup", action: "link", localRowId: pool.id, name: "" }],
+                    [{ localId: "pool", kind: "phaseGroup", action: "link", localRowId: pool.id, name: pool.name }],
                 ),
             );
             return;

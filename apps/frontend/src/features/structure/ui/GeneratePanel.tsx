@@ -50,6 +50,7 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
         {
           tournamentId,
           divisionId: division.id,
+          divisionName: division.name,
           structureVersion: division.structureVersion,
           phaseName: phaseName.trim() || `Bracket ${division.phases.length + 1}`,
           poolName: "Bracket",

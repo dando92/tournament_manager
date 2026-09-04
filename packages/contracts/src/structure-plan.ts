@@ -16,8 +16,18 @@ import type { EntrantType } from './vocabulary';
  * built, drawn and edited before any of it exists.
  */
 
-/** What applying the plan does with one node. */
-export type PlanAction = 'create' | 'link' | 'skip';
+/**
+ * What applying the plan does with one node.
+ *
+ * `link` is not a no-op: the node names a row by `localRowId` and carries the
+ * name that row should have, so renaming something is an edit to a linked node
+ * rather than an action of its own. The link is identity; the name is data.
+ *
+ * `skip` leaves a row alone — it is what a producer says about something it
+ * read and will not write. `remove` deletes one, which is what a builder says
+ * about something already there.
+ */
+export type PlanAction = 'create' | 'link' | 'skip' | 'remove';
 
 export type PlanNodeKind = 'division' | 'phase' | 'phaseGroup' | 'match' | 'participant' | 'entrant';
 
@@ -85,6 +95,19 @@ export type PlanRoute = {
     targetSlot: number;
 };
 
+/**
+ * A slot the plan empties.
+ *
+ * Writing a route already replaces whatever claimed its slot, so this exists
+ * for the other half: taking a route away without putting one back. Naming the
+ * slot rather than the rule keeps the plan free of database ids, and means a
+ * plan can be recomputed without knowing which rule row it is about to drop.
+ */
+export type PlanSlot = {
+    targetLocalId: string;
+    targetSlot: number;
+};
+
 /** What produced the plan, so the panel can say and the reader can judge. */
 export type PlanSource =
     | { kind: 'manual' }
@@ -110,6 +133,8 @@ export type StructurePlan = {
     basedOn: PlanBasis[];
     nodes: PlanNode[];
     routes: PlanRoute[];
+    /** Slots the plan empties. Absent means it empties none. */
+    clearedSlots?: PlanSlot[];
 };
 
 /** What a plan will do, counted by kind. The panel reads this; apply does not. */
@@ -118,6 +143,7 @@ export type PlanCountsDto = {
     create: number;
     link: number;
     skip: number;
+    remove: number;
 };
 
 export type StructurePlanAppliedDto = {
