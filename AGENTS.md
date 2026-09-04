@@ -73,28 +73,38 @@ Tournament Manager is a self-contained, provider-independent application for man
 
 Every file below lives in the external `tournament_manager-docs` repository, cloned locally at `C:\.airepos\tournament_manager\` — not in this repository.
 
-- `Backend.md` — Backend architecture and coding rules
-- `Architecture.md` — Application architecture and reliability rules
+That repository holds two kinds of document, and the difference decides what happens to one.
+
+- **What the system is, and what was decided about it.** These are permanent. A decision is recorded where the rule lives, not in the document that happened to produce it.
+- **A plan.** A plan is scaffolding for work in progress and lives only as long as that work does. When it is finished, whatever it decided about the system moves into the documents above, and the plan is deleted — git history keeps the account of how the work was done, and a finished plan left in place turns into a description of a system that has moved on.
+
+How the system works, and what was decided:
+
+- `Architecture.md` — Application architecture, service boundaries, and reliability rules
+- `Backend.md` — Backend architecture and coding rules: aggregates, projections, database access, responses, naming
+- `Frontend.md` — Frontend architecture and coding rules
+- `Design.md` — Design system and design decisions
+- `Schedule.md` — Schedules: lifecycle, runner, eligibility, persistence, timing, API surface, and the two pages that read them
+- `Scoring.md` — Rounds, standings and scores, the scoring strategies, and the deferred mixed-round design
+- `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
+- `AdvancementRuleEditor.md` — Advancement rule editor and deferred quick-rule mode
+- `SyncStart.md` — SyncStart protocol package and session ownership
+- `LegacySyncStartBridge.md` — Legacy ITGmania SyncStart bridge
+- `mockups/schedule-restructure/` — Approved reference views behind the schedule board and Control Room
+- `mockups/structure-builder/` — Approved reference views behind the Structure page
+
+Operations:
+
 - `LocalOperations.md` — Local platform operations
 - `NewPcSetup.md` — New PC setup guide
 - `Deployment.md` — Continuous delivery and testing deployment
 - `HostingOptions.md` — Hosting options and deferred hosted target
-- `FunctionalQuestions.md` — Deferred functional questions
-- `Frontend.md` — Frontend architecture and coding rules
-- `Design.md` — Design system and design decisions
-- `AdvancementRuleEditor.md` — Advancement rule editor and deferred quick-rule mode
-- `SyncStartRefactoring.md` — SyncStart protocol refactoring decisions
-- `LegacySyncStartBridge.md` — Legacy ITGmania SyncStart bridge
-- `ScoringRefactoring.md` — Scoring model refactoring plan and decisions
-- `ApiRefactoring.md` — API and frontend structure refactoring plan and decisions
-- `ControlRoom.md` — Tournament Control Room flows and implementation plan
-- `TournamentTimeline.md` — Tournament overview timeline and timing model
-- `ScheduleRestructuring.md` — Schedule board, shared schedule switcher, `flow` to `schedule` rename, and their plan
-- `mockups/schedule-restructure/` — Approved reference views for `ScheduleRestructuring.md`
-- `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
-- `QueryAndSchemaOptimization.md` — Query style, index, and schema optimization plan
-- `PerformanceReadiness.md` — Write path, live-update fan-out, load measurement, and the schema change to make before production
-- `LobbyManagerSeparation.md` — Lobby manager and community event hub integration plan and decisions
+
+Open work:
+
+- `FunctionalQuestions.md` — The functional backlog: deferred questions, and the answered ones with the decision that closed them
+- `PerformanceReadiness.md` — Active plan: write path, live-update fan-out, load measurement, and the schema change to make before production
+- `LobbyManagerSeparation.md` — Lobby manager and community event hub integration: design intent, nothing implemented
 
 ## Repository Architecture
 
