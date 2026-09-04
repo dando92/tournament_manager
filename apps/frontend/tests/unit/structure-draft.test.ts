@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { BracketPlan } from "@tournament-manager/brackets";
 import type { AdvancementRuleDto, MatchDto, PhaseGroupDto } from "@tournament-manager/contracts";
 
 import {
+    addBracket,
     addNode,
     changeCount,
     clearSlot,
@@ -232,4 +234,54 @@ test("a node's routes are gathered from both of the ends they are carried on", (
     assert.deepEqual(routesOf(routes, "match", 5).incoming.map((entry) => entry.sourceName), ["Pool A"]);
     assert.deepEqual(routesOf(routes, "pool", 1).outgoing.map((entry) => entry.targetSlot), [2]);
     assert.deepEqual(routesOf(routes, "pool", 1).incoming, []);
+});
+
+/* The generator answers with a graph under its own local identifiers. What it
+   means for the draft is that those become unwritten ids like anything else
+   somebody types, so a bracket is not a different kind of change. */
+function semifinals(): BracketPlan {
+    return {
+        bracketType: "SingleElimination",
+        playerPerMatch: 2,
+        entrantCount: 4,
+        byes: 0,
+        matches: [
+            { localId: "a", name: "Semifinal 1", round: "Semifinals" },
+            { localId: "b", name: "Semifinal 2", round: "Semifinals" },
+            { localId: "c", name: "Grand Final", round: "Final" },
+        ],
+        routes: [
+            { sourceMatchLocalId: "a", sourcePlacement: 1, targetMatchLocalId: "c", targetSlot: 1 },
+            { sourceMatchLocalId: "b", sourcePlacement: 1, targetMatchLocalId: "c", targetSlot: 2 },
+        ],
+        seats: [],
+    };
+}
+
+test("a generated bracket joins the draft as its own phase, pool, matches and routes", () => {
+    const bracket = semifinals();
+    const draft = addBracket(draftOf(), 7, { phaseName: "Top 4", poolName: "Bracket", bracket });
+
+    assert.deepEqual(
+        draft.added.map((node) => node.kind),
+        ["phase", "pool", "match", "match", "match"],
+    );
+    assert.equal(draft.routes.length, 2);
+    assert.ok(draft.routes.every((route) => route.sourceId < 0 && route.targetId < 0));
+
+    const projected = projectStructure(division(), [], draft);
+    const added = projected.division!.phases.at(-1)!;
+
+    assert.equal(added.name, "Top 4");
+    assert.equal(added.matchCount, 3);
+    assert.ok(projected.pending.has(`pool:${draft.added[1].id}`));
+});
+
+test("a generated bracket reaches the plan with every route between local ids", () => {
+    const draft = addBracket(draftOf(), 7, { phaseName: "Top 4", poolName: "Bracket", bracket: semifinals() });
+    const plan = toStructurePlan(draft, "Open", indexOf(draft), 3);
+
+    assert.equal(plan.routes.length, 2);
+    assert.ok(plan.nodes.filter((node) => node.kind === "match").every((node) => node.action === "create"));
+    assert.ok(plan.routes.every((route) => plan.nodes.some((node) => node.localId === route.sourceLocalId)));
 });

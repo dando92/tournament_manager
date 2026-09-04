@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import type { StructurePlan } from "@tournament-manager/contracts";
 
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { useStructurePage } from "@/features/structure/model/useStructurePage";
-import { addNode, clearSlot, drawRoute, indexStructure, removeNode, renameNode } from "@/features/structure/model/structureDraft";
+import { addBracket, addNode, clearSlot, drawRoute, indexStructure, removeNode, renameNode } from "@/features/structure/model/structureDraft";
+import type { BracketRequest } from "@/features/structure/model/structureDraft";
 import StructureCanvasView from "@/features/structure/ui/StructureCanvasView";
 import StructureInspector from "@/features/structure/ui/StructureInspector";
 import GeneratePanel from "@/features/structure/ui/GeneratePanel";
-import PlanPreviewColumn from "@/features/structure/ui/PlanPreviewColumn";
 import AddSlot from "@/features/structure/ui/AddSlot";
 import { nextPoolName } from "@/features/division/model/poolVisibility";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
@@ -39,14 +38,11 @@ export default function StructurePage() {
     const { tournamentId, divisions, controls, hasStartggApiKey } = useTournamentPageContext();
     const tree = useTournamentTree();
     const page = useStructurePage(tournamentId, divisions);
-    const [preview, setPreview] = useState<StructurePlan | null>(null);
     const [panel, setPanel] = useState<"inspector" | "generate">("inspector");
     const [armed, setArmed] = useState<ArmedPlacement | null>(null);
     const [importNotice, setImportNotice] = useState(false);
 
     const selectedCard = page.canvas.columns.flatMap((column) => column.cards).find((card) => card.key === selectionKey(page.selection));
-
-    const handlePreview = useCallback((plan: StructurePlan | null) => setPreview(plan), []);
 
     /* Aiming is a mode the page is in, so the key that leaves every other mode
        leaves this one. Without it the only way out is to click the same chip
@@ -90,6 +86,13 @@ export default function StructurePage() {
 
     function addMatch(poolId: number, name: string): void {
         page.edit((draft) => addNode(draft, "match", poolId, name));
+    }
+
+    /* A generated bracket is not a different kind of change. It joins the draft
+       as dashed cards with its routes already between them, and leaves on the
+       same Commit as everything somebody typed. */
+    function addGeneratedBracket(request: BracketRequest): void {
+        page.edit((draft) => addBracket(draft, page.divisionId, request));
     }
 
     function addPhase(name: string): void {
@@ -256,18 +259,10 @@ export default function StructurePage() {
                         suggestedCardName={(phaseId) => nextPoolName(page.division?.phases.find((phase) => phase.id === phaseId))}
                         suggestedPhaseName={`Phase ${(page.division?.phases.length ?? 0) + 1}`}
                     />
-                    {preview && <PlanPreviewColumn plan={preview} />}
                 </div>
 
                 {panel === "generate" && page.division ? (
-                    <GeneratePanel
-                        tournamentId={tournamentId}
-                        division={page.division}
-                        applying={page.applying}
-                        onPreview={handlePreview}
-                        onApply={page.apply}
-                        onClose={() => setPanel("inspector")}
-                    />
+                    <GeneratePanel division={page.division} onAdd={addGeneratedBracket} onClose={() => setPanel("inspector")} />
                 ) : (
                     <StructureInspector
                         division={page.division}

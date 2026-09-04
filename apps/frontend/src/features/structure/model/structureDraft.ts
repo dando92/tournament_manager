@@ -1,3 +1,4 @@
+import type { BracketPlan } from "@tournament-manager/brackets";
 import type { AdvancementRuleDto, PlanNode, StructurePlan } from "@tournament-manager/contracts";
 import type { PhaseGroup } from "@/features/division/model/types";
 import type { Match } from "@/features/match/model/types";
@@ -74,6 +75,64 @@ function nextId(draft: StructureDraft): number {
 
 export function addNode(draft: StructureDraft, kind: DraftKind, parentId: number, name: string): StructureDraft {
     return { ...draft, added: [...draft.added, { kind, id: nextId(draft), parentId, name }] };
+}
+
+export type BracketRequest = {
+    /** The phase to build in, or a name for the one the bracket brings with it. */
+    phaseId?: number;
+    phaseName: string;
+    poolName: string;
+    bracket: BracketPlan;
+};
+
+/**
+ * A generated bracket, added to the draft rather than written.
+ *
+ * The generator is a pure function of how many people are entered, and what it
+ * answers is a graph under its own local identifiers. Those become unwritten
+ * ids like anything else somebody types, so a bracket lands on the canvas as
+ * dashed cards with its routes already drawn between them — which is the
+ * preview, and is also exactly what Commit sends. There is no second
+ * representation of it to keep in step with the first.
+ */
+export function addBracket(draft: StructureDraft, divisionId: number, request: BracketRequest): StructureDraft {
+    let next = draft;
+    let phaseId = request.phaseId;
+
+    if (phaseId === undefined) {
+        next = addNode(next, "phase", divisionId, request.phaseName);
+        phaseId = next.added.at(-1)!.id;
+    }
+
+    next = addNode(next, "pool", phaseId, request.poolName);
+    const poolId = next.added.at(-1)!.id;
+
+    const idOfLocal = new Map<string, number>();
+    for (const match of request.bracket.matches) {
+        next = addNode(next, "match", poolId, match.name);
+        idOfLocal.set(match.localId, next.added.at(-1)!.id);
+    }
+
+    const routes = request.bracket.routes.flatMap((route) => {
+        const sourceId = idOfLocal.get(route.sourceMatchLocalId);
+        const targetId = idOfLocal.get(route.targetMatchLocalId);
+        if (sourceId === undefined || targetId === undefined) {
+            return [];
+        }
+
+        return [
+            {
+                sourceKind: "match" as const,
+                sourceId,
+                placement: route.sourcePlacement,
+                targetKind: "match" as const,
+                targetId,
+                slot: route.targetSlot,
+            },
+        ];
+    });
+
+    return { ...next, routes: [...next.routes, ...routes] };
 }
 
 /**
