@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
 import { createLobby } from "@/features/tournament/api/lobbies.api";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 type UseTournamentHeaderLobbyManageMenuOptions = {
   tournamentId: number;
@@ -11,6 +11,7 @@ export function useTournamentHeaderLobbyManageMenu({
   tournamentId,
   canCreateLobby,
 }: UseTournamentHeaderLobbyManageMenuOptions) {
+  const { report } = usePageNotices();
   const [menuOpen, setMenuOpen] = useState(false);
   const [createLobbyModalOpen, setCreateLobbyModalOpen] = useState(false);
   const [createLobbyName, setCreateLobbyName] = useState("");
@@ -20,7 +21,7 @@ export function useTournamentHeaderLobbyManageMenu({
   const toggleMenu = () => setMenuOpen((value) => !value);
   const openCreateLobbyModal = () => {
     if (!canCreateLobby) {
-      toast.error("Connect to SyncStart before creating a lobby.");
+      report("Connect to SyncStart before creating a lobby.");
       return;
     }
     closeMenu();

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, DropResult } from "react-beautiful-dnd";
-import { toast } from "react-toastify";
 import SeedingEntrantRow from "@/features/division/ui/SeedingEntrantRow";
 import PlayersSearchBar from "@/features/division/ui/PlayersSearchBar";
 import { updateDivisionSeeding } from "@/features/division/api/division.api";
 import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/participant/model/types";
 import { btnPrimary, btnSecondary } from "@/styles/buttonStyles";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 type SeedingTabProps = {
   division: Division;
@@ -15,6 +15,7 @@ type SeedingTabProps = {
 };
 
 export default function SeedingTab({ division, entrants: roster, canEdit }: SeedingTabProps) {
+  const { report, dismiss } = usePageNotices();
   /* The roster arrives in the order it was seeded in, unseeded entrants last
      and alphabetical among themselves, so the tab opens on the order the last
      save wrote. It used to read a projection that carried no seed and sort by
@@ -62,8 +63,9 @@ export default function SeedingTab({ division, entrants: roster, canEdit }: Seed
     setSaving(true);
     try {
       await updateDivisionSeeding(division.id, draftEntrantIds);
+      dismiss("Error updating division seeding.");
     } catch {
-      toast.error("Error updating division seeding.");
+      report("Error updating division seeding.");
     } finally {
       setSaving(false);
     }

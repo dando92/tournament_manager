@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faClock, faPlay } from "@fortawesome/free-solid-svg-icons";
 import type { ScheduleDto } from "@tournament-manager/contracts";
-import { toast } from "react-toastify";
 
 import { getDivisionSummary } from "@/features/division/api/division.api";
 import { divisionKeys } from "@/features/division/api/division.keys";
@@ -19,6 +18,7 @@ import StatusIcon from "@/shared/components/ui/StatusIcon";
 import ContextMenu, { useContextMenu } from "@/shared/components/ui/ContextMenu";
 import FormModal from "@/shared/components/ui/FormModal";
 import { useLongPress } from "@/shared/hooks/useLongPress";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 
 type Props = {
@@ -38,6 +38,7 @@ type Props = {
 export default function ControlRoomSchedulePanel(props: Props) {
     const { schedule } = props;
     const { menu, openMenu, closeMenu } = useContextMenu();
+    const { report } = usePageNotices();
     const [selectedEntryId, setSelectedEntryId] = useState<number | null>(() => schedule.currentEntryId ?? schedule.entries[0]?.id ?? null);
     const [committingMatchId, setCommittingMatchId] = useState<number | null>(null);
     const [timingEntry, setTimingEntry] = useState<ScheduleDto["entries"][number] | null>(null);
@@ -58,11 +59,14 @@ export default function ControlRoomSchedulePanel(props: Props) {
         try {
             const { startggReport } = await MatchesApi.commitMatchResult(matchId);
             if (startggReport === "failed") {
-                toast.warn("Match completed, but reporting the result to start.gg failed.");
+                report("Match completed, but reporting the result to start.gg failed.", {
+                    tone: "warning",
+                    detail: "The bracket here is correct. The one on start.gg is not.",
+                });
             }
         } catch (error) {
             console.error("Error committing match result.", error);
-            toast.error("Error committing match result.");
+            report("Error committing match result.");
         } finally {
             setCommittingMatchId(null);
         }

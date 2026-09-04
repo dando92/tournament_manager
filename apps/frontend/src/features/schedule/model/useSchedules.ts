@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 
 import * as api from "@/features/schedule/api/schedule.api";
 import { scheduleKeys } from "@/features/schedule/api/schedule.keys";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 import type { ScheduleEditorDto, ScheduleDto, ScheduleEntryInputDto } from "@tournament-manager/contracts";
 
 export function useSchedules(tournamentId: number) {
     const queryClient = useQueryClient();
+    const { report, dismiss } = usePageNotices();
     const schedules = useQuery({
         queryKey: scheduleKeys.list(tournamentId, false),
         queryFn: () => api.listSchedules(tournamentId),
@@ -22,10 +23,13 @@ export function useSchedules(tournamentId: number) {
 
     const mutate = useMutation({
         mutationFn: async (work: () => Promise<void>) => work(),
-        onSuccess: () => invalidate(),
+        onSuccess: () => {
+            dismiss("Unable to update the schedule.");
+            return invalidate();
+        },
         onError: (error) => {
             console.error("Schedule command failed", error);
-            toast.error("Unable to update the schedule.");
+            report("Unable to update the schedule.");
         },
     });
 
@@ -57,9 +61,10 @@ export function useSchedules(tournamentId: number) {
                     ? { ...current, schedule: { ...current.schedule, entries: current.schedule.entries.map((entry) => entry.id === entryId ? { ...entry, expectedDurationMinutes } : entry) } }
                     : current,
                 );
+                dismiss("Unable to update the expected duration.");
             } catch (error) {
                 console.error("Schedule timing update failed", error);
-                toast.error("Unable to update the expected duration.");
+                report("Unable to update the expected duration.");
                 throw error;
             }
         },

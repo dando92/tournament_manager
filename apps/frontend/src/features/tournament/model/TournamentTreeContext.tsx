@@ -1,7 +1,6 @@
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { TournamentDivisionOption } from "@/features/tournament/model/types";
 import { useTournamentOverviewQuery } from "@/features/tournament/model/useTournamentOverviewQuery";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
@@ -17,6 +16,7 @@ import {
   type TournamentSectionKey,
 } from "@/shared/lib/treeState";
 import TournamentStructureModals from "@/features/tournament/ui/tree/TournamentStructureModals";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 /**
  * The tournament's structure: what it holds, what is open in the tree, and
@@ -122,6 +122,7 @@ export function TournamentTreeProvider({
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { report, dismiss } = usePageNotices();
   const query = useTournamentOverviewQuery(tournamentId);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(getExpandedNodes);
   const [collapsedTournamentSections, setCollapsedTournamentSectionsState] = useState<ReadonlySet<TournamentSectionKey>>(getCollapsedTournamentSections);
@@ -242,11 +243,12 @@ export function TournamentTreeProvider({
     async (work: () => Promise<void>, failure: string) => {
       try {
         await work();
+        dismiss(failure);
       } catch {
-        toast.error(failure);
+        report(failure);
       }
     },
-    [],
+    [report, dismiss],
   );
 
   const addDivision = useCallback(

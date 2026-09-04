@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 import {
   getLobbyControlOptions,
   lobbyControlKeys,
   selectLobbySong,
   startLobbySong,
 } from "@/features/tournament/api/lobbies.api";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
+import { apiErrorDetail } from "@/shared/lib/apiError";
+
+const SELECT_FAILED = "Unable to select the song.";
+const START_FAILED = "Unable to start the cabinets.";
 
 export function useLobbyControl(tournamentId: number) {
+  const { report, dismiss } = usePageNotices();
   const options = useQuery({
     queryKey: lobbyControlKeys.options(tournamentId),
     queryFn: () => getLobbyControlOptions(tournamentId),
@@ -31,7 +36,8 @@ export function useLobbyControl(tournamentId: number) {
       if (!lobbyId || songId === null) throw new Error("Select a lobby and song first.");
       await selectLobbySong(tournamentId, lobbyId, songId);
     },
-    onError: (error) => toast.error(commandError(error, "Unable to select the song.")),
+    onSuccess: () => dismiss(SELECT_FAILED),
+    onError: (error) => report(SELECT_FAILED, { detail: commandDetail(error) }),
   });
 
   const startSong = useMutation({
@@ -39,7 +45,8 @@ export function useLobbyControl(tournamentId: number) {
       if (!lobbyId || songId === null) throw new Error("Select a lobby and song first.");
       await startLobbySong(tournamentId, lobbyId, songId);
     },
-    onError: (error) => toast.error(commandError(error, "Unable to start the cabinets.")),
+    onSuccess: () => dismiss(START_FAILED),
+    onError: (error) => report(START_FAILED, { detail: commandDetail(error) }),
   });
 
   return {
@@ -55,7 +62,8 @@ export function useLobbyControl(tournamentId: number) {
   };
 }
 
-function commandError(error: unknown, fallback: string): string {
-  return (error as { response?: { data?: { message?: string } } })?.response?.data?.message
-    ?? (error instanceof Error ? error.message : fallback);
+/* A command refused before it left — no lobby, no song — says so in the error
+   it threw; anything further down says it in the response body. */
+function commandDetail(error: unknown): string | undefined {
+  return apiErrorDetail(error) ?? (error instanceof Error ? error.message : undefined);
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
 import { apiErrorMessage } from '@/shared/lib/apiError';
+import { usePageNotices } from '@/shared/context/PageNoticeContext';
 import { Division } from '@/features/division/model/types';
 import { Entrant, Participant } from '@/features/participant/model/types';
 import {
@@ -55,6 +55,7 @@ function competing(entrants: Entrant[]): Participant[] {
  * seeing the roster on its own.
  */
 export function usePlayersTab({ division, entrants }: UsePlayersTabOptions) {
+    const { report } = usePageNotices();
     const [divisionParticipants, setDivisionParticipants] = useState<Participant[]>(competing(entrants));
     const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
     const [search, setSearch] = useState('');
@@ -177,13 +178,13 @@ export function usePlayersTab({ division, entrants }: UsePlayersTabOptions) {
                 setDivisionParticipants((current) => current.filter((entry) => !idSet.has(entry.id)));
                 setAvailableParticipants((current) => [...current, ...participants]);
                 /* Admitting somebody is done without a dialog, so the failure has no dialog to appear in either. */
-                toast.error(apiErrorMessage(error, 'They could not be added to the division.'));
+                report(apiErrorMessage(error, 'They could not be added to the division.'));
                 throw error;
             } finally {
                 setSaving(false);
             }
         },
-        [division.id, loadAvailableParticipants],
+        [division.id, loadAvailableParticipants, report],
     );
 
     const withdraw = useCallback(

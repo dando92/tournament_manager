@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 import { TournamentConfiguration } from "@/features/tournament/model/types";
 import { rememberTournament } from "@/shared/lib/recentTournaments";
 import {
@@ -13,6 +12,7 @@ import { listScoringSystems } from "@/features/match/api/match.api";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { tournamentKeys } from "@/features/tournament/api/tournament.keys";
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 /**
  * The configuration form: what it holds, what it may save, and what closing
@@ -58,6 +58,7 @@ export function useTournamentConfigurationPage() {
     setHasStartggApiKey,
     setTournamentStatus,
   } = useTournamentPageContext();
+  const { report, dismiss } = usePageNotices();
   const [initial, setInitial] = useState<TournamentConfigurationForm>(emptyForm);
   const [form, setForm] = useState<TournamentConfigurationForm>(emptyForm);
   const configurationQuery = useQuery({
@@ -132,8 +133,9 @@ export function useTournamentConfigurationPage() {
     try {
       await saveMutation.mutateAsync(form);
       rememberTournament({ id: tournamentId, name: form.name.trim() });
+      dismiss("Failed to save tournament configuration.");
     } catch {
-      toast.error("Failed to save tournament configuration.");
+      report("Failed to save tournament configuration.");
     }
   }
 
@@ -146,7 +148,7 @@ export function useTournamentConfigurationPage() {
     try {
       await closeMutation.mutateAsync();
     } catch {
-      toast.error("Failed to close tournament.");
+      report("Failed to close tournament.");
     }
   }
 
@@ -155,7 +157,7 @@ export function useTournamentConfigurationPage() {
     try {
       await reopenMutation.mutateAsync();
     } catch {
-      toast.error("Failed to reopen tournament.");
+      report("Failed to reopen tournament.");
     }
   }
 

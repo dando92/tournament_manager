@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
 import type { SyncStartLobbyStatusDto } from "@tournament-manager/contracts";
 import {
   ActiveLobbyDto,
@@ -16,6 +15,8 @@ import {
   listTournamentLobbies,
   spectateLobby,
 } from "@/features/tournament/api/lobbies.api";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
+import { apiErrorDetail } from "@/shared/lib/apiError";
 
 type Params = {
   tournamentId: number;
@@ -35,9 +36,16 @@ const closedSpectateModal: SpectateModalState = {
   password: "",
 };
 
+/* The page states what it could not do and puts the server's reason under it,
+   so the sentence stays the same one the operation takes back when it works. */
+const REFRESH_FAILED = "Failed to refresh lobbies.";
+const CONNECT_FAILED = "Failed to connect to SyncStart.";
+const DISCONNECT_FAILED = "Failed to disconnect from SyncStart.";
+
 export function useTournamentLobbiesPage({
   tournamentId,
 }: Params) {
+  const { report, dismiss } = usePageNotices();
   const [activeLobbies, setActiveLobbies] = useState<ReadonlyMap<string, ActiveLobbyDto>>(new Map());
   const [syncStartConnectionStatus, setSyncStartConnectionStatus] = useState<SyncStartConnectionStatusDto>({
     tournamentId,
@@ -58,15 +66,13 @@ export function useTournamentLobbiesPage({
       const lobbies = await listTournamentLobbies(tournamentId);
       setAvailableLobbies(lobbies.lobbies);
       setServerConnectionStatus(lobbies.status);
+      dismiss(REFRESH_FAILED);
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to refresh lobbies.";
-      toast.error(message);
+      report(REFRESH_FAILED, { detail: apiErrorDetail(error) });
     } finally {
       setRefreshing(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, report, dismiss]);
 
   useEffect(() => {
     if (syncStartConnectionStatus.tournamentId !== tournamentId) return;
@@ -230,14 +236,12 @@ export function useTournamentLobbiesPage({
     try {
       const status = await connectLobbyServer(tournamentId);
       setServerConnectionStatus(status);
+      dismiss(CONNECT_FAILED);
       if (status.isConnected) {
         refreshLobbies().catch(() => {});
       }
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to connect to SyncStart.";
-      toast.error(message);
+      report(CONNECT_FAILED, { detail: apiErrorDetail(error), retry: () => void handleConnectServer() });
     } finally {
       setConnectingServer(false);
     }
@@ -248,14 +252,12 @@ export function useTournamentLobbiesPage({
     try {
       const status = await disconnectLobbyServer(tournamentId);
       setServerConnectionStatus(status);
+      dismiss(DISCONNECT_FAILED);
       if (!status.isConnected) {
         setAvailableLobbies([]);
       }
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to disconnect from SyncStart.";
-      toast.error(message);
+      report(DISCONNECT_FAILED, { detail: apiErrorDetail(error) });
     } finally {
       setDisconnectingServer(false);
     }
@@ -290,7 +292,7 @@ export function useTournamentLobbiesPage({
         return next;
       });
     } catch {
-      toast.error("Failed to disconnect lobby.");
+      report("Failed to disconnect lobby.");
     } finally {
       refreshLobbies().catch(() => {});
     }

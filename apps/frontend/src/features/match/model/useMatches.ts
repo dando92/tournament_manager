@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 import * as MatchesApi from "@/features/match/api/match.api";
 import { matchKeys } from "@/features/match/api/match.keys";
 import { updateAdvancementRulesForSource } from "@/features/match/api/advancement-rule.api";
 import { CreateMatchRequest, MatchAdvancementRuleInput, RoundSourceRequest } from "@/features/match/model/types";
+import { usePageNotices } from "@/shared/context/PageNoticeContext";
 
 /**
  * The matches of a division, or of one pool inside it, and every change they
@@ -22,6 +22,7 @@ import { CreateMatchRequest, MatchAdvancementRuleInput, RoundSourceRequest } fro
  */
 export function useMatches(divisionId: number, phaseGroupId?: number) {
   const queryClient = useQueryClient();
+  const { report, dismiss } = usePageNotices();
   const queryKey = useMemo(
     () => (phaseGroupId !== undefined ? matchKeys.byPhaseGroup(phaseGroupId) : matchKeys.byDivision(divisionId)),
     [divisionId, phaseGroupId],
@@ -38,9 +39,10 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
    *
    * Nothing is applied here on success: the realtime invalidation refetches the
    * list. These are the writes with no dialog to hold the answer — a score
-   * typed into a cell, a round deleted from the table — so the failure is
-   * announced here and the original error re-thrown, which keeps the server's
-   * own sentence available to anyone above who can show it.
+   * typed into a cell, a round deleted from the table — so the failure goes to
+   * the page notice slot and the original error is re-thrown, which keeps the
+   * server's own sentence available to anyone above who can show it. Succeeding
+   * takes the sentence back: a write that worked has nothing left to report.
    *
    * The writes a dialog drives do not come through here. They report nothing,
    * let the failure out, and the dialog that asked stays open and states it.
@@ -48,9 +50,10 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
   async function run(work: () => Promise<void>, failure: string): Promise<void> {
     try {
       await work();
+      dismiss(failure);
     } catch (error) {
       console.error(failure, error);
-      toast.error(failure);
+      report(failure);
       throw error;
     }
   }
@@ -153,7 +156,10 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
         run(async () => {
           const { startggReport } = await MatchesApi.commitMatchResult(matchId);
           if (startggReport === "failed") {
-            toast.warn("Match completed, but reporting the result to start.gg failed.");
+            report("Match completed, but reporting the result to start.gg failed.", {
+              tone: "warning",
+              detail: "The bracket here is correct. The one on start.gg is not.",
+            });
           }
         }, "Error committing match result."),
 
@@ -163,7 +169,7 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
             await MatchesApi.reopenMatchResult(matchId);
           } catch (error) {
             if (error instanceof MatchesApi.AdvancementRollbackBlockedError) {
-              toast.error(error.message);
+              report(error.message);
               return;
             }
             throw error;
