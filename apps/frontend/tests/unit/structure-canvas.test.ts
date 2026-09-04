@@ -8,7 +8,7 @@ import {
     COLUMN_GAP,
     COLUMN_WIDTH,
     HEADER_HEIGHT,
-    POOL_CARD_HEIGHT,
+    cardHeight,
     ordinal,
 } from "../../src/features/structure/model/structureCanvas.ts";
 import type { TournamentDivisionOption } from "../../src/features/tournament/model/types.ts";
@@ -76,13 +76,50 @@ const QUALIFIERS = {
 test("a phase is a column and a pool is a card stacked under its header", () => {
     const canvas = buildStructureCanvas({ division: division([QUALIFIERS]), matches: [], density: "pools", selection: null });
 
+    const [first, second] = canvas.columns[0].cards;
+
     assert.equal(canvas.columns.length, 1);
     assert.equal(canvas.columns[0].left, 0);
-    assert.deepEqual(
-        canvas.columns[0].cards.map((card) => card.top),
-        [HEADER_HEIGHT + CARD_GAP, HEADER_HEIGHT + CARD_GAP + POOL_CARD_HEIGHT + CARD_GAP],
-    );
+    assert.deepEqual([first.top, second.top], [HEADER_HEIGHT + CARD_GAP, HEADER_HEIGHT + CARD_GAP + first.height + CARD_GAP]);
     assert.equal(canvas.columns[0].slotLabel, "Pool");
+});
+
+/* Two constants used to stand in for every card, and both were shorter than
+   what a card draws, so a column overlapped itself from the second card down. */
+test("a card is as tall as what it holds, and the next one starts below it", () => {
+    const canvas = buildStructureCanvas({
+        division: division([
+            {
+                id: 10,
+                name: "Qualifiers",
+                matchCount: 2,
+                phaseGroups: [pool({ id: 1, name: "Pool A" }), pool({ id: 2, name: "Pool B" })],
+            },
+        ]),
+        matches: [],
+        density: "pools",
+        selection: null,
+    });
+
+    for (const card of canvas.columns[0].cards) {
+        assert.equal(card.height, cardHeight(card));
+    }
+
+    const stacked = canvas.columns[0].cards;
+    assert.ok(stacked[1].top >= stacked[0].top + stacked[0].height + CARD_GAP);
+});
+
+test("a match is tall enough for the slots it is waiting on", () => {
+    const canvas = buildStructureCanvas({
+        division: division([{ id: 10, name: "Top 8", matchCount: 1, phaseGroups: [pool({ id: 2, name: "Bracket" })] }]),
+        matches: [match({ id: 1, phaseGroupId: 2 })],
+        density: "matches",
+        selection: null,
+    });
+    const [card] = canvas.columns[0].cards;
+
+    assert.equal(card.slots.length, 2);
+    assert.equal(card.height, cardHeight(card));
 });
 
 test("columns run left to right in the order the phases run", () => {

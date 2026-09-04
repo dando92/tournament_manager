@@ -19,11 +19,29 @@ export const COLUMN_WIDTH = 236;
 export const COLUMN_GAP = 46;
 export const HEADER_HEIGHT = 54;
 export const CARD_GAP = 10;
-export const POOL_CARD_HEIGHT = 78;
-export const MATCH_CARD_HEIGHT = 56;
 export const SLOT_HEIGHT = 38;
 export const ADD_COLUMN_WIDTH = 46;
 const FIRST_CARD_TOP = HEADER_HEIGHT + CARD_GAP;
+
+/*
+ * What one line inside a card is worth.
+ *
+ * A card used to be one of two constants, and both of them were too short: a
+ * match declaring 56 pixels drew a name, its pool and two slots, which is
+ * nearer ninety, so every card in the column sat on top of the one below it.
+ * The height is measured from what the card holds instead, and these are the
+ * pieces it is measured in - kept beside the arithmetic that uses them so a
+ * line added to the card is a line added here.
+ */
+const CARD_PADDING_Y = 8;
+const NAME_ROW = 20;
+const META_ROW = 16;
+const SLOT_ROW = 18;
+const SLOT_BLOCK_GAP = 2;
+const CHIP_ROW = 20;
+const CHIP_BLOCK_GAP = 6;
+/** Four short placement chips fit across a column before one wraps. */
+const CHIPS_PER_ROW = 4;
 
 export type CanvasDensity = "pools" | "matches";
 
@@ -93,6 +111,27 @@ const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
 
 export function ordinal(placement: number): string {
     return ORDINALS[placement - 1] ?? `${placement}th`;
+}
+
+/**
+ * How tall a card has to be to hold what is in it.
+ *
+ * The first line of `meta` rides the name row, so only the rest of it costs a
+ * line. Everything else stacks: the slots a match is waiting on, and the
+ * placements a pool sends on, four to a row.
+ */
+export function cardHeight(card: Pick<CanvasCard, 'meta' | 'chips' | 'slots'>): number {
+    let height = CARD_PADDING_Y * 2 + NAME_ROW;
+
+    height += Math.max(card.meta.length - 1, 0) * META_ROW;
+    if (card.slots.length > 0) {
+        height += SLOT_BLOCK_GAP + card.slots.length * SLOT_ROW;
+    }
+    if (card.chips.length > 0) {
+        height += CHIP_BLOCK_GAP + Math.ceil(card.chips.length / CHIPS_PER_ROW) * CHIP_ROW;
+    }
+
+    return height;
 }
 
 export function buildStructureCanvas(input: StructureCanvasInput): StructureCanvas {
@@ -169,9 +208,10 @@ function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<numb
             chips: placementChips(pool, advancingPlaces),
             slots: [],
             top,
-            height: POOL_CARD_HEIGHT,
+            height: 0,
         };
-        top += POOL_CARD_HEIGHT + CARD_GAP;
+        card.height = cardHeight(card);
+        top += card.height + CARD_GAP;
 
         return card;
     });
@@ -211,7 +251,7 @@ function matchCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<num
 
     for (const pool of phase.phaseGroups ?? []) {
         for (const match of matchesByPool.get(pool.id) ?? []) {
-            cards.push({
+            const card: CanvasCard = {
                 key: matchKey(match.id),
                 kind: "match",
                 id: match.id,
@@ -221,9 +261,11 @@ function matchCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<num
                 chips: [],
                 slots: matchSlots(match),
                 top,
-                height: MATCH_CARD_HEIGHT,
-            });
-            top += MATCH_CARD_HEIGHT + CARD_GAP;
+                height: 0,
+            };
+            card.height = cardHeight(card);
+            cards.push(card);
+            top += card.height + CARD_GAP;
         }
     }
 

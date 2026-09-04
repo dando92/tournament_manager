@@ -74,9 +74,9 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
 
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3.5">
-      <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Generate</div>
+      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Generate</div>
 
-      <label className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-phase-name">
+      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-phase-name">
         Called
       </label>
       <input
@@ -88,7 +88,7 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
         className={`mt-1 w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
       />
 
-      <label className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-shape">
+      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-shape">
         Shape
       </label>
       <Select
@@ -99,7 +99,7 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
         className="mt-1"
       />
 
-      <label className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-players">
+      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-players">
         Players per match
       </label>
       <input
@@ -112,28 +112,28 @@ export default function GeneratePanel({ tournamentId, division, applying, onPrev
       />
 
       <div className="mt-4 rounded-lg border border-ui-separator px-2.5 py-2">
-        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">This will create</div>
+        <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">This will create</div>
         <div className="mt-1.5 flex flex-col gap-1 text-[12px] text-ui-text">
           <span className="flex items-center gap-2">
-            1 phase <span className="ml-auto text-[11px] text-ui-text-mute">{phaseName.trim() || `Bracket ${division.phases.length + 1}`}</span>
+            1 phase <span className="ml-auto text-[12px] text-ui-text-mute">{phaseName.trim() || `Bracket ${division.phases.length + 1}`}</span>
           </span>
           <span className="flex items-center gap-2">
-            1 pool <span className="ml-auto text-[11px] text-ui-text-mute">Bracket</span>
+            1 pool <span className="ml-auto text-[12px] text-ui-text-mute">Bracket</span>
           </span>
           <span className="flex items-center gap-2">
             {matchCount} {matchCount === 1 ? "match" : "matches"}
-            <span className="ml-auto text-[11px] text-ui-text-mute">{division.entrantCount} entrants</span>
+            <span className="ml-auto text-[12px] text-ui-text-mute">{division.entrantCount} entrants</span>
           </span>
           <span className="flex items-center gap-2">
             {routeCount} {routeCount === 1 ? "route" : "routes"}
-            <span className="ml-auto text-[11px] text-ui-text-mute">{generated?.bracket.byes ?? 0} byes</span>
+            <span className="ml-auto text-[12px] text-ui-text-mute">{generated?.bracket.byes ?? 0} byes</span>
           </span>
         </div>
       </div>
 
-      {error && <p className="mt-3 text-[11px] text-state-failed">{error}</p>}
+      {error && <p className="mt-3 text-[12px] text-state-failed">{error}</p>}
 
-      <p className="mt-3 text-[11px] leading-relaxed text-ui-text-mute">
+      <p className="mt-3 text-[12px] leading-relaxed text-ui-text-mute">
         Nothing is written yet. The dashed column is exactly what Create will make, and every piece of it can be changed afterwards.
       </p>
 

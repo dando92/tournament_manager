@@ -27,14 +27,14 @@ export default function PlanPreviewColumn({ plan }: { plan: StructurePlan }) {
         <span className="rounded-full border border-dashed border-ui-border-strong px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ui-text-mute">
           Preview
         </span>
-        <span className="ml-auto text-[11px] text-ui-text-mute">
+        <span className="ml-auto text-[12px] text-ui-text-mute">
           {pools.length} {pools.length === 1 ? "pool" : "pools"} · {matches.length} {matches.length === 1 ? "match" : "matches"} · {plan.routes.length}{" "}
           {plan.routes.length === 1 ? "route" : "routes"}
         </span>
       </header>
 
       {linked.length > 0 && (
-        <p className="mt-1.5 text-[11px] text-ui-text-mute">
+        <p className="mt-1.5 text-[12px] text-ui-text-mute">
           Kept as it is: {linked.map((node) => node.name).join(", ")}
         </p>
       )}

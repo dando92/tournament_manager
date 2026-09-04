@@ -46,7 +46,7 @@ export default function StructureInspector({
   if (!selection || !card) {
     return (
       <aside className="flex h-full w-[280px] shrink-0 flex-col rounded-xl border border-ui-border bg-ui-surface p-3.5">
-        <p className="text-[11px] leading-relaxed text-ui-text-mute">
+        <p className="text-[12px] leading-relaxed text-ui-text-mute">
           Select a pool or a match to edit it here. The dashed slots add one; a placement chip draws a route.
         </p>
       </aside>
@@ -68,8 +68,8 @@ export default function StructureInspector({
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3.5">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">{selection.kind === "pool" ? "Pool" : "Match"}</span>
-        <button type="button" onClick={onClearSelection} className={`${focusRing} text-[11px] text-ui-text-mute hover:text-ui-text`}>
+        <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">{selection.kind === "pool" ? "Pool" : "Match"}</span>
+        <button type="button" onClick={onClearSelection} className={`${focusRing} text-[12px] text-ui-text-mute hover:text-ui-text`}>
           Clear
         </button>
       </div>
@@ -83,7 +83,7 @@ export default function StructureInspector({
         className={`mt-1.5 w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
       />
 
-      <p className="mt-1.5 text-[11px] text-ui-text-mute">
+      <p className="mt-1.5 text-[12px] text-ui-text-mute">
         {division?.name} <span className="text-ui-border-strong">/</span> {phase?.name}
         {selection.kind === "match" && pool ? (
           <>
@@ -95,14 +95,14 @@ export default function StructureInspector({
 
       <div className="mt-3 flex items-center gap-2 rounded-lg border border-ui-separator px-2.5 py-2">
         <StatusIcon status={card.status} />
-        <span className="text-[11px] text-ui-text-mute">{card.meta.join(" · ")}</span>
+        <span className="text-[12px] text-ui-text-mute">{card.meta.join(" · ")}</span>
       </div>
 
       {selection.kind === "pool" && (
         <>
-          <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Advancement</div>
+          <div className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Advancement</div>
           {rules.length === 0 ? (
-            <p className="mt-1.5 text-[11px] text-ui-text-mute">Nothing advances out of this pool yet.</p>
+            <p className="mt-1.5 text-[12px] text-ui-text-mute">Nothing advances out of this pool yet.</p>
           ) : (
             <ul className="mt-1.5 flex flex-col divide-y divide-ui-separator">
               {rules.map((rule) => (
@@ -128,9 +128,9 @@ export default function StructureInspector({
             Edit routes
           </button>
 
-          <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Matches</div>
+          <div className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Matches</div>
           {poolMatches.length === 0 ? (
-            <p className="mt-1.5 text-[11px] text-ui-text-mute">
+            <p className="mt-1.5 text-[12px] text-ui-text-mute">
               {card.meta[0]}. Switch to the match density to see them.
             </p>
           ) : (
@@ -147,7 +147,7 @@ export default function StructureInspector({
 
       {selection.kind === "match" && card.slots.length > 0 && (
         <>
-          <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Who plays</div>
+          <div className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Who plays</div>
           <ul className="mt-1.5 flex flex-col divide-y divide-ui-separator">
             {card.slots.map((slot) => (
               <li key={slot.slot} className="flex items-center gap-2 py-2 text-[12px] text-ui-text-mute">
@@ -164,7 +164,7 @@ export default function StructureInspector({
           <FontAwesomeIcon icon={faTrash} className="mr-1.5 text-[10px]" />
           Delete {selection.kind === "pool" ? "pool" : "match"}
         </button>
-        <span className="ml-auto text-[11px] text-ui-text-mute">Saved as you go</span>
+        <span className="ml-auto text-[12px] text-ui-text-mute">Saved as you go</span>
       </div>
     </aside>
   );

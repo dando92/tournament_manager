@@ -108,7 +108,7 @@ export default function StructureCanvasView({
                     {card.slots.map((slot) => (
                       <span key={slot.slot} className="flex items-center gap-1.5 text-[11px] text-ui-text-mute">
                         <span className="rounded border border-ui-border bg-ui-raised px-1 font-semibold text-ui-text">{slot.slot}</span>
-                        <span className={slot.from ? "truncate italic" : "truncate italic text-ui-text-mute"}>{slot.from ?? "nobody yet"}</span>
+                        <span className="truncate italic">{slot.from ?? "nobody yet"}</span>
                       </span>
                     ))}
                   </span>
@@ -121,7 +121,8 @@ export default function StructureCanvasView({
                         key={chip.placement}
                         role="button"
                         tabIndex={0}
-                        aria-label={`${chip.label} of ${card.name}`}
+                        aria-label={chip.routed ? `${chip.label} of ${card.name}` : `${chip.label} of ${card.name}, routed nowhere`}
+                        title={chip.routed ? `${chip.label} of ${card.name}` : `${chip.label} of ${card.name} goes nowhere yet`}
                         onClick={(event) => {
                           event.stopPropagation();
                           onArm(
@@ -145,7 +146,6 @@ export default function StructureCanvasView({
                         }`}
                       >
                         {chip.label}
-                        {!chip.routed && " → nowhere"}
                       </span>
                     ))}
                   </span>
