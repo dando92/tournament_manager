@@ -1,9 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { requestTimingHandler } from './observability/request-timing.middleware';
+import { requestTimingEnabled } from './observability/request-timing.settings';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  /* Bound before the routes are, so the scope it opens covers the guards and
+     the database reads authentication performs. Off unless a run asked for it. */
+  if (requestTimingEnabled()) {
+    app.use(requestTimingHandler());
+  }
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')

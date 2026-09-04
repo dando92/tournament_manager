@@ -9,6 +9,7 @@ import { TournamentModule } from '@tournament/tournament.module';
 import { AccountModule } from '@account/account.module';
 
 import { HealthModule } from './health/health.module';
+import { ObservabilityModule } from './observability/observability.module';
 import { InternalController } from './internal.controller';
 
 @Module({
@@ -52,6 +53,7 @@ import { InternalController } from './internal.controller';
     AccountModule,
     TournamentModule,
     HealthModule,
+    ObservabilityModule,
   ],
   controllers: [InternalController],
 })

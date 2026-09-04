@@ -111,6 +111,7 @@ Every file below lives in the external `tournament_manager-docs` repository, clo
 - `packages/startgg`: Provider-facing Start.gg client, GraphQL operations, types, parsing, pagination, and rate limiting.
 - `tools/syncstart-simulator`: Deterministic SyncStart protocol simulator for local runs and tests.
 - `tools/legacy-syncstart-bridge`: Compatibility adapter that presents a legacy UDP-broadcast ITGmania cabinet as a SyncStart lobby.
+- `tools/dataset-seeder`: Deterministic bulk seeder that writes a database worth measuring, in the `venue`, `season`, and `stress` profiles.
 
 Project architecture, coding, and design decisions live in the external `tournament_manager-docs` repository — see [Documentation Index](#documentation-index).
 

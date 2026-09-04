@@ -15,6 +15,7 @@
     "apps/realtime",
     "apps/frontend",
     "tools/syncstart-simulator",
+    "tools/dataset-seeder",
     "tools/legacy-syncstart-bridge"
   ],
   "scripts": {
@@ -41,6 +42,8 @@
     "local:logs": "docker compose logs --follow --tail=200",
     "local:down": "docker compose down --remove-orphans",
     "local:reset": "docker compose down --volumes --remove-orphans && npm run local:up",
+    "seed:dataset": "npm run build --workspace=@tournament-manager/dataset-seeder && node tools/dataset-seeder/dist/main.js",
+    "bench:pgstat": "node scripts/pg-stat.mjs",
     "verify:local": "npm run build && npm run test:integration && npm run test:e2e && node scripts/verify-local.mjs"
   },
   "devDependencies": {

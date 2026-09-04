@@ -27,6 +27,7 @@ COPY apps/syncstart/package.json apps/syncstart/package.json
 COPY apps/realtime/package.json apps/realtime/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 COPY tools/syncstart-simulator/package.json tools/syncstart-simulator/package.json
+COPY tools/dataset-seeder/package.json tools/dataset-seeder/package.json
 COPY tools/legacy-syncstart-bridge/package.json tools/legacy-syncstart-bridge/package.json
 
 # ---- Build dependencies ----
@@ -96,6 +97,14 @@ CMD ["npm", "run", "start:prod", "--workspace=@tournament-manager/realtime"]
 FROM node-runtime AS syncstart-simulator
 COPY --from=build /app/tools/syncstart-simulator/dist tools/syncstart-simulator/dist
 CMD ["npm", "run", "start", "--workspace=@tournament-manager/syncstart-simulator"]
+
+# ---- Dataset seeder ----
+# Not part of the running stack. It exists as an image so a measured run can
+# write its dataset from inside the Compose network, against the same database
+# the services use, without a local toolchain.
+FROM node-runtime AS dataset-seeder
+COPY --from=build /app/tools/dataset-seeder/dist tools/dataset-seeder/dist
+CMD ["npm", "run", "start", "--workspace=@tournament-manager/dataset-seeder"]
 
 # ---- Legacy ITGmania bridge ----
 FROM node-runtime AS legacy-syncstart-bridge
