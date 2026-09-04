@@ -149,3 +149,28 @@ test("a rule whose source no longer exists is still named, by what it points at"
 
     assert.equal(sourceLabel(orphan), "1st from Match 42");
 });
+
+test("the axis stops where the blocks do, and carries the present only when it falls inside", () => {
+    const yesterday = schedule({
+        status: "completed",
+        currentEntryId: null,
+        willStartAt: "2026-08-24T10:00:00.000Z",
+        entries: [
+            {
+                id: 31,
+                position: 0,
+                expectedDurationMinutes: 30,
+                startedAt: "2026-08-24T10:00:00.000Z",
+                completedAt: "2026-08-24T10:30:00.000Z",
+                match: match({ id: 301, state: "completed" }),
+            },
+        ],
+    });
+
+    const model = board(yesterday);
+
+    /* Half an hour of match and the quarter of an hour the axis keeps after the
+       last block: it does not stretch itself to reach the present. */
+    assert.equal(model.height, 45 * PIXELS_PER_MINUTE);
+    assert.equal(model.nowTop, null);
+});

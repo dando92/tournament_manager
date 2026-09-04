@@ -4,13 +4,17 @@ import type { ScheduleDto } from "@tournament-manager/contracts";
 import { buildScheduleBoard } from "@/features/schedule/model/scheduleBoard";
 import { divisionNameOf } from "@/features/schedule/model/scheduleContext";
 import { formatClock } from "@/features/schedule/model/scheduleDateTime";
+import type { ScheduleDay } from "@/features/schedule/model/scheduleDays";
 import { summarizeSchedule } from "@/features/schedule/model/scheduleSummary";
 import ScheduleBoardCard from "@/features/schedule/ui/ScheduleBoardCard";
+import ScheduleDaySelector from "@/features/schedule/ui/ScheduleDaySelector";
 import { ScheduleSwitcherCard } from "@/features/schedule/ui/ScheduleSwitcher";
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
 
 /**
- * Every schedule of the tournament, on one time axis.
+ * Every schedule of one day of the tournament, on one time axis. The page
+ * chooses the day and hands over its schedules; a tournament that lasts one day
+ * never sees the selector.
  *
  * The point of the board is the comparison: four columns, one clock, and a
  * dashed line at the present, so "Cabinet B is twenty minutes behind" is read
@@ -58,11 +62,17 @@ function columnClass(focused: boolean, anyFocused: boolean): string {
 export default function ScheduleBoard({
     schedules,
     divisions,
+    days,
+    selectedDay,
+    onSelectDay,
     selectedMatchId,
     onOpenMatch,
 }: {
     schedules: ScheduleDto[];
     divisions: TournamentDivisionOption[];
+    days: ScheduleDay[];
+    selectedDay: ScheduleDay | null;
+    onSelectDay: (dayKey: string) => void;
     selectedMatchId: number | null;
     onOpenMatch: (matchId: number) => void;
 }) {
@@ -84,6 +94,7 @@ export default function ScheduleBoard({
     /* A schedule that has gone from the board takes its focus with it, or the
        remaining columns stay narrow for a column nobody can see. */
     const focused = schedules.some((schedule) => schedule.id === focusedScheduleId) ? focusedScheduleId : null;
+    const dayBar = days.length > 1 ? selectedDay : null;
 
     /* The column headings are the switcher. Choosing one expands it and folds
        the rest away; choosing it again gives every schedule the same room back.
@@ -103,9 +114,16 @@ export default function ScheduleBoard({
 
     return (
         <div className="flex min-w-0 flex-col gap-3">
+            {/* Outside the horizontal scroller, or it would scroll away with
+                the columns. The headings below stack under its height. */}
+            {dayBar && (
+                <div className="sticky top-0 z-30 min-w-0 bg-ui-canvas">
+                    <ScheduleDaySelector days={days} selected={dayBar} onSelect={onSelectDay} />
+                </div>
+            )}
             <div className="min-w-0 overflow-x-auto pb-2">
                 <div className={`flex flex-col ${focused === null ? "min-w-max sm:min-w-0" : "min-w-0"}`}>
-                    <div className="sticky top-0 z-20 flex gap-2 bg-ui-canvas pb-3 sm:gap-3">
+                    <div className={`sticky ${dayBar ? "top-11" : "top-0"} z-20 flex gap-2 bg-ui-canvas pb-3 sm:gap-3`}>
                         <div className={GUTTER_CLASS} />
                         {board.columns.map((column, index) => (
                             <ScheduleSwitcherCard

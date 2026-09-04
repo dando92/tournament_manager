@@ -18,3 +18,8 @@ export function localDateTimeToIso(value: string): string {
 export function formatClock(value: string | number): string {
     return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
+
+/** The day a board is read by: a weekday and a date, in the reader's locale. */
+export function formatDayLabel(value: string | number): string {
+    return new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" }).format(new Date(value));
+}

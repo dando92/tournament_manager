@@ -6,10 +6,13 @@ import { toOrdinal } from "@/shared/utils";
 /**
  * The geometry of the schedule board.
  *
- * Every schedule of the tournament is a column on one shared time axis, so a
- * block that crosses the current time is late and says so by where it sits
- * rather than by carrying a badge. The model is pure: it takes the schedules
- * and a clock and answers with pixels, and the components draw what it says.
+ * Every schedule it is given is a column on one shared time axis, so a block
+ * that crosses the current time is late and says so by where it sits rather
+ * than by carrying a badge. The model is pure: it takes the schedules and a
+ * clock and answers with pixels, and the components draw what it says.
+ *
+ * The axis spans the blocks it was given and nothing else: the page decides
+ * which schedules those are, one day at a time. See `scheduleDays.ts`.
  *
  * Time is placed by what actually happened wherever that is known — a settled
  * entry occupies its real start and completion, the current one grows until it
@@ -53,7 +56,7 @@ export type ScheduleBoardColumn = {
 export type ScheduleBoardModel = {
     columns: ScheduleBoardColumn[];
     ticks: Array<{ atMs: number; top: number }>;
-    /** Null when the current time falls outside the axis, which only an empty board does. */
+    /** Null when the present falls outside the day being read, which is every day but today. */
     nowTop: number | null;
     height: number;
 };
@@ -64,8 +67,8 @@ export function buildScheduleBoard(schedules: ScheduleDto[], pixelsPerMinute: nu
     const spans = columns.flatMap((column) => column.blocks.map((block) => [block.startMs, block.endMs] as const));
     const earliest = spans.length > 0 ? Math.min(...spans.map(([start]) => start)) : nowMs;
     const latest = spans.length > 0 ? Math.max(...spans.map(([, end]) => end)) : nowMs;
-    const axisStart = floorToTick(Math.min(earliest, nowMs));
-    const axisEnd = Math.max(latest, nowMs) + TRAILING_MS;
+    const axisStart = floorToTick(earliest);
+    const axisEnd = latest + TRAILING_MS;
     const perMs = pixelsPerMinute / 60_000;
     const height = Math.max(0, (axisEnd - axisStart) * perMs);
 
@@ -82,7 +85,9 @@ export function buildScheduleBoard(schedules: ScheduleDto[], pixelsPerMinute: nu
         ticks.push({ atMs, top: (atMs - axisStart) * perMs });
     }
 
-    return { columns, ticks, nowTop: (nowMs - axisStart) * perMs, height };
+    const nowTop = nowMs >= axisStart && nowMs <= axisEnd ? (nowMs - axisStart) * perMs : null;
+
+    return { columns, ticks, nowTop, height };
 }
 
 function toColumn(schedule: ScheduleDto, nowMs: number, now: Date): ScheduleBoardColumn {
