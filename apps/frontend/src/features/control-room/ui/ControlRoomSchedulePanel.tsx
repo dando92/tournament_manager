@@ -108,7 +108,6 @@ export default function ControlRoomSchedulePanel(props: Props) {
                         <QueueEntryRow
                             key={entry.id}
                             entry={entry}
-                            current={entry.id === schedule.currentEntryId}
                             selected={entry.id === selectedEntryId}
                             canStartFrom={schedule.status === "inactive"}
                             committing={committingMatchId === entry.match.id}
@@ -139,7 +138,6 @@ export default function ControlRoomSchedulePanel(props: Props) {
 
 function QueueEntryRow({
     entry,
-    current,
     selected,
     canStartFrom,
     committing,
@@ -151,7 +149,6 @@ function QueueEntryRow({
     onOpenMenu,
 }: {
     entry: ScheduleDto["entries"][number];
-    current: boolean;
     selected: boolean;
     canStartFrom: boolean;
     committing: boolean;
@@ -189,8 +186,14 @@ function QueueEntryRow({
                 openActions(event.clientX, event.clientY);
             }}
         >
+            {/* The match's own `active` flag and nothing else: the violet dot
+                means a match is on a cabinet, and a schedule's cursor is not
+                that. A stopped schedule keeps `currentEntryId` so it can be
+                resumed where it was, while `ScheduleRunner` takes its match off
+                the cabinet — drawing the cursor as active contradicted both the
+                column and the board, which reads `entry.match.active` too. */}
             <MatchListRow
-                match={{ ...entry.match, active: current }}
+                match={entry.match}
                 selected={selected}
                 routed={false}
                 controls={!committing}
