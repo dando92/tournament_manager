@@ -68,6 +68,54 @@ function scoringSystems(recalc: jest.Mock): ScoringSystemProvider {
 }
 
 describe('MatchAggregate', () => {
+  /**
+   * The one definition of where a match stands. `MatchStore` writes it to
+   * `match."state"` and the pool counts of the tree filter on that column, so
+   * every value below is a row somebody else reads.
+   */
+  describe('state', () => {
+    const scoredPlayer = player(101);
+    const otherPlayer = player(102);
+    const field = [entrant(1, 101), entrant(2, 102)];
+
+    it('is open while the match holds nothing anybody played', () => {
+      expect(match(field, []).state).toBe('open');
+      expect(match(field, [playedRound()]).state).toBe('open');
+      expect(match(field, [handScoredRound([standing(200, scoredPlayer, undefined, 0)])]).state).toBe('open');
+    });
+
+    it('is partial while a round waits for somebody', () => {
+      const partial = match(field, [playedRound([standing(200, scoredPlayer, score(100, scoredPlayer, 99))])]);
+
+      expect(partial.state).toBe('partial');
+    });
+
+    it('is ready once every round is settled and nothing depends on a tie', () => {
+      const settled = match(field, [playedRound([
+        standing(200, scoredPlayer, score(100, scoredPlayer, 99)),
+        standing(201, otherPlayer, score(101, otherPlayer, 98)),
+      ])]);
+
+      expect(settled.state).toBe('ready');
+    });
+
+    it('is tiebreak_required when a rule leaving the match splits the tied players', () => {
+      const standings = [
+        standing(200, scoredPlayer, score(100, scoredPlayer, 99)),
+        standing(201, otherPlayer, score(101, otherPlayer, 99)),
+      ];
+
+      expect(match(field, [playedRound(standings)]).state).toBe('ready');
+      expect(match(field, [playedRound(standings)], null, [advancementRule(1, 40)]).state).toBe('tiebreak_required');
+    });
+
+    it('is completed once the result is written', () => {
+      const completed = match(field, [playedRound()], { id: 1, playerPoints: [] } as MatchResult);
+
+      expect(completed.state).toBe('completed');
+    });
+  });
+
   describe('pool projection state', () => {
     it('counts played scores and positive hand-scored points as progress', () => {
       const scoredPlayer = player(101);

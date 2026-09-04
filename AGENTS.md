@@ -93,6 +93,7 @@ Every file below lives in the external `tournament_manager-docs` repository, clo
 - `mockups/schedule-restructure/` — Approved reference views for `ScheduleRestructuring.md`
 - `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
 - `QueryAndSchemaOptimization.md` — Query style, index, and schema optimization plan
+- `PerformanceReadiness.md` — Write path, live-update fan-out, load measurement, and the schema change to make before production
 - `LobbyManagerSeparation.md` — Lobby manager and community event hub integration plan and decisions
 
 ## Repository Architecture

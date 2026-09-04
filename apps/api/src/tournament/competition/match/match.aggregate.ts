@@ -13,6 +13,7 @@ import {
     Song,
     Standing,
 } from '@tournament-manager/persistence';
+import type { MatchState } from '@tournament-manager/persistence';
 import type { MatchResultStateDto } from '@tournament-manager/contracts';
 import type { ScoringSystemProvider, ScoringSystemType } from '@tournament-manager/scoring';
 import { resolvePlacements, TiebreakPlacementInput } from '@match/placement.resolver';
@@ -99,6 +100,7 @@ export class MatchAggregate {
         match.notes = details.notes;
         match.scoringSystem = details.scoringSystem;
         match.active = false;
+        match.state = 'open';
         match.phaseGroup = phaseGroup;
         match.entrants = entrants;
         match.rounds = [];
@@ -146,26 +148,51 @@ export class MatchAggregate {
     }
 
     /**
+     * Where the match stands, in the one place that decides it.
+     *
+     * `MatchStore` writes this to `match."state"` on every save, and the reads
+     * that used to re-derive it — the pool counts of the tree above all — filter on
+     * the column instead. Nothing else may compute it: a second definition is
+     * exactly the drift `PerformanceReadiness.md` batch S exists to remove, and
+     * the invariant test in `match-writes.e2e-spec.ts` fails when the column and
+     * this getter disagree.
+     *
+     * A settled match always carries evidence — a played round is settled only
+     * when every player has a score in it, and a hand-scored one only when
+     * somebody has points above zero — so `open` is the only state that means
+     * nothing has happened yet.
+     */
+    get state(): MatchState {
+        if (this.isCompleted) {
+            return 'completed';
+        }
+
+        const { status } = this.calculatedResultState();
+        if (status === 'ready' || status === 'tiebreak_required') {
+            return status;
+        }
+
+        return this.hasEvidence() ? 'partial' : 'open';
+    }
+
+    /**
      * What the tree draws about the pool this match sits in: how many of its
      * matches are waiting on a person, and how many are done.
      *
-     * `TreeQueries.pendingMatchesInScope` counts a match as waiting under
-     * exactly the rule `resultEntries` applies, so the two are the same
-     * predicate written twice and must change together. A command compares this
-     * before and after its change to know whether the pool's projection moved,
-     * which is what decides whether an event addressed to the pool follows the
-     * one addressed to the match.
+     * It is `state` read four ways, so the predicate the pool counts and the
+     * predicate a match is stored under cannot come apart. A command compares
+     * this before and after its change to know whether the pool's projection
+     * moved, which is what decides whether an event addressed to the pool
+     * follows the one addressed to the match.
      */
     get poolState(): MatchPoolState {
+        const state = this.state;
+
         return {
-            completed: this.isCompleted,
-            awaitingCommit: this.resultState.status === 'ready',
-            awaitingResolution: this.resultState.status === 'ready' || this.resultState.status === 'tiebreak_required',
-            progressed:
-                this.isCompleted ||
-                this.rounds.some((round) =>
-                    (round.standings ?? []).some((standing) => Boolean(standing.score) || standing.points > 0),
-                ),
+            completed: state === 'completed',
+            awaitingCommit: state === 'ready',
+            awaitingResolution: state === 'ready' || state === 'tiebreak_required',
+            progressed: state !== 'open',
         };
     }
 
@@ -546,6 +573,13 @@ export class MatchAggregate {
      * particular: the points are stated, one to nothing is a result, and a
      * player nobody gave points to scored none.
      */
+    /** Whether anybody has played or been given anything in this match. */
+    private hasEvidence(): boolean {
+        return this.rounds.some((round) =>
+            (round.standings ?? []).some((standing) => Boolean(standing.score) || standing.points > 0),
+        );
+    }
+
     private calculatePoints(): Array<{ playerId: number; points: number }> | null {
         const playerIds = this.singlesPlayerIds();
         if (playerIds.length === 0 || this.rounds.length === 0) return null;

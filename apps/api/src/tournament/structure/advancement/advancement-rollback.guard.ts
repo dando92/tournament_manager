@@ -42,10 +42,12 @@ type SeatedPoolRow = { phaseGroupId: number };
  * impacted by a rule aimed at a different match is not affected by this
  * rollback. `unnest` of two arrays is that pairing.
  *
- * Progress is the same evidence `PROGRESSED_POOLS` looks for, which is what
- * `MatchAggregate.poolState` computes in memory: a committed result, or a
- * standing carrying a score or a hand-scored point. This replaces loading the
- * whole aggregate of every target, one target at a time.
+ * Progress is `match."state"`, which `MatchStore` writes from
+ * `MatchAggregate.state`: every state above `open` carries evidence, and
+ * `completed` is the one that carries a committed result. Both this and
+ * `PROGRESSED_POOLS` used to spell that evidence out over `round` and
+ * `standing`, which was the same predicate the tree counted and the aggregate
+ * decided, written a third time. See `PerformanceReadiness.md`, batch S.
  */
 const PROGRESSED_MATCHES = `
     WITH impact("matchId", "entrantId") AS (
@@ -54,17 +56,11 @@ const PROGRESSED_MATCHES = `
     SELECT DISTINCT
              m."id" AS "targetId",
              m."name" AS "targetName",
-             CASE WHEN m."matchResultId" IS NOT NULL THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
+             CASE WHEN m."state" = 'completed' THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
     FROM     "match" m
     JOIN     impact i ON i."matchId" = m."id"
     JOIN     "match_entrants_entrant" me ON me."matchId" = m."id" AND me."entrantId" = i."entrantId"
-    WHERE    m."matchResultId" IS NOT NULL OR EXISTS (
-                SELECT  1
-                FROM    "round" r
-                JOIN    "standing" st ON st."roundId" = r."id"
-                WHERE   r."matchId" = m."id"
-                    AND (st."scoreId" IS NOT NULL OR st."points" > 0)
-             )
+    WHERE    m."state" <> 'open'
     ORDER BY m."id"
 `;
 
@@ -87,24 +83,18 @@ const SEATS_TAKEN_BY_RULES = `
  *
  * A committed result is progress, and so is any standing carrying a score or a
  * hand-scored point. Both block a rollback that would change who competes in
- * the pool.
+ * the pool, and both are a match whose state is above `open`.
  */
 const PROGRESSED_POOLS = `
     SELECT   pg."id" AS "targetId",
              pg."name" AS "targetName",
              m."id" AS "blockingMatchId",
              m."name" AS "blockingMatchName",
-             CASE WHEN m."matchResultId" IS NOT NULL THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
+             CASE WHEN m."state" = 'completed' THEN 'RESULT_COMMITTED' ELSE 'SCORES_RECORDED' END AS "reason"
     FROM     "phase_group" pg
     JOIN     "match" m ON m."phaseGroupId" = pg."id"
     WHERE    pg."id" = ANY($1::int[])
-        AND  (m."matchResultId" IS NOT NULL OR EXISTS (
-                SELECT  1
-                FROM    "round" r
-                JOIN    "standing" st ON st."roundId" = r."id"
-                WHERE   r."matchId" = m."id"
-                    AND (st."scoreId" IS NOT NULL OR st."points" > 0)
-             ))
+        AND  m."state" <> 'open'
     ORDER BY pg."id", m."id"
 `;
 

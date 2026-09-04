@@ -260,6 +260,9 @@ export class MatchStore {
                 const unsavedScores = this.unsavedScoresOf(match);
                 if (unsavedScores.length > 0) await manager.save(Score, unsavedScores);
 
+                /* The one place the lifecycle of a match is written. Every read
+                   that used to re-derive it filters on the column instead. */
+                match.entity.state = match.state;
                 await manager.save(Match, match.entity);
 
                 /* The match row released it above; the row itself is ours to drop. */
@@ -283,6 +286,22 @@ export class MatchStore {
 
     async remove(match: MatchAggregate): Promise<void> {
         await this.matches.remove(match.entity);
+    }
+
+    /**
+     * Rewrites the state column alone.
+     *
+     * A match whose own graph did not change can still change state, because an
+     * advancement rule leaving it decides whether a tie is ambiguous. That is
+     * one column and no aggregate write, so it does not go through `save` —
+     * which would put the whole graph back for a value the caller already has a
+     * reason to recompute.
+     */
+    async refreshState(matchId: number): Promise<void> {
+        const match = await this.load(matchId);
+        if (!match) return;
+
+        await this.matches.update(matchId, { state: match.state });
     }
 
     private unsavedScoresOf(match: MatchAggregate): Score[] {

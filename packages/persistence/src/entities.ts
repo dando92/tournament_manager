@@ -24,6 +24,7 @@ import { MatchTiebreak } from './entities/match-tiebreak.entity';
 import { MatchTiebreakStanding } from './entities/match-tiebreak-standing.entity';
 export type { ParticipantRole, ParticipantStatus } from './entities/participant.entity';
 export type { EntrantType, EntrantStatus } from './entities/entrant.entity';
+export type { MatchState } from './entities/match.entity';
 export type { MatchResultEntry } from './entities/match_result.entity';
 export type { AdvancementCompetitionKind } from './entities/advancement-rule.entity';
 export type { PhaseGroupState } from './entities/phase-group.entity';

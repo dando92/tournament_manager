@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { AdvancementCompetitionKind } from '@tournament-manager/persistence';
 import { AdvancementRuleInputDto } from './advancement-rule.requests';
 import { MatchQueries } from '@match/match.queries';
+import { MatchStore } from '@match/match.store';
 import { UiUpdatePublisher } from '@tournament/shared/ui-update.publisher';
 import { PhaseGroupQueries } from '@tournament/structure/phase-group/phase-group.queries';
 import { AdvancementRuleStore } from './advancement-rule.store';
@@ -23,6 +24,7 @@ export class AdvancementRuleCommands {
   constructor(
     private readonly advancementRules: AdvancementRuleStore,
     private readonly matchQueries: MatchQueries,
+    private readonly matches: MatchStore,
     private readonly phaseGroupQueries: PhaseGroupQueries,
     private readonly publisher: UiUpdatePublisher,
     private readonly controlRoom: ScheduleRunner,
@@ -47,6 +49,13 @@ export class AdvancementRuleCommands {
         targetSlot: rule.targetSlot,
       })),
     );
+
+    /* Where the finishers of a match go decides whether a tie between them is
+       ambiguous, so a rule written here can move the state of its source match
+       without anybody touching the match itself. */
+    if (sourceKind === 'match') {
+      await this.matches.refreshState(sourceId);
+    }
 
     const affectedMatchIds = [...previous, ...(rules ?? [])]
       .filter((rule) => rule.targetKind === 'match')

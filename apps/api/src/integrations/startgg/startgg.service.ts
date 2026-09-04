@@ -969,6 +969,10 @@ export class StartggService {
             });
         }
 
+        /* An imported match carries the result start.gg reported and no rounds
+           of its own, so the only two states the import can produce are the
+           result it wrote and the absence of one. A match somebody also scored
+           here would be settled by `MatchStore` on its next local write. */
         const resultIdsToDelete = new Set<number>();
         const savedMatchIds = Array.from(matchesBySetId.values()).map((match) => match.id);
         for (const matchId of savedMatchIds) {
@@ -1029,6 +1033,7 @@ export class StartggService {
                 }
                 localMatch.matchResult = null;
                 localMatch.active = false;
+                localMatch.state = 'open';
                 continue;
             }
 
@@ -1039,6 +1044,7 @@ export class StartggService {
                 }
                 localMatch.matchResult = null;
                 localMatch.active = false;
+                localMatch.state = 'open';
                 continue;
             }
 
@@ -1047,6 +1053,7 @@ export class StartggService {
             matchResult.match = localMatch;
             localMatch.matchResult = matchResult;
             localMatch.active = false;
+            localMatch.state = 'completed';
         }
 
         await this.matchRepository.save(Array.from(matchesBySetId.values()), { chunk: this.bulkSaveChunkSize });

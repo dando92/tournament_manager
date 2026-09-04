@@ -9,6 +9,7 @@ import { Account } from '@tournament-manager/persistence';
 import { LIVE_EVENT_PUBLISHER } from '@tournament-manager/live-messaging';
 import type { EventEnvelope } from '@tournament-manager/live-messaging';
 import { TournamentSyncStartService } from '../../../src/tournament/syncstart/tournament-syncstart.service';
+import { MatchStore } from '@match/match.store';
 import {
   dropTestDatabase,
   getTestDatabaseName,
@@ -211,6 +212,13 @@ describe('Match writes (e2e)', () => {
     const response = await request(app.getHttpServer()).get(`/matches/${id}`).expect(200);
 
     return response.body;
+  }
+
+  /** The lifecycle column, read from the row rather than from a projection. */
+  async function storedState(id: number): Promise<string> {
+    const [row] = await dataSource.query<Array<{ state: string }>>('SELECT "state" FROM "match" WHERE "id" = $1', [id]);
+
+    return row.state;
   }
 
   async function playerIdsOf(match: MatchBody): Promise<[number, number]> {
@@ -678,5 +686,79 @@ describe('Match writes (e2e)', () => {
     expect(
       await countGraphLoadsOf(() => request(app.getHttpServer()).put(`/matches/${match.id}/result`).expect(200)),
     ).toBe(1);
+  });
+
+  /**
+   * The state of a match, in the column every read now filters on.
+   *
+   * `MatchAggregate.state` defines it and `MatchStore` writes it, so what these
+   * assert is that the writes actually store it: a scored round moves the match
+   * through the lifecycle, and a rule leaving the match moves it without the
+   * match being touched at all.
+   */
+  describe('the stored state of a match', () => {
+    it('follows the match from open to completed and back as it is scored', async () => {
+      const match = await createMatch('Stateful Match', [firstEntrantId, secondEntrantId], [songId]);
+      const roundId = match.rounds[0].id;
+      expect(await storedState(match.id)).toBe('open');
+
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${firstPlayerId}`)
+        .send({ percentage: 99, isFailed: false })
+        .expect(204);
+      expect(await storedState(match.id)).toBe('partial');
+
+      await request(app.getHttpServer())
+        .put(`/rounds/${roundId}/scores/${secondPlayerId}`)
+        .send({ percentage: 98, isFailed: false })
+        .expect(204);
+      expect(await storedState(match.id)).toBe('ready');
+
+      await request(app.getHttpServer()).put(`/matches/${match.id}/result`).expect(200);
+      expect(await storedState(match.id)).toBe('completed');
+
+      await request(app.getHttpServer()).delete(`/matches/${match.id}/result`).expect(204);
+      expect(await storedState(match.id)).toBe('ready');
+    });
+
+    it('is rewritten when a rule leaving the match makes its tie ambiguous', async () => {
+      const source = await createMatch('Ambiguity Source', [firstEntrantId, secondEntrantId]);
+      const target = await createMatch('Ambiguity Target', []);
+      await request(app.getHttpServer()).post(`/matches/${source.id}/rounds`).send({}).expect(204);
+      const roundId = (await readMatch(source.id)).rounds[0].id;
+      await request(app.getHttpServer()).put(`/rounds/${roundId}/points/${firstPlayerId}`).send({ points: 1 }).expect(204);
+      await request(app.getHttpServer()).put(`/rounds/${roundId}/points/${secondPlayerId}`).send({ points: 1 }).expect(204);
+
+      /* Tied on points, and nothing depends on the order of the tie yet. */
+      expect(await storedState(source.id)).toBe('ready');
+
+      await request(app.getHttpServer())
+        .put(`/advancement-rules/sources/match/${source.id}`)
+        .send({ rules: [{ sourcePlacement: 1, targetKind: 'match', targetId: target.id, targetSlot: 1 }] })
+        .expect(204);
+      expect(await storedState(source.id)).toBe('tiebreak_required');
+
+      await request(app.getHttpServer())
+        .put(`/advancement-rules/sources/match/${source.id}`)
+        .send({ rules: [] })
+        .expect(204);
+      expect(await storedState(source.id)).toBe('ready');
+    });
+
+    /**
+     * The guard the column needs: a fifth writer added later fails here rather
+     * than leaving a tree counting the wrong pools. Every match this suite left
+     * behind is recomputed from its own aggregate and compared with the row.
+     */
+    it('agrees with the aggregate for every match the suite wrote', async () => {
+      const matches = app.get(MatchStore);
+      const stored = await dataSource.query<Array<{ id: number; state: string }>>('SELECT "id", "state" FROM "match" ORDER BY "id"');
+      expect(stored.length).toBeGreaterThan(0);
+
+      const recomputed = await Promise.all(
+        stored.map(async ({ id }) => ({ id, state: (await matches.loadOrFail(id)).state })),
+      );
+      expect(recomputed).toEqual(stored);
+    });
   });
 });

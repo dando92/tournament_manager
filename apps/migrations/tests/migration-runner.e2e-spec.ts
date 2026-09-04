@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { createMigrationDataSource } from '../src/migration-data-source';
 import { seedLocalFixture } from '../src/seed-local-fixture';
 import { TournamentTimelineTiming1788300000000 } from '../src/migrations/1788300000000-TournamentTimelineTiming';
+import { MatchState1788900000000 } from '../src/migrations/1788900000000-MatchState';
 
 const host = process.env.DATABASE_HOST ?? '127.0.0.1';
 const port = Number(process.env.DATABASE_PORT ?? 5432);
@@ -202,6 +203,104 @@ describe('migration runner', () => {
     } finally {
       await runner.query('SET search_path TO public');
       await runner.query('DROP SCHEMA IF EXISTS timeline_upgrade_test CASCADE');
+      await runner.release();
+    }
+  });
+
+  /**
+   * The backfill of `match."state"`, over rows that predate the column.
+   *
+   * The column is written by the application from `MatchAggregate.state`, so the
+   * only thing the migration decides on its own is where the matches already
+   * stored start. It classifies them with the two SQL predicates it retires, and
+   * this exercises all four values it can produce by dropping the column and
+   * adding it back over a tournament that holds one match of each kind.
+   */
+  it('backfills the state of the matches it finds', async () => {
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    const inserted = async (sql: string, params: unknown[] = []): Promise<number> => {
+      const [row] = (await runner.query(sql, params)) as unknown as Array<{ id: number }>;
+
+      return row.id;
+    };
+
+    try {
+      const tournamentId = await inserted(`INSERT INTO "tournament" ("name") VALUES ('Backfill tournament') RETURNING "id"`);
+      const divisionId = await inserted(`INSERT INTO "division" ("name", "tournamentId") VALUES ('Backfill division', $1) RETURNING "id"`, [tournamentId]);
+      const phaseId = await inserted(`INSERT INTO "phase" ("name", "divisionId") VALUES ('Backfill phase', $1) RETURNING "id"`, [divisionId]);
+      const poolId = await inserted(`INSERT INTO "phase_group" ("name", "phaseId") VALUES ('Backfill pool', $1) RETURNING "id"`, [phaseId]);
+      const songId = await inserted(
+        `INSERT INTO "song" ("title", "artist", "group", "difficulty", "tournamentId") VALUES ('Backfill song', 'Writer', 'Test', 9, $1) RETURNING "id"`,
+        [tournamentId],
+      );
+
+      const playerIds: number[] = [];
+      const entrantIds: number[] = [];
+      for (const name of ['Backfill One', 'Backfill Two']) {
+        const playerId = await inserted(`INSERT INTO "player" ("playerName") VALUES ($1) RETURNING "id"`, [name]);
+        const participantId = await inserted(`INSERT INTO "participant" ("tournamentId", "playerId") VALUES ($1, $2) RETURNING "id"`, [tournamentId, playerId]);
+        const entrantId = await inserted(`INSERT INTO "entrant" ("name", "divisionId") VALUES ($1, $2) RETURNING "id"`, [name, divisionId]);
+        await runner.query(`INSERT INTO "entrant_participants_participant" ("entrantId", "participantId") VALUES ($1, $2)`, [entrantId, participantId]);
+        playerIds.push(playerId);
+        entrantIds.push(entrantId);
+      }
+
+      const matchOf = async (name: string): Promise<number> => {
+        const matchId = await inserted(
+          `INSERT INTO "match" ("name", "scoringSystem", "phaseGroupId") VALUES ($1, 'PlacementPointsWithFailZero', $2) RETURNING "id"`,
+          [name, poolId],
+        );
+        for (const entrantId of entrantIds) {
+          await runner.query(`INSERT INTO "match_entrants_entrant" ("matchId", "entrantId") VALUES ($1, $2)`, [matchId, entrantId]);
+        }
+
+        return matchId;
+      };
+
+      await matchOf('Backfill untouched');
+
+      /* One of the two players has played the song, so the match carries
+         evidence and is still waiting for the other. */
+      const partialId = await matchOf('Backfill partial');
+      const partialRoundId = await inserted(`INSERT INTO "round" ("matchId", "songId") VALUES ($1, $2) RETURNING "id"`, [partialId, songId]);
+      const scoreId = await inserted(
+        `INSERT INTO "score" ("percentage", "isFailed", "songId", "playerId") VALUES (99, false, $1, $2) RETURNING "id"`,
+        [songId, playerIds[0]],
+      );
+      await runner.query(`INSERT INTO "standing" ("roundId", "playerId", "scoreId", "points") VALUES ($1, $2, $3, 0)`, [partialRoundId, playerIds[0], scoreId]);
+
+      /* A hand-scored round settles as soon as somebody has a point. */
+      const settledId = await matchOf('Backfill settled');
+      const settledRoundId = await inserted(`INSERT INTO "round" ("matchId") VALUES ($1) RETURNING "id"`, [settledId]);
+      await runner.query(`INSERT INTO "standing" ("roundId", "playerId", "points") VALUES ($1, $2, 3)`, [settledRoundId, playerIds[0]]);
+
+      const completedId = await matchOf('Backfill completed');
+      const resultId = await inserted(`INSERT INTO "match_result" ("playerPoints") VALUES ('[]'::jsonb) RETURNING "id"`);
+      await runner.query(`UPDATE "match" SET "matchResultId" = $1 WHERE "id" = $2`, [resultId, completedId]);
+
+      const migration = new MatchState1788900000000();
+      await migration.down(runner);
+      await migration.up(runner);
+
+      const states = await runner.query(`SELECT "name", "state" FROM "match" WHERE "phaseGroupId" = $1 ORDER BY "id"`, [poolId]);
+      expect(states).toEqual([
+        { name: 'Backfill untouched', state: 'open' },
+        { name: 'Backfill partial', state: 'partial' },
+        { name: 'Backfill settled', state: 'ready' },
+        { name: 'Backfill completed', state: 'completed' },
+      ]);
+    } finally {
+      /* The two join tables are cleared first: neither cascades from the rows
+         the tournament takes with it. */
+      const backfillEntrants = `SELECT "id" FROM "entrant" WHERE "name" IN ('Backfill One', 'Backfill Two')`;
+      await runner.query(`DELETE FROM "entrant_participants_participant" WHERE "entrantId" IN (${backfillEntrants})`);
+      await runner.query(`DELETE FROM "match_entrants_entrant" WHERE "entrantId" IN (${backfillEntrants})`);
+      await runner.query(`DELETE FROM "entrant" WHERE "name" IN ('Backfill One', 'Backfill Two')`);
+      await runner.query(`DELETE FROM "tournament" WHERE "name" = 'Backfill tournament'`);
+      await runner.query(`DELETE FROM "match_result" mr WHERE NOT EXISTS (SELECT 1 FROM "match" m WHERE m."matchResultId" = mr."id")`);
+      await runner.query(`DELETE FROM "player" WHERE "playerName" IN ('Backfill One', 'Backfill Two')`);
+      await runner.query(`DELETE FROM "song" WHERE "title" = 'Backfill song'`);
       await runner.release();
     }
   });
