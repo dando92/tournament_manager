@@ -100,9 +100,12 @@ describe("Control Room (e2e)", () => {
             .set("Authorization", `Bearer ${accessToken}`)
             .send({ playerName })
             .expect(201);
-        const entrant = await request(app.getHttpServer()).post(`/divisions/${divisionId}/participants/${participant.body.id}`).expect(201);
+        const admitted = await request(app.getHttpServer())
+            .post(`/divisions/${divisionId}/participants`)
+            .send({ participantIds: [participant.body.id] })
+            .expect(201);
 
-        return entrant.body.id;
+        return admitted.body[0].id;
     }
 
     async function createMatch(name: string, entrantIds: number[], phaseGroupId = poolId): Promise<MatchBody> {

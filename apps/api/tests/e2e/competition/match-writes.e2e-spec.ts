@@ -173,11 +173,12 @@ describe('Match writes (e2e)', () => {
       .send({ playerName })
       .expect(201);
 
-    const entrant = await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participant.body.id}`)
+    const admitted = await request(app.getHttpServer())
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participant.body.id] })
       .expect(201);
 
-    return entrant.body.id;
+    return admitted.body[0].id;
   }
 
   async function addSong(title: string): Promise<number> {

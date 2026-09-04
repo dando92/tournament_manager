@@ -141,13 +141,15 @@ describe('Division writes (e2e)', () => {
 
   function admit(playerName: string): request.Test {
     return request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participantIdByName.get(playerName)}`)
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantIdByName.get(playerName)] })
       .expect(201);
   }
 
   function withdraw(playerName: string): request.Test {
     return request(app.getHttpServer())
-      .delete(`/divisions/${divisionId}/participants/${participantIdByName.get(playerName)}`)
+      .delete(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantIdByName.get(playerName)] })
       .expect(204);
   }
 
@@ -182,9 +184,11 @@ describe('Division writes (e2e)', () => {
   it('offers a participant again once they are withdrawn, and stops offering an admitted one', async () => {
     await admit('Bob');
     const admitted = await request(app.getHttpServer()).get(`/divisions/${divisionId}/available-participants`).expect(200);
+    /* Registration order: the owner is a participant of the tournament it
+       created, and was registered before anybody was added to it. */
     expect(admitted.body.map((participant: { player: { playerName: string } }) => participant.player.playerName)).toEqual([
-      'Cal',
       'Division Writes Owner',
+      'Cal',
     ]);
 
     const events = await announcedBy(() => withdraw('Bob'));
@@ -193,14 +197,14 @@ describe('Division writes (e2e)', () => {
     const available = await request(app.getHttpServer()).get(`/divisions/${divisionId}/available-participants`).expect(200);
     expect(
       available.body.map((participant: { player: { playerName: string } }) => participant.player.playerName),
-    ).toEqual(['Bob', 'Cal', 'Division Writes Owner']);
+    ).toEqual(['Division Writes Owner', 'Bob', 'Cal']);
   });
 
   /* The entrant carries what was played and how it was seeded, so admitting the
      same person again has to be the reversal of the withdrawal it follows. */
   it('gives a re-admitted participant the entrant they had, with its seed', async () => {
     const admitted = await admit('Cal');
-    const calEntrantId = admitted.body.id;
+    const calEntrantId = admitted.body[0].id;
     const annEntrantId = (await entrants()).find((entrant) => entrant.name === 'Ann')!.id;
 
     await request(app.getHttpServer())
@@ -211,7 +215,7 @@ describe('Division writes (e2e)', () => {
     await withdraw('Cal');
     const readmitted = await admit('Cal');
 
-    expect(readmitted.body.id).toBe(calEntrantId);
+    expect(readmitted.body[0].id).toBe(calEntrantId);
     /* Bob is here too, withdrawn: the roster keeps everybody it ever had. */
     const roster = await entrants();
     expect(roster.map((entrant) => entrant.name)).toEqual(['Cal', 'Ann', 'Bob']);

@@ -215,7 +215,8 @@ describe('Tournament writes (e2e)', () => {
       request(app.getHttpServer()).post('/divisions').send({ name: 'Main Division', tournamentId }),
     ).expect(201);
     await request(app.getHttpServer())
-      .post(`/divisions/${division.body.id}/participants/${participantId}`)
+      .post(`/divisions/${division.body.id}/participants`)
+      .send({ participantIds: [participantId] })
       .expect(201);
 
     const events = await announcedBy(() =>

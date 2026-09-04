@@ -17,6 +17,7 @@ const baseConfig: BridgeConfig = {
   lobbyPassword: "",
   finalGraceMs: 1500,
   finalTimeoutMs: 20000,
+  machineIdleMs: 600000,
   logLevel: "error",
 };
 

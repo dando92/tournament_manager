@@ -150,9 +150,10 @@ describe('Tournament management (e2e)', () => {
     const divisionId = divisionResponse.body.id;
 
     const entrantResponse = await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantId] })
       .expect(201);
-    const entrantId = entrantResponse.body.id;
+    const entrantId = entrantResponse.body[0].id;
 
     const phaseResponse = await request(app.getHttpServer())
       .post('/phases')

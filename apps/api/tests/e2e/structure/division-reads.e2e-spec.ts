@@ -141,11 +141,12 @@ describe('Division reads (e2e)', () => {
   }
 
   async function addEntrant(playerName: string): Promise<void> {
-    const entrant = await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participantIdByName.get(playerName)}`)
+    const admitted = await request(app.getHttpServer())
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantIdByName.get(playerName)] })
       .expect(201);
 
-    entrantIdByName.set(playerName, entrant.body.id);
+    entrantIdByName.set(playerName, admitted.body[0].id);
   }
 
   it('lists the roster by seed, with the unseeded entrants last', async () => {
@@ -182,13 +183,14 @@ describe('Division reads (e2e)', () => {
       .expect(200)
       .expect(({ body }) => {
         /* The account that created the tournament is a participant of it and
-           competes in nothing, so it is offered alongside Dee. The order
-           ignores case. */
+           competes in nothing, so it is offered alongside Dee. The order is
+           registration order, which is the order the roster tab lists
+           everybody in, and the owner was registered first. */
         expect(body.map((participant) => participant.player.playerName)).toEqual([
-          'Dee Player',
           ownerCredentials.playerName,
+          'Dee Player',
         ]);
-        expect(body[0]).toEqual({
+        expect(body[1]).toEqual({
           id: participantIdByName.get('Dee Player'),
           roles: ['competitor'],
           status: 'registered',
@@ -316,9 +318,11 @@ describe('Division reads (e2e)', () => {
             id: expect.any(Number),
             sourceKind: 'phase_group',
             sourceId: poolId,
+            sourceName: 'Pool A',
             sourcePlacement: 1,
             targetKind: 'phase_group',
             targetId: advancementTargetPoolId,
+            targetName: 'Pool',
             targetSlot: 1,
           },
         ]);
@@ -366,7 +370,8 @@ describe('Division reads (e2e)', () => {
     const participantId = participantIdByName.get('Dee Player');
 
     await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantId] })
       .expect(201);
 
     const available = async (): Promise<number[]> => {
@@ -387,14 +392,16 @@ describe('Division reads (e2e)', () => {
        the entrant and states its status, and the participant has to be on offer
        again — without that, a removal could not be undone from the interface. */
     await request(app.getHttpServer())
-      .delete(`/divisions/${divisionId}/participants/${participantId}`)
+      .delete(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantId] })
       .expect(204);
 
     expect(await entrantOf('Dee Player')).toMatchObject({ status: 'withdrawn' });
     expect(await available()).toContain(participantId);
 
     await request(app.getHttpServer())
-      .post(`/divisions/${divisionId}/participants/${participantId}`)
+      .post(`/divisions/${divisionId}/participants`)
+      .send({ participantIds: [participantId] })
       .expect(201);
 
     expect(await entrantOf('Dee Player')).toMatchObject({ status: 'active' });
