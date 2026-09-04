@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
-import { useSchedules } from "@/features/schedule/model/useSchedules";
+import { useArchivedSchedules, useScheduleActivity, useSchedules } from "@/features/schedule/model/useSchedules";
 import ScheduleBoard from "@/features/schedule/ui/ScheduleBoard";
 import ScheduleMatchDetail from "@/features/schedule/ui/ScheduleMatchDetail";
 import { btnSecondary } from "@/styles/buttonStyles";
@@ -22,10 +22,15 @@ export default function SchedulePage() {
     const [params, setParams] = useSearchParams();
     const [showArchived, setShowArchived] = useState(false);
 
-    const archivedCount = schedules.schedules.filter((schedule) => schedule.archivedAt).length;
-    const visible = schedules.schedules.filter((schedule) => showArchived || !schedule.archivedAt);
+    /* The live boards come from one request and the archived ones from another,
+       fetched only while somebody is looking at them. How many there are is a
+       count, so the button can offer them without them having been read. */
+    const activity = useScheduleActivity(tournamentId);
+    const archived = useArchivedSchedules(tournamentId, showArchived);
+    const archivedCount = activity.data?.archivedCount ?? 0;
+    const visible = showArchived ? [...schedules.schedules, ...(archived.data ?? [])] : schedules.schedules;
     const openedMatchId = Number(params.get("match")) || null;
-    const openedSchedule = schedules.schedules.find((schedule) => schedule.entries.some((entry) => entry.match.id === openedMatchId)) ?? null;
+    const openedSchedule = visible.find((schedule) => schedule.entries.some((entry) => entry.match.id === openedMatchId)) ?? null;
 
     function openMatch(matchId: number): void {
         setParams((current) => {

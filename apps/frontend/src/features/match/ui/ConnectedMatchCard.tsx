@@ -3,7 +3,7 @@ import { useAdvancementTargets } from "@/features/match/model/useAdvancementTarg
 import { useMatches } from "@/features/match/model/useMatches";
 import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/participant/model/types";
-import { Match, MatchHighlight } from "@/features/match/model/types";
+import { Match, MatchHighlight, MatchNeighbour } from "@/features/match/model/types";
 import { useManualMatchActivationAllowed } from "@/features/schedule/model/useSchedules";
 
 /**
@@ -18,7 +18,7 @@ type ConnectedMatchCardProps = {
   match: Match;
   division: Division;
   divisionEntrants: Entrant[];
-  allMatches: Match[];
+  allMatches: MatchNeighbour[];
   actions: ReturnType<typeof useMatches>["actions"];
   controls: boolean;
   tournamentId?: number;

@@ -5,6 +5,8 @@ import type { ScheduleDto } from "@tournament-manager/contracts";
 
 import { getDivisionSummary } from "@/features/division/api/division.api";
 import { divisionKeys } from "@/features/division/api/division.keys";
+import { getMatch } from "@/features/match/api/match.api";
+import { matchKeys } from "@/features/match/api/match.keys";
 import ReadOnlyMatchCard from "@/features/match/ui/ReadOnlyMatchCard";
 import { formatClock } from "@/features/schedule/model/scheduleDateTime";
 import { buildScheduleTimeline } from "@/features/schedule/model/scheduleTiming";
@@ -25,6 +27,11 @@ import { focusRing } from "@/styles/buttonStyles";
  * belong to the Control Room, and permissions never turn this into an editor.
  * The full `division · phase · pool` address lives here rather than on the
  * board cards, which have no room for it.
+ *
+ * The board carries a summary of each match, which is enough to draw a
+ * timetable and not enough to draw a card, so opening one reads the match in
+ * full. That request is the deliberate cost of a board that no longer ships
+ * every round, standing and score of every schedule to everybody watching.
  *
  * The sheet is dragged away downwards, which is what a sheet that came up from
  * the bottom of a phone is expected to do. The grabber above the title says so
@@ -56,6 +63,11 @@ export default function ScheduleMatchDetail({
         queryKey: divisionKeys.summary(divisionId ?? 0),
         queryFn: () => getDivisionSummary(divisionId ?? 0),
         enabled: divisionId !== null,
+    });
+    const matchQuery = useQuery({
+        queryKey: matchKeys.byId(matchId ?? 0),
+        queryFn: () => getMatch(matchId ?? 0),
+        enabled: matchId !== null,
     });
     const [dragY, setDragY] = useState(0);
     const [dragging, setDragging] = useState(false);
@@ -169,10 +181,10 @@ export default function ScheduleMatchDetail({
                                     </div>
 
                                     <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4">
-                                        {divisionQuery.data ? (
+                                        {divisionQuery.data && matchQuery.data ? (
                                             <ReadOnlyMatchCard
                                                 division={divisionQuery.data}
-                                                match={entry.match}
+                                                match={matchQuery.data}
                                                 allMatches={schedule.entries.map((item) => item.match)}
                                             />
                                         ) : (

@@ -1,29 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { MatchDto, ScheduleDto } from "@tournament-manager/contracts";
+import type { MatchSummaryDto, ScheduleDto } from "@tournament-manager/contracts";
 
 import { buildScheduleBoard, previewLineup, sourceLabel } from "../../src/features/schedule/model/scheduleBoard.ts";
 
 const PIXELS_PER_MINUTE = 3;
 const NOW = new Date("2026-08-25T10:50:00.000Z");
 
-function match(overrides: Partial<MatchDto> = {}): MatchDto {
+function match(overrides: Partial<MatchSummaryDto> = {}): MatchSummaryDto {
     return {
         id: 101,
         name: "Winners R1",
         subtitle: "",
-        notes: "",
-        scoringSystem: "PlacementPointsWithFailZero",
         active: false,
-        entrants: [],
-        rounds: [],
-        tiebreaks: [],
-        advancementRules: [],
-        resultState: { status: "incomplete", entries: [], ambiguousTies: [] },
-        matchResult: null,
+        state: "open",
         phaseGroupId: 7,
+        entrants: [],
+        incomingRules: [],
+        songCount: 0,
+        handScored: false,
+        missingScoreCount: 0,
+        tiebreakInProgress: false,
+        winner: null,
         ...overrides,
-    } as MatchDto;
+    } as MatchSummaryDto;
 }
 
 function schedule(overrides: Partial<ScheduleDto> = {}): ScheduleDto {
@@ -47,7 +47,7 @@ function schedule(overrides: Partial<ScheduleDto> = {}): ScheduleDto {
                 expectedDurationMinutes: 30,
                 startedAt: "2026-08-25T10:00:00.000Z",
                 completedAt: "2026-08-25T10:25:00.000Z",
-                match: match({ id: 101, matchResult: { id: 1, playerPoints: [{ playerId: 5, points: 6, placement: 1 }] } }),
+                match: match({ id: 101, state: "completed", winner: { id: 5, playerName: "ALESSIO" } }),
             },
             {
                 id: 12,
@@ -116,10 +116,11 @@ test("a block never shrinks below a touch target, however short the match", () =
 test("a finished match collapses to its winner and an open one lists who is in it", () => {
     const played = match({
         entrants: [
-            { id: 1, name: "ALESSIO", type: "player", status: "active", participants: [{ id: 1, roles: [], status: "active", player: { id: 5, playerName: "ALESSIO" } }] },
-            { id: 2, name: "MARTA", type: "player", status: "active", participants: [{ id: 2, roles: [], status: "active", player: { id: 6, playerName: "MARTA" } }] },
-        ] as never,
-        matchResult: { id: 1, playerPoints: [{ playerId: 5, points: 6, placement: 1 }] },
+            { id: 1, name: "ALESSIO", type: "player", player: { id: 5, playerName: "ALESSIO" } },
+            { id: 2, name: "MARTA", type: "player", player: { id: 6, playerName: "MARTA" } },
+        ],
+        state: "completed",
+        winner: { id: 5, playerName: "ALESSIO" },
     });
 
     assert.equal(previewLineup(played).winnerName, "ALESSIO");
@@ -130,9 +131,9 @@ test("the slots a match is still waiting for are named by the rule that feeds th
     const pending = match({
         id: 300,
         entrants: [
-            { id: 1, name: "ALESSIO", type: "player", status: "active", participants: [{ id: 1, roles: [], status: "active", player: { id: 5, playerName: "ALESSIO" } }] },
-        ] as never,
-        advancementRules: [
+            { id: 1, name: "ALESSIO", type: "player", player: { id: 5, playerName: "ALESSIO" } },
+        ],
+        incomingRules: [
             { id: 1, sourceKind: "match", sourceId: 101, sourceName: "Winners R1", sourcePlacement: 1, targetKind: "match", targetId: 300, targetName: "Grand final", targetSlot: 1 },
             { id: 2, sourceKind: "phase_group", sourceId: 9, sourceName: "Pool C", sourcePlacement: 2, targetKind: "match", targetId: 300, targetName: "Grand final", targetSlot: 2 },
         ],

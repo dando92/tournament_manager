@@ -12,6 +12,7 @@ import type { TournamentDivisionOption } from "@/features/tournament/model/types
 import { useMatches } from "@/features/match/model/useMatches";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import MatchListRow from "@/features/match/ui/MatchListRow";
+import { rowOfSummary } from "@/features/match/model/matchRow";
 import * as MatchesApi from "@/features/match/api/match.api";
 import { scheduleInterruptionMessage, scheduleStaleMessage, scheduleStatusLabel } from "@/features/schedule/model/scheduleStatus";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
@@ -186,14 +187,15 @@ function QueueEntryRow({
                 openActions(event.clientX, event.clientY);
             }}
         >
-            {/* The match's own `active` flag and nothing else: the violet dot
-                means a match is on a cabinet, and a schedule's cursor is not
-                that. A stopped schedule keeps `currentEntryId` so it can be
-                resumed where it was, while `ScheduleRunner` takes its match off
-                the cabinet — drawing the cursor as active contradicted both the
-                column and the board, which reads `entry.match.active` too. */}
+            {/* `entry.match.active` and nothing else. A schedule holds one
+                active match at a time and decides which, but the answer is a
+                fact about the match — it is what a live run is attributed to —
+                so every screen reads the same column and this one cannot
+                disagree with the division's. The schedule's own cursor is not
+                that: it survives a stop, so that a stopped schedule can be
+                resumed where it left off. */}
             <MatchListRow
-                match={entry.match}
+                match={rowOfSummary(entry.match)}
                 selected={selected}
                 routed={false}
                 controls={!committing}

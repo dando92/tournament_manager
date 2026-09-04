@@ -1,12 +1,15 @@
 import type { ScoringSystemType } from '@tournament-manager/scoring';
-import type { AdvancementCompetitionKind } from './vocabulary';
+import type { AdvancementCompetitionKind, EntrantType, MatchState } from './vocabulary';
 import type { EntrantDto, PlayerRefDto, ScoreDto, SongRefDto } from './projections';
 
 /**
- * The one shape a match is read in.
+ * The two shapes a match is read in.
  *
- * `GET /matches/:id`, the two list routes and every mutation that answers with
- * a match return this, because they all go through the same projection.
+ * `MatchDto` is the Detail level: `GET /matches/:id` answers with it, and so do
+ * the two list routes that have not yet been narrowed. `MatchSummaryDto` below
+ * is the Summary level every list of matches reads. Both come out of the same
+ * projection file, so a field cannot mean two things depending on which one
+ * carried it.
  */
 
 /**
@@ -99,6 +102,7 @@ export type MatchDto = {
     notes: string;
     scoringSystem: ScoringSystemType;
     active: boolean;
+    state: MatchState;
     entrants: EntrantDto[];
     rounds: MatchRoundDto[];
     tiebreaks: MatchTiebreakDto[];
@@ -106,6 +110,51 @@ export type MatchDto = {
     resultState: MatchResultStateDto;
     matchResult?: MatchResultDto | null;
     phaseGroupId: number;
+};
+
+/** An entrant as a list names it: the player behind a singles slot, or nothing. */
+export type MatchSummaryEntrantDto = {
+    id: number;
+    name: string;
+    type: EntrantType;
+    player: PlayerRefDto | null;
+};
+
+/**
+ * A match as a list draws it.
+ *
+ * The Summary level of a match, in the sense `Backend.md` gives the word: who
+ * is in it, where it stands, and what it is still waiting for, with its rounds,
+ * standings, scores and tiebreaks reduced to the counts a row reads. Those
+ * belong to `MatchDto`, which is the Detail level and is read one match at a
+ * time by whatever opened it.
+ *
+ * It is owned by the match and not by any of its readers. The schedule board,
+ * the unassigned picker of the Control Room and the timetable rows all read
+ * this one shape, and a reader that needs another field adds it here for
+ * everyone rather than growing a projection of its own.
+ *
+ * `missingScoreCount` counts the runs the rounds played on a song are still
+ * waiting for. `tiebreakInProgress` is an attempt already on the table, which
+ * is what tells a row waiting for a tiebreak from one whose tiebreak has been
+ * opened. `winner` is resolved here because a row that has dropped the entrants
+ * of a settled match can no longer name the player its result points at.
+ */
+export type MatchSummaryDto = {
+    id: number;
+    name: string;
+    subtitle: string;
+    active: boolean;
+    state: MatchState;
+    phaseGroupId: number;
+    entrants: MatchSummaryEntrantDto[];
+    /** The rules that feed this match, so a row can name the slots it is waiting for. */
+    incomingRules: AdvancementRuleDto[];
+    songCount: number;
+    handScored: boolean;
+    missingScoreCount: number;
+    tiebreakInProgress: boolean;
+    winner: PlayerRefDto | null;
 };
 
 /** `skipped` means the match is not linked to a start.gg set, so there was nothing to report. */

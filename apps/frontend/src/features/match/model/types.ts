@@ -1,4 +1,4 @@
-import type { AdvancementRuleDto } from "@tournament-manager/contracts";
+import type { AdvancementRuleDto, MatchState } from "@tournament-manager/contracts";
 
 /**
  * What the match views read, under the names they read it by.
@@ -9,6 +9,8 @@ import type { AdvancementRuleDto } from "@tournament-manager/contracts";
  */
 export type {
   AdvancementCompetitionKind,
+  MatchState,
+  MatchSummaryDto as MatchSummary,
   AdvancementRuleDto as AdvancementRule,
   MatchDto as Match,
   MatchRoundDto as Round,
@@ -17,6 +19,22 @@ export type {
 } from "@tournament-manager/contracts";
 
 export type MatchCommitState = "Disabled" | "Tiebreak" | "Pending" | "Completed";
+
+/**
+ * Another match, as a view of one match refers to it.
+ *
+ * Enough to name it, place it in a pool and say whether it is finished, which
+ * is all the table and the advancement editor ever ask of the matches around
+ * the one they are drawing. It is structural on purpose: a caller holding
+ * `MatchDto`s satisfies it, and so does one holding `MatchSummaryDto`s, so a
+ * view does not have to read every neighbour in full to name it.
+ */
+export type MatchNeighbour = {
+  id: number;
+  name: string;
+  phaseGroupId: number;
+  state: MatchState;
+};
 
 /**
  * A rule as the editor holds it before it is saved. The identifier is the

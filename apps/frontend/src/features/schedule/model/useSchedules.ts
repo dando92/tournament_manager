@@ -8,13 +8,21 @@ import type { ScheduleEditorDto, ScheduleDto, ScheduleEntryInputDto } from "@tou
 export function useSchedules(tournamentId: number) {
     const queryClient = useQueryClient();
     const schedules = useQuery({
-        queryKey: scheduleKeys.all(tournamentId),
+        queryKey: scheduleKeys.list(tournamentId, false),
         queryFn: () => api.listSchedules(tournamentId),
     });
 
+    /* Both lists and the activity counts: starting, stopping or archiving a
+       schedule moves what `scheduleKeys.activity` answers, and it is the one key
+       that does not sit under the boards' prefix. */
+    const invalidate = () => Promise.all([
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.all(tournamentId) }),
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.activity(tournamentId) }),
+    ]);
+
     const mutate = useMutation({
         mutationFn: async (work: () => Promise<void>) => work(),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: scheduleKeys.all(tournamentId) }),
+        onSuccess: () => invalidate(),
         onError: (error) => {
             console.error("Schedule command failed", error);
             toast.error("Unable to update the schedule.");
@@ -22,7 +30,6 @@ export function useSchedules(tournamentId: number) {
     });
 
     const run = (work: () => Promise<void>) => mutate.mutateAsync(work);
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: scheduleKeys.all(tournamentId) });
 
     return {
         query: schedules,
@@ -41,7 +48,7 @@ export function useSchedules(tournamentId: number) {
         updateEntryTime: async (scheduleId: number, entryId: number, expectedDurationMinutes: number) => {
             try {
                 await api.updateEntryTime(scheduleId, entryId, expectedDurationMinutes);
-                queryClient.setQueryData<ScheduleDto[]>(scheduleKeys.all(tournamentId), (current) =>
+                queryClient.setQueryData<ScheduleDto[]>(scheduleKeys.list(tournamentId, false), (current) =>
                     current?.map((schedule) => schedule.id === scheduleId
                         ? { ...schedule, entries: schedule.entries.map((entry) => entry.id === entryId ? { ...entry, expectedDurationMinutes } : entry) }
                         : schedule),
@@ -66,12 +73,45 @@ export function useSchedules(tournamentId: number) {
     };
 }
 
-export function useManualMatchActivationAllowed(tournamentId?: number): boolean {
-    const query = useQuery({
-        queryKey: scheduleKeys.all(tournamentId ?? 0),
-        queryFn: () => api.listSchedules(tournamentId ?? 0),
+/**
+ * The archived boards, read only once somebody asks to see them.
+ *
+ * An event marks them stale beside the live ones — `scheduleKeys.lists` names
+ * both — but React Query refetches only what is mounted, and this is mounted
+ * only while the archived view is open.
+ */
+export function useArchivedSchedules(tournamentId: number, enabled: boolean) {
+    return useQuery({
+        queryKey: scheduleKeys.list(tournamentId, true),
+        queryFn: () => api.listSchedules(tournamentId, true),
+        enabled,
+    });
+}
+
+/**
+ * The two counts a page needs about schedules it is not showing.
+ *
+ * One request the size of a row, in place of the board projection both of its
+ * callers used to mount to read a scalar out of it.
+ */
+export function useScheduleActivity(tournamentId?: number) {
+    return useQuery({
+        queryKey: scheduleKeys.activity(tournamentId ?? 0),
+        queryFn: () => api.getScheduleActivity(tournamentId ?? 0),
         enabled: Boolean(tournamentId),
     });
+}
 
-    return !(query.data ?? []).some((schedule) => schedule.status === "running" || schedule.status === "paused");
+/**
+ * Whether a match may be put on a cabinet by hand.
+ *
+ * It may not while a schedule is running, because the schedule owns that
+ * decision. Every connected match card asks this, so it must not be a
+ * board: asking it used to mount every schedule of the tournament with all of
+ * its entries, and every score typed on a division page refetched the lot.
+ */
+export function useManualMatchActivationAllowed(tournamentId?: number): boolean {
+    const activity = useScheduleActivity(tournamentId);
+
+    return !activity.data?.running;
 }

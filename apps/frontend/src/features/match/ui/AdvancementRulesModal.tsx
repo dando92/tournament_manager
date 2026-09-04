@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { AdvancementCompetitionKind, AdvancementRuleInput, Match } from "@/features/match/model/types";
+import { AdvancementCompetitionKind, AdvancementRuleInput, MatchNeighbour } from "@/features/match/model/types";
 import { isAdvancementSourceTarget, validateAdvancementRules } from "@/features/match/model/advancementRuleValidation";
 import { Division } from "@/features/division/model/types";
 import FormModal from "@/shared/components/ui/FormModal";
@@ -15,7 +15,7 @@ type AdvancementRulesModalProps = {
     sourceId: number;
     rules: AdvancementRuleInput[];
     division: Division;
-    allMatches: Match[];
+    allMatches: MatchNeighbour[];
     onChange: (rules: AdvancementRuleInput[]) => void;
     onSave: () => Promise<void>;
     onCancel: () => void;
@@ -230,7 +230,7 @@ function InlineDestination({
     );
 }
 
-function matchOptionsLabel(match: Match | undefined, phaseGroupLabelById: Map<number, string>): string {
+function matchOptionsLabel(match: MatchNeighbour | undefined, phaseGroupLabelById: Map<number, string>): string {
     if (!match) {
         return "Match";
     }

@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards, ValidationPipe } from "@nestjs/common";
-import type { ScheduleCreationDto, ScheduleEditorDto, ScheduleDto, CreatedResourceDto } from "@tournament-manager/contracts";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UseGuards, ValidationPipe } from "@nestjs/common";
+import type { ScheduleActivityDto, ScheduleCreationDto, ScheduleEditorDto, ScheduleDto, CreatedResourceDto } from "@tournament-manager/contracts";
 
 import { RequireOpenTournament, TournamentOpenGuard } from "@tournament/shared/tournament-open.guard";
 import { ScheduleCommands } from "./schedule.commands";
@@ -14,9 +14,21 @@ export class ScheduleController {
         private readonly queries: ScheduleQueries,
     ) {}
 
+    /**
+     * The live boards of a tournament, or its archived ones.
+     *
+     * Two asks rather than one list a page filters: the archived boards are what
+     * was, they are opened deliberately, and a reader who never asks for them
+     * never pays for them.
+     */
     @Get("tournaments/:tournamentId/schedules")
-    list(@Param("tournamentId") tournamentId: number): Promise<ScheduleDto[]> {
-        return this.queries.forTournament(Number(tournamentId));
+    list(@Param("tournamentId") tournamentId: number, @Query("archived") archived?: string): Promise<ScheduleDto[]> {
+        return this.queries.forTournament(Number(tournamentId), archived === "true");
+    }
+
+    @Get("tournaments/:tournamentId/schedules/activity")
+    activity(@Param("tournamentId") tournamentId: number): Promise<ScheduleActivityDto> {
+        return this.queries.activity(Number(tournamentId));
     }
 
     @Get("tournaments/:tournamentId/schedules/creation")

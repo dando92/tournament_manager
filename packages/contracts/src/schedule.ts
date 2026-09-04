@@ -1,4 +1,4 @@
-import type { MatchDto } from "./match";
+import type { MatchSummaryDto } from "./match";
 
 export type ScheduleStatus = "inactive" | "running" | "paused" | "completed";
 
@@ -24,13 +24,20 @@ export type ScheduleStaleDetails = {
     blockingPlayerIds?: number[];
 };
 
+/**
+ * One row of a timetable.
+ *
+ * It carries the match at its Summary level, because a board draws a schedule
+ * and not a match: the rounds, standings, scores and tiebreaks a card shows are
+ * read by `GET /matches/:id` when somebody opens one.
+ */
 export type ScheduleEntryDto = {
     id: number;
     position: number;
     expectedDurationMinutes: number;
     startedAt: string | null;
     completedAt: string | null;
-    match: MatchDto;
+    match: MatchSummaryDto;
 };
 
 export type ScheduleDto = {
@@ -50,7 +57,7 @@ export type ScheduleDto = {
 };
 
 export type ScheduleCreationDto = {
-    unassignedMatches: MatchDto[];
+    unassignedMatches: MatchSummaryDto[];
 };
 
 export type ScheduleEntryInputDto = {
@@ -60,10 +67,25 @@ export type ScheduleEntryInputDto = {
 
 export type ScheduleEditorDto = {
     schedule: ScheduleDto;
-    unassignedMatches: MatchDto[];
+    unassignedMatches: MatchSummaryDto[];
 };
 
 export type ScheduleAddressDto = {
     tournamentId: number;
     scheduleId: number;
+};
+
+/**
+ * What the schedules of a tournament amount to, without reading any of them.
+ *
+ * Two counts, and both exist so that nothing has to load a board to learn a
+ * scalar. `running` is the fact a match card outside the schedule pages needs:
+ * while a schedule is running it owns which of its matches is active, so manual
+ * activation is refused, and answering that used to mount every board of the
+ * tournament. `archivedCount` is what lets a page offer the archived boards
+ * without having fetched them.
+ */
+export type ScheduleActivityDto = {
+    running: boolean;
+    archivedCount: number;
 };

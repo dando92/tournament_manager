@@ -194,6 +194,7 @@ describe('Match reads (e2e)', () => {
       notes: 'Qualifier 1 notes',
       scoringSystem: 'PlacementPointsWithFailZero',
       active: false,
+      state: 'partial',
       phaseGroupId: poolId,
       matchResult: null,
       resultState: { status: 'incomplete', entries: [], ambiguousTies: [] },

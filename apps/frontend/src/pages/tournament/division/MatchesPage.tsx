@@ -4,6 +4,7 @@ import { useDivisionMatchesPage } from "@/features/division/model/useDivisionMat
 import PoolAdvancementEditor from "@/features/division/ui/PoolAdvancementEditor";
 import ConnectedMatchCard from "@/features/match/ui/ConnectedMatchCard";
 import MatchListRow from "@/features/match/ui/MatchListRow";
+import { rowOfMatch } from "@/features/match/model/matchRow";
 import CreateMatchModal from "@/features/match/ui/CreateMatchModal";
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import CreateCard from "@/shared/components/ui/CreateCard";
@@ -113,7 +114,7 @@ export default function DivisionMatchesPage() {
                   {group.matches.map((match) => (
                     <div key={match.id} ref={match.id === highlight.matchId ? page.routedRowRef : undefined}>
                       <MatchListRow
-                        match={match}
+                        match={rowOfMatch(match)}
                         selected={match.id === selectedMatch?.id}
                         routed={match.id === highlight.matchId}
                         controls={controls}

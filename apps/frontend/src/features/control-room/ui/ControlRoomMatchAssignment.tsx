@@ -1,21 +1,21 @@
 import { createPortal } from "react-dom";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "react-beautiful-dnd";
-import type { MatchDto } from "@tournament-manager/contracts";
+import type { MatchSummaryDto } from "@tournament-manager/contracts";
 
 import { focusRing } from "@/styles/buttonStyles";
 
 export type EditableScheduleEntry = {
-    match: MatchDto;
+    match: MatchSummaryDto;
     expectedDurationMinutes: number;
 };
 
 type Props = {
     assigned: EditableScheduleEntry[];
-    unassigned: MatchDto[];
+    unassigned: MatchSummaryDto[];
     defaultExpectedDurationMinutes: number;
     editableDurations?: boolean;
     onAssignedChange: (entries: EditableScheduleEntry[]) => void;
-    onUnassignedChange: (matches: MatchDto[]) => void;
+    onUnassignedChange: (matches: MatchSummaryDto[]) => void;
 };
 
 export default function ControlRoomMatchAssignment({
@@ -151,7 +151,7 @@ function AssignedColumn({
     );
 }
 
-function UnassignedColumn({ matches, onAdd }: { matches: MatchDto[]; onAdd: (match: MatchDto) => void }) {
+function UnassignedColumn({ matches, onAdd }: { matches: MatchSummaryDto[]; onAdd: (match: MatchSummaryDto) => void }) {
     return (
         <Droppable droppableId="unassigned">
             {(provided) => (

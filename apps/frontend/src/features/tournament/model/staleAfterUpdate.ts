@@ -101,14 +101,16 @@ export function staleAfterUpdate(message: TournamentSocketMessage): QueryKey[] {
       ];
     case "MatchUpdate":
       return [
+        matchKeys.byId(message.data.matchId),
         matchKeys.byPhaseGroup(message.data.phaseGroupId),
         matchKeys.byDivision(message.data.divisionId),
         lobbyControlKeys.options(message.data.tournamentId),
-        scheduleKeys.all(message.data.tournamentId),
+        ...scheduleKeys.lists(message.data.tournamentId),
       ];
     case "ScheduleUpdate":
       return [
-        scheduleKeys.all(message.data.tournamentId),
+        ...scheduleKeys.lists(message.data.tournamentId),
+        scheduleKeys.activity(message.data.tournamentId),
         scheduleKeys.editor(message.data.scheduleId),
         lobbyControlKeys.options(message.data.tournamentId),
       ];

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
-import { useSchedules } from "@/features/schedule/model/useSchedules";
+import { useArchivedSchedules, useSchedules } from "@/features/schedule/model/useSchedules";
 import { summarizeSchedule } from "@/features/schedule/model/scheduleSummary";
 import { scheduleStaleMessage } from "@/features/schedule/model/scheduleStatus";
 import ScheduleSwitcher from "@/features/schedule/ui/ScheduleSwitcher";
@@ -34,7 +34,11 @@ export default function ControlRoomPage() {
     const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
     const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
 
-    const visible = room.schedules.filter((schedule) => showArchived || !schedule.archivedAt);
+    const archived = useArchivedSchedules(tournamentId, showArchived);
+    const visible = useMemo(
+        () => (showArchived ? [...room.schedules, ...(archived.data ?? [])] : room.schedules),
+        [showArchived, room.schedules, archived.data],
+    );
     const summaries = useMemo(() => visible.map((schedule) => summarizeSchedule(schedule)), [visible]);
     const selected = visible.find((schedule) => schedule.id === selectedScheduleId) ?? operationalFirst(visible) ?? null;
     const waitingElsewhere = visible.filter((schedule) => schedule.staleCode && schedule.id !== selected?.id);

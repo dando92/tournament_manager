@@ -141,6 +141,14 @@ describe("Control Room (e2e)", () => {
         return created.body.id;
     }
 
+    /** Which match of a schedule the board row says is active. */
+    async function boardRows(scheduleId: number): Promise<Array<{ id: number; active: boolean }>> {
+        const boards = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules`).expect(200);
+        const board = boards.body.find((schedule: { id: number }) => schedule.id === scheduleId);
+
+        return board.entries.map((entry: { match: MatchBody }) => ({ id: entry.match.id, active: entry.match.active }));
+    }
+
     async function score(match: MatchBody): Promise<void> {
         const current = await readMatch(match.id);
         const playerIds = current.entrants.map((entrant) => entrant.participants[0].player.id);
@@ -370,5 +378,93 @@ describe("Control Room (e2e)", () => {
         expect(await countQueriesOf(MATCH_GRAPH, scoreOf(secondPlayerId, 98))).toBe(1);
         expect((await readMatch(second.id)).active).toBe(true);
         expect((await readMatch(first.id)).active).toBe(false);
+    });
+
+    /* A schedule holds one active match at a time — the one scores are accepted
+       for — and the board row is where a reader of the schedule learns which.
+       Asserting it on `GET /matches/:id` would not: that is a different read,
+       and the boards are projected at the Summary level. */
+    it("reports on the board row which match of the schedule is active", async () => {
+        const players = [await addEntrant("Kilo"), await addEntrant("Lima")];
+        const first = await createMatch("Boarded", players);
+        const second = await createMatch("Boarded next", players);
+        const scheduleId = await createSchedule("Boarded cabinet", [first.id, second.id]);
+
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/start`).expect(204);
+        expect(await boardRows(scheduleId)).toEqual([
+            { id: first.id, active: true },
+            { id: second.id, active: false },
+        ]);
+
+        /* Every run entered and nothing committed: the schedule advances past
+           the match without waiting for a commit, and the active match moves
+           with it. */
+        await score(first);
+        expect(await boardRows(scheduleId)).toEqual([
+            { id: first.id, active: false },
+            { id: second.id, active: true },
+        ]);
+    });
+
+    it("draws a board row from a summary of the match, and never from a card of it", async () => {
+        const players = [await addEntrant("Golf"), await addEntrant("Hotel")];
+        const played = await createMatch("Summarised", players);
+        await createSchedule("Summarised cabinet", [played.id]);
+        const current = await readMatch(played.id);
+        const [firstPlayerId] = current.entrants.map((entrant) => entrant.participants[0].player.id);
+        await request(app.getHttpServer())
+            .put(`/rounds/${current.rounds[0].id}/scores/${firstPlayerId}`)
+            .send({ percentage: 97, isFailed: false })
+            .expect(204);
+
+        const boards = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules`).expect(200);
+        const row = boards.body
+            .flatMap((schedule: { entries: Array<{ match: Record<string, unknown> }> }) => schedule.entries)
+            .map((entry: { match: Record<string, unknown> }) => entry.match)
+            .find((match: { id: number }) => match.id === played.id);
+
+        expect(row).toMatchObject({
+            id: played.id,
+            name: "Summarised",
+            state: "partial",
+            songCount: 1,
+            handScored: false,
+            /* Two players on one song, one run entered: one still to come. */
+            missingScoreCount: 1,
+            tiebreakInProgress: false,
+            winner: null,
+        });
+        expect(row.entrants).toHaveLength(2);
+        expect(row.entrants[0]).toMatchObject({ type: "player", player: { id: expect.any(Number), playerName: expect.any(String) } });
+
+        /* What a card opens and a timetable never draws. Their absence is the
+           point of the level, so it is asserted rather than assumed. */
+        for (const field of ["rounds", "standings", "tiebreaks", "resultState", "matchResult", "notes", "scoringSystem"]) {
+            expect(row).not.toHaveProperty(field);
+        }
+    });
+
+    it("keeps the archived boards out of the live list, and offers them through counts instead", async () => {
+        const players = [await addEntrant("India"), await addEntrant("Juliett")];
+        const match = await createMatch("Archivable", players);
+        const scheduleId = await createSchedule("Archivable cabinet", [match.id]);
+        const before = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules/activity`).expect(200);
+
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/start`).expect(204);
+        expect((await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules/activity`).expect(200)).body.running).toBe(true);
+
+        await score(match);
+        await request(app.getHttpServer()).put(`/matches/${match.id}/result`).expect(200);
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/archive`).expect(204);
+
+        const live = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules`).expect(200);
+        expect(live.body.map((schedule: { id: number }) => schedule.id)).not.toContain(scheduleId);
+
+        const archived = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules?archived=true`).expect(200);
+        expect(archived.body.map((schedule: { id: number }) => schedule.id)).toEqual([scheduleId]);
+        expect(archived.body[0].entries[0].match).toMatchObject({ id: match.id, state: "completed", winner: { playerName: expect.any(String) } });
+
+        const after = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules/activity`).expect(200);
+        expect(after.body.archivedCount).toBe(before.body.archivedCount + 1);
     });
 });

@@ -23,7 +23,7 @@ export type ScheduleSummary = {
 
 export function summarizeSchedule(schedule: ScheduleDto, now = new Date()): ScheduleSummary {
     const current = schedule.entries.find((entry) => entry.id === schedule.currentEntryId) ?? null;
-    const remaining = schedule.entries.filter((entry) => !entry.completedAt && !entry.match.matchResult).length;
+    const remaining = schedule.entries.filter((entry) => !entry.completedAt && entry.match.state !== "completed").length;
     const live = Boolean(current?.match.active) && !schedule.staleCode;
     const timeline = buildScheduleTimeline(schedule, now);
 

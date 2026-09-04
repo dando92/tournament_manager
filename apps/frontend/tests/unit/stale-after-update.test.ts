@@ -11,13 +11,25 @@ import { scheduleKeys } from '../../src/features/schedule/api/schedule.keys.ts';
 
 const address = { tournamentId: 1, divisionId: 2, phaseId: 3, phaseGroupId: 4, matchId: 5 };
 
-test('a match event stales its lists and the active-song lobby controls', () => {
+test('a match event stales the match itself, its lists and the active-song lobby controls', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'MatchUpdate', data: address }), [
+    matchKeys.byId(5),
     matchKeys.byPhaseGroup(4),
     matchKeys.byDivision(2),
     lobbyControlKeys.options(1),
-    scheduleKeys.all(1),
+    ...scheduleKeys.lists(1),
   ]);
+});
+
+/* The listener invalidates exactly, so a key an event names has to be a key a
+   query is read under. `scheduleKeys.all` is a prefix nothing reads, and naming
+   it left every board stale-marked and never refetched. */
+test('the schedule keys an event names are the lists that are read, not their prefix', () => {
+  const keys = staleAfterUpdate({ event: 'MatchUpdate', data: address }).map((key) => JSON.stringify(key));
+
+  assert.ok(keys.includes(JSON.stringify(scheduleKeys.list(1, false))));
+  assert.ok(keys.includes(JSON.stringify(scheduleKeys.list(1, true))));
+  assert.ok(!keys.includes(JSON.stringify(scheduleKeys.all(1))));
 });
 
 test('a pool event stales the tree, match lists, and active-song lobby controls', () => {
@@ -64,9 +76,10 @@ test('a song event stales only the tournament song catalogue', () => {
   ]);
 });
 
-test('a schedule event stales its schedule list, editor, and lobby options', () => {
+test('a schedule event stales its schedule lists, activity counts, editor, and lobby options', () => {
   assert.deepEqual(staleAfterUpdate({ event: 'ScheduleUpdate', data: { tournamentId: 1, scheduleId: 9 } }), [
-    scheduleKeys.all(1),
+    ...scheduleKeys.lists(1),
+    scheduleKeys.activity(1),
     scheduleKeys.editor(9),
     lobbyControlKeys.options(1),
   ]);

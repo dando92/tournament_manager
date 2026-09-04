@@ -16,6 +16,19 @@ export type ParticipantStatus = 'registered' | 'checked_in' | 'withdrawn' | 'unk
 export type EntrantType = 'player' | 'team';
 export type EntrantStatus = 'active' | 'dropped' | 'withdrawn' | 'dq' | 'unknown';
 
+/**
+ * Where a match stands in its result lifecycle.
+ *
+ * `open` holds nothing anybody played, `partial` holds evidence that does not
+ * settle it yet, `ready` can be committed as it is, `tiebreak_required` is
+ * settled on points but tied where the tie decides where somebody goes, and
+ * `completed` has its result written. The order is total: everything above
+ * `open` carries evidence.
+ *
+ * `active` says something else entirely — that a match is on a cabinet now.
+ */
+export type MatchState = 'open' | 'partial' | 'ready' | 'tiebreak_required' | 'completed';
+
 export type PhaseGroupState = 'pending' | 'active' | 'completed';
 export type PhaseGroupEntrantStatus = 'pending' | 'active' | 'advanced' | 'eliminated' | 'withdrawn' | 'dq';
 

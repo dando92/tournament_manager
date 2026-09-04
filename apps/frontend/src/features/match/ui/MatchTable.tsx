@@ -1,4 +1,4 @@
-import { AdvancementCompetitionKind, Match, MatchHighlight } from "@/features/match/model/types";
+import { AdvancementCompetitionKind, Match, MatchHighlight, MatchNeighbour } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
 import { entrantPlayers } from "@/features/participant/model/entrant";
 import { useStandingOrder } from "@/features/match/model/useStandingOrder";
@@ -15,7 +15,7 @@ type ScoreEntry = { scoreId: number; score: number; percentage: number; isFailed
 type MatchTableProps = {
   match: Match;
   division: Division;
-  allMatches: Match[];
+  allMatches: MatchNeighbour[];
   controls: boolean;
   highlight: MatchHighlight;
   onHighlight: (highlight: MatchHighlight) => void;
@@ -229,7 +229,7 @@ export default function MatchTable({
               const rows = positions.length > 0 ? positions : [1];
 
               const isSourceComplete = typedSourceKind === "match"
-                ? Boolean(sourceMatch?.matchResult)
+                ? sourceMatch?.state === "completed"
                 : sourcePhaseGroup?.state === "completed";
               if (isSourceComplete) return [];
               const sourceHighlight = getHighlightForTarget(typedSourceKind, sourceId);

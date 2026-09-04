@@ -1,7 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import type { ScheduleCreationDto, ScheduleEditorDto, ScheduleDto, ScheduleStaleCode, MatchDto } from "@tournament-manager/contracts";
+import { IsNull, Not, Repository } from "typeorm";
+import type {
+    MatchSummaryDto,
+    ScheduleActivityDto,
+    ScheduleCreationDto,
+    ScheduleDto,
+    ScheduleEditorDto,
+    ScheduleStaleCode,
+} from "@tournament-manager/contracts";
 import { Schedule } from "@tournament-manager/persistence";
 
 import { MatchQueries } from "@match/match.queries";
@@ -15,7 +22,7 @@ type UnassignedMatchRow = { matchId: number };
  *
  * The subtraction is a `NOT EXISTS` rather than a projection of every match of
  * the tournament filtered in memory: only the matches actually offered are
- * projected afterwards, through `MatchQueries.byIds`.
+ * projected afterwards, through `MatchQueries.summariesByIds`.
  */
 const UNASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
     SELECT   m."id" AS "matchId"
@@ -31,6 +38,21 @@ const UNASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
                 WHERE   entry."matchId" = m."id" AND s."tournamentId" = $1
              )
     ORDER BY m."id"
+`;
+
+/**
+ * What the tournament's schedules amount to, in one row.
+ *
+ * Two counts over `schedule` alone. Both used to be answered by reading every
+ * board of the tournament with its entries: one to decide whether a match card
+ * may be activated by hand, the other to label a button that offers the
+ * archived boards.
+ */
+const SCHEDULE_ACTIVITY_OF_TOURNAMENT = `
+    SELECT  count(*) FILTER (WHERE s."status" IN ('running', 'paused')) AS "runningCount",
+            count(*) FILTER (WHERE s."archivedAt" IS NOT NULL)          AS "archivedCount"
+    FROM    "schedule" s
+    WHERE   s."tournamentId" = $1
 `;
 
 /** Which tournament a schedule belongs to. */
@@ -57,22 +79,37 @@ export class ScheduleQueries {
      * was affordable while the Control Room was the only reader; the schedule
      * board makes this the read of every viewer of a tournament, so the trade
      * turns around. See item 31 in `QueryAndSchemaOptimization.md`.
+     *
+     * The archived boards are excluded here rather than in the browser. They are
+     * a separate ask because they are a separate question — what was, not what
+     * is — and on a tournament whose boards are a quarter archived they were a
+     * quarter of a payload both pages then filtered away.
      */
-    async forTournament(tournamentId: number): Promise<ScheduleDto[]> {
+    async forTournament(tournamentId: number, archived = false): Promise<ScheduleDto[]> {
         const schedules = await this.schedules.find({
-            where: { tournament: { id: tournamentId } },
+            where: { tournament: { id: tournamentId }, archivedAt: archived ? Not(IsNull()) : IsNull() },
             relations: { entries: { match: true } },
             order: { id: "ASC", entries: { position: "ASC" } },
         });
-        const matches = await this.matches.byIds([...new Set(schedules.flatMap((schedule) => this.matchIdsOf(schedule)))]);
+        const matches = await this.matches.summariesByIds([...new Set(schedules.flatMap((schedule) => this.matchIdsOf(schedule)))]);
         const matchById = new Map(matches.map((match) => [match.id, match]));
 
         return schedules.map((schedule) => this.toDto(schedule, matchById));
     }
 
+    /** Two counts over the schedules themselves, for the callers that need no board. */
+    async activity(tournamentId: number): Promise<ScheduleActivityDto> {
+        const rows: Array<{ runningCount: string; archivedCount: string }> = await this.schedules.manager.query(
+            SCHEDULE_ACTIVITY_OF_TOURNAMENT,
+            [tournamentId],
+        );
+
+        return { running: Number(rows[0]?.runningCount ?? 0) > 0, archivedCount: Number(rows[0]?.archivedCount ?? 0) };
+    }
+
     async byId(scheduleId: number): Promise<ScheduleDto> {
         const schedule = await this.scheduleOrFail(scheduleId);
-        const matches = await this.matches.byIds(this.matchIdsOf(schedule));
+        const matches = await this.matches.summariesByIds(this.matchIdsOf(schedule));
 
         return this.toDto(schedule, new Map(matches.map((match) => [match.id, match])));
     }
@@ -80,7 +117,7 @@ export class ScheduleQueries {
     async creation(tournamentId: number): Promise<ScheduleCreationDto> {
         const unassignedIds = await this.unassignedMatchIdsOf(tournamentId);
 
-        return { unassignedMatches: await this.matches.byIds(unassignedIds) };
+        return { unassignedMatches: await this.matches.summariesByIds(unassignedIds) };
     }
 
     async editor(scheduleId: number): Promise<ScheduleEditorDto> {
@@ -91,7 +128,7 @@ export class ScheduleQueries {
         const tournamentId = await this.tournamentIdOf(scheduleId);
         const unassignedIds = await this.unassignedMatchIdsOf(tournamentId);
         const scheduleMatchIds = this.matchIdsOf(schedule);
-        const matches = await this.matches.byIds([...new Set([...scheduleMatchIds, ...unassignedIds])]);
+        const matches = await this.matches.summariesByIds([...new Set([...scheduleMatchIds, ...unassignedIds])]);
         const matchById = new Map(matches.map((match) => [match.id, match]));
         const unassigned = new Set(unassignedIds);
 
@@ -133,7 +170,7 @@ export class ScheduleQueries {
         return rows[0].tournamentId;
     }
 
-    private toDto(schedule: Schedule, matchById: Map<number, MatchDto>): ScheduleDto {
+    private toDto(schedule: Schedule, matchById: Map<number, MatchSummaryDto>): ScheduleDto {
         return {
             id: schedule.id,
             name: schedule.name,

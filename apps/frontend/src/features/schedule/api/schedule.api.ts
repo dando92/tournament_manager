@@ -1,8 +1,13 @@
 import axios from "axios";
-import type { ScheduleCreationDto, ScheduleEditorDto, ScheduleDto, ScheduleEntryInputDto } from "@tournament-manager/contracts";
+import type { ScheduleActivityDto, ScheduleCreationDto, ScheduleEditorDto, ScheduleDto, ScheduleEntryInputDto } from "@tournament-manager/contracts";
 
-export async function listSchedules(tournamentId: number): Promise<ScheduleDto[]> {
-    const response = await axios.get<ScheduleDto[]>(`tournaments/${tournamentId}/schedules`);
+export async function listSchedules(tournamentId: number, archived = false): Promise<ScheduleDto[]> {
+    const response = await axios.get<ScheduleDto[]>(`tournaments/${tournamentId}/schedules`, { params: archived ? { archived: true } : undefined });
+    return response.data;
+}
+
+export async function getScheduleActivity(tournamentId: number): Promise<ScheduleActivityDto> {
+    const response = await axios.get<ScheduleActivityDto>(`tournaments/${tournamentId}/schedules/activity`);
     return response.data;
 }
 

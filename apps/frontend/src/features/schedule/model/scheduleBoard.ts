@@ -1,4 +1,4 @@
-import type { AdvancementRuleDto, MatchDto, ScheduleDto } from "@tournament-manager/contracts";
+import type { AdvancementRuleDto, MatchSummaryDto, ScheduleDto } from "@tournament-manager/contracts";
 
 import { buildScheduleTimeline, type ScheduleTimelineEntry, type ScheduleTimelineModel } from "@/features/schedule/model/scheduleTiming";
 import { toOrdinal } from "@/shared/utils";
@@ -109,7 +109,7 @@ function toColumn(schedule: ScheduleDto, nowMs: number, now: Date): ScheduleBoar
 }
 
 function stateOf(schedule: ScheduleDto, entry: ScheduleTimelineEntry, current: boolean): ScheduleBlockState {
-    if (entry.match.matchResult || entry.completedAt) {
+    if (entry.match.state === "completed" || entry.completedAt) {
         return "completed";
     }
     if (!current) {
@@ -143,6 +143,9 @@ function ceilToTick(atMs: number): number {
  * rule produced which entrant. Filling the lowest slots first matches the
  * eligibility rule the API applies, and the API remains the authority on
  * whether the match can start. This is a preview, and it is allowed to be one.
+ *
+ * The winner arrives named. A summary carries the result as a player rather
+ * than as points to be matched back against entrants it no longer holds.
  */
 export type MatchLineupPreview = {
     winnerName: string | null;
@@ -150,33 +153,20 @@ export type MatchLineupPreview = {
     pendingSources: string[];
 };
 
-export function previewLineup(match: MatchDto): MatchLineupPreview {
+export function previewLineup(match: MatchSummaryDto): MatchLineupPreview {
     const playerNames = (match.entrants ?? []).flatMap((entrant) =>
-        entrant.type === "player" ? [entrant.participants?.[0]?.player?.playerName ?? entrant.name] : [entrant.name],
+        entrant.type === "player" ? [entrant.player?.playerName ?? entrant.name] : [entrant.name],
     );
-    const incoming = (match.advancementRules ?? [])
-        .filter((rule) => rule.targetKind === "match" && rule.targetId === match.id)
-        .sort((left, right) => left.targetSlot - right.targetSlot);
 
     return {
-        winnerName: winnerNameOf(match),
+        winnerName: match.winner?.playerName ?? null,
         playerNames,
-        pendingSources: incoming.slice(playerNames.length).map(sourceLabel),
+        /* Already only the rules that feed this match, in slot order: the
+           projection filters and sorts them, so nothing here does it again. */
+        pendingSources: (match.incomingRules ?? []).slice(playerNames.length).map(sourceLabel),
     };
 }
 
 export function sourceLabel(rule: AdvancementRuleDto): string {
     return `${toOrdinal(rule.sourcePlacement)} from ${rule.sourceName ?? `${rule.sourceKind === "match" ? "Match" : "Pool"} ${rule.sourceId}`}`;
-}
-
-function winnerNameOf(match: MatchDto): string | null {
-    const winner = (match.matchResult?.playerPoints ?? []).find((entry) => entry.placement === 1);
-    if (!winner) {
-        return null;
-    }
-    const player = (match.entrants ?? [])
-        .flatMap((entrant) => entrant.participants ?? [])
-        .find((participant) => participant.player?.id === winner.playerId);
-
-    return player?.player?.playerName ?? null;
 }

@@ -1,11 +1,11 @@
 import type { Division } from "@/features/division/model/types";
-import type { Match } from "@/features/match/model/types";
+import type { Match, MatchNeighbour } from "@/features/match/model/types";
 import MatchCard from "@/features/match/ui/MatchCard";
 
 type Props = {
     division: Division;
     match: Match;
-    allMatches: Match[];
+    allMatches: MatchNeighbour[];
 };
 
 const noop = () => {};

@@ -3,13 +3,10 @@ import { StatusBadge } from "@/shared/components/ui/StatusIcon";
 import { ActiveIndicator } from "@/shared/components/ui/StatusDot";
 import {
   getActiveLabel,
-  getCommitBlocker,
-  getMatchProgress,
   getMatchProgressLabel,
   getMatchProgressStatus,
 } from "@/features/match/model/matchStatus";
-import { entrantPlayers } from "@/features/participant/model/entrant";
-import { Match } from "@/features/match/model/types";
+import type { MatchRowModel } from "@/features/match/model/matchRow";
 
 /**
  * One match in the list.
@@ -30,7 +27,7 @@ import { Match } from "@/features/match/model/types";
  */
 
 type MatchListRowProps = {
-  match: Match;
+  match: MatchRowModel;
   selected: boolean;
   /** Lit because an advancement route in the open card points at this match. */
   routed: boolean;
@@ -54,19 +51,13 @@ export default function MatchListRow({
   const statusRef = useRef<HTMLDivElement>(null);
   const [marqueeLayout, setMarqueeLayout] = useState({ distance: 0, fadeWidth: 0 });
   const [mobileMarquee, setMobileMarquee] = useState(false);
-  const progress = getMatchProgress(match);
+  const { progress, blocker, playerCount, songCount, handScored } = match;
   const status = getMatchProgressStatus(progress);
-  const blocker = getCommitBlocker(match);
   const label = blocker ?? getMatchProgressLabel(progress);
   const canCommit = controls && progress === "readyToCommit";
   const needsTiebreak = controls && progress === "tiebreakRequired";
 
-  const playerCount = entrantPlayers(match.entrants).length;
   const players = `${playerCount} player${playerCount !== 1 ? "s" : ""}`;
-  /* Counting rounds would call the hand-scored one a song, which is the one
-     thing it is not. */
-  const songCount = match.rounds.filter((round) => round.song !== null).length;
-  const handScored = match.rounds.some((round) => round.song === null);
   const meta = handScored
     ? `${players} · by hand`
     : songCount > 0

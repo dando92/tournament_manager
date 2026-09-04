@@ -5,11 +5,15 @@ import type { ScoringSystemType } from '@tournament-manager/scoring';
 import {
     AdvancementRuleDto,
     MatchDto,
+    MatchState,
+    MatchSummaryDto,
+    MatchSummaryEntrantDto,
     EntrantDto,
     MatchResultEntryDto,
     MatchResultStateDto,
     MatchRoundDto,
     MatchTiebreakDto,
+    PlayerRefDto,
     SongRefDto,
 } from '@tournament-manager/contracts';
 import { resolvePlacements } from '@match/placement.resolver';
@@ -55,6 +59,7 @@ type MatchRow = {
     notes: string | null;
     scoringSystem: ScoringSystemType;
     active: boolean;
+    state: MatchState;
     phaseGroupId: number;
     matchResultId: number | null;
     matchResultPlayerPoints: MatchResultEntryDto[] | null;
@@ -70,6 +75,7 @@ const matchesInScope = (predicate: string): string => `
             m."notes"                   AS "notes",
             m."scoringSystem"           AS "scoringSystem",
             m."active"                  AS "active",
+            m."state"                   AS "state",
             m."phaseGroupId"            AS "phaseGroupId",
             mr."id"                     AS "matchResultId",
             mr."playerPoints"           AS "matchResultPlayerPoints",
@@ -192,6 +198,157 @@ const MATCHES_IN_SCOPE: Record<MatchScope, string> = {
     division: matchesInScope(SCOPE_PREDICATE.division),
     tournament: matchesInScope(SCOPE_PREDICATE.tournament),
 };
+
+/**
+ * The rows `MATCH_SUMMARIES_IN_SCOPE` produces.
+ *
+ * Everything a list draws, and nothing a card does. Rounds, standings, scores
+ * and tiebreaks are counts and booleans here rather than the JSON the full
+ * projection aggregates: that aggregation is what made a board of 720 entries
+ * cost 81 ms, and no reader of a timetable row ever opened one of them. The
+ * lineup stays a collection, because a row names who is playing.
+ *
+ * `scoredCount` is the standings recorded on rounds played on a song. The
+ * mapper turns it into the runs still missing, which is the only form a row
+ * reads it in.
+ */
+type MatchSummaryRow = {
+    id: number;
+    name: string;
+    subtitle: string | null;
+    active: boolean;
+    state: MatchState;
+    phaseGroupId: number;
+    entrants: MatchSummaryEntrantDto[];
+    songCount: string | number;
+    handScored: boolean;
+    scoredCount: string | number;
+    tiebreakInProgress: boolean;
+    winner: PlayerRefDto | null;
+};
+
+/**
+ * A tiebreak attempt that is on the table and still waiting.
+ *
+ * The settled predicate is `MatchAggregate.isTiebreakComplete` and its browser
+ * twin in `tiebreaks.ts`, written here a third time in SQL because a list
+ * cannot afford to carry the attempts themselves. The three must change
+ * together: an attempt played on a song waits for every score, a stated one is
+ * settled by the first point above zero, and neither is settled below two
+ * players.
+ */
+const TIEBREAK_IN_PROGRESS = `
+    EXISTS (
+        SELECT  1
+        FROM    "match_tiebreak" mt
+        WHERE   mt."matchId" = m."id"
+            AND mt."invalidated" = FALSE
+            AND NOT (
+                (SELECT count(*) FROM "match_tiebreak_standing" s WHERE s."tiebreakId" = mt."id") >= 2
+                AND CASE
+                    WHEN mt."songId" IS NULL THEN EXISTS (
+                        SELECT 1 FROM "match_tiebreak_standing" s
+                        WHERE s."tiebreakId" = mt."id" AND COALESCE(s."manualPoints", 0) > 0
+                    )
+                    ELSE NOT EXISTS (
+                        SELECT 1 FROM "match_tiebreak_standing" s
+                        WHERE s."tiebreakId" = mt."id" AND s."scoreId" IS NULL
+                    )
+                END
+            )
+    )
+`;
+
+const matchSummariesInScope = (predicate: string): string => `
+    SELECT  m."id"                      AS "id",
+            m."name"                    AS "name",
+            m."subtitle"                AS "subtitle",
+            m."active"                  AS "active",
+            m."state"                   AS "state",
+            m."phaseGroupId"            AS "phaseGroupId",
+            COALESCE(entrants."json", '[]'::json) AS "entrants",
+            COALESCE(rounds."songCount", 0)      AS "songCount",
+            COALESCE(rounds."handScored", FALSE) AS "handScored",
+            COALESCE(rounds."scoredCount", 0)    AS "scoredCount",
+            ${TIEBREAK_IN_PROGRESS}     AS "tiebreakInProgress",
+            winner."json"               AS "winner"
+    FROM        "match" m
+    LEFT JOIN   "match_result" mr ON mr."id" = m."matchResultId"
+    LEFT JOIN LATERAL (
+        SELECT  json_agg(
+                    json_build_object(
+                        'id', e."id",
+                        'name', e."name",
+                        'type', e."type",
+                        'player', player."json"
+                    ) ORDER BY e."id"
+                ) AS "json"
+        FROM        "match_entrants_entrant" me
+        JOIN        "entrant" e ON e."id" = me."entrantId"
+        LEFT JOIN LATERAL (
+            SELECT   json_build_object('id', pl."id", 'playerName', pl."playerName") AS "json"
+            FROM     "entrant_participants_participant" ep
+            JOIN     "participant" pa ON pa."id" = ep."participantId"
+            JOIN     "player" pl ON pl."id" = pa."playerId"
+            WHERE    ep."entrantId" = e."id" AND e."type" = 'player'
+            ORDER BY pa."id"
+            LIMIT    1
+        ) player ON TRUE
+        WHERE   me."matchId" = m."id"
+    ) entrants ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT      count(*) FILTER (WHERE r."songId" IS NOT NULL) AS "songCount",
+                    bool_or(r."songId" IS NULL)                    AS "handScored",
+                    COALESCE(sum(standings."count") FILTER (WHERE r."songId" IS NOT NULL), 0) AS "scoredCount"
+        FROM        "round" r
+        LEFT JOIN LATERAL (
+            SELECT count(*) AS "count" FROM "standing" st WHERE st."roundId" = r."id"
+        ) standings ON TRUE
+        WHERE       r."matchId" = m."id"
+    ) rounds ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT  json_build_object('id', wp."id", 'playerName', wp."playerName") AS "json"
+        FROM    jsonb_array_elements(mr."playerPoints") AS placement
+        JOIN    "player" wp ON wp."id" = (placement->>'playerId')::int
+        WHERE   (placement->>'placement')::int = 1
+        LIMIT   1
+    ) winner ON TRUE
+    WHERE   ${predicate}
+    ORDER BY m."id"
+`;
+
+/** The same scopes as the full projection, so a caller narrows the level and not the rows. */
+const MATCH_SUMMARIES_IN_SCOPE: Record<MatchScope, string> = {
+    match: matchSummariesInScope(SCOPE_PREDICATE.match),
+    ids: matchSummariesInScope(SCOPE_PREDICATE.ids),
+    phaseGroup: matchSummariesInScope(SCOPE_PREDICATE.phaseGroup),
+    division: matchSummariesInScope(SCOPE_PREDICATE.division),
+    tournament: matchSummariesInScope(SCOPE_PREDICATE.tournament),
+};
+
+/**
+ * Only the rules that feed a set of matches.
+ *
+ * A row says what a match is still waiting for; where its own winner goes next
+ * is the card's business, and asking for both doubled the rows this returns.
+ */
+const INCOMING_ADVANCEMENT_RULES_FOR_MATCHES = `
+    SELECT  ar."id"              AS "id",
+            ar."sourceKind"      AS "sourceKind",
+            ar."sourceId"        AS "sourceId",
+            COALESCE(sm."name", spg."name") AS "sourceName",
+            ar."sourcePlacement" AS "sourcePlacement",
+            ar."targetKind"      AS "targetKind",
+            ar."targetId"        AS "targetId",
+            tm."name"            AS "targetName",
+            ar."targetSlot"      AS "targetSlot"
+    FROM      "advancement_rule" ar
+    LEFT JOIN "match" sm ON ar."sourceKind" = 'match' AND sm."id" = ar."sourceId"
+    LEFT JOIN "phase_group" spg ON ar."sourceKind" = 'phase_group' AND spg."id" = ar."sourceId"
+    LEFT JOIN "match" tm ON tm."id" = ar."targetId"
+    WHERE     ar."targetKind" = 'match' AND ar."targetId" = ANY($1::int[])
+    ORDER BY  ar."targetId", ar."targetSlot", ar."id"
+`;
 
 /** The rows `ADVANCEMENT_RULES_FOR_MATCHES` produces. */
 type AdvancementRuleRow = AdvancementRuleDto;
@@ -407,11 +564,47 @@ function projectedResultState(row: MatchRow, rules: AdvancementRuleDto[]): Match
 }
 
 /**
- * Every read of a match, in the one shape the interface consumes.
+ * A row as a list reads it.
+ *
+ * The runs still missing are the places the song rounds hold minus the
+ * standings recorded on them, which holds while a standing belongs to a player
+ * the match holds — the only way one is written. It is clamped, so a standing
+ * left behind by a player removed from the match reads as nothing missing
+ * rather than as a negative.
+ */
+function toSummary(row: MatchSummaryRow, incomingRules: AdvancementRuleDto[]): MatchSummaryDto {
+    const entrants = row.entrants ?? [];
+    const playerCount = entrants.filter((entrant) => entrant.player !== null).length;
+    const songCount = Number(row.songCount);
+
+    return {
+        id: row.id,
+        name: row.name,
+        subtitle: row.subtitle,
+        active: row.active,
+        state: row.state,
+        phaseGroupId: row.phaseGroupId,
+        entrants,
+        incomingRules,
+        songCount,
+        handScored: row.handScored,
+        missingScoreCount: Math.max(0, songCount * playerCount - Number(row.scoredCount)),
+        tiebreakInProgress: row.tiebreakInProgress,
+        winner: row.winner,
+    };
+}
+
+/**
+ * Every read of a match, at the level its reader asked for.
  *
  * It projects and nothing else: it does not write, does not publish, and does
- * not call a service. Two queries answer a request whatever its size — the
- * matches in scope, then the advancement rules of all of them at once.
+ * not call a service. Two queries answer a request whatever its size and
+ * whatever its level — the matches in scope, then the advancement rules of all
+ * of them at once.
+ *
+ * The two levels share the scopes and the mapper file rather than the shape:
+ * `MatchDto` is what a card opens, `MatchSummaryDto` is what a list draws, and
+ * `Backend.md` says which reader is entitled to which.
  */
 @Injectable()
 export class MatchQueries {
@@ -434,6 +627,17 @@ export class MatchQueries {
         if (ids.length === 0) return [];
 
         return await this.inScope('ids', ids);
+    }
+
+    /**
+     * The same set of matches at the Summary level, for the readers that draw a
+     * list of them. The schedule board, the Control Room queue and the pickers
+     * of the schedule editor all come through here.
+     */
+    async summariesByIds(ids: number[]): Promise<MatchSummaryDto[]> {
+        if (ids.length === 0) return [];
+
+        return await this.summariesInScope('ids', ids);
     }
 
     async byPhaseGroup(phaseGroupId: number): Promise<MatchDto[]> {
@@ -480,6 +684,15 @@ export class MatchQueries {
         return rows.length > 0;
     }
 
+    private async summariesInScope(scope: MatchScope, id: number | number[]): Promise<MatchSummaryDto[]> {
+        const rows: MatchSummaryRow[] = await this.dataSource.query(MATCH_SUMMARIES_IN_SCOPE[scope], [id]);
+        if (rows.length === 0) return [];
+
+        const rules = await this.incomingAdvancementRulesOf(rows.map((row) => row.id));
+
+        return rows.map((row) => toSummary(row, rules.get(row.id) ?? []));
+    }
+
     private async inScope(scope: MatchScope, id: number | number[]): Promise<MatchDto[]> {
         const rows: MatchRow[] = await this.dataSource.query(MATCHES_IN_SCOPE[scope], [id]);
         if (rows.length === 0) return [];
@@ -495,6 +708,7 @@ export class MatchQueries {
             notes: row.notes,
             scoringSystem: row.scoringSystem,
             active: row.active,
+            state: row.state,
             entrants: row.entrants,
             rounds: row.rounds,
             tiebreaks: row.tiebreaks,
@@ -521,6 +735,17 @@ export class MatchQueries {
             if (rule.targetKind === 'match' && !(leavesAMatch && rule.sourceId === rule.targetId)) {
                 this.append(byMatch, rule.targetId, rule);
             }
+        }
+
+        return byMatch;
+    }
+
+    private async incomingAdvancementRulesOf(matchIds: number[]): Promise<Map<number, AdvancementRuleDto[]>> {
+        const rows: AdvancementRuleRow[] = await this.dataSource.query(INCOMING_ADVANCEMENT_RULES_FOR_MATCHES, [matchIds]);
+        const byMatch = new Map<number, AdvancementRuleDto[]>();
+
+        for (const rule of rows) {
+            this.append(byMatch, rule.targetId, rule);
         }
 
         return byMatch;

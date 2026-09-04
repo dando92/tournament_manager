@@ -1,4 +1,4 @@
-import { Match, MatchAdvancementRuleInput, MatchHighlight, RoundSourceRequest } from "@/features/match/model/types";
+import { Match, MatchAdvancementRuleInput, MatchHighlight, MatchNeighbour, RoundSourceRequest } from "@/features/match/model/types";
 import { Division } from "@/features/division/model/types";
 import { Entrant } from "@/features/participant/model/types";
 import AddEditSongToMatchModal from "@/features/match/ui/AddEditSongToMatchModal";
@@ -23,8 +23,8 @@ type MatchCardProps = {
   /** The division roster, read apart from its structure. Only the add-players dialog needs it. */
   divisionEntrants: Entrant[];
   match: Match;
-  allMatches: Match[];
-  loadAdvancementTargets?: () => Promise<Match[]>;
+  allMatches: MatchNeighbour[];
+  loadAdvancementTargets?: () => Promise<MatchNeighbour[]>;
   controls?: boolean;
   tournamentId?: number;
   highlight?: MatchHighlight;
@@ -149,7 +149,7 @@ export default function MatchCard({
   const [removeItemsModal, setRemoveItemsModal] = useState<"players" | "songs" | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [pendingAdvancementRules, setPendingAdvancementRules] = useState<MatchAdvancementRuleInput[]>([]);
-  const [advancementTargetMatches, setAdvancementTargetMatches] = useState<Match[] | null>(null);
+  const [advancementTargetMatches, setAdvancementTargetMatches] = useState<MatchNeighbour[] | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   /* Hand scoring is no longer a switch this card remembers: it is the round
