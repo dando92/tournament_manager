@@ -31,7 +31,6 @@ export function useLobbyControl(tournamentId: number) {
       if (!lobbyId || songId === null) throw new Error("Select a lobby and song first.");
       await selectLobbySong(tournamentId, lobbyId, songId);
     },
-    onSuccess: () => toast.success("Song selection sent to the lobby."),
     onError: (error) => toast.error(commandError(error, "Unable to select the song.")),
   });
 
@@ -40,7 +39,6 @@ export function useLobbyControl(tournamentId: number) {
       if (!lobbyId || songId === null) throw new Error("Select a lobby and song first.");
       await startLobbySong(tournamentId, lobbyId, songId);
     },
-    onSuccess: () => toast.success("Start sent to the lobby."),
     onError: (error) => toast.error(commandError(error, "Unable to start the cabinets.")),
   });
 

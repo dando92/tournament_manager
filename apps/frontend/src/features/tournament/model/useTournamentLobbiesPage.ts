@@ -230,7 +230,6 @@ export function useTournamentLobbiesPage({
     try {
       const status = await connectLobbyServer(tournamentId);
       setServerConnectionStatus(status);
-      toast.success("Connected to SyncStart.");
       if (status.isConnected) {
         refreshLobbies().catch(() => {});
       }
@@ -252,7 +251,6 @@ export function useTournamentLobbiesPage({
       if (!status.isConnected) {
         setAvailableLobbies([]);
       }
-      toast.success("Disconnected from SyncStart.");
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -291,7 +289,6 @@ export function useTournamentLobbiesPage({
         next.delete(lobbyId);
         return next;
       });
-      toast.success("Lobby disconnected.");
     } catch {
       toast.error("Failed to disconnect lobby.");
     } finally {

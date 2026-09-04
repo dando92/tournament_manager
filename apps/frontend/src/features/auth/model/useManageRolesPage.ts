@@ -21,7 +21,6 @@ export function useManageRolesPage() {
     try {
       const updated = await updateAccountFlags(accountId, { [flag]: value });
       setAccounts((current) => current.map((account) => (account.id === accountId ? updated : account)));
-      toast.success("Updated.");
     } catch {
       toast.error("Failed to update.");
     }

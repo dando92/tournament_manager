@@ -112,13 +112,12 @@ export function useSongImport({ tournamentId }: Options) {
     setState({ status: "importing", folder: state.scan.rootName, total: rows.length });
 
     try {
-      const result = await importSongs(tournamentId, rows);
+      await importSongs(tournamentId, rows);
       setState({ status: "idle" });
 
       if (warnings.length > 0) console.warn("Song import warnings:", warnings, state.scan.warnings);
 
-      const skipped = result.skipped > 0 ? ` ${result.skipped} were already in the pool.` : "";
-      toast.success(`Imported ${result.imported} chart${result.imported === 1 ? "" : "s"}.${skipped}`);
+      /* The pool it filled is the report, so this goes there and says nothing. */
       navigate(`/tournament/${tournamentId}/songs`);
     } catch (error) {
       setState({ status: "failed", message: messageOf(error, "The songs could not be saved.") });

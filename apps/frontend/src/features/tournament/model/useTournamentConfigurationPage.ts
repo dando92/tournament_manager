@@ -132,7 +132,6 @@ export function useTournamentConfigurationPage() {
     try {
       await saveMutation.mutateAsync(form);
       rememberTournament({ id: tournamentId, name: form.name.trim() });
-      toast.success("Configuration saved.");
     } catch {
       toast.error("Failed to save tournament configuration.");
     }
@@ -146,7 +145,6 @@ export function useTournamentConfigurationPage() {
     if (!confirmed) return;
     try {
       await closeMutation.mutateAsync();
-      toast.success("Tournament closed. It is now read-only.");
     } catch {
       toast.error("Failed to close tournament.");
     }
@@ -156,7 +154,6 @@ export function useTournamentConfigurationPage() {
     if (!configuration || changingStatus) return;
     try {
       await reopenMutation.mutateAsync();
-      toast.success("Tournament reopened.");
     } catch {
       toast.error("Failed to reopen tournament.");
     }

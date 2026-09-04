@@ -239,10 +239,9 @@ export function TournamentTreeProvider({
      answer. */
 
   const run = useCallback(
-    async (work: () => Promise<void>, success: string, failure: string) => {
+    async (work: () => Promise<void>, failure: string) => {
       try {
         await work();
-        toast.success(success);
       } catch {
         toast.error(failure);
       }
@@ -280,7 +279,6 @@ export function TournamentTreeProvider({
         async () => {
           await deleteDivision(divisionId);
         },
-        "Division deleted.",
         "Error deleting division.",
       );
       if (tournamentId !== null) navigate(`/tournament/${tournamentId}/schedule`);
@@ -294,7 +292,6 @@ export function TournamentTreeProvider({
         async () => {
           await deletePhase(phaseId);
         },
-        "Phase deleted.",
         "Error deleting phase.",
       );
     },
@@ -307,7 +304,6 @@ export function TournamentTreeProvider({
         async () => {
           await deletePhaseGroup(phaseGroupId);
         },
-        "Pool deleted.",
         "Error deleting pool.",
       );
     },

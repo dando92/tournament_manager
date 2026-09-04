@@ -62,7 +62,6 @@ export default function SeedingTab({ division, entrants: roster, canEdit }: Seed
     setSaving(true);
     try {
       await updateDivisionSeeding(division.id, draftEntrantIds);
-      toast.success("Division seeding updated.");
     } catch {
       toast.error("Error updating division seeding.");
     } finally {

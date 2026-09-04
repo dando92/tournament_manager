@@ -21,7 +21,6 @@ export function useItgmaniaProfileExport({ tournamentName, participants }: Optio
             const players = playersForItgmaniaProfiles(participants);
             const archive = await createItgmaniaProfilesArchive(players);
             downloadArchive(archive, itgmaniaArchiveFileName(tournamentName));
-            toast.success(`Exported ${players.length} ITGmania profile${players.length === 1 ? "" : "s"}.`);
         } catch {
             toast.error("Failed to export ITGmania profiles.");
         } finally {

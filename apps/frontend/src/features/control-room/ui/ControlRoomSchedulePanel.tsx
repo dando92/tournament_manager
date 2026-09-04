@@ -59,10 +59,6 @@ export default function ControlRoomSchedulePanel(props: Props) {
             const { startggReport } = await MatchesApi.commitMatchResult(matchId);
             if (startggReport === "failed") {
                 toast.warn("Match completed, but reporting the result to start.gg failed.");
-            } else if (startggReport === "reported") {
-                toast.success("Match completed and reported to start.gg.");
-            } else {
-                toast.success("Match completed.");
             }
         } catch (error) {
             console.error("Error committing match result.", error);

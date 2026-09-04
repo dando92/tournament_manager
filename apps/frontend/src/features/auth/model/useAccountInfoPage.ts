@@ -40,7 +40,6 @@ export function useAccountInfoPage() {
       setProfilePicture(base64);
       await updateAccountProfile(account.id, { profilePicture: base64 });
       await actions.loadCurrentUser();
-      toast.success("Profile picture updated.");
     } catch {
       toast.error("Failed to update profile picture.");
     } finally {
@@ -54,7 +53,6 @@ export function useAccountInfoPage() {
     try {
       await updateAccountProfile(account.id, { playerName, nationality, grooveStatsApi });
       await actions.loadCurrentUser();
-      toast.success("Profile updated.");
       setEditingProfile(false);
     } catch {
       toast.error("Failed to update profile.");

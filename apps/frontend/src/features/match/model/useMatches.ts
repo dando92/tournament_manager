@@ -144,28 +144,23 @@ export function useMatches(divisionId: number, phaseGroupId?: number) {
         ),
 
       updateMatchActive: (matchId: number, active: boolean) =>
-        run(async () => {
-          await MatchesApi.updateMatchActive(matchId, active);
-          toast.success(active ? "Match activated." : "Match deactivated.");
-        }, "Error updating match active state."),
+        run(() => MatchesApi.updateMatchActive(matchId, active), "Error updating match active state."),
 
+      /* The violet dot, the committed card and the re-opened table are the
+         report. Only the part that happened somewhere else — the result start.gg
+         did not take — is still worth a sentence. */
       commitMatchResult: (matchId: number) =>
         run(async () => {
           const { startggReport } = await MatchesApi.commitMatchResult(matchId);
           if (startggReport === "failed") {
             toast.warn("Match completed, but reporting the result to start.gg failed.");
-          } else if (startggReport === "reported") {
-            toast.success("Match completed and reported to start.gg.");
-          } else {
-            toast.success("Match completed.");
           }
         }, "Error committing match result."),
 
       reopenMatchResult: (matchId: number) =>
         run(async () => {
           try {
-            const reopened = await MatchesApi.reopenMatchResult(matchId);
-            if (reopened) toast.success("Match re-opened.");
+            await MatchesApi.reopenMatchResult(matchId);
           } catch (error) {
             if (error instanceof MatchesApi.AdvancementRollbackBlockedError) {
               toast.error(error.message);
