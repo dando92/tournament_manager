@@ -1,5 +1,6 @@
 import StatusIcon from "@/shared/components/ui/StatusIcon";
 import AddSlot from "@/features/structure/ui/AddSlot";
+import { focusRing } from "@/styles/buttonStyles";
 import {
   ADD_COLUMN_WIDTH,
   COLUMN_WIDTH,
@@ -80,16 +81,24 @@ export default function StructureCanvasView({
 
         {canvas.columns.map((column) => (
           <div key={column.phaseId} className="absolute top-0" style={{ left: column.left, width: COLUMN_WIDTH }}>
-            <div
-              className="flex flex-col justify-center gap-0.5 rounded-xl border border-ui-border bg-ui-raised px-2.5 py-2"
+            {/* The header is the phase, and a phase is a thing with a name, so
+                it is selected and renamed like everything else on the canvas. */}
+            <button
+              type="button"
+              onClick={() => onSelect({ kind: "phase", id: column.phaseId })}
+              className={`flex w-full flex-col justify-center gap-0.5 rounded-xl border px-2.5 py-2 text-left ${focusRing} ${
+                selection?.kind === "phase" && selection.id === column.phaseId
+                  ? "border-ui-border-strong bg-ui-selected shadow-[inset_3px_0_0_0_rgb(var(--ui-accent))]"
+                  : "border-ui-border bg-ui-raised"
+              }`}
               style={{ height: HEADER_HEIGHT }}
             >
-              <div className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 <StatusIcon status={column.status} />
                 <span className="truncate text-[15px] font-bold text-ui-text">{column.name}</span>
-              </div>
-              <div className="text-[11px] text-ui-text-mute">{column.meta}</div>
-            </div>
+              </span>
+              <span className="text-[11px] text-ui-text-mute">{column.meta}</span>
+            </button>
 
             {column.cards.map((card) => (
               <button

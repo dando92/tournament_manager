@@ -274,6 +274,7 @@ export default function StructurePage() {
                         selection={page.selection}
                         card={selectedCard}
                         matches={page.matches}
+                        onAddPool={addPool}
                         onAddMatch={addMatch}
                         onRename={rename}
                         onDelete={remove}

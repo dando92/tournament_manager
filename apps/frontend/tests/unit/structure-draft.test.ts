@@ -15,6 +15,7 @@ import {
     toStructurePlan,
     type StructureDraft,
 } from "../../src/features/structure/model/structureDraft.ts";
+import { collectRoutes, routesOf } from "../../src/features/structure/model/structureRoutes.ts";
 import type { TournamentDivisionOption } from "../../src/features/tournament/model/types.ts";
 
 function pool(overrides: Partial<PhaseGroupDto> = {}): PhaseGroupDto {
@@ -215,4 +216,20 @@ test("a route between two things that do not exist yet is expressed in local ids
         { sourceLocalId: `pool:${source}`, sourcePlacement: 1, targetLocalId: `match:${target}`, targetSlot: 1 },
     ]);
     assert.deepEqual(plan.clearedSlots, []);
+});
+
+/* A rule is written once and read from both of its ends, so the panel asks for
+   a node's routes rather than flattening the tree again on every surface. */
+test("a node's routes are gathered from both of the ends they are carried on", () => {
+    const out = rule({ sourceId: 1, sourceName: "Pool A", targetKind: "match", targetId: 5, targetSlot: 2 });
+    const withRule = division();
+    withRule.phases[0].phaseGroups = [pool({ id: 1, advancementRules: [out] })];
+    const matches = [match({ id: 5, phaseGroupId: 2, advancementRules: [out] })];
+
+    const routes = collectRoutes(withRule, matches as never);
+
+    assert.equal(routes.length, 1);
+    assert.deepEqual(routesOf(routes, "match", 5).incoming.map((entry) => entry.sourceName), ["Pool A"]);
+    assert.deepEqual(routesOf(routes, "pool", 1).outgoing.map((entry) => entry.targetSlot), [2]);
+    assert.deepEqual(routesOf(routes, "pool", 1).incoming, []);
 });

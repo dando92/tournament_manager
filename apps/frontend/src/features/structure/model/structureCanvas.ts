@@ -120,7 +120,8 @@ export type StructureCanvas = {
     danglingPlacements: number;
 };
 
-export type CanvasSelection = { kind: "pool" | "match"; id: number } | null;
+/** A phase is selectable too: it is a thing with a name, and names get typed wrong. */
+export type CanvasSelection = { kind: "pool" | "match" | "phase"; id: number } | null;
 
 /** The placement a route is being drawn from, waiting for somewhere to land. */
 export type ArmedPlacement = { kind: "pool" | "match"; id: number; placement: number };
@@ -463,7 +464,7 @@ function allRules(input: StructureCanvasInput): CanvasRule[] {
 }
 
 function touchesSelection(selection: CanvasSelection, rule: CanvasRule): boolean {
-    if (!selection) {
+    if (!selection || selection.kind === "phase") {
         return false;
     }
 

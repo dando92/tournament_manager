@@ -187,7 +187,7 @@ function readSelection(raw: string | null): CanvasSelection {
         return null;
     }
     const [kind, id] = raw.split(":");
-    if ((kind !== "pool" && kind !== "match") || !Number(id)) {
+    if ((kind !== "pool" && kind !== "match" && kind !== "phase") || !Number(id)) {
         return null;
     }
 
