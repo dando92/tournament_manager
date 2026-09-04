@@ -20,7 +20,7 @@ import type { TournamentDivisionOption } from "@/features/tournament/model/types
  * more of them.
  *
  * It reads and never operates. Selecting a card opens the match read-only;
- * Control Room is where a schedule is started, paused or reordered.
+ * Control Room is where a schedule is started, stopped or reordered.
  */
 
 const DESKTOP_PIXELS_PER_MINUTE = 3.4;

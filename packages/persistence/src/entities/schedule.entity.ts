@@ -3,10 +3,10 @@ import { Check, Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, Primary
 import { Tournament } from "./tournament.entity";
 import { ScheduleEntry } from "./schedule-entry.entity";
 
-export type ScheduleStatus = "inactive" | "running" | "paused" | "completed";
+export type ScheduleStatus = "inactive" | "running" | "completed";
 
 @Entity()
-@Check("CHK_schedule_status", `"status" IN ('inactive', 'running', 'paused', 'completed')`)
+@Check("CHK_schedule_status", `"status" IN ('inactive', 'running', 'completed')`)
 @Index("IDX_schedule_tournament", ["tournament"])
 @Index("IDX_schedule_current_entry", ["currentEntry"])
 export class Schedule {

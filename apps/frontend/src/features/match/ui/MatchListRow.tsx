@@ -28,6 +28,12 @@ import type { MatchRowModel } from "@/features/match/model/matchRow";
 
 type MatchListRowProps = {
   match: MatchRowModel;
+  /**
+   * What the dot on the left means, for the one list where it is not the
+   * match's own `active` column. The Control Room queue draws the schedule's
+   * cursor there, and a dot that says one thing must not be labelled the other.
+   */
+  activeLabel?: string;
   selected: boolean;
   /** Lit because an advancement route in the open card points at this match. */
   routed: boolean;
@@ -39,6 +45,7 @@ type MatchListRowProps = {
 
 export default function MatchListRow({
   match,
+  activeLabel,
   selected,
   routed,
   controls,
@@ -52,6 +59,7 @@ export default function MatchListRow({
   const [marqueeLayout, setMarqueeLayout] = useState({ distance: 0, fadeWidth: 0 });
   const [mobileMarquee, setMobileMarquee] = useState(false);
   const { progress, blocker, playerCount, songCount, handScored } = match;
+  const dotLabel = activeLabel ?? getActiveLabel(match.active);
   const status = getMatchProgressStatus(progress);
   const label = blocker ?? getMatchProgressLabel(progress);
   const canCommit = controls && progress === "readyToCommit";
@@ -112,10 +120,10 @@ export default function MatchListRow({
           }
           onSelect();
         }}
-        title={getActiveLabel(match.active)}
+        title={dotLabel}
         className="group/name flex min-w-0 flex-1 items-center gap-3 overflow-hidden px-3 py-2.5 text-left"
       >
-        <ActiveIndicator on={match.active} label={getActiveLabel(match.active)} />
+        <ActiveIndicator on={match.active} label={dotLabel} />
 
         <span
           ref={nameViewportRef}

@@ -79,8 +79,6 @@ export default function ControlRoomPage() {
                                     busy={room.pending}
                                     onEdit={() => setEditingScheduleId(selected.id)}
                                     onStart={() => room.start(selected.id)}
-                                    onPause={() => room.pause(selected.id)}
-                                    onResume={() => room.resume(selected.id)}
                                     onStop={() => room.stop(selected.id)}
                                     onArchive={() => room.archive(selected.id)}
                                     onUnarchive={() => room.unarchive(selected.id)}
@@ -145,5 +143,5 @@ export default function ControlRoomPage() {
 
 /** The schedule an operator most likely came here for: one that is under way. */
 function operationalFirst<T extends { status: string }>(schedules: T[]): T | undefined {
-    return schedules.find((schedule) => schedule.status === "running" || schedule.status === "paused") ?? schedules[0];
+    return schedules.find((schedule) => schedule.status === "running") ?? schedules[0];
 }

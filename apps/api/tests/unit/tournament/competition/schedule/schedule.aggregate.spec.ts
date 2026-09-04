@@ -19,7 +19,9 @@ describe("ScheduleAggregate", () => {
         return aggregate;
     }
 
-    it("distinguishes running stale from paused", () => {
+    /* A schedule runs or it does not: waiting is something a running schedule
+       does, and stopping is the only way out of it. */
+    it("keeps a waiting schedule running, and clears the wait when it is stopped", () => {
         const aggregate = schedule();
         aggregate.start();
         aggregate.waitAt(11, "NOT_ENOUGH_ENTRANTS", { matchId: 20, entrantCount: 1 });
@@ -27,11 +29,10 @@ describe("ScheduleAggregate", () => {
         expect(aggregate.status).toBe("running");
         expect(aggregate.entity.staleCode).toBe("NOT_ENOUGH_ENTRANTS");
 
-        aggregate.pause();
-        expect(aggregate.status).toBe("paused");
-        aggregate.resume();
-        expect(aggregate.status).toBe("running");
+        aggregate.stop();
+        expect(aggregate.status).toBe("inactive");
         expect(aggregate.entity.staleCode).toBeNull();
+        expect(() => aggregate.stop()).toThrow(/is not running/);
     });
 
     it("restarts an ordinary run from the beginning while preserving an explicit start entry", () => {

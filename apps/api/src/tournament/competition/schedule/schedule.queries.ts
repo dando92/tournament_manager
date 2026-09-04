@@ -49,7 +49,7 @@ const UNASSIGNED_MATCH_IDS_OF_TOURNAMENT = `
  * archived boards.
  */
 const SCHEDULE_ACTIVITY_OF_TOURNAMENT = `
-    SELECT  count(*) FILTER (WHERE s."status" IN ('running', 'paused')) AS "runningCount",
+    SELECT  count(*) FILTER (WHERE s."status" = 'running')              AS "runningCount",
             count(*) FILTER (WHERE s."archivedAt" IS NOT NULL)          AS "archivedCount"
     FROM    "schedule" s
     WHERE   s."tournamentId" = $1

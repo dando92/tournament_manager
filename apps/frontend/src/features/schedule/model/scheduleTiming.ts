@@ -33,7 +33,7 @@ export function buildScheduleTimeline(schedule: ScheduleDto, now = new Date()): 
         const expectedCompletion = currentEntry.startedAt
             ? new Date(currentEntry.startedAt).getTime() + durationMs
             : now.getTime() + durationMs;
-        const projectedCompletion = schedule.status === "running" || schedule.status === "paused"
+        const projectedCompletion = schedule.status === "running"
             ? Math.max(expectedCompletion, now.getTime())
             : expectedCompletion;
         offsetMs = projectedCompletion - plannedCompletion;

@@ -54,7 +54,7 @@ async function readTournament(manager: EntityManager, into: number | 'last'): Pr
     );
     const songs: Array<{ id: number }> = await manager.query(`SELECT "id" FROM "song" WHERE "tournamentId" = $1 ORDER BY "id"`, [id]);
     const [{ running }] = await manager.query(
-        `SELECT COUNT(*)::int AS "running" FROM "schedule" WHERE "tournamentId" = $1 AND "status" IN ('running', 'paused')`,
+        `SELECT COUNT(*)::int AS "running" FROM "schedule" WHERE "tournamentId" = $1 AND "status" = 'running'`,
         [id],
     );
 

@@ -30,7 +30,7 @@ const OPERATIONAL_SCHEDULE_IDS_OF_TOURNAMENT = `
     SELECT  s."id" AS "id"
     FROM    "schedule" s
     WHERE   s."tournamentId" = $1
-        AND s."status" IN ('running', 'paused')
+        AND s."status" = 'running'
 `;
 
 /** Every running schedule, which a restarted API reconciles against the database. */
@@ -151,6 +151,25 @@ const ACTIVE_MATCH_OF_ENTRY = `
     WHERE   entry."id" = $1
 `;
 
+/**
+ * Every match of a schedule that is active, with its address.
+ *
+ * A schedule holds one at a time, so this normally returns one row or none.
+ * More than one means something outside the schedule activated a match of its
+ * own while the schedule was inactive, which is what starting has to undo.
+ */
+const ACTIVE_MATCHES_OF_SCHEDULE = `
+    SELECT  ca."tournamentId" AS "tournamentId",
+            ca."divisionId"   AS "divisionId",
+            ca."phaseId"      AS "phaseId",
+            ca."phaseGroupId" AS "phaseGroupId",
+            ca."matchId"      AS "matchId"
+    FROM    "schedule_entry" entry
+    JOIN    "match" m ON m."id" = entry."matchId" AND m."active" = TRUE
+    JOIN    "competition_address" ca ON ca."matchId" = m."id"
+    WHERE   entry."scheduleId" = $1
+`;
+
 /** The rows `ACTIVE_CONFLICTS` produces. */
 type ActiveConflictRow = { matchId: number; playerId: number };
 
@@ -221,6 +240,34 @@ export class ScheduleRunner {
     async recalculate(scheduleId: number): Promise<void> {
         const transition = await this.dataSource.transaction((manager) => this.recalculateLocked(manager, scheduleId));
         await this.announce(transition);
+    }
+
+    /**
+     * Takes every match of the schedule out of the active state.
+     *
+     * Starting calls this before the walk. A schedule decides which of its
+     * matches is active, and it is the only writer of that column for them
+     * while it runs — but between a stop and the next start it owns nothing,
+     * and a match may be activated by hand. This is where the schedule takes
+     * them back, so the walk cannot leave a second one active beside the one it
+     * picks: live runs are attributed by looking among the active matches, and
+     * two of them make that ambiguous.
+     */
+    async deactivateEveryMatch(scheduleId: number): Promise<void> {
+        const addresses = await this.dataSource.transaction(async (manager) => {
+            const rows: MatchAddressRow[] = await manager.query(ACTIVE_MATCHES_OF_SCHEDULE, [scheduleId]);
+            if (rows.length === 0) {
+                return [];
+            }
+            const addresses = rows.map((row) => this.addressOf(row));
+            await manager.update(Match, { id: In(addresses.map((address) => address.matchId)) }, { active: false });
+
+            return addresses;
+        });
+
+        for (const address of addresses) {
+            await this.publisher.emitMatchUpdate(address);
+        }
     }
 
     async stop(scheduleId: number, interruptionCode?: ScheduleInterruptionCode, interruptionDetails?: Record<string, unknown>): Promise<void> {
@@ -451,16 +498,21 @@ export class ScheduleRunner {
             return [];
         }
 
-        const address: MatchAddress = {
-            tournamentId: Number(rows[0].tournamentId),
-            divisionId: Number(rows[0].divisionId),
-            phaseId: Number(rows[0].phaseId),
-            phaseGroupId: Number(rows[0].phaseGroupId),
-            matchId: Number(rows[0].matchId),
-        };
+        const address = this.addressOf(rows[0]);
         await manager.update(Match, { id: address.matchId }, { active: false });
 
         return [address];
+    }
+
+    /** One address row, as everything that publishes a match event reads it. */
+    private addressOf(row: MatchAddressRow): MatchAddress {
+        return {
+            tournamentId: Number(row.tournamentId),
+            divisionId: Number(row.divisionId),
+            phaseId: Number(row.phaseId),
+            phaseGroupId: Number(row.phaseGroupId),
+            matchId: Number(row.matchId),
+        };
     }
 
     private async announce(transition: ScheduleTransition): Promise<void> {

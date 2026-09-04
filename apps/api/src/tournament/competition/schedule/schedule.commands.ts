@@ -44,24 +44,21 @@ export class ScheduleCommands {
         await this.publisher.emitScheduleUpdate(tournamentId, scheduleId);
     }
 
+    /**
+     * Starts the schedule, and takes its matches over before walking them.
+     *
+     * A schedule holds one active match at a time and decides which. Between a
+     * stop and this call the schedule owns nothing, and that is the only window
+     * in which a match may be activated by hand, so whatever is active among its
+     * own matches is switched off before the walk picks one. Without that, a
+     * match somebody left active would sit beside the one the schedule chose,
+     * and a run arriving live could be attributed to either.
+     */
     async start(scheduleId: number, entryId?: number): Promise<void> {
         const schedule = await this.store.loadOrFail(scheduleId);
         schedule.start(entryId);
         await this.store.save(schedule);
-        await this.runner.recalculate(scheduleId);
-    }
-
-    async pause(scheduleId: number): Promise<void> {
-        const schedule = await this.store.loadOrFail(scheduleId);
-        schedule.pause();
-        await this.store.save(schedule);
-        await this.publisher.emitScheduleUpdate(schedule.tournamentId, scheduleId);
-    }
-
-    async resume(scheduleId: number): Promise<void> {
-        const schedule = await this.store.loadOrFail(scheduleId);
-        schedule.resume();
-        await this.store.save(schedule);
+        await this.runner.deactivateEveryMatch(scheduleId);
         await this.runner.recalculate(scheduleId);
     }
 

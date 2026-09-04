@@ -203,7 +203,7 @@ describe("Control Room (e2e)", () => {
         expect((await readMatch(second.id)).active).toBe(true);
     });
 
-    it("keeps a stale schedule running and resumes when an entrant resolves it", async () => {
+    it("keeps a stale schedule running until an entrant resolves it", async () => {
         const waiting = await createMatch("Waiting", [entrants[2]]);
         const scheduleId = await createSchedule("Cabinet 2", [waiting.id]);
         await request(app.getHttpServer()).post(`/schedules/${scheduleId}/start`).expect(204);
@@ -220,12 +220,7 @@ describe("Control Room (e2e)", () => {
         expect(schedule.body).toMatchObject({ status: "running", staleCode: null });
         expect((await readMatch(waiting.id)).active).toBe(true);
 
-        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/pause`).expect(204);
         await score(waiting);
-        expect((await request(app.getHttpServer()).get(`/schedules/${scheduleId}`).expect(200)).body.status).toBe("paused");
-        expect((await readMatch(waiting.id)).active).toBe(true);
-
-        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/resume`).expect(204);
         schedule = await request(app.getHttpServer()).get(`/schedules/${scheduleId}`).expect(200);
         expect(schedule.body.status).toBe("completed");
         expect(await readMatch(waiting.id)).toMatchObject({ active: false, matchResult: null });
@@ -466,5 +461,39 @@ describe("Control Room (e2e)", () => {
 
         const after = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules/activity`).expect(200);
         expect(after.body.archivedCount).toBe(before.body.archivedCount + 1);
+    });
+    /* Last, because it needs a tournament with nothing running: manual
+       activation is refused while any schedule of the tournament is. That is
+       the window this covers — between a stop and the next start the schedule
+       owns nothing, so a match can be activated by hand, and starting has to
+       take it back before the walk. Without that the match left active holds
+       the same two players as the first entry, and the schedule would refuse to
+       start against itself with ENTRANTS_ALREADY_ACTIVE. */
+    it("takes its matches back when it starts, and leaves none active when it stops", async () => {
+        const live = await request(app.getHttpServer()).get(`/tournaments/${tournamentId}/schedules`).expect(200);
+        for (const running of live.body.filter((schedule: { status: string }) => schedule.status === "running")) {
+            await request(app.getHttpServer()).post(`/schedules/${running.id}/stop`).expect(204);
+        }
+
+        const players = [await addEntrant("Mike"), await addEntrant("November")];
+        const first = await createMatch("Taken back", players);
+        const second = await createMatch("Taken back next", players);
+        const scheduleId = await createSchedule("Taken back schedule", [first.id, second.id]);
+
+        await request(app.getHttpServer()).put(`/matches/${second.id}/active`).send({ active: true }).expect(204);
+        expect((await readMatch(second.id)).active).toBe(true);
+
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/start`).expect(204);
+        expect((await request(app.getHttpServer()).get(`/schedules/${scheduleId}`).expect(200)).body.staleCode).toBeNull();
+        expect(await boardRows(scheduleId)).toEqual([
+            { id: first.id, active: true },
+            { id: second.id, active: false },
+        ]);
+
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/stop`).expect(204);
+        expect(await boardRows(scheduleId)).toEqual([
+            { id: first.id, active: false },
+            { id: second.id, active: false },
+        ]);
     });
 });

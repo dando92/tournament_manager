@@ -64,8 +64,6 @@ export function useSchedules(tournamentId: number) {
             }
         },
         start: (scheduleId: number) => run(() => api.startSchedule(scheduleId)),
-        pause: (scheduleId: number) => run(() => api.pauseSchedule(scheduleId)),
-        resume: (scheduleId: number) => run(() => api.resumeSchedule(scheduleId)),
         stop: (scheduleId: number) => run(() => api.stopSchedule(scheduleId)),
         archive: (scheduleId: number) => run(() => api.archiveSchedule(scheduleId)),
         unarchive: (scheduleId: number) => run(() => api.unarchiveSchedule(scheduleId)),

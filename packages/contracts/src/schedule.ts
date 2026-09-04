@@ -1,6 +1,6 @@
 import type { MatchSummaryDto } from "./match";
 
-export type ScheduleStatus = "inactive" | "running" | "paused" | "completed";
+export type ScheduleStatus = "inactive" | "running" | "completed";
 
 export type ScheduleInterruptionCode = "MATCH_RESULT_REOPENED" | "ROLLBACK_CONFIRMED" | "TOURNAMENT_CLOSED";
 

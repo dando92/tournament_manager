@@ -49,7 +49,7 @@ function statusOf(schedule: ScheduleDto): Status {
         return "pending";
     }
 
-    return schedule.status === "running" || schedule.status === "paused" ? "running" : "idle";
+    return schedule.status === "running" ? "running" : "idle";
 }
 
 function stateLabelOf(schedule: ScheduleDto): string {
@@ -59,10 +59,6 @@ function stateLabelOf(schedule: ScheduleDto): string {
     if (schedule.staleCode) {
         return "Waiting";
     }
-    if (schedule.status === "paused") {
-        return "Paused";
-    }
-
     return schedule.status === "running" ? "Running" : "Not started";
 }
 

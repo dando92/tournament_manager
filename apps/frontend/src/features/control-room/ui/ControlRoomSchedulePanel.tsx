@@ -28,8 +28,6 @@ type Props = {
     busy: boolean;
     onEdit: () => void;
     onStart: () => Promise<void>;
-    onPause: () => Promise<void>;
-    onResume: () => Promise<void>;
     onStop: () => Promise<void>;
     onArchive: () => Promise<void>;
     onUnarchive: () => Promise<void>;
@@ -109,6 +107,7 @@ export default function ControlRoomSchedulePanel(props: Props) {
                         <QueueEntryRow
                             key={entry.id}
                             entry={entry}
+                            current={entry.id === schedule.currentEntryId}
                             selected={entry.id === selectedEntryId}
                             canStartFrom={schedule.status === "inactive"}
                             committing={committingMatchId === entry.match.id}
@@ -139,6 +138,7 @@ export default function ControlRoomSchedulePanel(props: Props) {
 
 function QueueEntryRow({
     entry,
+    current,
     selected,
     canStartFrom,
     committing,
@@ -150,6 +150,7 @@ function QueueEntryRow({
     onOpenMenu,
 }: {
     entry: ScheduleDto["entries"][number];
+    current: boolean;
     selected: boolean;
     canStartFrom: boolean;
     committing: boolean;
@@ -187,15 +188,17 @@ function QueueEntryRow({
                 openActions(event.clientX, event.clientY);
             }}
         >
-            {/* `entry.match.active` and nothing else. A schedule holds one
-                active match at a time and decides which, but the answer is a
-                fact about the match — it is what a live run is attributed to —
-                so every screen reads the same column and this one cannot
-                disagree with the division's. The schedule's own cursor is not
-                that: it survives a stop, so that a stopped schedule can be
-                resumed where it left off. */}
+            {/* The dot on a queue row is the schedule's cursor, not the
+                match's `active` column. The queue is the one place that draws
+                the schedule itself, and where it stands is what a reader of it
+                asks: a schedule held up names the entry it is waiting on, and a
+                stopped one keeps the cursor because that is where it resumes.
+                Whether the match is on a cabinet is the same dot everywhere
+                else — the division list, the schedule board — and is read from
+                the column there. The label says which of the two this is. */}
             <MatchListRow
-                match={rowOfSummary(entry.match)}
+                match={{ ...rowOfSummary(entry.match), active: current }}
+                activeLabel={current ? "The schedule is at this match" : "The schedule is not at this match"}
                 selected={selected}
                 routed={false}
                 controls={!committing}
@@ -259,24 +262,9 @@ function ScheduleActions(props: Props) {
                 </>
             )}
             {schedule.status === "running" && (
-                <>
-                    <button type="button" className={btnSecondary} disabled={busy} onClick={() => props.onPause()}>
-                        Pause
-                    </button>
-                    <button type="button" className={btnSecondary} disabled={busy} onClick={() => props.onStop()}>
-                        Stop
-                    </button>
-                </>
-            )}
-            {schedule.status === "paused" && (
-                <>
-                    <button type="button" className={btnPrimary} disabled={busy} onClick={() => props.onResume()}>
-                        Resume
-                    </button>
-                    <button type="button" className={btnSecondary} disabled={busy} onClick={() => props.onStop()}>
-                        Stop
-                    </button>
-                </>
+                <button type="button" className={btnSecondary} disabled={busy} onClick={() => props.onStop()}>
+                    Stop
+                </button>
             )}
             {schedule.status === "completed" &&
                 (schedule.archivedAt ? (

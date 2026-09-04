@@ -3,6 +3,7 @@ import { createMigrationDataSource } from '../src/migration-data-source';
 import { seedLocalFixture } from '../src/seed-local-fixture';
 import { TournamentTimelineTiming1788300000000 } from '../src/migrations/1788300000000-TournamentTimelineTiming';
 import { MatchState1788900000000 } from '../src/migrations/1788900000000-MatchState';
+import { ScheduleWithoutPause1789000000000 } from '../src/migrations/1789000000000-ScheduleWithoutPause';
 
 const host = process.env.DATABASE_HOST ?? '127.0.0.1';
 const port = Number(process.env.DATABASE_PORT ?? 5432);
@@ -301,6 +302,58 @@ describe('migration runner', () => {
       await runner.query(`DELETE FROM "match_result" mr WHERE NOT EXISTS (SELECT 1 FROM "match" m WHERE m."matchResultId" = mr."id")`);
       await runner.query(`DELETE FROM "player" WHERE "playerName" IN ('Backfill One', 'Backfill Two')`);
       await runner.query(`DELETE FROM "song" WHERE "title" = 'Backfill song'`);
+      await runner.release();
+    }
+  });
+  /**
+   * The removal of the paused state.
+   *
+   * A paused schedule kept its match active while owning nothing, so the
+   * migration has to take that match out of the active state as it normalizes
+   * the row: after it, no schedule would ever switch it off. The old constraint
+   * is restored first, because a paused row cannot be written under the new one.
+   */
+  it('normalizes paused schedules and takes their matches out of the active state', async () => {
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    const inserted = async (sql: string, params: unknown[] = []): Promise<number> => {
+      const [row] = (await runner.query(sql, params)) as unknown as Array<{ id: number }>;
+
+      return row.id;
+    };
+
+    try {
+      const tournamentId = await inserted(`INSERT INTO "tournament" ("name") VALUES ('Pause tournament') RETURNING "id"`);
+      const divisionId = await inserted(`INSERT INTO "division" ("name", "tournamentId") VALUES ('Pause division', $1) RETURNING "id"`, [tournamentId]);
+      const phaseId = await inserted(`INSERT INTO "phase" ("name", "divisionId") VALUES ('Pause phase', $1) RETURNING "id"`, [divisionId]);
+      const poolId = await inserted(`INSERT INTO "phase_group" ("name", "phaseId") VALUES ('Pause pool', $1) RETURNING "id"`, [phaseId]);
+      const matchId = await inserted(
+        `INSERT INTO "match" ("name", "scoringSystem", "phaseGroupId", "active") VALUES ('Paused match', 'PlacementPointsWithFailZero', $1, TRUE) RETURNING "id"`,
+        [poolId],
+      );
+
+      const migration = new ScheduleWithoutPause1789000000000();
+      await migration.down(runner);
+      const scheduleId = await inserted(
+        `INSERT INTO "schedule" ("name", "willStartAt", "status", "version", "tournamentId") VALUES ('Paused schedule', now(), 'paused', 1, $1) RETURNING "id"`,
+        [tournamentId],
+      );
+      await runner.query(
+        `INSERT INTO "schedule_entry" ("position", "expectedDurationMinutes", "scheduleId", "matchId") VALUES (0, 30, $1, $2)`,
+        [scheduleId, matchId],
+      );
+
+      await migration.up(runner);
+
+      const [schedule] = await runner.query(`SELECT "status" FROM "schedule" WHERE "id" = $1`, [scheduleId]);
+      const [match] = await runner.query(`SELECT "active" FROM "match" WHERE "id" = $1`, [matchId]);
+      expect(schedule).toEqual({ status: 'inactive' });
+      expect(match).toEqual({ active: false });
+      await expect(
+        runner.query(`UPDATE "schedule" SET "status" = 'paused' WHERE "id" = $1`, [scheduleId]),
+      ).rejects.toThrow(/CHK_schedule_status/);
+    } finally {
+      await runner.query(`DELETE FROM "tournament" WHERE "name" = 'Pause tournament'`);
       await runner.release();
     }
   });

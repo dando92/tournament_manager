@@ -7,7 +7,7 @@ import { ScheduleStore } from "./schedule.store";
 type RollbackSchedule = {
     scheduleId: number;
     scheduleName: string;
-    status: "running" | "paused";
+    status: "running";
     matchPosition: number;
     currentPosition: number;
 };
@@ -19,7 +19,7 @@ type CompletedSchedule = {
 };
 
 /**
- * The running or paused schedule a rollback of this match would invalidate: one
+ * The running schedule a rollback of this match would invalidate: one
  * whose current position has not passed the match yet, because a schedule that has
  * already moved past it keeps its history.
  */
@@ -33,7 +33,7 @@ const ROLLBACK_SCHEDULE_OF_MATCH = `
     JOIN        "schedule" s ON s."id" = target."scheduleId"
     LEFT JOIN   "schedule_entry" current ON current."id" = s."currentEntryId"
     WHERE       target."matchId" = $1
-        AND     s."status" IN ('running', 'paused')
+        AND     s."status" = 'running'
         AND     (current."position" IS NULL OR target."position" <= current."position")
 `;
 
@@ -61,7 +61,7 @@ export class ScheduleMutationGuard {
         if (scheduleIds.length > 0) {
             throw new ConflictException({
                 code: "MANUAL_ACTIVATION_DISABLED_BY_SCHEDULE",
-                message: "Manual match activation is unavailable while a schedule is running or paused",
+                message: "Manual match activation is unavailable while a schedule is running",
                 scheduleIds,
             });
         }

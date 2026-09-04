@@ -50,8 +50,6 @@ async function command(scheduleId: number, action: string): Promise<void> {
 }
 
 export const startSchedule = (scheduleId: number) => command(scheduleId, "start");
-export const pauseSchedule = (scheduleId: number) => command(scheduleId, "pause");
-export const resumeSchedule = (scheduleId: number) => command(scheduleId, "resume");
 export const stopSchedule = (scheduleId: number) => command(scheduleId, "stop");
 export const archiveSchedule = (scheduleId: number) => command(scheduleId, "archive");
 export async function unarchiveSchedule(scheduleId: number): Promise<void> {

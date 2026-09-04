@@ -79,24 +79,9 @@ export class ScheduleAggregate {
         this.clearInterruption();
     }
 
-    pause(): void {
+    stop(interruptionCode?: ScheduleInterruptionCode, interruptionDetails?: Record<string, unknown>): void {
         if (this.schedule.status !== "running") {
             throw new ConflictException(`Schedule ${this.schedule.id} is not running`);
-        }
-        this.schedule.status = "paused";
-    }
-
-    resume(): void {
-        if (this.schedule.status !== "paused") {
-            throw new ConflictException(`Schedule ${this.schedule.id} is not paused`);
-        }
-        this.schedule.status = "running";
-        this.clearStale();
-    }
-
-    stop(interruptionCode?: ScheduleInterruptionCode, interruptionDetails?: Record<string, unknown>): void {
-        if (this.schedule.status !== "running" && this.schedule.status !== "paused") {
-            throw new ConflictException(`Schedule ${this.schedule.id} is not running or paused`);
         }
         this.schedule.status = "inactive";
         this.clearStale();

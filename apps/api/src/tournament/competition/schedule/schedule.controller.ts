@@ -106,20 +106,6 @@ export class ScheduleController {
         return this.commands.start(Number(scheduleId), Number(entryId));
     }
 
-    @Post("schedules/:scheduleId/pause")
-    @HttpCode(HttpStatus.NO_CONTENT)
-    @RequireOpenTournament({ entity: "schedule", location: "params", field: "scheduleId" })
-    pause(@Param("scheduleId") scheduleId: number): Promise<void> {
-        return this.commands.pause(Number(scheduleId));
-    }
-
-    @Post("schedules/:scheduleId/resume")
-    @HttpCode(HttpStatus.NO_CONTENT)
-    @RequireOpenTournament({ entity: "schedule", location: "params", field: "scheduleId" })
-    resume(@Param("scheduleId") scheduleId: number): Promise<void> {
-        return this.commands.resume(Number(scheduleId));
-    }
-
     @Post("schedules/:scheduleId/stop")
     @HttpCode(HttpStatus.NO_CONTENT)
     @RequireOpenTournament({ entity: "schedule", location: "params", field: "scheduleId" })

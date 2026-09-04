@@ -198,7 +198,7 @@ export class ScheduleStore {
 
     async operationalScheduleIds(tournamentId: number): Promise<number[]> {
         const schedules = await this.schedules.find({
-            where: { tournament: { id: tournamentId }, status: In(["running", "paused"]) },
+            where: { tournament: { id: tournamentId }, status: "running" },
             select: { id: true },
         });
 
