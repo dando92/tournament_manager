@@ -1,20 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { DataSource, EntityManager, FindOptionsRelations, In } from "typeorm";
-import { AdvancementRule, Schedule, ScheduleEntry, Match, Tournament } from "@tournament-manager/persistence";
+import { DataSource, EntityManager, In } from "typeorm";
+import { Schedule, ScheduleEntry, Match, Tournament } from "@tournament-manager/persistence";
+import type { MatchState } from "@tournament-manager/persistence";
 import type { ScheduleInterruptionCode } from "@tournament-manager/contracts";
 
-import { MatchAddress, MatchAggregate } from "@match/match.aggregate";
+import { MatchAddress } from "@match/match.aggregate";
 import { UiUpdatePublisher } from "@tournament/shared/ui-update.publisher";
 import { ScheduleAggregate } from "./schedule.aggregate";
-import { ScheduleMatchSnapshot, evaluateScheduleMatch } from "./schedule.eligibility";
-
-const RUNNER_MATCH_GRAPH: FindOptionsRelations<Match> = {
-    entrants: { participants: { player: true } },
-    phaseGroup: { phase: { division: { tournament: true } } },
-    rounds: { song: true, standings: { player: true } },
-    tiebreaks: { song: true, standings: { player: true, score: true } },
-    matchResult: true,
-};
+import { ScheduleConflicts, ScheduleMatchSnapshot, evaluateConflicts, evaluateLocalEligibility } from "./schedule.eligibility";
 
 type ScheduleTransition = { tournamentId: number; scheduleId: number; matchAddresses: MatchAddress[] };
 
@@ -48,6 +41,116 @@ const RUNNING_SCHEDULE_IDS = `
     ORDER BY s."id"
 `;
 
+/** The rows `SCHEDULE_ENTRY_SNAPSHOTS` produces, one per entry, in schedule order. */
+type ScheduleEntryRow = {
+    entryId: number;
+    entryMatchId: number;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    matchId: number | null;
+    matchName: string | null;
+    active: boolean | null;
+    state: MatchState | null;
+    tournamentId: number | null;
+    divisionId: number | null;
+    phaseId: number | null;
+    phaseGroupId: number | null;
+    roundCount: number;
+    playerIds: number[] | null;
+    requiredEntrantCount: number;
+};
+
+/**
+ * Everything a recalculation reads about the schedule it is walking.
+ *
+ * One row per entry, and every column the verdict below needs: where the match
+ * stands, whether it is on a cabinet, how many rounds it holds, who plays in
+ * it, how many entrants its incoming rules will eventually seat, and its
+ * address. It used to be the seven-relation graph of every match of the
+ * schedule, hydrated in full to answer, normally, one question about one of
+ * them, followed by two more queries per entry inside the loop.
+ *
+ * `m."state"` is the column batch S introduced: `completed` and `ready` are the
+ * two the schedule reads, and nothing here re-derives them. See
+ * `PerformanceReadiness.md`, batch R.
+ *
+ * The match is joined on the left because the entry is what the schedule owns.
+ * A row with no match cannot happen while the foreign key cascades, and the
+ * verdict for it is written down rather than assumed.
+ */
+const SCHEDULE_ENTRY_SNAPSHOTS = `
+    SELECT      entry."id"          AS "entryId",
+                entry."matchId"     AS "entryMatchId",
+                entry."startedAt"   AS "startedAt",
+                entry."completedAt" AS "completedAt",
+                m."id"              AS "matchId",
+                m."name"            AS "matchName",
+                m."active"          AS "active",
+                m."state"           AS "state",
+                ca."tournamentId"   AS "tournamentId",
+                ca."divisionId"     AS "divisionId",
+                ca."phaseId"        AS "phaseId",
+                ca."phaseGroupId"   AS "phaseGroupId",
+                COALESCE(rounds."count", 0)::int AS "roundCount",
+                players."ids" AS "playerIds",
+                GREATEST(COALESCE(slots."required", 0), 2)::int AS "requiredEntrantCount"
+    FROM        "schedule_entry" entry
+    LEFT JOIN   "match" m ON m."id" = entry."matchId"
+    LEFT JOIN   "competition_address" ca ON ca."matchId" = m."id"
+    LEFT JOIN   LATERAL (
+                    SELECT  COUNT(*) AS "count"
+                    FROM    "round" r
+                    WHERE   r."matchId" = m."id"
+                ) rounds ON TRUE
+    LEFT JOIN   LATERAL (
+                    SELECT  array_agg(seat."playerId" ORDER BY seat."entrantId") AS "ids"
+                    FROM (
+                        SELECT DISTINCT ON (e."id") e."id" AS "entrantId", pa."playerId"
+                        FROM    "match_entrants_entrant" me
+                        JOIN    "entrant" e ON e."id" = me."entrantId" AND e."type" = 'player'
+                        JOIN    "entrant_participants_participant" ep ON ep."entrantId" = e."id"
+                        JOIN    "participant" pa ON pa."id" = ep."participantId"
+                        WHERE   me."matchId" = m."id"
+                        ORDER   BY e."id", pa."id"
+                    ) seat
+                ) players ON TRUE
+    LEFT JOIN   LATERAL (
+                    SELECT  MAX(target."targetSlot") AS "required"
+                    FROM    "advancement_rule" target
+                    WHERE   target."targetKind" = 'match' AND target."targetId" = m."id"
+                ) slots ON TRUE
+    WHERE       entry."scheduleId" = $1
+    ORDER BY    entry."position"
+`;
+
+/** The rows `ACTIVE_MATCH_OF_ENTRY` produces. */
+type MatchAddressRow = {
+    tournamentId: number;
+    divisionId: number;
+    phaseId: number;
+    phaseGroupId: number;
+    matchId: number;
+};
+
+/**
+ * The match an entry holds, if it is on a cabinet right now, with its address.
+ *
+ * Stopping a schedule has to take its current match off the cabinet and say
+ * where that match lives. Both are columns; loading the aggregate to reach them
+ * was the same graph a recalculation used to load per entry.
+ */
+const ACTIVE_MATCH_OF_ENTRY = `
+    SELECT  ca."tournamentId" AS "tournamentId",
+            ca."divisionId"   AS "divisionId",
+            ca."phaseId"      AS "phaseId",
+            ca."phaseGroupId" AS "phaseGroupId",
+            ca."matchId"      AS "matchId"
+    FROM    "schedule_entry" entry
+    JOIN    "match" m ON m."id" = entry."matchId" AND m."active" = TRUE
+    JOIN    "competition_address" ca ON ca."matchId" = m."id"
+    WHERE   entry."id" = $1
+`;
+
 /** The rows `ACTIVE_CONFLICTS` produces. */
 type ActiveConflictRow = { matchId: number; playerId: number };
 
@@ -55,6 +158,15 @@ type ActiveConflictRow = { matchId: number; playerId: number };
  * Which other active match of the tournament already holds one of these
  * players. A player cannot be sent to two cabinets at once, so an entry waits
  * while another match has them.
+ *
+ * It runs once per recalculation, for the entry that passed every other check,
+ * because that is the only entry whose answer is read.
+ *
+ * The excluded ids are the entry's own match and every match this recalculation
+ * has already decided to take off the cabinet. Those are still `active` in the
+ * database — they are written once, at the end — and a match the walk has just
+ * finished with is not an obstacle to the one that follows it. The predecessor
+ * of an entry usually holds exactly the same people.
  */
 const ACTIVE_CONFLICTS = `
     SELECT DISTINCT other."id" AS "matchId",
@@ -66,9 +178,21 @@ const ACTIVE_CONFLICTS = `
     JOIN    "participant" ON participant."id" = ep."participantId"
     WHERE   ca."tournamentId" = $1
         AND other."active" = TRUE
-        AND other."id" <> $2
+        AND other."id" <> ALL($2::int[])
         AND participant."playerId" = ANY($3::int[])
 `;
+
+/** One entry of the schedule, as the walk below reads it. */
+type ScheduleEntrySnapshot = {
+    entryId: number;
+    entryMatchId: number;
+    matchExists: boolean;
+    tournamentId: number | null;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    address: MatchAddress;
+    match: ScheduleMatchSnapshot;
+};
 
 @Injectable()
 export class ScheduleRunner {
@@ -141,6 +265,14 @@ export class ScheduleRunner {
         }
     }
 
+    /**
+     * Where the schedule stands, decided from the current entry onwards.
+     *
+     * The walk stops at the first entry that is not already settled: it either
+     * puts that match on the cabinet or records why it cannot. Entries passed on
+     * the way are completed and taken off the cabinet, and the writes they imply
+     * are issued once, at the end, by `settle`.
+     */
     private async recalculateLocked(manager: EntityManager, scheduleId: number): Promise<ScheduleTransition> {
         const schedule = await this.loadScheduleForUpdate(manager, scheduleId);
         if (schedule.status !== "running") {
@@ -156,155 +288,146 @@ export class ScheduleRunner {
             return { tournamentId: schedule.tournamentId, scheduleId, matchAddresses: addresses };
         }
 
-        const entries = await manager.find(ScheduleEntry, {
-            where: { schedule: { id: scheduleId } },
-            relations: { match: true },
-            order: { position: "ASC" },
-        });
-        const matchIds = entries.map((entry) => entry.match.id);
-        const matches = matchIds.length > 0 ? await manager.find(Match, { where: { id: In(matchIds) }, relations: RUNNER_MATCH_GRAPH }) : [];
-        const byId = new Map(matches.map((match) => [match.id, match]));
-        const required = await this.requiredEntrants(manager, matchIds);
-        const changed: Match[] = [];
+        const rows: ScheduleEntryRow[] = await manager.query(SCHEDULE_ENTRY_SNAPSHOTS, [scheduleId]);
+        const entries = rows.map((row) => this.entryOf(row, schedule.currentEntryId));
+        const aggregate = ScheduleAggregate.of(schedule);
+        const deactivated: ScheduleEntrySnapshot[] = [];
         const currentIndex = schedule.currentEntryId
             ? Math.max(
-                  entries.findIndex((entry) => entry.id === schedule.currentEntryId),
+                  entries.findIndex((entry) => entry.entryId === schedule.currentEntryId),
                   0,
               )
             : 0;
 
         for (let index = currentIndex; index < entries.length; index += 1) {
             const entry = entries[index];
-            const match = byId.get(entry.match.id);
-            if (!match) {
-                ScheduleAggregate.of(schedule).waitAt(entry.id, "MATCH_REMOVED", { matchId: entry.match.id });
-                await manager.save(Schedule, schedule);
+            if (!entry.matchExists) {
+                aggregate.waitAt(entry.entryId, "MATCH_REMOVED", { matchId: entry.entryMatchId });
 
-                return { tournamentId: schedule.tournament.id, scheduleId, matchAddresses: changed.map((item) => this.addressOf(item)) };
+                return this.settle(manager, schedule, scheduleId, deactivated, null);
             }
-            if (match.phaseGroup?.phase?.division?.tournament?.id !== schedule.tournamentId) {
-                ScheduleAggregate.of(schedule).waitAt(entry.id, "MATCH_OUTSIDE_TOURNAMENT", {
-                    matchId: match.id,
-                    matchName: match.name,
+            if (entry.tournamentId !== schedule.tournamentId) {
+                aggregate.waitAt(entry.entryId, "MATCH_OUTSIDE_TOURNAMENT", {
+                    matchId: entry.match.matchId,
+                    matchName: entry.match.matchName,
                 });
-                if (changed.length > 0) {
-                    await manager.save(Match, changed);
-                }
-                await manager.save(Schedule, schedule);
 
-                return { tournamentId: schedule.tournamentId, scheduleId, matchAddresses: changed.map((item) => this.addressOf(item)) };
+                return this.settle(manager, schedule, scheduleId, deactivated, null);
             }
 
-            const snapshot = await this.snapshot(manager, schedule, entry, match, required.get(match.id) ?? 2);
-            const eligibility = evaluateScheduleMatch(snapshot);
-            if (eligibility.kind === "passed") {
+            const local = evaluateLocalEligibility(entry.match);
+            if (local.kind === "passed") {
                 if (!entry.completedAt) {
-                    entry.completedAt = new Date();
-                    await manager.save(ScheduleEntry, entry);
+                    await manager.update(ScheduleEntry, { id: entry.entryId }, { completedAt: new Date() });
                 }
-                if (match.active) {
-                    match.active = false;
-                    changed.push(match);
-                    await manager.save(Match, match);
+                if (entry.match.active) {
+                    deactivated.push(entry);
                 }
                 continue;
             }
-            if (eligibility.kind === "stale") {
-                ScheduleAggregate.of(schedule).waitAt(entry.id, eligibility.code, eligibility.details);
-                if (changed.length > 0) {
-                    await manager.save(Match, changed);
-                }
-                await manager.save(Schedule, schedule);
+            if (local.kind === "stale") {
+                aggregate.waitAt(entry.entryId, local.code, local.details);
 
-                return { tournamentId: schedule.tournament.id, scheduleId, matchAddresses: changed.map((item) => this.addressOf(item)) };
+                return this.settle(manager, schedule, scheduleId, deactivated, null);
             }
 
-            if (!match.active) {
-                match.active = true;
-                changed.push(match);
-                entry.startedAt = new Date();
-                entry.completedAt = null;
-                await manager.save(ScheduleEntry, entry);
+            const verdict = evaluateConflicts(entry.match, await this.conflictsOf(manager, schedule.tournamentId, entry, deactivated));
+            if (verdict.kind === "stale") {
+                aggregate.waitAt(entry.entryId, verdict.code, verdict.details);
+
+                return this.settle(manager, schedule, scheduleId, deactivated, null);
+            }
+
+            if (!entry.match.active) {
+                await manager.update(ScheduleEntry, { id: entry.entryId }, { startedAt: new Date(), completedAt: null });
             } else if (!entry.startedAt) {
-                entry.startedAt = new Date();
-                await manager.save(ScheduleEntry, entry);
+                await manager.update(ScheduleEntry, { id: entry.entryId }, { startedAt: new Date() });
             }
-            ScheduleAggregate.of(schedule).activate(entry.id);
-            if (changed.length > 0) {
-                await manager.save(Match, changed);
-            }
-            await manager.save(Schedule, schedule);
+            aggregate.activate(entry.entryId);
 
-            return { tournamentId: schedule.tournament.id, scheduleId, matchAddresses: changed.map((item) => this.addressOf(item)) };
+            return this.settle(manager, schedule, scheduleId, deactivated, entry.match.active ? null : entry);
         }
 
-        ScheduleAggregate.of(schedule).complete();
-        if (changed.length > 0) {
-            await manager.save(Match, changed);
+        aggregate.complete();
+
+        return this.settle(manager, schedule, scheduleId, deactivated, null);
+    }
+
+    /**
+     * The writes a verdict produces, and the events it owes.
+     *
+     * Every exit of the walk above passes through here, so a match that came off
+     * the cabinet is written on every one of them, and it is written once: the
+     * deactivations are a single statement rather than a save inside the loop
+     * and a second one after it.
+     */
+    private async settle(
+        manager: EntityManager,
+        schedule: Schedule,
+        scheduleId: number,
+        deactivated: ScheduleEntrySnapshot[],
+        activated: ScheduleEntrySnapshot | null,
+    ): Promise<ScheduleTransition> {
+        if (deactivated.length > 0) {
+            await manager.update(Match, { id: In(deactivated.map((entry) => entry.match.matchId)) }, { active: false });
+        }
+        if (activated) {
+            await manager.update(Match, { id: activated.match.matchId }, { active: true });
         }
         await manager.save(Schedule, schedule);
 
-        return { tournamentId: schedule.tournament.id, scheduleId, matchAddresses: changed.map((item) => this.addressOf(item)) };
+        const changed = activated ? [...deactivated, activated] : deactivated;
+
+        return { tournamentId: schedule.tournamentId, scheduleId, matchAddresses: changed.map((entry) => entry.address) };
     }
 
-    private async snapshot(
-        manager: EntityManager,
-        schedule: Schedule,
-        entry: ScheduleEntry,
-        match: Match,
-        requiredEntrantCount: number,
-    ): Promise<ScheduleMatchSnapshot> {
-        const playerIds = (match.entrants ?? [])
-            .filter((entrant) => entrant.type === "player")
-            .map((entrant) => entrant.participants?.[0]?.player?.id)
-            .filter((id): id is number => Number.isFinite(id));
-        const rules = await manager.find(AdvancementRule, {
-            where: { sourceKind: "match", sourceId: match.id },
-        });
-        const readyToCommit = MatchAggregate.of(match, rules).poolState.awaitingCommit;
-        const conflicts = await this.activeConflicts(manager, schedule.tournament.id, match.id, playerIds);
+    /** One row of `SCHEDULE_ENTRY_SNAPSHOTS`, as everything above reads an entry. */
+    private entryOf(row: ScheduleEntryRow, currentEntryId: number | null): ScheduleEntrySnapshot {
+        const entryId = Number(row.entryId);
 
         return {
-            matchId: match.id,
-            matchName: match.name,
-            active: match.active,
-            completed: Boolean(match.matchResult),
-            readyToCommit,
-            playerIds,
-            roundCount: (match.rounds ?? []).length,
-            requiredEntrantCount,
-            blockingMatchIds: [...new Set(conflicts.map((row) => row.matchId))],
-            blockingPlayerIds: [...new Set(conflicts.map((row) => row.playerId))],
-            isCurrentEntry: schedule.currentEntryId === entry.id,
+            entryId,
+            entryMatchId: Number(row.entryMatchId),
+            matchExists: row.matchId !== null,
+            tournamentId: row.tournamentId === null ? null : Number(row.tournamentId),
+            startedAt: row.startedAt,
+            completedAt: row.completedAt,
+            address: {
+                tournamentId: Number(row.tournamentId),
+                divisionId: Number(row.divisionId),
+                phaseId: Number(row.phaseId),
+                phaseGroupId: Number(row.phaseGroupId),
+                matchId: Number(row.matchId),
+            },
+            match: {
+                matchId: Number(row.matchId),
+                matchName: row.matchName ?? "",
+                active: Boolean(row.active),
+                /* The two states the schedule reads. Both are settled: one has
+                   its result written, the other can have it written as it is. */
+                completed: row.state === "completed",
+                readyToCommit: row.state === "ready",
+                playerIds: (row.playerIds ?? []).map(Number),
+                roundCount: Number(row.roundCount),
+                requiredEntrantCount: Number(row.requiredEntrantCount),
+                isCurrentEntry: entryId === currentEntryId,
+            },
         };
     }
 
-    private async requiredEntrants(manager: EntityManager, matchIds: number[]): Promise<Map<number, number>> {
-        if (matchIds.length === 0) {
-            return new Map();
-        }
-        const rules = await manager.find(AdvancementRule, {
-            where: { targetKind: "match", targetId: In(matchIds) },
-        });
-        const required = new Map<number, number>();
-        for (const rule of rules) {
-            required.set(rule.targetId, Math.max(required.get(rule.targetId) ?? 2, rule.targetSlot));
-        }
-
-        return required;
-    }
-
-    private async activeConflicts(
+    private async conflictsOf(
         manager: EntityManager,
         tournamentId: number,
-        matchId: number,
-        playerIds: number[],
-    ): Promise<ActiveConflictRow[]> {
-        if (playerIds.length === 0) {
-            return [];
-        }
+        entry: ScheduleEntrySnapshot,
+        deactivated: ScheduleEntrySnapshot[],
+    ): Promise<ScheduleConflicts> {
+        const settled = [entry.match.matchId, ...deactivated.map((passed) => passed.match.matchId)];
+        const rows: ActiveConflictRow[] = await manager.query(ACTIVE_CONFLICTS, [tournamentId, settled, entry.match.playerIds]);
 
-        return manager.query(ACTIVE_CONFLICTS, [tournamentId, matchId, playerIds]);
+        return {
+            blockingMatchIds: [...new Set(rows.map((row) => Number(row.matchId)))],
+            blockingPlayerIds: [...new Set(rows.map((row) => Number(row.playerId)))],
+        };
     }
 
     private async loadScheduleForUpdate(manager: EntityManager, scheduleId: number): Promise<Schedule> {
@@ -323,31 +446,21 @@ export class ScheduleRunner {
         if (!schedule.currentEntryId) {
             return [];
         }
-        const entry = await manager.findOne(ScheduleEntry, {
-            where: { id: schedule.currentEntryId },
-            relations: { match: RUNNER_MATCH_GRAPH },
-        });
-        if (!entry?.match?.active) {
+        const rows: MatchAddressRow[] = await manager.query(ACTIVE_MATCH_OF_ENTRY, [schedule.currentEntryId]);
+        if (rows.length === 0) {
             return [];
         }
-        entry.match.active = false;
-        await manager.save(Match, entry.match);
 
-        return [this.addressOf(entry.match)];
-    }
-
-    private addressOf(match: Match): MatchAddress {
-        const phaseGroup = match.phaseGroup;
-        const phase = phaseGroup?.phase;
-        const division = phase?.division;
-
-        return {
-            tournamentId: division?.tournament?.id,
-            divisionId: division?.id,
-            phaseId: phase?.id,
-            phaseGroupId: phaseGroup?.id,
-            matchId: match.id,
+        const address: MatchAddress = {
+            tournamentId: Number(rows[0].tournamentId),
+            divisionId: Number(rows[0].divisionId),
+            phaseId: Number(rows[0].phaseId),
+            phaseGroupId: Number(rows[0].phaseGroupId),
+            matchId: Number(rows[0].matchId),
         };
+        await manager.update(Match, { id: address.matchId }, { active: false });
+
+        return [address];
     }
 
     private async announce(transition: ScheduleTransition): Promise<void> {

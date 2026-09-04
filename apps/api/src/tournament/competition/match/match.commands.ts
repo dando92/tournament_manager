@@ -233,7 +233,7 @@ export class MatchCommands {
         match.upsertScore(roundId, player, score, this.scoringSystems);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -250,7 +250,7 @@ export class MatchCommands {
         match.upsertPoints(roundId, await this.store.loadPlayer(playerId), points);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -267,7 +267,7 @@ export class MatchCommands {
         match.removeStanding(roundId, playerId);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -280,7 +280,7 @@ export class MatchCommands {
         const tiebreak = match.addTiebreak(song, playerIds.map((playerId) => players.get(playerId)));
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
 
         return tiebreak.id;
@@ -293,7 +293,7 @@ export class MatchCommands {
         match.removeTiebreak(tiebreakId);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -308,7 +308,7 @@ export class MatchCommands {
         match.upsertTiebreakScore(tiebreakId, player, score);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -319,7 +319,7 @@ export class MatchCommands {
         match.upsertTiebreakPoints(tiebreakId, playerId, points);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -330,7 +330,7 @@ export class MatchCommands {
         match.clearTiebreakStanding(tiebreakId, playerId);
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -351,7 +351,7 @@ export class MatchCommands {
         await this.store.save(match);
 
         await this.advancement.advanceFromMatch(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         const startggReport = await this.report(match);
         await this.announce(match, before);
 
@@ -370,7 +370,7 @@ export class MatchCommands {
 
         match.reopen();
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -405,7 +405,7 @@ export class MatchCommands {
         }
 
         await this.store.save(match);
-        await this.controlRoom.recalculateForMatch(match.id);
+        await this.recalculateScheduleIfMoved(match, before);
         await this.announce(match, before);
     }
 
@@ -414,6 +414,30 @@ export class MatchCommands {
         await this.controlRoom.recalculateForMatch(match.id);
         await this.publisher.emitMatchUpdate(match.address);
         await this.publisher.emitPhaseGroupUpdate(match.address);
+    }
+
+    /**
+     * The schedule, recalculated only when its verdict can have moved.
+     *
+     * A recalculation takes a lock on the schedule row and walks it, and it used
+     * to run after every write to a match in one — every percentage typed, every
+     * run a cabinet reports. What the schedule reads of a match is two of the
+     * four things `poolState` states: whether it is completed, and whether it can
+     * be committed as it stands. A write that leaves both where they were cannot
+     * change where the schedule stands, so it does not open the transaction.
+     *
+     * The commands that change rounds, entrants or the pool a match sits in keep
+     * calling `recalculateForMatch` unconditionally, because they move inputs
+     * this comparison does not see: how many rounds the match holds, who plays in
+     * it, and which tournament it belongs to.
+     */
+    private async recalculateScheduleIfMoved(match: MatchAggregate, before: MatchPoolState): Promise<void> {
+        const after = match.poolState;
+        if (after.completed === before.completed && after.awaitingCommit === before.awaitingCommit) {
+            return;
+        }
+
+        await this.controlRoom.recalculateForMatch(match.id);
     }
 
     /**

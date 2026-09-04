@@ -2,7 +2,7 @@ import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as request from "supertest";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 
 import { AppModule } from "../../../src/app.module";
 import { Account } from "@tournament-manager/persistence";
@@ -311,5 +311,64 @@ describe("Control Room (e2e)", () => {
                 },
             ],
         });
+    });
+
+    /**
+     * What a write to a scheduled match costs.
+     *
+     * A cabinet reports several times into a match before it settles, and the
+     * schedule cannot move until it does. `countQueriesOf` watches for the query
+     * that opens a recalculation, and for the hydrated match graph the runner
+     * used to load per entry. See `PerformanceReadiness.md`, batch R.
+     */
+    it("recalculates the schedule only when a write can move its verdict, and loads no match graph when it does", async () => {
+        const countQueriesOf = async (fragment: string, send: () => Promise<unknown>): Promise<number> => {
+            const dataSource = app.get(DataSource);
+            const logger = dataSource.logger;
+            let matched = 0;
+            (dataSource as unknown as { logger: unknown }).logger = {
+                ...logger,
+                logQuery: (query: string) => {
+                    if (query.includes(fragment)) {
+                        matched += 1;
+                    }
+                },
+            };
+
+            try {
+                await send();
+            } finally {
+                (dataSource as unknown as { logger: unknown }).logger = logger;
+            }
+
+            return matched;
+        };
+        const RECALCULATION = 'entry."scheduleId" AS "scheduleId"';
+        const MATCH_GRAPH = '"distinctAlias"."Match_id"';
+
+        /* Two entrants of their own: matches of the tests above are still on
+           cabinets, and a player already playing holds an entry back. */
+        const probed = [await addEntrant("Echo"), await addEntrant("Foxtrot")];
+        const first = await createMatch("Probed", probed);
+        const second = await createMatch("Probed next", probed);
+        const scheduleId = await createSchedule("Probed cabinet", [first.id, second.id]);
+        await request(app.getHttpServer()).post(`/schedules/${scheduleId}/start`).expect(204);
+
+        const current = await readMatch(first.id);
+        const [firstPlayerId, secondPlayerId] = current.entrants.map((entrant) => entrant.participants[0].player.id);
+        const roundId = current.rounds[0].id;
+        const scoreOf = (playerId: number, percentage: number) => () =>
+            request(app.getHttpServer()).put(`/rounds/${roundId}/scores/${playerId}`).send({ percentage, isFailed: false }).expect(204);
+
+        /* One player of two: the match carries evidence and is not settled, so
+           the schedule's verdict cannot have moved and is not asked. */
+        expect(await countQueriesOf(RECALCULATION, scoreOf(firstPlayerId, 99))).toBe(0);
+
+        /* The second settles it and the schedule advances. One match graph is
+           hydrated: the aggregate the write itself loads. The recalculation
+           behind it loads none, where it used to load one per entry. */
+        expect(await countQueriesOf(MATCH_GRAPH, scoreOf(secondPlayerId, 98))).toBe(1);
+        expect((await readMatch(second.id)).active).toBe(true);
+        expect((await readMatch(first.id)).active).toBe(false);
     });
 });

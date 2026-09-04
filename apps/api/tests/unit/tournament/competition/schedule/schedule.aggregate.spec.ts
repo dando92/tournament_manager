@@ -1,7 +1,7 @@
 import { ScheduleEntry, Tournament } from "@tournament-manager/persistence";
 
 import { ScheduleAggregate } from "@tournament/competition/schedule/schedule.aggregate";
-import { evaluateScheduleMatch } from "@tournament/competition/schedule/schedule.eligibility";
+import { evaluateConflicts, evaluateLocalEligibility } from "@tournament/competition/schedule/schedule.eligibility";
 
 describe("ScheduleAggregate", () => {
     function schedule() {
@@ -82,7 +82,7 @@ describe("ScheduleAggregate", () => {
     });
 });
 
-describe("evaluateScheduleMatch", () => {
+describe("schedule eligibility", () => {
     const playable = {
         matchId: 1,
         matchName: "Match 1",
@@ -92,24 +92,31 @@ describe("evaluateScheduleMatch", () => {
         playerIds: [1, 2],
         roundCount: 1,
         requiredEntrantCount: 2,
-        blockingMatchIds: [],
-        blockingPlayerIds: [],
         isCurrentEntry: false,
     };
 
     it("passes settled matches and accepts a playable match", () => {
-        expect(evaluateScheduleMatch(playable)).toEqual({ kind: "eligible" });
-        expect(evaluateScheduleMatch({ ...playable, readyToCommit: true })).toEqual({ kind: "passed" });
-        expect(evaluateScheduleMatch({ ...playable, completed: true })).toEqual({ kind: "passed" });
+        expect(evaluateLocalEligibility(playable)).toEqual({ kind: "eligible" });
+        expect(evaluateLocalEligibility({ ...playable, readyToCommit: true })).toEqual({ kind: "passed" });
+        expect(evaluateLocalEligibility({ ...playable, completed: true })).toEqual({ kind: "passed" });
     });
 
-    it("reports stable entrant and overlap reasons", () => {
-        expect(evaluateScheduleMatch({ ...playable, playerIds: [] })).toMatchObject({ kind: "stale", code: "NO_ENTRANTS" });
-        expect(evaluateScheduleMatch({ ...playable, playerIds: [1] })).toMatchObject({ kind: "stale", code: "NOT_ENOUGH_ENTRANTS" });
-        expect(evaluateScheduleMatch({ ...playable, requiredEntrantCount: 3 })).toMatchObject({ kind: "stale", code: "UNRESOLVED_ENTRANTS" });
-        expect(evaluateScheduleMatch({ ...playable, blockingMatchIds: [9], blockingPlayerIds: [2] })).toMatchObject({
+    it("reports the reasons an entry states about itself", () => {
+        expect(evaluateLocalEligibility({ ...playable, playerIds: [] })).toMatchObject({ kind: "stale", code: "NO_ENTRANTS" });
+        expect(evaluateLocalEligibility({ ...playable, playerIds: [1] })).toMatchObject({ kind: "stale", code: "NOT_ENOUGH_ENTRANTS" });
+        expect(evaluateLocalEligibility({ ...playable, requiredEntrantCount: 3 })).toMatchObject({ kind: "stale", code: "UNRESOLVED_ENTRANTS" });
+        expect(evaluateLocalEligibility({ ...playable, roundCount: 0 })).toMatchObject({ kind: "stale", code: "NO_ROUNDS" });
+        expect(evaluateLocalEligibility({ ...playable, active: true })).toMatchObject({ kind: "stale", code: "MATCH_ALREADY_ACTIVE" });
+    });
+
+    /* The overlap is a question about the tournament rather than about the
+       entry, so it is asked separately and only of a match already playable. */
+    it("holds a playable match while another one has its players", () => {
+        expect(evaluateConflicts(playable, { blockingMatchIds: [], blockingPlayerIds: [] })).toEqual({ kind: "eligible" });
+        expect(evaluateConflicts(playable, { blockingMatchIds: [9], blockingPlayerIds: [2] })).toMatchObject({
             kind: "stale",
             code: "ENTRANTS_ALREADY_ACTIVE",
+            details: { blockingMatchIds: [9], blockingPlayerIds: [2] },
         });
     });
 });
