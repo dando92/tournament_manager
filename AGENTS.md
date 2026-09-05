@@ -94,6 +94,7 @@ How the system works, and what was decided:
 - `mockups/schedule-restructure/` — Approved reference views behind the schedule board and Control Room
 - `mockups/structure-builder/` — Approved reference views behind the Structure page
 - `mockups/page-notice/` — Approved reference views behind the page notice slot and the five destinations a message can have
+- `mockups/stats-page/` — Proposed views for the statistics page: two directions on how much colour it may carry, and what each would cost
 
 Operations:
 
