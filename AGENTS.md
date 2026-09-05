@@ -106,6 +106,7 @@ Operations:
 Open work:
 
 - `FunctionalQuestions.md` — The functional backlog: deferred questions, and the answered ones with the decision that closed them
+- `SongCatalogue.md` — Approved plan: splitting the one song entity into pack, song and chart, with a global catalogue and a per-tournament pool
 - `PerformanceReadiness.md` — Active plan: write path, live-update fan-out, load measurement, and the schema change to make before production
 - `LobbyManagerSeparation.md` — Lobby manager and community event hub integration: design intent, nothing implemented
 
