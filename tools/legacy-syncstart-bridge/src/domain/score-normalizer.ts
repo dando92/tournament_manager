@@ -1,4 +1,5 @@
 import type { LegacyScoreMessage } from "../legacy/score-message";
+import { hasJudgedItem, toJudgments } from "./judgment-mapper";
 
 /**
  * The one number this bridge exists to carry.
@@ -25,6 +26,18 @@ export function legacyPercentage(message: LegacyScoreMessage): number {
   )
     return 0;
   return clamp((message.actualDancePoints / message.possibleDancePoints) * 100);
+}
+
+/**
+ * A skipped song: the cabinet still writes a final score, with every counter
+ * and the percentage at zero. A run that ended at zero with something judged —
+ * a missed arrow, a hit mine, a touched hold — is a real run and not this.
+ */
+export function isEphemeralScore(message: LegacyScoreMessage): boolean {
+  return (
+    legacyPercentage(message) === 0 &&
+    !hasJudgedItem(toJudgments(message), message)
+  );
 }
 
 function clamp(percentage: number): number {

@@ -208,6 +208,43 @@ describe("LegacyBridgeLobby", () => {
     ]);
   });
 
+  it("stops waiting for a player once their skipped song is reported", () => {
+    const { lobby, published } = lobbyUnderTest();
+    const aliceFinal = legacyPayload(alice);
+    const bobSkip = emptyLegacyPayload(bob);
+
+    lobby.handleScore(CABINET_A, parsed(emptyLegacyPayload(bob)));
+    lobby.handleFinalScore(CABINET_A, parsed(aliceFinal), aliceFinal);
+    jest.advanceTimersByTime(config.finalGraceMs + 1);
+    const beforeSkip = published.length;
+
+    lobby.handleFinalScore(CABINET_A, parsed(bobSkip), bobSkip);
+    jest.advanceTimersByTime(config.finalGraceMs + 1);
+
+    expect(screens(published.slice(beforeSkip))).toEqual([
+      "ScreenGameplay",
+      "ScreenEvaluation",
+    ]);
+    expect(published.at(-1)?.players).toEqual([
+      expect.objectContaining({ playerId: "P1", profileName: "Alice" }),
+    ]);
+  });
+
+  it("completes nothing when the song was skipped on every side", () => {
+    const { lobby, published } = lobbyUnderTest();
+    const aliceSkip = emptyLegacyPayload(alice);
+    const bobSkip = emptyLegacyPayload(bob);
+
+    lobby.handleSong(CABINET_A, "5guys1pack/Earthquake");
+    const selected = published.length;
+
+    lobby.handleFinalScore(CABINET_A, parsed(aliceSkip), aliceSkip);
+    lobby.handleFinalScore(CABINET_A, parsed(bobSkip), bobSkip);
+    jest.advanceTimersByTime(config.finalTimeoutMs + 1);
+
+    expect(published).toHaveLength(selected);
+  });
+
   it("ignores a repeated final datagram", () => {
     const { lobby, published } = lobbyUnderTest();
     const payload = legacyPayload(alice);

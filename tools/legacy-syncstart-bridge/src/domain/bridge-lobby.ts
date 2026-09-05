@@ -2,7 +2,7 @@ import type { BridgeConfig } from "../config";
 import type { LegacyScoreMessage } from "../legacy/score-message";
 import type { Logger } from "../observability/logger";
 import { hasJudgedItem, toJudgments } from "./judgment-mapper";
-import { legacyPercentage } from "./score-normalizer";
+import { isEphemeralScore, legacyPercentage } from "./score-normalizer";
 import type {
   BridgeLobbyView,
   SyncStartJudgments,
@@ -168,6 +168,11 @@ export class LegacyBridgeLobby implements BridgeLobbyView {
     const machine = this.machineFor(address);
     if (!machine) return;
 
+    if (isEphemeralScore(message)) {
+      this.discardEphemeral(machine, message);
+      return;
+    }
+
     const existing = machine.players.get(playerIdOf(message));
     if (machine.song === message.song && existing?.finalPayload === payload) {
       this.logger.debug("Ignoring repeated final score", {
@@ -183,6 +188,34 @@ export class LegacyBridgeLobby implements BridgeLobbyView {
 
     this.upsert(machine, message, payload);
     this.scheduleFlush();
+  }
+
+  /**
+   * A skipped song leaves its player out of the run entirely, and a completion
+   * the room is already waiting on stops waiting for them.
+   */
+  private discardEphemeral(
+    machine: Machine,
+    message: LegacyScoreMessage,
+  ): void {
+    this.logger.info("Ignoring the score of a skipped song", {
+      machine: machine.address,
+      song: message.song,
+      player: message.playerName,
+    });
+
+    const left =
+      this.isInSession(machine) &&
+      machine.song === message.song &&
+      machine.players.delete(playerIdOf(message));
+    if (!left) {
+      return;
+    }
+
+    if (this.flushTimer) {
+      this.scheduleFlush();
+    }
+    this.publish("ScreenGameplay");
   }
 
   /** Stops the pending timers so the process can exit. */

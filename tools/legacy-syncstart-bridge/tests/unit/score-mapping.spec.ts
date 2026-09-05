@@ -1,5 +1,8 @@
 import { hasJudgedItem, toJudgments } from "../../src/domain/judgment-mapper";
-import { legacyPercentage } from "../../src/domain/score-normalizer";
+import {
+  isEphemeralScore,
+  legacyPercentage,
+} from "../../src/domain/score-normalizer";
 import {
   parseLegacyScoreMessage,
   type LegacyScoreMessage,
@@ -100,5 +103,34 @@ describe("hasJudgedItem", () => {
 
     expect(hasJudgedItem(toJudgments(stepped), stepped)).toBe(true);
     expect(hasJudgedItem(toJudgments(mined), mined)).toBe(true);
+  });
+});
+
+describe("isEphemeralScore", () => {
+  it("is true for the final score of a song that was skipped", () => {
+    const skipped = parseLegacyScoreMessage(emptyLegacyPayload());
+    if (!skipped) throw new Error("fixture payload must parse");
+
+    expect(isEphemeralScore(skipped)).toBe(true);
+  });
+
+  it("is false for a run that was judged, however low it scored", () => {
+    const missed = message({
+      formattedScore: "0.00",
+      actualDancePoints: 0,
+      white: 0,
+      fantasticsWithoutWhite: 0,
+      w2: 0,
+      w3: 0,
+      w4: 0,
+      w5: 0,
+      miss: 40,
+      avoidMine: 0,
+      letGo: 0,
+      held: 0,
+    });
+
+    expect(isEphemeralScore(missed)).toBe(false);
+    expect(isEphemeralScore(message())).toBe(false);
   });
 });
