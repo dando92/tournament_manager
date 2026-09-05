@@ -16,8 +16,10 @@ export default function SongsList({
     packFilter,
     songSearch,
     packOptions,
+    expandedPacks,
     setPackFilter,
     setSongSearch,
+    togglePack,
     handleDeleteSong,
     handleDeletePack,
   } = useSongsList({ tournamentId });
@@ -36,6 +38,8 @@ export default function SongsList({
         packFilter={packFilter}
         songSearch={songSearch}
         canEdit={canEdit}
+        expandedPacks={expandedPacks}
+        onTogglePack={togglePack}
         onDelete={handleDeleteSong}
         onDeletePack={handleDeletePack}
       />

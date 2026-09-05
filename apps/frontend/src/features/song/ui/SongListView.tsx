@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Song } from "@/features/song/model/types";
 import DeleteConfirmButton from "@/shared/components/ui/DeleteConfirmButton";
 import SongRow from "./SongRow";
@@ -8,11 +10,16 @@ type Props = {
   packFilter: string;
   songSearch: string;
   canEdit: boolean;
+  expandedPacks: ReadonlySet<string>;
+  onTogglePack: (pack: string) => void;
   onDelete: (id: number) => void;
   onDeletePack: (pack: string) => void;
 };
 
-export default function SongListView({ songs, packFilter, songSearch, canEdit, onDelete, onDeletePack }: Props) {
+/* A pack opens only when somebody opens it, except while the toolbar narrows the
+   list: a search answering with nothing but pack headers reads as a search that
+   found nothing. */
+export default function SongListView({ songs, packFilter, songSearch, canEdit, expandedPacks, onTogglePack, onDelete, onDeletePack }: Props) {
   const filtered = useMemo(() => {
     const q = songSearch.toLowerCase();
     return songs
@@ -45,36 +52,58 @@ export default function SongListView({ songs, packFilter, songSearch, canEdit, o
     );
   }
 
+  const narrowed = packFilter !== "" || songSearch.trim() !== "";
+
   return (
     <div className="flex flex-col gap-3">
-      {grouped.map(([pack, packSongs]) => (
-        <div key={pack} className="rounded-lg border border-ui-border shadow-sm overflow-hidden bg-ui-surface">
-          <div className="flex items-center gap-2 border-b border-ui-border bg-ui-raised px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute">
-            <span className="flex-1 truncate">{pack}</span>
-            <span className="font-normal opacity-70 shrink-0">
-              {packSongs.length} song{packSongs.length !== 1 ? "s" : ""}
-            </span>
-            {canEdit && (
-              <DeleteConfirmButton
-                onConfirm={() => onDeletePack(pack)}
-                className="shrink-0 ml-1"
-                iconClassName="w-3"
-                title={`Delete pack "${pack}"`}
-                confirmMessage={`Delete pack "${pack}" and all its songs?`}
-              />
-            )}
-          </div>
+      {grouped.map(([pack, packSongs]) => {
+        const open = narrowed || expandedPacks.has(pack);
 
-          {packSongs.map((song) => (
-            <SongRow
-              key={song.id}
-              song={song}
-              canEdit={canEdit}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
-      ))}
+        return (
+          <div key={pack} className="rounded-lg border border-ui-border shadow-sm overflow-hidden bg-ui-surface">
+            <div
+              className={`flex items-center gap-2 bg-ui-raised px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-ui-text-mute ${
+                open ? "border-b border-ui-border" : ""
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onTogglePack(pack)}
+                aria-expanded={open}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left hover:text-ui-text transition-colors"
+              >
+                <FontAwesomeIcon
+                  icon={faChevronRight}
+                  className={`w-2.5 shrink-0 text-[10px] transition-transform ${open ? "rotate-90" : ""}`}
+                />
+                <span className="flex-1 truncate">{pack}</span>
+                <span className="font-normal opacity-70 shrink-0">
+                  {packSongs.length} song{packSongs.length !== 1 ? "s" : ""}
+                </span>
+              </button>
+              {canEdit && (
+                <DeleteConfirmButton
+                  onConfirm={() => onDeletePack(pack)}
+                  className="shrink-0 ml-1"
+                  iconClassName="w-3"
+                  title={`Delete pack "${pack}"`}
+                  confirmMessage={`Delete pack "${pack}" and all its songs?`}
+                />
+              )}
+            </div>
+
+            {open &&
+              packSongs.map((song) => (
+                <SongRow
+                  key={song.id}
+                  song={song}
+                  canEdit={canEdit}
+                  onDelete={onDelete}
+                />
+              ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
