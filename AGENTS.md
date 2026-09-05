@@ -86,6 +86,7 @@ How the system works, and what was decided:
 - `Design.md` — Design system and design decisions
 - `Schedule.md` — Schedules: lifecycle, runner, eligibility, persistence, timing, API surface, and the two pages that read them
 - `Scoring.md` — Rounds, standings and scores, the scoring strategies, and the deferred mixed-round design
+- `Stats.md` — The statistics page: how a final placement is read off the advancement graph, and what each section measures
 - `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
 - `AdvancementRuleEditor.md` — Advancement rule editor and deferred quick-rule mode
 - `SyncStart.md` — SyncStart protocol package and session ownership
