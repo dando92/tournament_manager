@@ -63,7 +63,7 @@ export default function MainLayout() {
         tournamentName={tournamentName}
         controls={canEdit}
       >
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-[100dvh] overflow-hidden">
           <ResizableSidebar>
             <Sidebar />
           </ResizableSidebar>

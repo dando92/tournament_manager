@@ -87,7 +87,7 @@ export default function Sidebar({
         <HeaderButton icon={faMagnifyingGlass} title="Find a tournament" onClick={() => setSearchOpen(true)} />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
         <TournamentTree onNavigate={onNavigate} />
       </div>
 
@@ -134,7 +134,7 @@ function HeaderButton({ icon, title, onClick }: { icon: IconDefinition; title: s
       title={title}
       aria-label={title}
       onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded text-xs text-ui-text-mute transition-colors hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+      className="flex h-9 w-9 items-center justify-center rounded text-sm text-ui-text-mute transition-colors md:h-7 md:w-7 md:text-xs hover:bg-ui-raised hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
     >
       <FontAwesomeIcon icon={icon} />
     </button>

@@ -31,7 +31,7 @@ export function MobileBottomNav() {
   return (
     <>
       <SearchTournamentModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-14 border-t border-ui-border bg-ui-surface md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-ui-border bg-ui-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavButton
           icon={faListUl}
           label="Browse"

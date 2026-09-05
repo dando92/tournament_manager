@@ -389,6 +389,7 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
                                   tree.toggleNode(divisionKey, deep);
                                   go(divisionPath(tournament.id, division.id));
                                 }}
+                                onToggle={() => tree.toggleNode(divisionKey, false)}
                                 onOpenMenu={
                                   controls
                                     ? (x, y) => openMenu(x, y, division.name, divisionMenu(division.id, division.name))
@@ -431,6 +432,7 @@ export default function TournamentTree({ onNavigate }: { onNavigate?: () => void
                                             if (poolsShown) tree.toggleNode(phaseKey, deep);
                                             go(phasePath(tournament.id, division.id, phase.id));
                                           }}
+                                          onToggle={poolsShown ? () => tree.toggleNode(phaseKey, false) : undefined}
                                           onOpenMenu={
                                             controls
                                               ? (x, y) => openMenu(x, y, phase.name, phaseMenu(division.id, phase))
