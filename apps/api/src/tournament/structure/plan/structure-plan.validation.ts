@@ -68,6 +68,12 @@ function validateNode(node: PlanNode, byLocalId: Map<string, PlanNode>): string[
         errors.push(`${node.localId} both creates and names an existing row.`);
     }
 
+    /* Only a match is played, so only a match has people in it and songs to
+       play. A pool carrying either is a plan that means something else. */
+    if (node.kind !== 'match' && (node.entrantRowIds || node.songIds)) {
+        errors.push(`${node.localId} is a ${node.kind} and cannot hold players or songs.`);
+    }
+
     const expectedParent = PARENT_OF[node.kind];
     if (!node.parentLocalId) {
         /* A division hangs off the tournament, and so does a participant, which

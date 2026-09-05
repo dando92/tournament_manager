@@ -70,6 +70,16 @@ export type PlanNode = {
     scoringSystem?: string | null;
     /** Entrants seated in a match, by their node's local id, in slot order. */
     entrantLocalIds?: string[];
+    /**
+     * Entrants seated in a match, by the row they already are, in slot order.
+     *
+     * The local-id form above is for a producer that brings its own people. A
+     * builder seats the ones the division already has, and naming the rows is
+     * what lets it do that without inventing a node per person.
+     */
+    entrantRowIds?: number[];
+    /** Songs a match is played on, by row, added to the rounds it already has. */
+    songIds?: number[];
     /** The participants an entrant is made of, by their node's local id. */
     participantLocalIds?: string[];
     /** A seeding number an entrant arrives with. */

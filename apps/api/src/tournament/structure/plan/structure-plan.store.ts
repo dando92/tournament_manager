@@ -4,12 +4,15 @@ import { isScoringSystemType } from '@tournament-manager/scoring';
 import {
     AdvancementRule,
     Division,
+    Entrant,
     ExternalMapping,
     type ExternalMappingExternalType,
     type ExternalMappingLocalType,
     Match,
     Phase,
     PhaseGroup,
+    Round,
+    Song,
     Tournament,
 } from '@tournament-manager/persistence';
 import { DataSource, EntityManager, type EntityTarget, In } from 'typeorm';
@@ -97,6 +100,7 @@ export class StructurePlanStore {
             await this.removeRows(manager, removed, rowIdByLocalId);
             await this.clearSlots(manager, plan, rowIdByLocalId);
             await this.writeRoutes(manager, plan, rowIdByLocalId);
+            await this.writeMatchContents(manager, ordered, rowIdByLocalId);
             await this.writeMappings(manager, created, rowIdByLocalId);
 
             for (const divisionId of divisionIds) {
@@ -255,6 +259,81 @@ export class StructurePlanStore {
         }
 
         throw new BadRequestException(`A ${node.kind} cannot be written from a structure plan yet.`);
+    }
+
+    /**
+     * Who plays a match, and on what.
+     *
+     * Seating and songs are not structure, and they are here for the same
+     * reason the routes are: a builder that lays out a bracket and fills its
+     * first round is doing one thing, and splitting it into a plan plus a
+     * handful of match calls would leave a tournament half made whenever one of
+     * them failed. A node that says nothing about either leaves both alone.
+     */
+    private async writeMatchContents(manager: EntityManager, nodes: PlanNode[], rowIdByLocalId: Record<string, number>): Promise<void> {
+        for (const node of nodes) {
+            if (node.kind !== 'match' || node.action === 'skip' || node.action === 'remove') {
+                continue;
+            }
+
+            const matchId = rowIdByLocalId[node.localId];
+            if (!matchId) {
+                continue;
+            }
+            if (node.entrantRowIds) {
+                await this.seat(manager, matchId, node);
+            }
+            if (node.songIds?.length) {
+                await this.addRounds(manager, matchId, node.songIds);
+            }
+        }
+    }
+
+    /**
+     * The people in a match, as the plan leaves it.
+     *
+     * The list replaces whoever was there, the way the match command does, and
+     * every one of them has to be an entrant of the division the match is in —
+     * a plan arrives from a browser, and seating somebody else's player would
+     * otherwise be one field away.
+     */
+    private async seat(manager: EntityManager, matchId: number, node: PlanNode): Promise<void> {
+        const match = await manager.findOne(Match, { where: { id: matchId }, relations: { phaseGroup: { phase: { division: true } } } });
+        const divisionId = match?.phaseGroup?.phase?.division?.id;
+        if (!match || !divisionId) {
+            throw new NotFoundException(`Match ${matchId}, which ${node.localId} seats, does not exist`);
+        }
+
+        const ids = [...new Set(node.entrantRowIds!)];
+        const entrants = ids.length === 0 ? [] : await manager.find(Entrant, { where: { id: In(ids) }, relations: { division: true } });
+        const foreign = entrants.filter((entrant) => entrant.division?.id !== divisionId);
+        if (entrants.length !== ids.length || foreign.length > 0) {
+            throw new BadRequestException(`${node.localId} seats somebody who is not an entrant of this division`);
+        }
+
+        match.entrants = entrants;
+        await manager.save(Match, match);
+    }
+
+    /**
+     * A round per song the match does not already have. A song it does have is
+     * not an error and not a second round: the unique index says so, and a
+     * builder asking twice means the same thing both times.
+     */
+    private async addRounds(manager: EntityManager, matchId: number, songIds: number[]): Promise<void> {
+        const wanted = [...new Set(songIds)];
+        const songs = await manager.find(Song, { where: { id: In(wanted) } });
+        if (songs.length !== wanted.length) {
+            throw new NotFoundException(`A song a plan puts in match ${matchId} does not exist`);
+        }
+
+        const existing = await manager.find(Round, { where: { match: { id: matchId } }, relations: { song: true } });
+        const played = new Set(existing.map((round) => round.song?.id).filter((id): id is number => id !== undefined));
+        const match = await manager.findOneBy(Match, { id: matchId });
+
+        for (const song of songs.filter((candidate) => !played.has(candidate.id))) {
+            await manager.save(Round, manager.create(Round, { match: match!, song, standings: [] }));
+        }
     }
 
     /** Which division a node moved, so its structure version follows the write. */

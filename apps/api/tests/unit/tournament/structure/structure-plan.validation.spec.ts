@@ -26,6 +26,19 @@ describe('validateStructurePlan', () => {
         expect(validateStructurePlan(plan([division, phase, pool, match]))).toEqual([]);
     });
 
+    it('accepts a match that carries the people in it and the songs it is played on', () => {
+        const seated = node({ localId: 'm', kind: 'match', parentLocalId: 'g', name: 'Round 1', entrantRowIds: [4, 5], songIds: [7] });
+
+        expect(validateStructurePlan(plan([division, phase, pool, seated]))).toEqual([]);
+    });
+
+    it('refuses players or songs on anything but a match', () => {
+        const seated = node({ localId: 'g', kind: 'phaseGroup', parentLocalId: 'p', name: 'Pool A', entrantRowIds: [4] });
+        const errors = validateStructurePlan(plan([division, phase, seated]));
+
+        expect(errors).toEqual([expect.stringContaining('cannot hold players or songs')]);
+    });
+
     it('refuses two nodes under one local id', () => {
         const errors = validateStructurePlan(plan([division, node({ localId: 'd', kind: 'division', name: 'Again' })]));
 
