@@ -67,6 +67,8 @@ import { ScheduleBootstrap } from './competition/schedule/schedule.bootstrap';
 import { ScheduleMutationGuard } from './competition/schedule/schedule-mutation.guard';
 import { AdvancementRollbackGuard } from './structure/advancement/advancement-rollback.guard';
 import { TiebreakController } from './competition/match/tiebreak.controller';
+import { StatsQueries } from './stats/stats.queries';
+import { TournamentStatsController } from './stats/stats.controller';
 
 @Module({
     imports: [
@@ -109,6 +111,7 @@ import { TiebreakController } from './competition/match/tiebreak.controller';
         SongQueries,
         ParticipantQueries,
         StandingsQueries,
+        StatsQueries,
         TreeQueries,
         TournamentQueries,
         TournamentCommands,
@@ -143,6 +146,7 @@ import { TiebreakController } from './competition/match/tiebreak.controller';
         TiebreakController,
         BracketController,
         ScheduleController,
+        TournamentStatsController,
     ],
 })
 export class TournamentModule {}

@@ -6,6 +6,7 @@ export * from './projections';
 export * from './registration';
 export * from './realtime';
 export * from './startgg-import';
+export * from './stats';
 export * from './structure';
 export * from './syncstart';
 export * from './tournament';
