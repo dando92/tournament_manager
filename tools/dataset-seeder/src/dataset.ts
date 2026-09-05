@@ -417,21 +417,27 @@ export class DatasetBuilder {
     /**
      * The phases, pools, matches and advancement of one division.
      *
-     * Every pool chains its matches — the winner of one seats the next — and its
-     * last match feeds a pool of the following phase. Those rules are not
-     * decoration: whether a tied match is merely tied or is blocked on a
+     * Every pool chains its matches — the winner of one seats the next — and the
+     * last match of each pool feeds a pool of the following phase. Those rules
+     * are not decoration: whether a tied match is merely tied or is blocked on a
      * tiebreak depends on where its placements would send people, so a dataset
-     * without advancement can never hold a `tiebreak_required` match.
+     * without advancement can never hold a `tiebreak_required` match. Sending a
+     * pool's last match into that same pool, which is what this did before, is a
+     * loop rather than a phase, and a reader that walks the rules cannot tell
+     * how far from the end anything sits.
      */
     private buildCompetition(divisionId: number, seats: EntrantSeat[], songs: number[]): PlannedMatch[] {
         const planned: PlannedMatch[] = [];
-        let previousPools: number[] | null = null;
+        let previousExits: number[] = [];
 
         for (let phaseIndex = 0; phaseIndex < this.profile.phasesPerDivision; phaseIndex += 1) {
             const phaseId = this.ids.phase();
             this.rows.phase.push([phaseId, phaseIndex === 0 ? 'Pools' : `Phase ${phaseIndex + 1}`, divisionId]);
 
+            const hasLaterPhase = phaseIndex < this.profile.phasesPerDivision - 1;
             const pools: number[] = [];
+            const exits: number[] = [];
+
             for (let poolIndex = 0; poolIndex < this.profile.poolsPerPhase; poolIndex += 1) {
                 const phaseGroupId = this.ids.phase_group();
                 const identifier = String.fromCharCode(65 + (poolIndex % 26));
@@ -447,9 +453,17 @@ export class DatasetBuilder {
 
                 const poolSeats = this.poolSeats(seats, poolIndex);
                 this.seatPool(phaseGroupId, poolSeats);
-                planned.push(...this.buildPoolMatches(phaseGroupId, identifier, poolSeats, songs, poolIndex, previousPools));
+                const poolMatches = this.buildPoolMatches(phaseGroupId, identifier, poolSeats, songs, hasLaterPhase);
+                planned.push(...poolMatches);
+                if (poolMatches.length > 0) {
+                    exits.push(poolMatches[poolMatches.length - 1].matchId);
+                }
             }
-            previousPools = pools;
+
+            previousExits.forEach((matchId, index) => {
+                this.addRule(matchId, 1, 'phase_group', pools[index % pools.length], index + 1);
+            });
+            previousExits = exits;
         }
 
         return planned;
@@ -479,14 +493,7 @@ export class DatasetBuilder {
         });
     }
 
-    private buildPoolMatches(
-        phaseGroupId: number,
-        identifier: string,
-        seats: EntrantSeat[],
-        songs: number[],
-        poolIndex: number,
-        previousPools: number[] | null,
-    ): PlannedMatch[] {
+    private buildPoolMatches(phaseGroupId: number, identifier: string, seats: EntrantSeat[], songs: number[], hasLaterPhase: boolean): PlannedMatch[] {
         const planned: PlannedMatch[] = [];
         const last = this.profile.matchesPerPool - 1;
 
@@ -499,7 +506,7 @@ export class DatasetBuilder {
              * instead. Writing `tiebreak_required` there would be a state the
              * aggregate does not agree with.
              */
-            const hasOutgoingRule = index < last || previousPools !== null;
+            const hasOutgoingRule = index < last || hasLaterPhase;
             const drawn = this.random.weighted(INTENT_MIX);
             const intent = drawn === 'tiebreak_required' && !hasOutgoingRule ? 'ready' : drawn;
             const size = intent === 'tiebreak_required' ? 2 : this.random.weighted([[2, 70] as const, [3, 25] as const, [4, 5] as const]);
@@ -510,9 +517,6 @@ export class DatasetBuilder {
 
         for (let index = 0; index < planned.length - 1; index += 1) {
             this.addRule(planned[index].matchId, 1, 'match', planned[index + 1].matchId, 1);
-        }
-        if (planned.length > 0 && previousPools) {
-            this.addRule(planned[planned.length - 1].matchId, 1, 'phase_group', phaseGroupId, poolIndex + 1);
         }
 
         return planned;
