@@ -1,18 +1,22 @@
 import type { DivisionPlacementRowDto } from "@tournament-manager/contracts";
 
-import { percentage, seedSwing } from "@/features/stats/model/statsFormat";
+import { seedSwing } from "@/features/stats/model/statsFormat";
 import Flag from "@/features/stats/ui/Flag";
-import GradeMark from "@/features/stats/ui/GradeMark";
 import Medal from "@/features/stats/ui/Medal";
+import ScoreWithGrade from "@/features/stats/ui/ScoreWithGrade";
 import SeedSwing from "@/features/stats/ui/SeedSwing";
 
 /**
  * The top of a finished division, drawn rather than tabulated.
  *
- * Three cards for the three places, the first at a different size because the
- * winner is not the second row of a list. A place several people share is one
- * card holding all of them, which is the honest shape for a band the tournament
- * never separated — a table row can only say that in small print.
+ * Three cards of one size and one shape. They were three sizes at first, which
+ * read well at full width and fell apart the moment the row wrapped: a hero card
+ * beside two small ones is a composition, and a hero card above two small ones
+ * is a mistake. Equal cards wrap into a column without anything to explain.
+ *
+ * A place several people share is one card holding all of them, which is the
+ * honest shape for a band the tournament never separated — a table row can only
+ * say that in small print.
  */
 export default function Podium({ rows }: { rows: DivisionPlacementRowDto[] }) {
   const bands = topBands(rows);
@@ -21,8 +25,10 @@ export default function Podium({ rows }: { rows: DivisionPlacementRowDto[] }) {
   }
 
   return (
-    <div className="grid items-end gap-3 md:grid-cols-[1.18fr_1fr_1fr]">
-      {bands.map((band, index) => (index === 0 ? <WinnerCard key={band[0].entrantId} row={band[0]} /> : <BandCard key={band[0].entrantId} band={band} />))}
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {bands.map((band) => (
+        <PodiumCard key={band[0].entrantId} band={band} />
+      ))}
     </div>
   );
 }
@@ -46,84 +52,75 @@ function topBands(rows: DivisionPlacementRowDto[]): DivisionPlacementRowDto[][] 
   return bands;
 }
 
+const TITLE: Record<number, string> = { 1: "Winner", 2: "Second", 3: "Third" };
+
 function nameOf(row: DivisionPlacementRowDto): string {
   return row.playerName ?? row.entrantName;
 }
 
-function WinnerCard({ row }: { row: DivisionPlacementRowDto }) {
-  const swing = seedSwing(row);
-
-  return (
-    <div className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-ui-border bg-ui-surface p-4 shadow-[0_3px_10px_0_rgb(var(--ui-shadow)/var(--ui-shadow-alpha))]">
-      <span className="pointer-events-none absolute -right-6 -top-5 text-medal-gold/10">
-        <Medal placement={1} size={150} />
-      </span>
-      <div className="relative flex items-center gap-2">
-        <Medal placement={1} size={26} />
-        <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-medal-gold">Winner</span>
-      </div>
-      <div className="relative flex items-center gap-2.5">
-        <Flag nationality={row.nationality} />
-        <span className="text-3xl font-extrabold leading-none tracking-tight text-ui-text">{nameOf(row)}</span>
-      </div>
-      <div className="relative flex items-center gap-4 text-ui-text-soft">
-        <Figure label="Average">
-          <span className="text-xl font-bold tabular-nums text-ui-text">{percentage(row.averagePercentage)}</span>
-          <GradeMark percentage={row.averagePercentage} />
-        </Figure>
-        <span className="self-stretch border-l border-ui-separator" />
-        <Figure label="Reached">
-          <span className="text-sm font-semibold text-ui-text">{row.exitName}</span>
-        </Figure>
-        {row.seedNum !== null ? (
-          <>
-            <span className="self-stretch border-l border-ui-separator" />
-            <Figure label="Seed">
-              <span className="text-xl font-bold tabular-nums text-ui-text">{row.seedNum}</span>
-              <SeedSwing swing={swing} />
-            </Figure>
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function BandCard({ band }: { band: DivisionPlacementRowDto[] }) {
+function PodiumCard({ band }: { band: DivisionPlacementRowDto[] }) {
   const placement = band[0].placement;
   const shared = band.length > 1;
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-2xl border border-ui-border bg-ui-surface p-4 shadow-[0_2px_6px_0_rgb(var(--ui-shadow)/var(--ui-shadow-alpha))]">
-      <div className="flex items-center gap-2">
+    <div className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-ui-border bg-ui-surface p-4 shadow-[0_2px_8px_0_rgb(var(--ui-shadow)/var(--ui-shadow-alpha))]">
+      <span className="pointer-events-none absolute -right-4 -top-3 opacity-[0.07]" aria-hidden="true">
+        <Medal placement={placement} className="h-20 w-20 sm:h-24 sm:w-24" />
+      </span>
+      <div className="relative flex items-center gap-2">
         <Medal placement={placement} size={20} />
         <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-ui-text-mute">
-          {placement === 2 ? "Second" : "Third"}
+          {TITLE[placement]}
           {shared ? " — shared" : ""}
         </span>
       </div>
-      <div className="flex flex-col gap-1.5">
-        {band.map((row) => (
-          <div key={row.entrantId} className="flex items-center gap-2.5">
-            <Flag nationality={row.nationality} />
-            <span className={`truncate font-bold text-ui-text ${shared ? "text-base" : "text-2xl leading-tight tracking-tight"}`}>{nameOf(row)}</span>
-            <span className="ml-auto flex shrink-0 items-center gap-2">
-              <span className="text-sm font-semibold tabular-nums text-ui-text-soft">{percentage(row.averagePercentage)}</span>
-              <GradeMark percentage={row.averagePercentage} />
-            </span>
+
+      {shared ? (
+        <div className="relative flex flex-col gap-2">
+          {band.map((row) => (
+            <div key={row.entrantId} className="flex items-center gap-2.5">
+              <Flag nationality={row.nationality} />
+              <span className="min-w-0 truncate text-base font-bold text-ui-text">{nameOf(row)}</span>
+              <span className="ml-auto shrink-0 text-sm">
+                <ScoreWithGrade value={row.averagePercentage} />
+              </span>
+            </div>
+          ))}
+          <p className="text-[11px] leading-snug text-ui-text-mute">Nothing played separated them.</p>
+        </div>
+      ) : (
+        <>
+          <div className="relative flex min-w-0 items-center gap-2.5">
+            <Flag nationality={band[0].nationality} />
+            <span className="truncate text-2xl font-extrabold leading-tight tracking-tight text-ui-text">{nameOf(band[0])}</span>
           </div>
-        ))}
-      </div>
-      {shared ? <p className="text-[11px] leading-snug text-ui-text-mute">Nothing played separated them.</p> : null}
+          <div className="relative mt-auto flex flex-wrap items-end gap-x-4 gap-y-2">
+            <Figure label="Average">
+              <span className="text-base">
+                <ScoreWithGrade value={band[0].averagePercentage} />
+              </span>
+            </Figure>
+            <Figure label="Reached">
+              <span className="truncate text-sm font-semibold text-ui-text">{band[0].exitName}</span>
+            </Figure>
+            {band[0].seedNum !== null ? (
+              <Figure label="Seed">
+                <span className="text-base font-bold tabular-nums text-ui-text">{band[0].seedNum}</span>
+                <SeedSwing swing={seedSwing(band[0])} />
+              </Figure>
+            ) : null}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function Figure({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-0.5">
       <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-ui-text-mute">{label}</span>
-      <span className="flex items-baseline gap-1.5">{children}</span>
+      <span className="flex min-w-0 items-baseline gap-1.5">{children}</span>
     </div>
   );
 }

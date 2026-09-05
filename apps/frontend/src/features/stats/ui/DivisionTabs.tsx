@@ -1,37 +1,31 @@
 import type { DivisionPlacementsDto } from "@tournament-manager/contracts";
 
-import StatusIcon from "@/shared/components/ui/StatusIcon";
-import type { Status } from "@/shared/components/ui/status";
-
 /**
- * Which division the placements are being read for.
+ * Which division's final order is being read.
  *
- * Tabs rather than a dropdown, because which divisions have finished is itself
- * information: the glyph says whether there is a final order behind the tab
- * before anybody opens it. A division nobody has played is idle, one still being
- * played is running, and one that is finished carries the check.
+ * Only the finished ones are listed. A division still being played has no order
+ * to show, and a tab that opens onto "this is still under way" is a tab that
+ * wasted somebody's click — a row of eight of them around the one division that
+ * has an answer is worse than no row at all. How many are still going is said
+ * once, at the end, as context rather than as eight destinations.
  */
-function divisionStatus(division: DivisionPlacementsDto): Status {
-  if (division.complete) {
-    return "done";
-  }
-
-  return division.rows.length > 0 ? "running" : "idle";
-}
-
 export default function DivisionTabs({
   divisions,
+  unfinished,
   selectedId,
   onSelect,
 }: {
   divisions: DivisionPlacementsDto[];
+  unfinished: number;
   selectedId: number | null;
   onSelect: (divisionId: number) => void;
 }) {
-  const finished = divisions.filter((division) => division.complete).length;
+  if (divisions.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto border-b border-ui-border pb-0.5">
+    <div className="flex flex-wrap items-center gap-1 border-b border-ui-border pb-1">
       {divisions.map((division) => {
         const selected = division.divisionId === selectedId;
 
@@ -40,21 +34,23 @@ export default function DivisionTabs({
             key={division.divisionId}
             type="button"
             onClick={() => onSelect(division.divisionId)}
-            className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+            aria-pressed={selected}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
               selected
                 ? "border-ui-border bg-ui-surface text-ui-text shadow-[inset_0_-3px_0_0_rgb(var(--ui-accent))]"
                 : "border-transparent text-ui-text-mute hover:text-ui-text"
             }`}
-            aria-pressed={selected}
           >
-            <StatusIcon status={divisionStatus(division)} className="h-3 w-3" />
             {division.divisionName}
+            <span className="text-xs font-normal tabular-nums text-ui-text-mute">{division.rows.length}</span>
           </button>
         );
       })}
-      <span className="ml-auto shrink-0 pl-3 pr-0.5 text-xs text-ui-text-mute">
-        {finished} of {divisions.length} division{divisions.length === 1 ? "" : "s"} finished
-      </span>
+      {unfinished > 0 ? (
+        <span className="ml-auto pl-3 text-xs text-ui-text-mute">
+          {unfinished} division{unfinished === 1 ? "" : "s"} still under way
+        </span>
+      ) : null}
     </div>
   );
 }

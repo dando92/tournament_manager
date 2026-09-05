@@ -13,6 +13,7 @@ export default function StatsSection({
     loading,
     error,
     empty,
+    emptyMessage = 'Nothing recorded yet.',
     children,
 }: {
     title: string;
@@ -20,6 +21,7 @@ export default function StatsSection({
     loading?: boolean;
     error?: boolean;
     empty?: boolean;
+    emptyMessage?: string;
     children: ReactNode;
 }) {
     return (
@@ -30,7 +32,7 @@ export default function StatsSection({
             </div>
             {loading ? <p className="text-sm text-ui-text-mute">Loading…</p> : null}
             {!loading && error ? <p className="text-sm text-state-failed">This could not be read.</p> : null}
-            {!loading && !error && empty ? <p className="text-sm italic text-ui-text-mute">Nothing recorded yet.</p> : null}
+            {!loading && !error && empty ? <p className="text-sm italic text-ui-text-mute">{emptyMessage}</p> : null}
             {!loading && !error && !empty ? children : null}
         </section>
     );

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import type { SongStatsRowDto } from "@tournament-manager/contracts";
 
 import { findingsOf } from "@/features/stats/model/findings";
 import { useTournamentStats } from "@/features/stats/model/useTournamentStats";
 import DifficultyScatter from "@/features/stats/ui/DifficultyScatter";
 import DivisionTabs from "@/features/stats/ui/DivisionTabs";
 import FindingsStrip from "@/features/stats/ui/FindingsStrip";
+import PackTabs, { type PackOption } from "@/features/stats/ui/PackTabs";
 import PlacementsTable from "@/features/stats/ui/PlacementsTable";
 import PlayerStatsTable from "@/features/stats/ui/PlayerStatsTable";
 import Podium from "@/features/stats/ui/Podium";
@@ -19,7 +21,8 @@ import { useTournamentPageContext } from "@/features/tournament/model/Tournament
  * FQ-016 held this page empty until somebody had asked a question, and these are
  * the three that were asked: where everybody finished, what each player did, and
  * how the pool of songs actually played. One at a time, because they are three
- * questions rather than one long page.
+ * questions rather than one long page, and each of the first and last picks its
+ * own scope — a division, a pack — from tabs of its own.
  *
  * Nothing here is live — the answers are for competitors and organisers after
  * the event, which is also why no read on this page subscribes to updates.
@@ -38,21 +41,24 @@ export default function StatsPage() {
   const { placements, players, songs } = useTournamentStats(tournamentId);
   const [tab, setTab] = useState<Tab>("placements");
   const [divisionId, setDivisionId] = useState<number | null>(null);
+  const [pack, setPack] = useState<string | null>(null);
 
-  const divisions = useMemo(() => placements.data ?? [], [placements.data]);
+  const allDivisions = useMemo(() => placements.data ?? [], [placements.data]);
+  const finished = useMemo(() => allDivisions.filter((division) => division.complete), [allDivisions]);
 
-  /* The first finished division is the one worth opening on; failing that, the
-     first there is, so the page never lands on an empty tab by default. */
   useEffect(() => {
-    if (divisionId !== null && divisions.some((division) => division.divisionId === divisionId)) {
+    if (divisionId !== null && finished.some((division) => division.divisionId === divisionId)) {
       return;
     }
-    const opening = divisions.find((division) => division.complete) ?? divisions[0];
-    setDivisionId(opening?.divisionId ?? null);
-  }, [divisions, divisionId]);
+    setDivisionId(finished[0]?.divisionId ?? null);
+  }, [finished, divisionId]);
 
-  const selected = divisions.find((division) => division.divisionId === divisionId) ?? null;
-  const findings = useMemo(() => findingsOf(players.data ?? [], songs.data ?? [], divisions), [players.data, songs.data, divisions]);
+  const selected = finished.find((division) => division.divisionId === divisionId) ?? null;
+  const findings = useMemo(() => findingsOf(players.data ?? [], songs.data ?? [], allDivisions), [players.data, songs.data, allDivisions]);
+
+  const allSongs = useMemo(() => songs.data ?? [], [songs.data]);
+  const packs = useMemo(() => packsOf(allSongs), [allSongs]);
+  const shownSongs = useMemo(() => (pack === null ? allSongs : allSongs.filter((song) => (song.group || "Unfiled") === pack)), [allSongs, pack]);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-2">
@@ -84,13 +90,16 @@ export default function StatsPage() {
           description="Read back off the advancement rules. Entrants the tournament never separated share a place."
           loading={placements.isLoading}
           error={placements.isError}
-          empty={divisions.length === 0}
+          empty={finished.length === 0}
+          emptyMessage={
+            allDivisions.length === 0 ? "No divisions yet." : "No division has finished yet, so there is no final order to read."
+          }
         >
           <div className="flex flex-col gap-5">
-            <DivisionTabs divisions={divisions} selectedId={divisionId} onSelect={setDivisionId} />
+            <DivisionTabs divisions={finished} unfinished={allDivisions.length - finished.length} selectedId={divisionId} onSelect={setDivisionId} />
             {selected ? (
               <>
-                {selected.complete ? <Podium rows={selected.rows} /> : null}
+                <Podium rows={selected.rows} />
                 <PlacementsTable division={selected} />
               </>
             ) : null}
@@ -127,26 +136,43 @@ export default function StatsPage() {
           description="What the pool was worth: the difficulty each song declares against how the field actually scored on it."
           loading={songs.isLoading}
           error={songs.isError}
-          empty={(songs.data ?? []).length === 0}
+          empty={allSongs.length === 0}
         >
           <div className="flex flex-col gap-5">
+            <PackTabs packs={packs} selected={pack} onSelect={setPack} />
             <div className="grid gap-4 lg:grid-cols-[1.9fr_1fr]">
               <div className="flex flex-col gap-2">
                 <h3 className="text-sm font-semibold text-ui-text">Declared difficulty against how it actually played</h3>
-                <DifficultyScatter rows={songs.data ?? []} />
+                <DifficultyScatter rows={shownSongs} />
               </div>
               <div className="flex flex-col gap-3 rounded-xl border border-ui-border bg-ui-surface p-4">
                 <h3 className="text-sm font-semibold text-ui-text">Songs that decided something</h3>
                 <p className="-mt-1 text-xs leading-snug text-ui-text-mute">
                   Ranked by how far apart they pulled the field. A song everybody passed alike decided nothing, however hard it was.
                 </p>
-                <SpreadList rows={songs.data ?? []} />
+                <SpreadList rows={shownSongs} />
               </div>
             </div>
-            <SongStatsTable rows={songs.data ?? []} />
+            <SongStatsTable rows={shownSongs} />
           </div>
         </StatsSection>
       ) : null}
     </div>
   );
+}
+
+/** The packs the pool holds, busiest first, which is the order the sections read in. */
+function packsOf(songs: SongStatsRowDto[]): PackOption[] {
+  const counts = new Map<string, { songs: number; runs: number }>();
+
+  for (const song of songs) {
+    const name = song.group || "Unfiled";
+    const held = counts.get(name) ?? { songs: 0, runs: 0 };
+    counts.set(name, { songs: held.songs + 1, runs: held.runs + song.playedCount });
+  }
+
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, songs: count.songs, runs: count.runs }))
+    .sort((left, right) => right.runs - left.runs || left.name.localeCompare(right.name))
+    .map(({ name, songs: count }) => ({ name, songs: count }));
 }

@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-flags.mjs",
+    "prebuild": "node scripts/copy-flags.mjs",
     "dev": "cross-env VITE_PUBLIC_API_URL=/api/ VITE_PUBLIC_REALTIME_URL=/realtime/ vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives",
@@ -11,13 +13,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tournament-manager/contracts": "0.0.1",
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@headlessui/react": "^1.7.19",
     "@tanstack/react-query": "^5.101.0",
+    "@tournament-manager/contracts": "0.0.1",
     "axios": "^1.14.0",
+    "flag-icons": "^7.5.0",
     "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",

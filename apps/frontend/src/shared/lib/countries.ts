@@ -58,20 +58,3 @@ const BY_CODE = new Map(COUNTRIES.map((country) => [country.code, country]));
 export function countryName(code: string): string {
     return BY_CODE.get(code.toUpperCase())?.name ?? code;
 }
-
-/**
- * The flag as the two regional indicator symbols of its code.
- *
- * No asset and no dependency: a flag emoji is its country code written in the
- * regional indicator block, and every platform that has flags renders it. A
- * platform without them — Windows is the one that matters here — shows the two
- * letters instead, which is a legible fallback rather than a broken image.
- */
-export function countryFlag(code: string): string {
-    const normalized = code.toUpperCase();
-    if (!/^[A-Z]{2}$/.test(normalized)) {
-        return '';
-    }
-
-    return String.fromCodePoint(...[...normalized].map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65));
-}

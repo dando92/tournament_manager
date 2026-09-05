@@ -1,10 +1,10 @@
 import type { DivisionPlacementRowDto, DivisionPlacementsDto } from "@tournament-manager/contracts";
 
-import { percentage, placementLabel, seedSwing } from "@/features/stats/model/statsFormat";
+import { placementLabel, seedSwing } from "@/features/stats/model/statsFormat";
 import Flag from "@/features/stats/ui/Flag";
-import GradeMark from "@/features/stats/ui/GradeMark";
 import Medal from "@/features/stats/ui/Medal";
 import RunChips from "@/features/stats/ui/RunChips";
+import ScoreWithGrade from "@/features/stats/ui/ScoreWithGrade";
 import SeedSwing from "@/features/stats/ui/SeedSwing";
 
 /**
@@ -48,7 +48,7 @@ export default function PlacementsTable({ division }: { division: DivisionPlacem
               <th className="w-40 px-3 py-2.5 text-left font-medium">Reached</th>
               <th className="w-20 px-3 py-2.5 text-right font-medium">Points</th>
               <th className="w-20 px-3 py-2.5 text-right font-medium">Songs</th>
-              <th className="w-32 px-3 py-2.5 text-right font-medium">Average</th>
+              <th className="w-40 px-3 py-2.5 text-right font-medium">Average</th>
             </tr>
           </thead>
           <tbody>
@@ -92,11 +92,8 @@ function PlacementRow({ row }: { row: DivisionPlacementRowDto }) {
       <td className="px-3 py-2.5 text-ui-text-soft">{row.exitName}</td>
       <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.points}</td>
       <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.songsPlayed}</td>
-      <td className="px-3 py-2.5">
-        <span className="flex items-center justify-end gap-2">
-          <span className="font-semibold tabular-nums text-ui-text">{percentage(row.averagePercentage)}</span>
-          <GradeMark percentage={row.averagePercentage} />
-        </span>
+      <td className="px-3 py-2.5 text-right">
+        <ScoreWithGrade value={row.averagePercentage} />
       </td>
     </tr>
   );

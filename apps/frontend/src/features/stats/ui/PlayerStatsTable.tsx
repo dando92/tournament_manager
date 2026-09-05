@@ -1,9 +1,9 @@
 import type { PlayerStatsRowDto } from "@tournament-manager/contracts";
 
-import { decimal, percentage, share } from "@/features/stats/model/statsFormat";
+import { decimal, share } from "@/features/stats/model/statsFormat";
 import Flag from "@/features/stats/ui/Flag";
-import GradeMark from "@/features/stats/ui/GradeMark";
 import GradeMixBar, { GradeMixLegend } from "@/features/stats/ui/GradeMixBar";
+import ScoreWithGrade from "@/features/stats/ui/ScoreWithGrade";
 
 /**
  * What each player did across the whole tournament.
@@ -19,7 +19,7 @@ export default function PlayerStatsTable({ rows }: { rows: PlayerStatsRowDto[] }
     <div className="flex flex-col gap-2">
       <GradeMixLegend />
       <div className="overflow-x-auto rounded-xl border border-ui-border">
-        <table className="w-full min-w-[52rem] text-sm">
+        <table className="w-full min-w-[58rem] text-sm">
           <thead className="bg-ui-raised text-[10px] uppercase tracking-wide text-ui-text-mute">
             <tr>
               <th className="w-12 px-3 py-2.5 text-left font-medium">#</th>
@@ -27,8 +27,8 @@ export default function PlayerStatsTable({ rows }: { rows: PlayerStatsRowDto[] }
               <th className="w-52 px-3 py-2.5 text-left font-medium">Grade mix</th>
               <th className="w-20 px-3 py-2.5 text-right font-medium">Points</th>
               <th className="w-16 px-3 py-2.5 text-right font-medium">Runs</th>
-              <th className="w-32 px-3 py-2.5 text-right font-medium">Average</th>
-              <th className="w-32 px-3 py-2.5 text-right font-medium">Best</th>
+              <th className="w-40 px-3 py-2.5 text-right font-medium">Average</th>
+              <th className="w-40 px-3 py-2.5 text-right font-medium">Best</th>
               <th className="w-20 px-3 py-2.5 text-right font-medium">Spread</th>
               <th className="w-24 px-3 py-2.5 text-right font-medium">Failed</th>
               <th className="w-24 px-3 py-2.5 text-right font-medium">Matches</th>
@@ -49,17 +49,11 @@ export default function PlayerStatsTable({ rows }: { rows: PlayerStatsRowDto[] }
                 </td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.points}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.songsPlayed}</td>
-                <td className="px-3 py-2.5">
-                  <span className="flex items-center justify-end gap-2">
-                    <span className="font-semibold tabular-nums text-ui-text">{percentage(row.averagePercentage)}</span>
-                    <GradeMark percentage={row.averagePercentage} />
-                  </span>
+                <td className="px-3 py-2.5 text-right">
+                  <ScoreWithGrade value={row.averagePercentage} />
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="flex items-center justify-end gap-2" title={row.bestSongTitle ?? undefined}>
-                    <span className="font-semibold tabular-nums text-ui-text-soft">{percentage(row.bestPercentage)}</span>
-                    <GradeMark percentage={row.bestPercentage} />
-                  </span>
+                <td className="px-3 py-2.5 text-right" title={row.bestSongTitle ?? undefined}>
+                  <ScoreWithGrade value={row.bestPercentage} />
                 </td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{decimal(row.percentageSpread)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">

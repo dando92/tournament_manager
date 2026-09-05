@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Copied from the flag-icons package by scripts/copy-flags.mjs
+public/flags

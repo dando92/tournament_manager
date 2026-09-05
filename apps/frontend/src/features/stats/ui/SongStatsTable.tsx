@@ -1,9 +1,9 @@
 import type { SongStatsRowDto } from "@tournament-manager/contracts";
 
 import { meterColor } from "@/features/song/model/chartDifficultyPresentation";
-import { percentage, share } from "@/features/stats/model/statsFormat";
-import GradeMark from "@/features/stats/ui/GradeMark";
+import { share } from "@/features/stats/model/statsFormat";
 import GradeMixBar from "@/features/stats/ui/GradeMixBar";
+import ScoreWithGrade from "@/features/stats/ui/ScoreWithGrade";
 import PackBanner from "@/features/stats/ui/PackBanner";
 
 /**
@@ -28,7 +28,7 @@ export default function SongStatsTable({ rows }: { rows: SongStatsRowDto[] }) {
             <span className="w-52">Where the runs landed</span>
             <span className="w-16 text-right">Runs</span>
             <span className="w-20 text-right">Failed</span>
-            <span className="w-32 text-right">Average</span>
+            <span className="w-40 text-right">Average</span>
           </div>
           {pack.songs.map((song) => (
             <div key={song.songId} className="flex items-center gap-3 border-t border-ui-separator px-4 py-2.5">
@@ -50,9 +50,8 @@ export default function SongStatsTable({ rows }: { rows: SongStatsRowDto[] }) {
                   <span className="font-bold text-score-failed">{share(song.failedCount, song.playedCount)}</span>
                 )}
               </span>
-              <span className="flex w-32 items-center justify-end gap-2">
-                <span className="text-[13.5px] font-semibold tabular-nums text-ui-text">{percentage(song.averagePercentage)}</span>
-                <GradeMark percentage={song.averagePercentage} />
+              <span className="w-40 text-right text-[13.5px]">
+                <ScoreWithGrade value={song.averagePercentage} />
               </span>
             </div>
           ))}
