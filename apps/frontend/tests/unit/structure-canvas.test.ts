@@ -10,7 +10,9 @@ import {
     HEADER_HEIGHT,
     NEST_INDENT,
     cardHeight,
+    headerHeight,
     ordinal,
+    poolKey,
 } from "../../src/features/structure/model/structureCanvas.ts";
 import type { TournamentDivisionOption } from "../../src/features/tournament/model/types.ts";
 
@@ -74,33 +76,21 @@ const QUALIFIERS = {
     phaseGroups: [pool({ id: 1, name: "Pool A" }), pool({ id: 2, name: "Pool B" })],
 };
 
-test("a phase is a column and a pool is a card stacked under its header", () => {
-    const canvas = buildStructureCanvas({ division: division([QUALIFIERS]), matches: [], mode: "build", selection: null });
 
+test("a phase is a column and a pool is a card stacked under its header", () => {
+    const canvas = buildStructureCanvas({ division: division([QUALIFIERS]), matches: [], selection: null });
     const [first, second] = canvas.columns[0].cards;
 
     assert.equal(canvas.columns.length, 1);
     assert.equal(canvas.columns[0].left, 0);
-    assert.deepEqual([first.top, second.top], [HEADER_HEIGHT + CARD_GAP, HEADER_HEIGHT + CARD_GAP + first.height + CARD_GAP]);
-    assert.equal(canvas.columns[0].slotLabel, "Pool");
+    assert.equal(first.top, HEADER_HEIGHT + CARD_GAP);
+    assert.ok(second.top > first.top + first.height);
 });
 
 /* Two constants used to stand in for every card, and both were shorter than
    what a card draws, so a column overlapped itself from the second card down. */
 test("a card is as tall as what it holds, and the next one starts below it", () => {
-    const canvas = buildStructureCanvas({
-        division: division([
-            {
-                id: 10,
-                name: "Qualifiers",
-                matchCount: 2,
-                phaseGroups: [pool({ id: 1, name: "Pool A" }), pool({ id: 2, name: "Pool B" })],
-            },
-        ]),
-        matches: [],
-        mode: "build",
-        selection: null,
-    });
+    const canvas = buildStructureCanvas({ division: division([QUALIFIERS]), matches: [], selection: null });
 
     for (const card of canvas.columns[0].cards) {
         assert.equal(card.height, cardHeight(card));
@@ -110,24 +100,80 @@ test("a card is as tall as what it holds, and the next one starts below it", () 
     assert.ok(stacked[1].top >= stacked[0].top + stacked[0].height + CARD_GAP);
 });
 
+/* A pool is what a match hangs under, and a match is added where it belongs, so
+   every pool carries the slot that adds one — on the canvas, not in a panel. */
+test("every pool offers a slot that adds a match to it, and the column one that adds a pool", () => {
+    const canvas = buildStructureCanvas({ division: division([QUALIFIERS]), matches: [], selection: null });
+
+    assert.deepEqual(
+        canvas.columns[0].slots.map((slot) => [slot.noun, slot.parentId]),
+        [
+            ["Match", 1],
+            ["Match", 2],
+            ["Pool", 10],
+        ],
+    );
+});
+
+/* The tree has always hidden a phase's only pool: the node would repeat the
+   phase under a name nobody chose. The canvas answers it the same way. */
+test("a phase with one pool draws no pool card, and its header carries the pool", () => {
+    const canvas = buildStructureCanvas({
+        division: division([{ id: 11, name: "Top 8", matchCount: 1, phaseGroups: [pool({ id: 3, name: "Bracket" })] }]),
+        matches: [match({ id: 1, phaseGroupId: 3, name: "Quarter 1" })],
+        selection: null,
+    });
+    const column = canvas.columns[0];
+
+    assert.equal(column.poolId, 3);
+    assert.deepEqual(
+        column.cards.map((card) => card.name),
+        ["Quarter 1"],
+    );
+    assert.deepEqual(
+        column.chips.map((chip) => chip.label),
+        ["1st", "2nd"],
+    );
+    assert.equal(column.cards[0].top, headerHeight(column.chips) + CARD_GAP);
+});
+
 test("a match is tall enough for the slots it is waiting on", () => {
     const canvas = buildStructureCanvas({
         division: division([{ id: 10, name: "Top 8", matchCount: 1, phaseGroups: [pool({ id: 2, name: "Bracket" })] }]),
         matches: [match({ id: 1, phaseGroupId: 2 })],
-        mode: "routes",
         selection: null,
     });
-    const card = canvas.columns[0].cards[1];
+    const card = canvas.columns[0].cards[0];
 
     assert.equal(card.slots.length, 2);
     assert.equal(card.height, cardHeight(card));
+});
+
+/* Folding is what the two modes were really for, at the granularity the
+   clutter has: the pool being worked on keeps its matches on screen. */
+test("a folded pool hides its matches and the slot that adds one", () => {
+    const shape = division([{ id: 11, name: "Top 8", matchCount: 2, phaseGroups: [pool({ id: 2, name: "Bracket" }), pool({ id: 3, name: "Losers" })] }]);
+    const matches = [match({ id: 1, phaseGroupId: 2, name: "Quarter 1" }), match({ id: 2, phaseGroupId: 3, name: "Loser 1" })];
+    const canvas = buildStructureCanvas({ division: shape, matches, selection: null, folded: new Set([poolKey(2)]) });
+
+    assert.deepEqual(
+        canvas.columns[0].cards.map((card) => card.name),
+        ["Bracket", "Losers", "Loser 1"],
+    );
+    assert.deepEqual(
+        canvas.columns[0].slots.map((slot) => [slot.noun, slot.parentId]),
+        [
+            ["Match", 3],
+            ["Pool", 11],
+        ],
+    );
+    assert.equal(canvas.columns[0].cards[0].folded, true);
 });
 
 test("columns run left to right in the order the phases run", () => {
     const canvas = buildStructureCanvas({
         division: division([QUALIFIERS, { id: 11, name: "Top 8", matchCount: 4, phaseGroups: [pool({ id: 3, name: "Bracket" })] }]),
         matches: [],
-        mode: "build",
         selection: null,
     });
 
@@ -145,13 +191,12 @@ test("a route leaves the right edge of its source and arrives at the left edge o
             { id: 11, name: "Top 8", matchCount: 4, phaseGroups: [pool({ id: 3, name: "Bracket" })] },
         ]),
         matches: [],
-        mode: "build",
         selection: null,
     });
 
     assert.equal(canvas.edges.length, 1);
-    assert.match(canvas.edges[0].path, new RegExp(`^M ${COLUMN_WIDTH} `));
-    assert.ok(canvas.edges[0].path.includes(`${COLUMN_WIDTH + COLUMN_GAP} `));
+    assert.match(canvas.edges[0].path, new RegExp("^M " + COLUMN_WIDTH + " "));
+    assert.ok(canvas.edges[0].path.includes(COLUMN_WIDTH + COLUMN_GAP + " "));
     assert.equal(canvas.edges[0].highlighted, false);
 });
 
@@ -162,7 +207,6 @@ test("selecting a pool highlights the routes that touch it", () => {
             { id: 11, name: "Top 8", matchCount: 4, phaseGroups: [pool({ id: 3, name: "Bracket" })] },
         ]),
         matches: [],
-        mode: "build",
         selection: { kind: "pool", id: 3 },
     });
 
@@ -176,12 +220,11 @@ test("a place with no route keeps its chip and is counted as going nowhere", () 
             { id: 11, name: "Top 8", matchCount: 4, phaseGroups: [pool({ id: 3, name: "Bracket" })] },
         ]),
         matches: [],
-        mode: "build",
         selection: null,
     });
 
     assert.deepEqual(
-        canvas.columns[0].cards[0].chips.map((chip) => [chip.label, chip.routed]),
+        canvas.columns[0].chips.map((chip) => [chip.label, chip.routed]),
         [
             ["1st", true],
             ["2nd", false],
@@ -195,42 +238,40 @@ test("the last phase is not counted as going nowhere", () => {
     const canvas = buildStructureCanvas({
         division: division([{ id: 11, name: "Finals", matchCount: 1, phaseGroups: [pool({ id: 3, name: "Bracket" })] }]),
         matches: [],
-        mode: "build",
         selection: null,
     });
 
     assert.equal(canvas.danglingPlacements, 0);
 });
 
-/* Routing draws both granularities at once, because both are ends of a real
+/* Both granularities are on the canvas at once, because both are ends of a real
    rule: the winners of a pool go to a bracket, and the winner of one match goes
    to the next. The matches sit inside the pool that holds them. */
-test("routing draws the matches of a pool nested under it", () => {
+test("a pool draws the matches inside it, nested", () => {
     const canvas = buildStructureCanvas({
-        division: division([{ id: 11, name: "Top 8", matchCount: 2, phaseGroups: [pool({ id: 2, name: "Bracket" })] }]),
+        division: division([{ id: 11, name: "Top 8", matchCount: 2, phaseGroups: [pool({ id: 2, name: "Bracket" }), pool({ id: 4, name: "Losers" })] }]),
         matches: [match({ id: 1, name: "Quarter 1" }), match({ id: 2, name: "Quarter 2" })],
-        mode: "routes",
         selection: null,
     });
     const cards = canvas.columns[0].cards;
 
     assert.deepEqual(
         cards.map((card) => card.name),
-        ["Bracket", "Quarter 1", "Quarter 2"],
+        ["Bracket", "Quarter 1", "Quarter 2", "Losers"],
     );
     assert.deepEqual(
         cards.map((card) => card.left),
-        [0, NEST_INDENT, NEST_INDENT],
+        [0, NEST_INDENT, NEST_INDENT, 0],
     );
     assert.deepEqual(
-        cards.map((card) => card.poolId),
+        cards.slice(0, 3).map((card) => card.poolId),
         [2, 2, 2],
     );
 });
 
 /* A route used to be drawn only when its own end was on the canvas, so half of
    them disappeared when the view changed rather than when the rule did. */
-test("a route out of a match is drawn while the canvas is showing pools", () => {
+test("a route out of a match inside a folded pool is drawn to the pool", () => {
     const canvas = buildStructureCanvas({
         division: division([
             { id: 10, name: "Top 8", matchCount: 1, phaseGroups: [pool({ id: 1, name: "Bracket" })] },
@@ -243,12 +284,12 @@ test("a route out of a match is drawn while the canvas is showing pools", () => 
                 advancementRules: [rule({ sourceKind: "match", sourceId: 5, targetKind: "phase_group", targetId: 3, targetSlot: 1 })],
             }),
         ],
-        mode: "build",
         selection: null,
+        folded: new Set([poolKey(1)]),
     });
 
     assert.equal(canvas.edges.length, 1);
-    assert.match(canvas.edges[0].path, new RegExp(`^M ${COLUMN_WIDTH} `));
+    assert.match(canvas.edges[0].path, new RegExp("^M " + COLUMN_WIDTH + " "));
 });
 
 test("a slot filled by a route reads as where it comes from", () => {
@@ -260,11 +301,10 @@ test("a slot filled by a route reads as where it comes from", () => {
                 advancementRules: [rule({ sourceKind: "match", sourceId: 4, sourceName: "Quarter 1", targetKind: "match", targetId: 5, targetSlot: 1 })],
             }),
         ],
-        mode: "routes",
         selection: null,
     });
 
-    assert.deepEqual(canvas.columns[0].cards[1].slots, [
+    assert.deepEqual(canvas.columns[0].cards[0].slots, [
         { slot: 1, from: "1st of Quarter 1" },
         { slot: 2, from: null },
     ]);

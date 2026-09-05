@@ -24,6 +24,11 @@ type AddSlotProps = {
  *
  * The dash is the design system's mark for something that is not there yet, so
  * the control says what it is without a colour and survives greyscale.
+ *
+ * It takes the size it is given and states none of its own. A slot used to
+ * declare itself full width, which quietly beat every width a caller asked for:
+ * the one beside the division tabs spanned the row, and the one that adds a
+ * phase became a box too narrow to type a name into.
  */
 export default function AddSlot({ noun, suggestedName, disabled, onCreate, className = "", style }: AddSlotProps) {
   const [naming, setNaming] = useState(false);
@@ -62,7 +67,7 @@ export default function AddSlot({ noun, suggestedName, disabled, onCreate, class
         disabled={disabled}
         onClick={() => setNaming(true)}
         style={style}
-        className={`${btnCreate} flex w-full items-center justify-center gap-2 rounded-lg border text-xs font-semibold ${className}`}
+        className={`${btnCreate} flex items-center justify-center gap-2 rounded-lg border text-xs font-semibold ${className}`}
       >
         <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
         {noun}
@@ -71,7 +76,7 @@ export default function AddSlot({ noun, suggestedName, disabled, onCreate, class
   }
 
   return (
-    <div style={style} className={`flex w-full items-center rounded-lg border border-ui-border-strong bg-ui-surface px-2 ${className}`}>
+    <div style={style} className={`flex items-center rounded-lg border border-ui-border-strong bg-ui-surface px-2 ${className}`}>
       <input
         ref={input}
         autoFocus

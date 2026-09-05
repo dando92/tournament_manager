@@ -9,127 +9,167 @@ import type { BracketRequest } from "@/features/structure/model/structureDraft";
 import type { TournamentDivisionOption } from "@/features/tournament/model/types";
 
 type Props = {
-  division: TournamentDivisionOption;
-  onAdd: (request: BracketRequest) => void;
-  onClose: () => void;
+    division: TournamentDivisionOption;
+    onAdd: (request: BracketRequest) => void;
+    onClose: () => void;
 };
 
 /**
  * Generating a bracket, into the draft the rest of the page is building.
  *
- * The generator is the pure function the API runs, and what it answers goes
- * straight into the draft: the bracket arrives on the canvas as dashed cards
- * with its routes already drawn, in the column it will occupy, and Commit sends
- * it along with everything else somebody did. There is no preview to keep in
- * step with the plan, because the preview is the plan.
+ * The generator is the same pure function the API runs, and what it answers
+ * goes straight into the draft: the bracket arrives on the canvas as dashed
+ * cards with its routes already drawn, in the column it will occupy, and Commit
+ * sends it along with everything else somebody did. There is no preview to keep
+ * in step with the plan, because the preview is the plan.
  *
- * That is also what makes this one page for all three producers. Typing a
- * structure, generating one and importing one are three ways of filling one
- * draft, and only one thing on the page writes.
+ * How many people it is for is a number somebody types, seeded from the ones
+ * who have entered. Reading the roster and nothing else meant a bracket could
+ * only be laid out once registration had closed, which is the opposite of when
+ * a bracket is decided: it is drawn for thirty-two, and the thirty-two arrive.
  */
 export default function GeneratePanel({ division, onAdd, onClose }: Props) {
-  const types = useMemo(bracketTypes, []);
-  const [bracketType, setBracketType] = useState<BracketType>(types[0]);
-  const [phaseName, setPhaseName] = useState("");
-  const [playerPerMatch, setPlayerPerMatch] = useState(2);
+    const types = useMemo(bracketTypes, []);
+    const [bracketType, setBracketType] = useState<BracketType>(types[0]);
+    const [phaseName, setPhaseName] = useState("");
+    const [playerPerMatch, setPlayerPerMatch] = useState(2);
+    const [players, setPlayers] = useState(division.entrantCount);
 
-  const suggested = `Bracket ${division.phases.length + 1}`;
-  const generated = useMemo(() => attempt(bracketType, division.entrantCount, playerPerMatch), [bracketType, division.entrantCount, playerPerMatch]);
+    const suggested = `Bracket ${division.phases.length + 1}`;
+    const generated = useMemo(() => attempt(bracketType, players, playerPerMatch), [bracketType, players, playerPerMatch]);
 
-  const matchCount = generated.bracket?.matches.length ?? 0;
-  const routeCount = generated.bracket?.routes.length ?? 0;
+    const matchCount = generated.bracket?.matches.length ?? 0;
+    const routeCount = generated.bracket?.routes.length ?? 0;
 
-  return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3.5">
-      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">Generate</div>
+    return (
+        <div className="flex max-h-[46%] shrink-0 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface shadow-card">
+            <Group className="w-[240px]">
+                <Label htmlFor="generate-phase-name">Generate</Label>
+                <input
+                    id="generate-phase-name"
+                    data-autofocus
+                    value={phaseName}
+                    placeholder={suggested}
+                    onChange={(event) => setPhaseName(event.target.value)}
+                    className={`w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
+                />
+                <span className="text-[11px] text-ui-text-mute">a new phase, at the end</span>
+            </Group>
 
-      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-phase-name">
-        Called
-      </label>
-      <input
-        id="generate-phase-name"
-        data-autofocus
-        value={phaseName}
-        placeholder={suggested}
-        onChange={(event) => setPhaseName(event.target.value)}
-        className={`mt-1 w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
-      />
+            <Group className="w-[220px]">
+                <Label htmlFor="generate-shape">Shape</Label>
+                <Select
+                    inputId="generate-shape"
+                    value={bracketType}
+                    onChange={(type) => setBracketType(type as BracketType)}
+                    options={types.map((type) => ({ value: type, label: formatBracketType(type) ?? type }))}
+                />
+            </Group>
 
-      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-shape">
-        Shape
-      </label>
-      <Select
-        inputId="generate-shape"
-        value={bracketType}
-        onChange={(type) => setBracketType(type as BracketType)}
-        options={types.map((type) => ({ value: type, label: formatBracketType(type) ?? type }))}
-        className="mt-1"
-      />
+            <Group className="w-[210px]">
+                <Label htmlFor="generate-players">Players</Label>
+                <div className="flex items-center gap-2">
+                    <input
+                        id="generate-players"
+                        type="number"
+                        min={2}
+                        value={players}
+                        onChange={(event) => setPlayers(Number(event.target.value))}
+                        className={`w-20 rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
+                    />
+                    <span className="text-[11px] text-ui-text-mute">
+                        {division.entrantCount} entered
+                        {players !== division.entrantCount && (
+                            <>
+                                {" · "}
+                                <button type="button" onClick={() => setPlayers(division.entrantCount)} className={`${focusRing} underline`}>
+                                    use {division.entrantCount}
+                                </button>
+                            </>
+                        )}
+                    </span>
+                </div>
+                <span className="text-[11px] text-ui-text-mute">
+                    {players > division.entrantCount ? `${players - division.entrantCount} seats still to fill` : "every seat has somebody"}
+                </span>
+            </Group>
 
-      <label className="mt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute" htmlFor="generate-players">
-        Players per match
-      </label>
-      <input
-        id="generate-players"
-        type="number"
-        min={2}
-        value={playerPerMatch}
-        onChange={(event) => setPlayerPerMatch(Number(event.target.value))}
-        className={`mt-1 w-full rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
-      />
+            <Group className="w-[160px]">
+                <Label htmlFor="generate-per-match">Per match</Label>
+                <input
+                    id="generate-per-match"
+                    type="number"
+                    min={2}
+                    value={playerPerMatch}
+                    onChange={(event) => setPlayerPerMatch(Number(event.target.value))}
+                    className={`w-20 rounded-lg border border-ui-border-strong bg-ui-surface px-2 py-1.5 text-sm font-semibold text-ui-text outline-none ${focusRing}`}
+                />
+            </Group>
 
-      <div className="mt-4 rounded-lg border border-ui-separator px-2.5 py-2">
-        <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">This will add</div>
-        <div className="mt-1.5 flex flex-col gap-1 text-[12px] text-ui-text">
-          <span className="flex items-center gap-2">
-            1 phase <span className="ml-auto text-[12px] text-ui-text-mute">{phaseName.trim() || suggested}</span>
-          </span>
-          <span className="flex items-center gap-2">
-            1 pool <span className="ml-auto text-[12px] text-ui-text-mute">Bracket</span>
-          </span>
-          <span className="flex items-center gap-2">
-            {matchCount} {matchCount === 1 ? "match" : "matches"}
-            <span className="ml-auto text-[12px] text-ui-text-mute">{division.entrantCount} entrants</span>
-          </span>
-          <span className="flex items-center gap-2">
-            {routeCount} {routeCount === 1 ? "route" : "routes"}
-            <span className="ml-auto text-[12px] text-ui-text-mute">{generated.bracket?.byes ?? 0} byes</span>
-          </span>
+            <Group className="min-w-[220px] flex-1">
+                <Label>This will add</Label>
+                {generated.error ? (
+                    <p className="text-[12px] text-state-failed">{generated.error}</p>
+                ) : (
+                    <div className="flex flex-col gap-1 text-[12px] text-ui-text-mute">
+                        <span>
+                            <Val>1</Val> phase <Val>1</Val> pool <Val>{matchCount}</Val> {matchCount === 1 ? "match" : "matches"}
+                        </span>
+                        <span>
+                            <Val>{routeCount}</Val> {routeCount === 1 ? "route" : "routes"} <Val>{generated.bracket?.byes ?? 0}</Val>{" "}
+                            {generated.bracket?.byes === 1 ? "bye" : "byes"}
+                        </span>
+                    </div>
+                )}
+                <span className="text-[11px] text-ui-text-mute">It arrives dashed, and nothing is written until Commit.</span>
+            </Group>
+
+            <Group className="w-[200px] border-r-0">
+                <div className="flex items-center gap-2">
+                    <button type="button" onClick={onClose} className={`${btnSecondary} text-xs`}>
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        disabled={!generated.bracket || matchCount === 0}
+                        onClick={() => {
+                            if (!generated.bracket) {
+                                return;
+                            }
+                            onAdd({ phaseName: phaseName.trim() || suggested, poolName: "Bracket", bracket: generated.bracket });
+                            onClose();
+                        }}
+                        className={`${btnPrimary} text-xs`}
+                    >
+                        Add to draft
+                    </button>
+                </div>
+            </Group>
         </div>
-      </div>
+    );
+}
 
-      {generated.error && <p className="mt-3 text-[12px] text-state-failed">{generated.error}</p>}
+function Group({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    return <div className={`flex shrink-0 flex-col gap-2 border-r border-ui-separator p-3.5 ${className}`}>{children}</div>;
+}
 
-      <p className="mt-3 text-[12px] leading-relaxed text-ui-text-mute">
-        It arrives on the canvas as a dashed column you can rename, re-route and add to. Nothing is written until Commit.
-      </p>
+function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
+    return (
+        <label htmlFor={htmlFor} className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">
+            {children}
+        </label>
+    );
+}
 
-      <div className="mt-auto flex items-center gap-2 border-t border-ui-separator pt-3.5">
-        <button type="button" onClick={onClose} className={`${btnSecondary} text-xs`}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={!generated.bracket || matchCount === 0}
-          onClick={() => {
-            if (!generated.bracket) return;
-            onAdd({ phaseName: phaseName.trim() || suggested, poolName: "Bracket", bracket: generated.bracket });
-            onClose();
-          }}
-          className={`${btnPrimary} ml-auto text-xs`}
-        >
-          Add to draft
-        </button>
-      </div>
-    </aside>
-  );
+function Val({ children }: { children: React.ReactNode }) {
+    return <span className="rounded-md border border-ui-border bg-ui-raised px-1.5 text-[12px] font-semibold text-ui-text">{children}</span>;
 }
 
 /** A shape that refuses these numbers says so where the numbers are. */
 function attempt(bracketType: BracketType, entrantCount: number, playerPerMatch: number): { bracket: BracketPlan | null; error: string | null } {
-  try {
-    return { bracket: generateBracket(bracketType, entrantCount, playerPerMatch), error: null };
-  } catch (failure) {
-    return { bracket: null, error: failure instanceof Error ? failure.message : "That bracket cannot be built." };
-  }
+    try {
+        return { bracket: generateBracket(bracketType, entrantCount, playerPerMatch), error: null };
+    } catch (failure) {
+        return { bracket: null, error: failure instanceof Error ? failure.message : "That bracket cannot be built." };
+    }
 }

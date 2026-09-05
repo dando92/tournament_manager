@@ -2,6 +2,7 @@ import type { Status } from "@/shared/components/ui/status";
 import type { PhaseGroup } from "@/features/division/model/types";
 import type { Match } from "@/features/match/model/types";
 import type { TournamentDivisionOption, TournamentDivisionOptionPhase } from "@/features/tournament/model/types";
+import { implicitPool } from "@/features/division/model/poolVisibility";
 import { phaseStatus, poolStatus } from "@/features/tournament/model/treeStatus";
 import { getMatchProgress, getMatchProgressStatus } from "@/features/match/model/matchStatus";
 
@@ -14,10 +15,11 @@ import { getMatchProgress, getMatchProgressStatus } from "@/features/match/model
  * where a card lands, where an edge leaves and arrives, how wide the canvas has
  * to be — something that can be read and tested on its own.
  *
- * The same geometry serves both modes. Building shows a division as its pools;
- * routing shows the matches under them, because a route runs between whichever
- * two of those the person drawing it means. Nothing about the columns, the
- * cards or the curves changes with the mode — only what is on the canvas does.
+ * There is one canvas and no modes. A pool draws the matches inside it, because
+ * a match is what a route runs to and is also the thing being added; a pool
+ * nobody is working on is folded away instead, which is the granularity the
+ * clutter actually has. A phase holding a single pool draws no pool card at
+ * all: the header is that pool, the same rule the tree has always followed.
  */
 
 export const COLUMN_WIDTH = 236;
@@ -25,8 +27,9 @@ export const COLUMN_GAP = 46;
 export const HEADER_HEIGHT = 54;
 export const CARD_GAP = 10;
 export const SLOT_HEIGHT = 38;
-export const ADD_COLUMN_WIDTH = 46;
-/** How far a match sits inside the pool it belongs to, when both are drawn. */
+/** A slot that adds a match is nested, so it is the height of one. */
+export const MATCH_SLOT_HEIGHT = 32;
+/** How far a match sits inside the pool it belongs to. */
 export const NEST_INDENT = 14;
 const FIRST_CARD_TOP = HEADER_HEIGHT + CARD_GAP;
 const NESTED_GAP = 6;
@@ -50,17 +53,6 @@ const CHIP_ROW = 20;
 const CHIP_BLOCK_GAP = 6;
 /** Four short placement chips fit across a column before one wraps. */
 const CHIPS_PER_ROW = 4;
-
-/**
- * What the canvas is for at this moment.
- *
- * Building is about what exists: pools under phases, and a dashed slot at the
- * end of every list. Routing is about what leads where — the matches come out
- * from under their pool, the placements and the slots come forward, and the
- * slots that would add another card go away, because adding one is not what
- * anybody is doing there.
- */
-export type CanvasMode = "build" | "routes";
 
 /** A chip on a card: one finishing place, and where it goes if anywhere. */
 export type PlacementChip = {
@@ -89,6 +81,23 @@ export type CanvasCard = {
     poolId: number;
     /** Drawn but not written: the draft would make it, and Commit has not run. */
     pending: boolean;
+    /** Named by a reason the applier refused the plan for. */
+    faulted?: boolean;
+    /** A pool whose matches are hidden, and which says so with its chevron. */
+    folded?: boolean;
+};
+
+/** A dashed slot that makes one more of something, in the place it will take. */
+export type CanvasSlot = {
+    key: string;
+    /** What it adds, which is also the word on it. */
+    noun: "Pool" | "Match";
+    /** The phase a pool joins, or the pool a match joins. */
+    parentId: number;
+    top: number;
+    left: number;
+    width: number;
+    height: number;
 };
 
 export type CanvasColumn = {
@@ -97,10 +106,21 @@ export type CanvasColumn = {
     status: Status;
     meta: string;
     left: number;
+    height: number;
+    /**
+     * The pool the header stands for, when the phase draws none of its own.
+     *
+     * The header is then both things at once: clicking it selects the phase,
+     * because that is the name anybody reads, while its chips arm the pool and
+     * a route lands on the pool. Only the pool is a thing routes can reach, so
+     * only the pool has an anchor.
+     */
+    poolId: number | null;
+    chips: PlacementChip[];
+    /** Named by a reason the applier refused the plan for. */
+    faulted: boolean;
     cards: CanvasCard[];
-    /** Where the dashed slot that adds another card sits. */
-    slotTop: number;
-    slotLabel: string;
+    slots: CanvasSlot[];
 };
 
 export type CanvasEdge = {
@@ -129,10 +149,19 @@ export type ArmedPlacement = { kind: "pool" | "match"; id: number; placement: nu
 export type StructureCanvasInput = {
     division: TournamentDivisionOption | undefined;
     matches: Match[];
-    mode: CanvasMode;
     selection: CanvasSelection;
     /** The card keys a draft would create, drawn as not there yet. */
     pending?: Set<string>;
+    /** The pool keys whose matches are hidden. */
+    folded?: Set<string>;
+    /**
+     * The node keys a refused plan named.
+     *
+     * The applier answers in reasons, and a reason without a card to point at
+     * is a sentence somebody has to decode. The keys are the ones the draft
+     * uses, so what is wrong is drawn where it is wrong.
+     */
+    faulted?: Set<string>;
     /** How many placements a pool is expected to send on, when nothing says. */
     advancingPlaces?: number;
 };
@@ -164,41 +193,110 @@ export function cardHeight(card: Pick<CanvasCard, "meta" | "chips" | "slots">): 
     return height;
 }
 
+/** How tall a phase header is, which depends on whether it is also a pool. */
+export function headerHeight(chips: PlacementChip[]): number {
+    if (chips.length === 0) {
+        return HEADER_HEIGHT;
+    }
+
+    return HEADER_HEIGHT + CHIP_BLOCK_GAP + Math.ceil(chips.length / CHIPS_PER_ROW) * CHIP_ROW;
+}
+
 export function buildStructureCanvas(input: StructureCanvasInput): StructureCanvas {
     const phases = input.division?.phases ?? [];
     const matchesByPool = groupMatchesByPool(input.matches);
     const advancingPlaces = input.advancingPlaces ?? 2;
-
     const pending = input.pending ?? new Set<string>();
+    const folded = input.folded ?? new Set<string>();
+    const faulted = input.faulted ?? new Set<string>();
 
-    const columns = phases.map((phase, index) => {
-        const left = index * (COLUMN_WIDTH + COLUMN_GAP);
-        const cards = input.mode === "routes" ? routingCards(phase, matchesByPool, pending) : poolCards(phase, matchesByPool, advancingPlaces, pending);
-        const last = cards.at(-1);
-
-        return {
-            phaseId: phase.id,
-            name: phase.name,
-            status: phaseStatus(phase),
-            meta: phaseMeta(phase),
-            left,
-            cards,
-            slotTop: last ? last.top + last.height + CARD_GAP : FIRST_CARD_TOP,
-            slotLabel: "Pool",
-        };
-    });
+    const columns = phases.map((phase, index) =>
+        buildColumn(phase, index * (COLUMN_WIDTH + COLUMN_GAP), matchesByPool, advancingPlaces, pending, folded, faulted),
+    );
 
     const edges = buildEdges(input, anchorsOf(columns));
-    const contentHeight = Math.max(...columns.map((column) => column.slotTop + SLOT_HEIGHT), FIRST_CARD_TOP + SLOT_HEIGHT);
+    const contentHeight = Math.max(...columns.map((column) => column.height), FIRST_CARD_TOP + SLOT_HEIGHT);
     const addColumnLeft = columns.length * (COLUMN_WIDTH + COLUMN_GAP);
 
     return {
         columns,
         edges,
-        width: addColumnLeft + ADD_COLUMN_WIDTH,
+        width: addColumnLeft + COLUMN_WIDTH,
         height: contentHeight,
         addColumnLeft,
         danglingPlacements: countDangling(phases, advancingPlaces),
+    };
+}
+
+/**
+ * One phase, and everything under it.
+ *
+ * The pools stack, each one followed by its matches and by the slot that adds
+ * another, and the column ends with the slot that adds another pool. A phase
+ * with a single pool skips the pool card: its header carries that pool's counts
+ * and its placements, and the matches hang straight off the header.
+ */
+function buildColumn(
+    phase: TournamentDivisionOptionPhase,
+    left: number,
+    matchesByPool: Map<number, Match[]>,
+    advancingPlaces: number,
+    pending: Set<string>,
+    folded: Set<string>,
+    faulted: Set<string>,
+): CanvasColumn {
+    const pools = phase.phaseGroups ?? [];
+    const implicit = implicitPool(phase);
+    const chips = implicit ? placementChips(implicit, advancingPlaces) : [];
+    const cards: CanvasCard[] = [];
+    const slots: CanvasSlot[] = [];
+
+    let top = headerHeight(chips) + CARD_GAP;
+
+    for (const pool of pools) {
+        if (pool.id !== implicit?.id) {
+            const card = sized(poolCard(pool, matchesByPool, placementChips(pool, advancingPlaces), pending, folded, faulted), top);
+            cards.push(card);
+            top += card.height + NESTED_GAP;
+        }
+
+        if (folded.has(poolKey(pool.id))) {
+            top += CARD_GAP - NESTED_GAP;
+            continue;
+        }
+
+        for (const match of matchesByPool.get(pool.id) ?? []) {
+            const nested = sized(matchCard(match, pool, pending, faulted), top);
+            cards.push(nested);
+            top += nested.height + NESTED_GAP;
+        }
+
+        slots.push({
+            key: `add-match:${pool.id}`,
+            noun: "Match",
+            parentId: pool.id,
+            top,
+            left: NEST_INDENT,
+            width: COLUMN_WIDTH - NEST_INDENT,
+            height: MATCH_SLOT_HEIGHT,
+        });
+        top += MATCH_SLOT_HEIGHT + CARD_GAP;
+    }
+
+    slots.push({ key: `add-pool:${phase.id}`, noun: "Pool", parentId: phase.id, top, left: 0, width: COLUMN_WIDTH, height: SLOT_HEIGHT });
+
+    return {
+        phaseId: phase.id,
+        name: phase.name,
+        status: phaseStatus(phase),
+        meta: implicit ? poolMeta(implicit, matchesByPool) : phaseMeta(phase),
+        left,
+        height: top + SLOT_HEIGHT,
+        poolId: implicit?.id ?? null,
+        chips,
+        faulted: faulted.has(`phase:${phase.id}`) || (implicit !== undefined && faulted.has(poolKey(implicit.id))),
+        cards,
+        slots,
     };
 }
 
@@ -218,49 +316,14 @@ function phaseMeta(phase: TournamentDivisionOptionPhase): string {
     return `${poolPart} · ${phase.matchCount} ${phase.matchCount === 1 ? "match" : "matches"}`;
 }
 
+/** The line a header carries when it is standing in for its only pool. */
+function poolMeta(pool: PhaseGroup, matchesByPool: Map<number, Match[]>): string {
+    return `${pool.matchCount} ${pool.matchCount === 1 ? "match" : "matches"} · ${poolProgress(pool, matchesByPool)}`;
+}
+
 /** A card at rest, told where it sits and asked how tall that makes it. */
 function sized(card: Omit<CanvasCard, "top" | "height">, top: number): CanvasCard {
     return { ...card, top, height: cardHeight(card) };
-}
-
-function poolCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, advancingPlaces: number, pending: Set<string>): CanvasCard[] {
-    let top = FIRST_CARD_TOP;
-
-    return (phase.phaseGroups ?? []).map((pool) => {
-        const card = sized(poolCard(pool, matchesByPool, placementChips(pool, advancingPlaces), pending), top);
-        top += card.height + CARD_GAP;
-
-        return card;
-    });
-}
-
-/**
- * A pool and the matches inside it, which is what a route runs between.
- *
- * Both granularities are on the canvas at once because both are ends of a real
- * rule: the winners of a pool go to a bracket, and the winner of one match goes
- * to the next. Drawing one at a time is what made a route disappear when the
- * view changed rather than when the rule did.
- */
-function routingCards(phase: TournamentDivisionOptionPhase, matchesByPool: Map<number, Match[]>, pending: Set<string>): CanvasCard[] {
-    const cards: CanvasCard[] = [];
-    let top = FIRST_CARD_TOP;
-
-    for (const pool of phase.phaseGroups ?? []) {
-        const card = sized(poolCard(pool, matchesByPool, routedChips(poolRulesOf(pool)), pending), top);
-        cards.push(card);
-        top += card.height + NESTED_GAP;
-
-        for (const match of matchesByPool.get(pool.id) ?? []) {
-            const nested = sized(matchCard(match, pool, pending), top);
-            cards.push(nested);
-            top += nested.height + NESTED_GAP;
-        }
-
-        top += CARD_GAP - NESTED_GAP;
-    }
-
-    return cards;
 }
 
 function poolCard(
@@ -268,6 +331,8 @@ function poolCard(
     matchesByPool: Map<number, Match[]>,
     chips: PlacementChip[],
     pending: Set<string>,
+    folded: Set<string>,
+    faulted: Set<string>,
 ): Omit<CanvasCard, "top" | "height"> {
     return {
         key: poolKey(pool.id),
@@ -282,10 +347,12 @@ function poolCard(
         width: COLUMN_WIDTH,
         poolId: pool.id,
         pending: pending.has(poolKey(pool.id)),
+        folded: folded.has(poolKey(pool.id)),
+        faulted: faulted.has(poolKey(pool.id)),
     };
 }
 
-function matchCard(match: Match, pool: PhaseGroup, pending: Set<string>): Omit<CanvasCard, "top" | "height"> {
+function matchCard(match: Match, pool: PhaseGroup, pending: Set<string>, faulted: Set<string>): Omit<CanvasCard, "top" | "height"> {
     return {
         key: matchKey(match.id),
         kind: "match",
@@ -299,6 +366,7 @@ function matchCard(match: Match, pool: PhaseGroup, pending: Set<string>): Omit<C
         width: COLUMN_WIDTH - NEST_INDENT,
         poolId: pool.id,
         pending: pending.has(matchKey(match.id)),
+        faulted: faulted.has(matchKey(match.id)),
     };
 }
 
@@ -376,6 +444,15 @@ function anchorsOf(columns: CanvasColumn[]): Map<string, Anchor> {
     const anchors = new Map<string, Anchor>();
 
     for (const column of columns) {
+        /* The header is where a route lands when the phase draws no pool card,
+           because there the header is the pool. */
+        if (column.poolId !== null) {
+            anchors.set(poolKey(column.poolId), {
+                left: column.left,
+                right: column.left + COLUMN_WIDTH,
+                y: headerHeight(column.chips) / 2,
+            });
+        }
         for (const card of column.cards) {
             anchors.set(card.key, { left: column.left + card.left, right: column.left + card.left + card.width, y: card.top + card.height / 2 });
         }
@@ -391,10 +468,9 @@ type CanvasRule = { sourceKind: "pool" | "match"; sourceId: number; targetKind: 
  * left edge of another. Both ends are horizontal, so a route reads as a flow
  * from one column into the next however far apart the two cards are vertically.
  *
- * Every rule is drawn in every mode. A rule whose end is not a card on this
- * canvas — a match, while the canvas is showing pools — is drawn to the pool
- * that holds it, so a route disappears when the rule does and not when the view
- * changes.
+ * Every rule is drawn, whether or not both of its ends are cards. A rule into a
+ * match inside a folded pool is drawn to the pool, so folding hides matches and
+ * never hides a route: a route disappears when the rule does.
  */
 function buildEdges(input: StructureCanvasInput, anchors: Map<string, Anchor>): CanvasEdge[] {
     const edges: CanvasEdge[] = [];

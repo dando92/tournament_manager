@@ -1,34 +1,50 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faChevronUp, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { useTournamentPageContext } from "@/features/tournament/model/TournamentPageContext";
 import { useTournamentTree } from "@/features/tournament/model/TournamentTreeContext";
 import { useStructurePage } from "@/features/structure/model/useStructurePage";
-import { addBracket, addNode, clearSlot, drawRoute, indexStructure, removeNode, renameNode } from "@/features/structure/model/structureDraft";
+import {
+    addBracket,
+    addNode,
+    clearSlot,
+    drawRoute,
+    indexStructure,
+    removeNode,
+    renameNode,
+    seatEntrants,
+    setMatchSongs,
+} from "@/features/structure/model/structureDraft";
 import type { BracketRequest } from "@/features/structure/model/structureDraft";
 import StructureCanvasView from "@/features/structure/ui/StructureCanvasView";
-import StructureInspector from "@/features/structure/ui/StructureInspector";
+import StructureDock from "@/features/structure/ui/StructureDock";
 import GeneratePanel from "@/features/structure/ui/GeneratePanel";
 import AddSlot from "@/features/structure/ui/AddSlot";
+import { spellReason } from "@/features/structure/model/planReasons";
 import { nextPoolName } from "@/features/division/model/poolVisibility";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
-import type { ArmedPlacement, CanvasCard } from "@/features/structure/model/structureCanvas";
+import type { ArmedPlacement, CanvasCard, CanvasSelection, CanvasSlot } from "@/features/structure/model/structureCanvas";
 
 /**
  * The whole shape of a division, on one page, written once.
  *
  * It replaces six dialogs that each knew one noun and none of which showed the
- * thing being changed: the dashed slots create, the panel edits whatever is
- * selected, and a route is drawn between two cards that are both on screen. The
- * header counts what is wrong rather than what exists, because a missing route
- * is the one thing no dialog could ever have reported.
+ * thing being changed: the dashed slots create, the dock under the canvas edits
+ * whatever is selected, and a route is drawn between two cards that are both on
+ * screen. The header counts what is wrong rather than what exists, because a
+ * missing route is the one thing no dialog could ever have reported.
  *
  * Nothing here writes. Every gesture edits a draft, the canvas draws the
  * division as that draft would leave it, and Commit sends the whole change as
  * one plan in one transaction. What is on the canvas and not yet in the
  * database is drawn with the dashed outline, which is what the design system
- * already means by a thing that is not there yet.
+ * already means by a thing that is not there yet — and while any of it is
+ * outstanding the page says DRAFT, because a canvas that looks finished and is
+ * not written is the one thing this page must never be.
+ *
+ * The page itself does not scroll; the canvas does. Everything else — the
+ * header, the divisions, the dock — stays where it was put.
  *
  * Below `lg` this redirects to the tree, which keeps its single-row creations
  * on every size. The rule is that the tree creates rows and this page creates
@@ -38,7 +54,7 @@ export default function StructurePage() {
     const { tournamentId, divisions, controls, hasStartggApiKey } = useTournamentPageContext();
     const tree = useTournamentTree();
     const page = useStructurePage(tournamentId, divisions);
-    const [panel, setPanel] = useState<"inspector" | "generate">("inspector");
+    const [panel, setPanel] = useState<"dock" | "generate">("dock");
     const [armed, setArmed] = useState<ArmedPlacement | null>(null);
     const [importNotice, setImportNotice] = useState(false);
 
@@ -62,8 +78,10 @@ export default function StructurePage() {
      * becomes a target, and the second click makes the rule. Click-click rather
      * than drag, because the canvas scrolls between the two ends.
      */
-    function dropRoute(target: CanvasCard): void {
-        if (!armed) return;
+    function dropRoute(target: { kind: "pool" | "match"; id: number; slots: CanvasCard["slots"] }): void {
+        if (!armed) {
+            return;
+        }
 
         const slot = target.kind === "match" ? (target.slots.find((entry) => !entry.from)?.slot ?? target.slots.length + 1) : armed.placement;
         page.edit((draft) =>
@@ -79,13 +97,9 @@ export default function StructurePage() {
         setArmed(null);
     }
 
-    /** What a card in a column is: the pool. A match is added from its pool. */
-    function addPool(phaseId: number, name: string): void {
-        page.edit((draft) => addNode(draft, "pool", phaseId, name));
-    }
-
-    function addMatch(poolId: number, name: string): void {
-        page.edit((draft) => addNode(draft, "match", poolId, name));
+    /** Every dashed slot on the canvas adds one thing to the thing it sits in. */
+    function addFromSlot(slot: CanvasSlot, name: string): void {
+        page.edit((draft) => addNode(draft, slot.noun === "Pool" ? "pool" : "match", slot.parentId, name));
     }
 
     /* A generated bracket is not a different kind of change. It joins the draft
@@ -100,12 +114,16 @@ export default function StructurePage() {
     }
 
     function rename(name: string): void {
-        if (!page.selection) return;
+        if (!page.selection) {
+            return;
+        }
         page.edit((draft) => renameNode(draft, page.selection!, name));
     }
 
     function remove(): void {
-        if (!page.selection) return;
+        if (!page.selection) {
+            return;
+        }
         const selected = page.selection;
         page.edit((draft) => removeNode(draft, selected, indexStructure(page.division, page.matches, draft)));
         page.select(null);
@@ -116,14 +134,50 @@ export default function StructurePage() {
         page.edit((draft) => clearSlot(draft, { targetKind, targetId, slot }));
     }
 
+    /** What a slot offers to call the thing it makes, by what is already there. */
+    function suggestedName(slot: CanvasSlot): string {
+        if (slot.noun === "Pool") {
+            return nextPoolName(page.division?.phases.find((phase) => phase.id === slot.parentId));
+        }
+
+        return `Match ${page.matches.filter((match) => match.phaseGroupId === slot.parentId).length + 1}`;
+    }
+
+    /** What a node in a reason is called, so the sentence names a thing. */
+    function nameOfRef(ref: string): string | undefined {
+        const [kind, raw] = ref.split(":");
+        const id = Number(raw);
+        if (kind === "phase") {
+            return page.canvas.columns.find((column) => column.phaseId === id)?.name;
+        }
+        if (kind === "division") {
+            return divisions.find((candidate) => candidate.id === id)?.name;
+        }
+
+        return page.canvas.columns.flatMap((column) => column.cards).find((card) => card.kind === kind && card.id === id)?.name;
+    }
+
     if (!controls) {
         return <p className="p-4 text-sm text-ui-text-mute">Structure is where a tournament is built, and it is open to whoever can edit this one.</p>;
     }
 
     return (
-        <div className="flex h-full flex-col gap-3.5 p-4">
+        /* The layout above this is a scrolling main with its own padding, so a
+           percentage height here resolves against something that moves. The
+           canvas is the one thing on the page that scrolls, and it can only be
+           that if the page states a height nothing else has to agree about. */
+        <div className="flex h-[calc(100dvh-2rem)] flex-col gap-3.5 p-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
-                <h1 className="text-2xl font-bold tracking-tight text-ui-text">Structure</h1>
+                <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-ui-text">
+                    Structure
+                    {/* Unwritten work is said out loud, in the colour the design
+                        system keeps for a thing that is waiting on somebody. */}
+                    {page.changes > 0 && (
+                        <span className="rounded-full border border-state-pending/50 bg-state-pending/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-state-pending">
+                            Draft
+                        </span>
+                    )}
+                </h1>
                 <div className="flex flex-wrap items-center gap-2.5">
                     {page.changes > 0 && (
                         <span className="rounded-full border border-ui-border-strong px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ui-text-mute">
@@ -135,29 +189,16 @@ export default function StructurePage() {
                             {page.canvas.danglingPlacements} {page.canvas.danglingPlacements === 1 ? "placement goes" : "placements go"} nowhere
                         </span>
                     )}
-                    {/* One canvas, two things to be doing on it: laying out the
-                        shape, and saying where its finishers go. */}
-                    <span className="inline-flex overflow-hidden rounded-lg border border-ui-border bg-ui-surface">
-                        {([
-                            { mode: "build", label: "Build" },
-                            { mode: "routes", label: "Routes" },
-                        ] as const).map((choice) => (
-                            <button
-                                key={choice.mode}
-                                type="button"
-                                onClick={() => page.setMode(choice.mode)}
-                                className={`${focusRing} px-3 py-1.5 text-xs font-semibold ${
-                                    page.mode === choice.mode ? "bg-ui-selected text-ui-text shadow-[inset_0_-3px_0_0_rgb(var(--ui-accent))]" : "text-ui-text-mute"
-                                }`}
-                            >
-                                {choice.label}
-                            </button>
-                        ))}
-                    </span>
+                    {/* One canvas and no modes: what is not being worked on is
+                        folded away, either one pool at a time or all at once. */}
+                    <button type="button" onClick={() => page.foldAll(page.folded.size === 0)} className={`${btnSecondary} text-xs`}>
+                        <FontAwesomeIcon icon={faChevronUp} className="mr-1.5 text-[10px]" />
+                        {page.folded.size === 0 ? "Fold matches" : "Unfold matches"}
+                    </button>
                     <button
                         type="button"
                         disabled={!page.division}
-                        onClick={() => setPanel(panel === "generate" ? "inspector" : "generate")}
+                        onClick={() => setPanel(panel === "generate" ? "dock" : "generate")}
                         className={`${btnSecondary} text-xs`}
                     >
                         Generate…
@@ -187,8 +228,12 @@ export default function StructurePage() {
 
             {/* A failure is stated where the action was taken, and does not expire. */}
             {page.error && (
-                <div className="flex items-start gap-2 rounded border border-state-failed/40 bg-state-failed/10 px-3 py-2 text-sm text-state-failed">
-                    <span className="flex-1">{page.error}</span>
+                <div className="flex max-h-40 shrink-0 items-start gap-2 overflow-y-auto rounded border border-state-failed/40 bg-state-failed/10 px-3 py-2 text-sm text-state-failed">
+                    <ul className="flex flex-1 flex-col gap-1">
+                        {page.error.map((reason) => (
+                            <li key={reason}>{spell(reason, nameOfRef, page.select)}</li>
+                        ))}
+                    </ul>
                     <button type="button" aria-label="Dismiss" onClick={page.dismissError} className={focusRing}>
                         <FontAwesomeIcon icon={faXmark} />
                     </button>
@@ -244,42 +289,76 @@ export default function StructurePage() {
                 created from its pool.
             </p>
 
-            <div className="hidden min-h-0 flex-1 gap-5 lg:flex">
-                <div className="min-w-0 flex-1">
+            <div className="hidden min-h-0 flex-1 flex-col gap-3.5 lg:flex">
+                {/* The one thing on the page that scrolls. */}
+                <div className="flex min-h-0 flex-1 rounded-xl border border-ui-border bg-ui-canvas p-3.5">
                     <StructureCanvasView
                         canvas={page.canvas}
-                        mode={page.mode}
                         selection={page.selection}
                         onSelect={page.select}
-                        onAddCard={(phaseId, name) => addPool(phaseId, name)}
+                        onAdd={(slot, name) => addFromSlot(slot, name)}
                         onAddPhase={(name) => addPhase(name)}
+                        onToggleFold={page.toggleFold}
                         armed={armed}
                         onArm={setArmed}
                         onDropRoute={dropRoute}
-                        suggestedCardName={(phaseId) => nextPoolName(page.division?.phases.find((phase) => phase.id === phaseId))}
+                        suggestedName={suggestedName}
                         suggestedPhaseName={`Phase ${(page.division?.phases.length ?? 0) + 1}`}
                     />
                 </div>
 
                 {panel === "generate" && page.division ? (
-                    <GeneratePanel division={page.division} onAdd={addGeneratedBracket} onClose={() => setPanel("inspector")} />
+                    <GeneratePanel division={page.division} onAdd={addGeneratedBracket} onClose={() => setPanel("dock")} />
                 ) : (
-                    <StructureInspector
+                    <StructureDock
+                        tournamentId={tournamentId}
                         division={page.division}
                         selection={page.selection}
                         card={selectedCard}
                         matches={page.matches}
-                        onAddPool={addPool}
-                        onAddMatch={addMatch}
+                        roster={page.roster}
+                        draft={page.draft}
                         onRename={rename}
                         onDelete={remove}
                         onDeleteRoute={deleteRoute}
+                        onSeat={(matchId, entrantIds) => page.edit((draft) => seatEntrants(draft, matchId, entrantIds))}
+                        onSetSongs={(matchId, songIds) => page.edit((draft) => setMatchSongs(draft, matchId, songIds))}
                         onClearSelection={() => page.select(null)}
                     />
                 )}
             </div>
         </div>
     );
+}
+
+/**
+ * A reason, with the nodes in it named and pointed at.
+ *
+ * The applier writes in local ids because that is the only thing a plan and a
+ * database agree about. Nobody reads `phase:-2`, so each one is drawn as the
+ * card it is, and clicking it selects that card — which is on the canvas in the
+ * same red the sentence is in.
+ */
+function spell(reason: string, nameOfRef: (ref: string) => string | undefined, select: (selection: CanvasSelection) => void): React.ReactNode[] {
+    return spellReason(reason).map((piece, index) => {
+        if (!piece.ref) {
+            return <span key={index}>{piece.text}</span>;
+        }
+
+        const [kind, raw] = piece.ref.split(":");
+
+        return (
+            <button
+                key={index}
+                type="button"
+                disabled={kind === "division"}
+                onClick={() => select({ kind: kind as "phase" | "pool" | "match", id: Number(raw) })}
+                className={`${focusRing} rounded border border-state-failed/50 px-1 font-semibold`}
+            >
+                {nameOfRef(piece.ref) ?? piece.text}
+            </button>
+        );
+    });
 }
 
 function selectionKey(selection: ReturnType<typeof useStructurePage>["selection"]): string | null {

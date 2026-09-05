@@ -20,3 +20,19 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
 export function apiErrorDetail(error: unknown): string | undefined {
     return (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
 }
+
+/**
+ * Every reason a call failed, as the sentences the API sent.
+ *
+ * Validation answers with a list, and a list rendered as one string is the run
+ * of full stops nobody can read: `x has no name.y cannot hang from a phase.`
+ * The caller gets the sentences and decides how to lay them out.
+ */
+export function apiErrorMessages(error: unknown, fallback: string): string[] {
+    const message = (error as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
+    if (Array.isArray(message)) {
+        return message;
+    }
+
+    return [message ?? (error instanceof Error ? error.message : fallback)];
+}

@@ -14,9 +14,14 @@ import {
     projectStructure,
     removeNode,
     renameNode,
+    seatEntrants,
+    seatingOf,
+    setMatchSongs,
+    songsOf,
     toStructurePlan,
     type StructureDraft,
 } from "../../src/features/structure/model/structureDraft.ts";
+import { buildStructureCanvas } from "../../src/features/structure/model/structureCanvas.ts";
 import { collectRoutes, routesOf } from "../../src/features/structure/model/structureRoutes.ts";
 import type { TournamentDivisionOption } from "../../src/features/tournament/model/types.ts";
 
@@ -284,4 +289,83 @@ test("a generated bracket reaches the plan with every route between local ids", 
     assert.equal(plan.routes.length, 2);
     assert.ok(plan.nodes.filter((node) => node.kind === "match").every((node) => node.action === "create"));
     assert.ok(plan.routes.every((route) => plan.nodes.some((node) => node.localId === route.sourceLocalId)));
+});
+
+test("a match the draft added is a whole match, so the canvas can draw it", () => {
+    const draft = addNode(draftOf(), "match", 1, "Quarter 1");
+    const projected = projectStructure(division(), [], draft);
+    const added = projected.matches.find((candidate) => candidate.id === draft.added[0].id)!;
+
+    assert.equal(added.resultState.status, "incomplete");
+    assert.doesNotThrow(() =>
+        buildStructureCanvas({ division: projected.division, matches: projected.matches, mode: "routes", selection: null, pending: projected.pending }),
+    );
+});
+
+/* Seats and songs are part of the same draft as the shape, so laying out a
+   bracket and filling its first round is one plan and one transaction. */
+test("seating a match draws the people in it and reaches the plan on the match node", () => {
+    const roster = [
+        { id: 21, name: "Ada" },
+        { id: 22, name: "Bo" },
+    ];
+    const seated = seatEntrants(draftOf(), 1, [21, 22]);
+    const projected = projectStructure(division(), [match({ id: 1, phaseGroupId: 1 })], seated, roster);
+
+    assert.deepEqual(
+        projected.matches[0].entrants.map((entrant) => entrant.name),
+        ["Ada", "Bo"],
+    );
+
+    const plan = toStructurePlan(seated, "Open", indexOf(seated, [match({ id: 1, phaseGroupId: 1 })]), 3);
+    const node = plan.nodes.find((candidate) => candidate.localId === "match:1")!;
+
+    assert.equal(node.action, "link");
+    assert.deepEqual(node.entrantRowIds, [21, 22]);
+});
+
+test("songs given to a match are counted as its rounds and travel on the same node", () => {
+    const given = setMatchSongs(draftOf(), 1, [7, 8]);
+    const projected = projectStructure(division(), [match({ id: 1, phaseGroupId: 1 })], given);
+
+    assert.equal(projected.matches[0].rounds.length, 2);
+    assert.equal(changeCount(given), 1);
+
+    const plan = toStructurePlan(given, "Open", indexOf(given, [match({ id: 1, phaseGroupId: 1 })]), 3);
+
+    assert.deepEqual(plan.nodes.find((candidate) => candidate.localId === "match:1")!.songIds, [7, 8]);
+});
+
+test("saying who plays twice says it once: the last answer replaces the one before", () => {
+    const seated = seatEntrants(seatEntrants(draftOf(), 1, [21]), 1, [22, 23]);
+
+    assert.equal(seated.seated.length, 1);
+    assert.deepEqual(seatingOf(seated, 1), [22, 23]);
+    assert.deepEqual(songsOf(setMatchSongs(seated, 1, []), 1), []);
+});
+
+test("removing a pool takes the seats and songs of the matches inside it", () => {
+    const matches = [match({ id: 1, phaseGroupId: 1 })];
+    let draft = seatEntrants(draftOf(), 1, [21]);
+    draft = setMatchSongs(draft, 1, [7]);
+    draft = removeNode(draft, { kind: "pool", id: 1 }, indexOf(draft, matches));
+
+    assert.deepEqual(draft.seated, []);
+    assert.deepEqual(draft.songs, []);
+});
+
+/* A phase hangs from the division. Calling its parent a phase made the plan
+   invent one out of the division's id, and every phase added after that was
+   refused for hanging from a phase. */
+test("a phase the draft adds hangs from the division, not from a phase", () => {
+    let draft = addNode(draftOf(), "phase", 7, "Finals");
+    draft = addNode(draft, "phase", 7, "Grand Finals");
+    const plan = toStructurePlan(draft, "Open", indexOf(draft), 3);
+
+    const phases = plan.nodes.filter((node) => node.kind === "phase");
+    const divisionNode = plan.nodes.find((node) => node.kind === "division")!;
+
+    assert.equal(phases.length, 2);
+    assert.ok(phases.every((node) => node.parentLocalId === divisionNode.localId));
+    assert.ok(plan.nodes.every((node) => node.name.trim().length > 0));
 });

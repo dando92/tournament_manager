@@ -35,6 +35,12 @@ export type DraftAddition = NodeRef & { parentId: number; name: string };
 export type DraftRename = NodeRef & { name: string };
 export type DraftRoute = { sourceKind: RoutableKind; sourceId: number; placement: number; targetKind: RoutableKind; targetId: number; slot: number };
 export type DraftSlot = { targetKind: RoutableKind; targetId: number; slot: number };
+/** Who sits in a match once the plan is written, replacing whoever did. */
+export type DraftSeating = { matchId: number; entrantIds: number[] };
+/** The songs a match is given, on top of the rounds it already has. */
+export type DraftSongs = { matchId: number; songIds: number[] };
+/** An entrant as the draft needs one: an id and the name to draw. */
+export type EntrantRef = { id: number; name: string };
 
 export type StructureDraft = {
     tournamentId: number;
@@ -45,15 +51,19 @@ export type StructureDraft = {
     routes: DraftRoute[];
     /** Routes taken away and not replaced. */
     cleared: DraftSlot[];
+    /** Matches whose players the draft has changed. */
+    seated: DraftSeating[];
+    /** Matches the draft has given songs to. */
+    songs: DraftSongs[];
 };
 
 export function emptyDraft(tournamentId: number, divisionId: number): StructureDraft {
-    return { tournamentId, divisionId, added: [], renamed: [], removed: [], routes: [], cleared: [] };
+    return { tournamentId, divisionId, added: [], renamed: [], removed: [], routes: [], cleared: [], seated: [], songs: [] };
 }
 
 /** How much is waiting to be written, which is what the header says out loud. */
 export function changeCount(draft: StructureDraft): number {
-    return draft.added.length + draft.renamed.length + draft.removed.length + draft.routes.length + draft.cleared.length;
+    return draft.added.length + draft.renamed.length + draft.removed.length + draft.routes.length + draft.cleared.length + draft.seated.length + draft.songs.length;
 }
 
 export function isPending(id: number): boolean {
@@ -165,7 +175,35 @@ export function removeNode(draft: StructureDraft, ref: NodeRef, tree: StructureI
         removed: [...draft.removed.filter((entry) => !isGone(entry)), ...gone.filter((entry) => !isPending(entry.id))],
         routes: draft.routes.filter((route) => !touchesGone(route.sourceKind, route.sourceId) && !touchesGone(route.targetKind, route.targetId)),
         cleared: draft.cleared.filter((slot) => !touchesGone(slot.targetKind, slot.targetId)),
+        seated: draft.seated.filter((entry) => !isGone({ kind: "match", id: entry.matchId })),
+        songs: draft.songs.filter((entry) => !isGone({ kind: "match", id: entry.matchId })),
     };
+}
+
+/**
+ * Who plays a match, and what it is played on, in the same draft as its shape.
+ *
+ * Both are the whole answer rather than an addition, so saying it twice says
+ * the same thing: the seating replaces the seating, and the songs replace the
+ * ones the draft was going to add. What the match already holds is untouched
+ * until Commit, which is what makes any of this reversible by Discard.
+ */
+export function seatEntrants(draft: StructureDraft, matchId: number, entrantIds: number[]): StructureDraft {
+    return { ...draft, seated: [...draft.seated.filter((entry) => entry.matchId !== matchId), { matchId, entrantIds }] };
+}
+
+export function setMatchSongs(draft: StructureDraft, matchId: number, songIds: number[]): StructureDraft {
+    const rest = draft.songs.filter((entry) => entry.matchId !== matchId);
+
+    return { ...draft, songs: songIds.length === 0 ? rest : [...rest, { matchId, songIds }] };
+}
+
+export function seatingOf(draft: StructureDraft, matchId: number): number[] | undefined {
+    return draft.seated.find((entry) => entry.matchId === matchId)?.entrantIds;
+}
+
+export function songsOf(draft: StructureDraft, matchId: number): number[] {
+    return draft.songs.find((entry) => entry.matchId === matchId)?.songIds ?? [];
 }
 
 /**
@@ -218,7 +256,15 @@ export function indexStructure(division: TournamentDivisionOption | undefined, m
         nameOf.set(keyOf({ kind: "match", id: match.id }), match.name);
     }
     for (const node of draft.added) {
-        parentOf.set(keyOf(node), { kind: node.kind === "match" ? "pool" : "phase", id: node.parentId });
+        /* A phase hangs from the division, which is not a node anything here
+           can point at: leaving it out of the index is what tells the plan to
+           hang it off the division. Calling its parent a phase made the plan
+           invent one out of the division's own id, and the applier answered
+           with four sentences about a phase inside a phase. */
+        const parent = parentKindOf(node.kind);
+        if (parent) {
+            parentOf.set(keyOf(node), { kind: parent, id: node.parentId });
+        }
         nameOf.set(keyOf(node), node.name);
     }
     for (const entry of draft.renamed) {
@@ -226,6 +272,15 @@ export function indexStructure(division: TournamentDivisionOption | undefined, m
     }
 
     return { parentOf, nameOf };
+}
+
+/** What holds what. A phase is held by the division, which is not a node. */
+function parentKindOf(kind: DraftKind): DraftKind | null {
+    if (kind === "match") {
+        return "pool";
+    }
+
+    return kind === "pool" ? "phase" : null;
 }
 
 function descendantsOf(ref: NodeRef, draft: StructureDraft, tree: StructureIndex): NodeRef[] {
@@ -257,7 +312,12 @@ export type ProjectedStructure = {
     pending: Set<string>;
 };
 
-export function projectStructure(division: TournamentDivisionOption | undefined, matches: Match[], draft: StructureDraft): ProjectedStructure {
+export function projectStructure(
+    division: TournamentDivisionOption | undefined,
+    matches: Match[],
+    draft: StructureDraft,
+    roster: EntrantRef[] = [],
+): ProjectedStructure {
     if (!division) {
         return { division, matches, pending: new Set() };
     }
@@ -299,7 +359,7 @@ export function projectStructure(division: TournamentDivisionOption | undefined,
 
     return {
         division: { ...division, phases },
-        matches: projectMatches(division, matches, draft, removed, renamed, rules),
+        matches: projectMatches(division, matches, draft, removed, renamed, rules, roster),
         pending: new Set(draft.added.filter((node) => node.kind !== "phase").map((node) => `${node.kind}:${node.id}`)),
     };
 }
@@ -325,13 +385,36 @@ function projectMatches(
     removed: Set<string>,
     renamed: Map<string, string>,
     rules: AdvancementRuleDto[],
+    roster: EntrantRef[],
 ): Match[] {
     const rulesOf = (id: number) => rules.filter((rule) => touches(rule, "match", id));
+    const entrantById = new Map(roster.map((entrant) => [entrant.id, entrant]));
+    /* A seated match draws the people the draft put in it, so the slots under
+       its name are the ones it will have and not the ones it has. */
+    const seatsOf = (id: number, current: Match["entrants"]) => {
+        const seating = seatingOf(draft, id);
+
+        return seating === undefined ? current : (seating.map((entrantId) => entrantById.get(entrantId)).filter(Boolean) as Match["entrants"]);
+    };
+    const roundsOf = (id: number, current: Match["rounds"]) => [
+        ...(current ?? []),
+        ...songsOf(draft, id).map((songId) => ({ id: -songId, song: { id: songId }, standings: [] }) as unknown as Match["rounds"][number]),
+    ];
 
     const existing = matches
         .filter((match) => !removed.has(`match:${match.id}`) && !removed.has(`pool:${match.phaseGroupId}`))
-        .map((match) => ({ ...match, name: renamed.get(`match:${match.id}`) ?? match.name, advancementRules: rulesOf(match.id) }));
+        .map((match) => ({
+            ...match,
+            name: renamed.get(`match:${match.id}`) ?? match.name,
+            advancementRules: rulesOf(match.id),
+            entrants: seatsOf(match.id, match.entrants),
+            rounds: roundsOf(match.id, match.rounds),
+        }));
 
+    /* A match nobody has played is still a whole match to everything that reads
+       one: `getMatchProgress` asks a match how far along it is before it asks
+       anything else, so a draft that leaves out its empty result state crashes
+       the canvas the moment it draws one. */
     const added = draft.added
         .filter((node) => node.kind === "match")
         .map(
@@ -342,9 +425,12 @@ function projectMatches(
                     subtitle: "",
                     notes: "",
                     active: false,
-                    entrants: [],
-                    rounds: [],
+                    state: "open",
+                    entrants: seatsOf(node.id, []),
+                    rounds: roundsOf(node.id, []),
                     tiebreaks: [],
+                    resultState: { status: "incomplete", entries: [], ambiguousTies: [] },
+                    matchResult: null,
                     phaseGroupId: node.parentId,
                     advancementRules: rulesOf(node.id),
                 }) as unknown as Match,
@@ -477,6 +563,17 @@ export function toStructurePlan(draft: StructureDraft, divisionName: string, tre
     }
     for (const slot of draft.cleared) {
         ensure({ kind: slot.targetKind, id: slot.targetId });
+    }
+    /* Seating and songs hang on the match node, so the node comes first and the
+       data is set on it — a match that is only being seated reaches the plan as
+       a link, which is what a plan says about a row it is not creating. */
+    for (const entry of draft.seated) {
+        const localId = ensure({ kind: "match", id: entry.matchId });
+        nodes.set(localId, { ...nodes.get(localId)!, entrantRowIds: entry.entrantIds });
+    }
+    for (const entry of draft.songs) {
+        const localId = ensure({ kind: "match", id: entry.matchId });
+        nodes.set(localId, { ...nodes.get(localId)!, songIds: entry.songIds });
     }
     /* Removals come last so a row that something else in the plan names is
        already a link when this asks for it, and is then turned into a removal. */
