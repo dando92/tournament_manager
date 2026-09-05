@@ -5,6 +5,8 @@ import StatusIcon from "@/shared/components/ui/StatusIcon";
 import AddSlot from "@/features/structure/ui/AddSlot";
 import { focusRing } from "@/styles/buttonStyles";
 import {
+    CHIP_RAIL_GAP,
+    CHIP_RAIL_WIDTH,
     COLUMN_WIDTH,
     headerHeight,
     type ArmedPlacement,
@@ -66,7 +68,7 @@ export default function StructureCanvasView({
        is not, because a dash means a thing that is not there yet. */
     const isTarget = (kind: "pool" | "match", id: number) => Boolean(armed) && !isArmedSource(kind, id);
 
-    function chipOf(kind: "pool" | "match", id: number, name: string, chip: PlacementChip) {
+    function chipOf(kind: "pool" | "match", id: number, name: string, chip: PlacementChip, rail = false) {
         const armedHere = isArmedSource(kind, id) && armed?.placement === chip.placement;
 
         return (
@@ -88,7 +90,7 @@ export default function StructureCanvasView({
                     event.stopPropagation();
                     onArm({ kind, id, placement: chip.placement });
                 }}
-                className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
+                className={`rounded-full border text-[10px] font-bold ${rail ? "w-full py-px text-center leading-[14px]" : "px-1.5 py-0.5"} ${
                     armedHere
                         ? "border-ui-accent bg-ui-accent/10 text-ui-accent"
                         : chip.routed
@@ -165,19 +167,36 @@ export default function StructureCanvasView({
                                 </span>
                                 {card.meta[1] && <span className="mt-0.5 truncate text-[11px] text-ui-text-mute">{card.meta[1]}</span>}
 
-                                {card.slots.length > 0 && (
-                                    <span className="mt-0.5 flex flex-col gap-px">
-                                        {card.slots.map((slot) => (
-                                            <span key={slot.slot} className="flex items-center gap-1.5 text-[11px] text-ui-text-mute">
-                                                <span className="rounded border border-ui-border bg-ui-raised px-1 font-semibold text-ui-text">{slot.slot}</span>
-                                                <span className="truncate italic">{slot.from ?? "nobody yet"}</span>
+                                {/* A card that says where its players come from reads
+                                    across rather than down: the slots hold the width
+                                    they need and the placements stack against the edge
+                                    their routes leave by, which costs the card no line
+                                    of its own. A card with no slots has nothing to sit
+                                    beside, so its placements stay under the name. */}
+                                {card.slots.length > 0 ? (
+                                    <span className="mt-0.5 flex items-start" style={{ gap: CHIP_RAIL_GAP }}>
+                                        <span className="flex min-w-0 flex-1 flex-col gap-px">
+                                            {card.slots.map((slot) => (
+                                                <span key={slot.slot} className="flex items-center gap-1.5 text-[11px] text-ui-text-mute">
+                                                    <span className="rounded border border-ui-border bg-ui-raised px-1 font-semibold text-ui-text">
+                                                        {slot.slot}
+                                                    </span>
+                                                    <span className="truncate italic">{slot.from ?? "nobody yet"}</span>
+                                                </span>
+                                            ))}
+                                        </span>
+                                        {card.chips.length > 0 && (
+                                            <span className="flex shrink-0 flex-col" style={{ width: CHIP_RAIL_WIDTH }}>
+                                                {card.chips.map((chip) => chipOf(card.kind, card.id, card.name, chip, true))}
                                             </span>
-                                        ))}
+                                        )}
                                     </span>
-                                )}
-
-                                {card.chips.length > 0 && (
-                                    <span className="mt-1.5 flex flex-wrap gap-1">{card.chips.map((chip) => chipOf(card.kind, card.id, card.name, chip))}</span>
+                                ) : (
+                                    card.chips.length > 0 && (
+                                        <span className="mt-1.5 flex flex-wrap gap-1">
+                                            {card.chips.map((chip) => chipOf(card.kind, card.id, card.name, chip))}
+                                        </span>
+                                    )
                                 )}
                             </button>
                         ))}

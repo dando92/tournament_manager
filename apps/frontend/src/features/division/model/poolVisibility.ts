@@ -43,6 +43,9 @@ export function poolLabelIn(phase: PhaseWithPools | undefined | null, pool: Phas
     return phaseGroupLabel(pool);
 }
 
+/** What the pool a new phase brings with it is called, which the phase draws as itself. */
+export const FIRST_POOL_NAME = "Pool";
+
 /** The name a new pool is offered under: the next number nobody has taken. */
 export function nextPoolName(phase: PhaseWithPools | undefined | null): string {
     const taken = new Set((phase?.phaseGroups ?? []).map((pool) => phaseGroupLabel(pool)));

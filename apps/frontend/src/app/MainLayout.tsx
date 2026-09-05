@@ -73,7 +73,9 @@ export default function MainLayout() {
                 was not saved. It sits at the bottom, away from the controls and
                 clear of the mobile navigation, because nobody asked for it. */}
             <ToastContainer position="bottom-right" className="!bottom-20 md:!bottom-4" style={{ zIndex: 99999 }} />
-            <main className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
+            {/* A column, so a page that has to end where the window does can ask
+                for the room that is left instead of guessing at a height. */}
+            <main className="flex flex-1 flex-col overflow-y-auto p-4 pb-20 md:pb-4">
               <PageNotices />
               <Suspense fallback={null}>
                 <Outlet />

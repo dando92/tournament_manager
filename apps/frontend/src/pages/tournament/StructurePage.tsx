@@ -22,7 +22,7 @@ import StructureDock from "@/features/structure/ui/StructureDock";
 import GeneratePanel from "@/features/structure/ui/GeneratePanel";
 import AddSlot from "@/features/structure/ui/AddSlot";
 import { spellReason } from "@/features/structure/model/planReasons";
-import { nextPoolName } from "@/features/division/model/poolVisibility";
+import { FIRST_POOL_NAME, nextPoolName } from "@/features/division/model/poolVisibility";
 import { btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 import type { ArmedPlacement, CanvasCard, CanvasSelection, CanvasSlot } from "@/features/structure/model/structureCanvas";
 
@@ -109,8 +109,16 @@ export default function StructurePage() {
         page.edit((draft) => addBracket(draft, page.divisionId, request));
     }
 
+    /* A phase with no pool holds nothing and can be routed nowhere, so it never
+       is what somebody meant to make. It arrives with the pool every phase has
+       to have, which the canvas draws as the phase itself and which puts the
+       slot that adds a match on screen straight away. */
     function addPhase(name: string): void {
-        page.edit((draft) => addNode(draft, "phase", page.divisionId, name));
+        page.edit((draft) => {
+            const withPhase = addNode(draft, "phase", page.divisionId, name);
+
+            return addNode(withPhase, "pool", withPhase.added.at(-1)!.id, FIRST_POOL_NAME);
+        });
     }
 
     function rename(name: string): void {
@@ -162,11 +170,12 @@ export default function StructurePage() {
     }
 
     return (
-        /* The layout above this is a scrolling main with its own padding, so a
-           percentage height here resolves against something that moves. The
-           canvas is the one thing on the page that scrolls, and it can only be
-           that if the page states a height nothing else has to agree about. */
-        <div className="flex h-[calc(100dvh-2rem)] flex-col gap-3.5 p-4">
+        /* The canvas is the one thing on the page that scrolls, so the page
+           itself has to end exactly where the window does. It takes the room
+           that is left rather than naming a height: the tournament header above
+           it wraps at some widths and a page notice appears at any of them, and
+           a height measured from the viewport counts neither of them. */
+        <div className="flex min-h-0 flex-1 flex-col gap-3.5 p-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-ui-text">
                     Structure

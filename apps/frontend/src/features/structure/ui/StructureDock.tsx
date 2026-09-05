@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faDice, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import StatusIcon from "@/shared/components/ui/StatusIcon";
+import BaseModal from "@/shared/components/ui/BaseModal";
 import MultiSelect from "@/shared/components/ui/MultiSelect";
 import SongRollPanel from "@/features/song/ui/SongRollPanel";
 import { useSongRoll } from "@/features/song/model/useSongRoll";
 import { listSongs } from "@/features/song/api/song.api";
 import { songKeys } from "@/features/song/api/song.keys";
 import { displaySongTitle } from "@/features/song/model/songTitle";
-import { btnDanger, btnSecondary, focusRing } from "@/styles/buttonStyles";
+import { btnDanger, btnPrimary, btnSecondary, focusRing } from "@/styles/buttonStyles";
 import { ordinal, type CanvasCard, type CanvasSelection } from "@/features/structure/model/structureCanvas";
 import { collectRoutes, routesOf } from "@/features/structure/model/structureRoutes";
 import { seatingOf, songsOf, type StructureDraft } from "@/features/structure/model/structureDraft";
@@ -41,14 +42,16 @@ const NOUN = { phase: "Phase", pool: "Pool", match: "Match" } as const;
  * What is selected, along the bottom of the canvas.
  *
  * It reads left to right in the order somebody asks about a thing: what it is
- * called, where it stands, what arrives, what leaves, and who is in it. A rail
+ * called and how it is going, what arrives, what leaves, and who is in it. A rail
  * down the right would take the axis the canvas has least of — the columns run
  * sideways and there are as many of them as the tournament has phases — so the
  * editor takes the axis a card has to spare instead.
  *
- * Nothing here opens a window over the canvas and nothing here writes. Every
- * edit goes into the draft the page commits in one go, seats and songs
- * included: a bracket laid out and filled in one sitting is one transaction.
+ * Nothing here writes. Every edit goes into the draft the page commits in one
+ * go, seats and songs included: a bracket laid out and filled in one sitting is
+ * one transaction. Nothing here opens a window over the canvas either, with one
+ * exception that earns it: a draw is a table of cards somebody deals and reads,
+ * which is more than a strip along the bottom of the page can hold.
  */
 export default function StructureDock({
     tournamentId,
@@ -87,7 +90,11 @@ export default function StructureDock({
 
     return (
         <div className="flex max-h-[46%] shrink-0 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface shadow-card">
-            <Group className="w-[248px]">
+            {/* The name, where it stands and how it is going are one thing being
+                identified, so they are one column. Two of them spent the width
+                the routes needed on a label and a status line neither of which
+                fills it. */}
+            <Group className="w-[264px]">
                 <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-ui-text-mute">{NOUN[selection.kind]}</span>
                     <button type="button" onClick={onClearSelection} className={`${focusRing} text-[12px] text-ui-text-mute hover:text-ui-text`}>
@@ -107,18 +114,10 @@ export default function StructureDock({
                     {selection.kind !== "phase" && phase ? <Crumb>{phase.name}</Crumb> : null}
                     {selection.kind === "match" && pool ? <Crumb>{pool.name}</Crumb> : null}
                 </p>
-            </Group>
-
-            <Group className="w-[176px]">
-                <Section label="State" />
-                {card ? (
-                    <span className="flex items-center gap-2 text-[12px] text-ui-text-mute">
-                        <StatusIcon status={card.status} />
-                        {card.meta.join(" · ") || "nothing played yet"}
-                    </span>
-                ) : (
-                    <span className="text-[12px] text-ui-text-mute">nothing played yet</span>
-                )}
+                <span className="flex items-center gap-2 text-[12px] text-ui-text-mute">
+                    {card && <StatusIcon status={card.status} />}
+                    {(card && card.meta.join(" · ")) || "nothing played yet"}
+                </span>
                 <button type="button" onClick={onDelete} className={`${btnDanger} w-fit text-xs`}>
                     <FontAwesomeIcon icon={faTrash} className="mr-1.5 text-[10px]" />
                     Delete {NOUN[selection.kind].toLowerCase()}
@@ -215,6 +214,7 @@ function MatchContents({
     onSetSongs: (matchId: number, songIds: number[]) => void;
 }) {
     const [tab, setTab] = useState<"players" | "songs">("players");
+    const [rolling, setRolling] = useState(false);
 
     const songs = useQuery({
         queryKey: songKeys.forTournament(tournamentId),
@@ -227,7 +227,7 @@ function MatchContents({
     /* A match nobody has written has no id the roller can exclude songs by, so
        the draw is asked about the division alone. */
     const roll = useSongRoll({
-        open: tab === "songs",
+        open: rolling,
         divisionId,
         matchId: match.id > 0 ? match.id : undefined,
         tournamentId,
@@ -294,17 +294,43 @@ function MatchContents({
                     {played.length > 0 && (
                         <p className="text-[11px] text-ui-text-mute">Already on: {played.map((round) => titleOf(round.song!.id)).join(", ")}</p>
                     )}
-                    <SongRollPanel roll={roll} songGroups={songGroups} />
-                    <button
-                        type="button"
-                        disabled={roll.drawnSongIds.length === 0}
-                        onClick={() => onSetSongs(match.id, [...new Set([...drafted, ...roll.drawnSongIds])])}
-                        className={`${btnSecondary} w-fit text-xs`}
-                    >
-                        Take the draw
+                    {/* The draw is a table of its own and the dock is a strip: laid
+                        out flat it was the only thing in the dock anybody could see.
+                        It opens on the button that starts it, in the dialog the round
+                        and the new match already deal their cards in. */}
+                    <button type="button" onClick={() => setRolling(true)} className={`${btnSecondary} w-fit text-xs`}>
+                        <FontAwesomeIcon icon={faDice} className="mr-1.5 text-[10px]" />
+                        Roll…
                     </button>
                 </div>
             )}
+
+            <BaseModal
+                open={rolling}
+                onClose={() => setRolling(false)}
+                title={`Roll songs for ${match.name}`}
+                fitViewport
+                footer={
+                    <div className="flex justify-end gap-2">
+                        <button type="button" onClick={() => setRolling(false)} className={btnSecondary}>
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            disabled={roll.drawnSongIds.length === 0}
+                            onClick={() => {
+                                onSetSongs(match.id, [...new Set([...drafted, ...roll.drawnSongIds])]);
+                                setRolling(false);
+                            }}
+                            className={btnPrimary}
+                        >
+                            Take the draw
+                        </button>
+                    </div>
+                }
+            >
+                <SongRollPanel roll={roll} songGroups={songGroups} />
+            </BaseModal>
         </>
     );
 }

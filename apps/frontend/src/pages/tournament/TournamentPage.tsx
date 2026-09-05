@@ -43,6 +43,9 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
       isSongsPage: at("songs"),
       isParticipantsPage: at("participants"),
       isLobbiesPage: at("lobbies"),
+      /* The only page that ends where the window does rather than where its
+         content does: it hands the room it is given straight to the canvas. */
+      isStructurePage: at("structure"),
     };
   }, [location.pathname, tournamentId]);
 
@@ -65,7 +68,7 @@ function TournamentFrame({ context }: { context: TournamentPageContextValue }) {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={`flex flex-col gap-4 ${page.isStructurePage ? "min-h-0 flex-1" : ""}`}>
       {page.isLobbiesPage ? (
         <TournamentLobbiesProvider tournamentId={tournamentId}>{content}</TournamentLobbiesProvider>
       ) : (

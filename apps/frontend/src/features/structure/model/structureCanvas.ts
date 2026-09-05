@@ -53,6 +53,17 @@ const CHIP_ROW = 20;
 const CHIP_BLOCK_GAP = 6;
 /** Four short placement chips fit across a column before one wraps. */
 const CHIPS_PER_ROW = 4;
+/**
+ * The rail of placements down the right of a card that lists slots.
+ *
+ * A card that says where its players come from is read down the left, and the
+ * places it sends on are the other end of the same card: stacked against the
+ * edge the routes leave from, they cost the card no height it was not already
+ * spending on its slots.
+ */
+export const CHIP_RAIL_WIDTH = 40;
+export const CHIP_RAIL_GAP = 6;
+const CHIP_RAIL_ROW = 18;
 
 /** A chip on a card: one finishing place, and where it goes if anywhere. */
 export type PlacementChip = {
@@ -176,21 +187,22 @@ export function ordinal(placement: number): string {
  * How tall a card has to be to hold what is in it.
  *
  * The first line of `meta` rides the name row, so only the rest of it costs a
- * line. Everything else stacks: the slots a match is waiting on, and the
- * placements it sends on, four to a row.
+ * line. What is under it depends on whether the card lists slots: one that does
+ * spends the taller of its two columns, the slots and the rail of placements
+ * beside them, and one that does not stacks its placements four to a row.
  */
 export function cardHeight(card: Pick<CanvasCard, "meta" | "chips" | "slots">): number {
-    let height = CARD_PADDING_Y * 2 + NAME_ROW;
+    const head = CARD_PADDING_Y * 2 + NAME_ROW + Math.max(card.meta.length - 1, 0) * META_ROW;
 
-    height += Math.max(card.meta.length - 1, 0) * META_ROW;
-    if (card.slots.length > 0) {
-        height += SLOT_BLOCK_GAP + card.slots.length * SLOT_ROW;
-    }
-    if (card.chips.length > 0) {
-        height += CHIP_BLOCK_GAP + Math.ceil(card.chips.length / CHIPS_PER_ROW) * CHIP_ROW;
+    if (card.slots.length === 0) {
+        if (card.chips.length === 0) {
+            return head;
+        }
+
+        return head + CHIP_BLOCK_GAP + Math.ceil(card.chips.length / CHIPS_PER_ROW) * CHIP_ROW;
     }
 
-    return height;
+    return head + SLOT_BLOCK_GAP + Math.max(card.slots.length * SLOT_ROW, card.chips.length * CHIP_RAIL_ROW);
 }
 
 /** How tall a phase header is, which depends on whether it is also a pool. */
