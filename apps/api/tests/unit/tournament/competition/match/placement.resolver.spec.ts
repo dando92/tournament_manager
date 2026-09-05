@@ -92,4 +92,65 @@ describe("resolvePlacements", () => {
 
         expect(result.entries.map((entry) => entry.playerId)).toEqual([2, 1, 3]);
     });
+
+    describe("with the averages of the match", () => {
+        const averaged = [
+            { playerId: 1, points: 6, averagePercentage: 92.5 },
+            { playerId: 2, points: 6, averagePercentage: 95.25 },
+            { playerId: 3, points: 4, averagePercentage: 80 },
+        ];
+
+        it("separates a tie no rule distinguishes", () => {
+            const result = resolvePlacements(averaged, [], []);
+
+            expect(result.ambiguousTies).toEqual([]);
+            expect(result.entries).toEqual([
+                { playerId: 2, points: 6, placement: 1 },
+                { playerId: 1, points: 6, placement: 2 },
+                { playerId: 3, points: 4, placement: 3 },
+            ]);
+        });
+
+        it("leaves the tie that decides an advancement to a played tiebreak", () => {
+            const result = resolvePlacements(averaged, [], [rule(1, 20), rule(2, 30)]);
+
+            expect(result.ambiguousTies).toEqual([{ playerIds: [1, 2], fromPlacement: 1, toPlacement: 2 }]);
+            expect(result.entries.map((entry) => entry.placement)).toEqual([1, 1, 3]);
+        });
+
+        it("separates a tie whose positions lead to the same place", () => {
+            const result = resolvePlacements(averaged, [], [rule(1, 20, 1), rule(2, 20, 1)]);
+
+            expect(result.ambiguousTies).toEqual([]);
+            expect(result.entries.map((entry) => entry.playerId)).toEqual([2, 1, 3]);
+        });
+
+        it("keeps the group tied when one of them has nothing to average", () => {
+            const result = resolvePlacements([
+                { playerId: 1, points: 6, averagePercentage: 92.5 },
+                { playerId: 2, points: 6, averagePercentage: null },
+            ], [], []);
+
+            expect(result.entries.map((entry) => entry.placement)).toEqual([1, 1]);
+        });
+
+        it("keeps the group tied when the averages agree", () => {
+            const result = resolvePlacements([
+                { playerId: 1, points: 6, averagePercentage: (90.13 + 95.27) / 2 },
+                { playerId: 2, points: 6, averagePercentage: (95.27 + 90.13) / 2 },
+            ], [], []);
+
+            expect(result.entries.map((entry) => entry.placement)).toEqual([1, 1]);
+        });
+
+        it("orders the entries by placement, which is how a rule reads them", () => {
+            const result = resolvePlacements([
+                { playerId: 7, points: 2, averagePercentage: 70 },
+                { playerId: 8, points: 6, averagePercentage: 91 },
+                { playerId: 9, points: 6, averagePercentage: 94 },
+            ], [], []);
+
+            expect(result.entries.map((entry) => entry.playerId)).toEqual([9, 8, 7]);
+        });
+    });
 });

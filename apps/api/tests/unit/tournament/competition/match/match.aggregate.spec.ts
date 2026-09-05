@@ -349,11 +349,47 @@ describe('MatchAggregate', () => {
 
       committed.commit();
 
+      /* Level on points, and nothing sends them apart, so the average of the two
+         songs they both ran settles it: 96.5 against 94.5. */
+      expect(committed.entity.matchResult.playerPoints).toEqual([
+        { playerId: 102, points: 3, placement: 1 },
+        { playerId: 101, points: 3, placement: 2 },
+      ]);
+      expect(committed.entity.active).toBe(false);
+    });
+
+    it('leaves a failed run out of the average that settles a tie', () => {
+      const failed = { ...score(3, player(101), 90), isFailed: true } as Score;
+      const committed = match(
+        [entrant(1, 101), entrant(2, 102)],
+        [
+          playedRound([standing(200, player(101), score(1, player(101), 99), 2), standing(201, player(102), score(2, player(102), 98), 1)]),
+          { id: 32, song: { id: 11, title: 'Second' } as Song, standings: [standing(202, player(101), failed, 1), standing(203, player(102), score(4, player(102), 95), 2)] } as Round,
+        ],
+      );
+
+      committed.commit();
+
+      /* 99 alone beats 96.5, where counting the failed run as played would have
+         averaged 101 down to 94.5 and reversed the pair. */
+      expect(committed.entity.matchResult.playerPoints).toEqual([
+        { playerId: 101, points: 3, placement: 1 },
+        { playerId: 102, points: 3, placement: 2 },
+      ]);
+    });
+
+    it('keeps a hand-scored tie tied, because there is nothing to average', () => {
+      const committed = match(
+        [entrant(1, 101), entrant(2, 102)],
+        [handScoredRound([standing(200, player(101), undefined, 3), standing(201, player(102), undefined, 3)])],
+      );
+
+      committed.commit();
+
       expect(committed.entity.matchResult.playerPoints).toEqual([
         { playerId: 101, points: 3, placement: 1 },
         { playerId: 102, points: 3, placement: 1 },
       ]);
-      expect(committed.entity.active).toBe(false);
     });
 
     it('refuses a match whose played round is missing a player standing', () => {
