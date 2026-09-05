@@ -13,7 +13,7 @@ import { Random } from './random';
  * because the two reference each other.
  */
 export const TABLES: Array<{ table: string; columns: string[] }> = [
-    { table: 'player', columns: ['id', 'playerName'] },
+    { table: 'player', columns: ['id', 'playerName', 'nationality'] },
     { table: 'setup', columns: ['id', 'name', 'cabinetName', 'position'] },
     {
         table: 'tournament',
@@ -131,6 +131,10 @@ const INTENT_MIX: ReadonlyArray<readonly [MatchIntent, number]> = [
 /** A power of two, so the finished bracket has no bye to explain. */
 const COMPLETED_DIVISION_ENTRANTS = 8;
 
+/* ISO 3166-1 alpha-2, with the empty string among them because a walk-up
+   competitor has nobody to ask and the interface has to hold up without one. */
+const NATIONALITIES = ['IT', 'JP', 'US', 'GB', 'DE', 'FR', 'BR', 'SE', 'NL', 'CA', 'AU', 'ES', '', ''];
+
 const SONG_GROUPS = ['In The Groove', 'Fraxtil', 'Tachyon', 'Gpop', 'Cirque du Sordid', 'Waixing', 'Digital Dance'];
 const CHART_DIFFICULTIES = ['Novice', 'Easy', 'Medium', 'Hard', 'Expert'];
 const DIVISION_NAMES = ['Open', 'Amateur', 'Novice', 'Advanced', 'Expert', 'Rookie', 'Veteran', 'Wild'];
@@ -234,7 +238,7 @@ export class DatasetBuilder {
         for (let index = 0; index < count; index += 1) {
             const id = this.ids.player();
             ids.push(id);
-            this.rows.player.push([id, `Player ${String(id).padStart(5, '0')}`]);
+            this.rows.player.push([id, `Player ${String(id).padStart(5, '0')}`, this.random.pick(NATIONALITIES)]);
         }
 
         return ids;

@@ -4,7 +4,6 @@ import type { PlayerRefDto } from './projections';
 export type AccountProfileDto = {
     id: string;
     username: string;
-    nationality: string;
     grooveStatsApi: string;
     profilePicture: string;
     player: PlayerRefDto | null;

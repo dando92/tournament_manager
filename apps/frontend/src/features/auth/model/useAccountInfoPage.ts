@@ -19,7 +19,7 @@ export function useAccountInfoPage() {
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [playerName, setPlayerName] = useState(account?.player?.playerName ?? "");
-  const [nationality, setNationality] = useState(account?.nationality ?? "");
+  const [nationality, setNationality] = useState(account?.player?.nationality ?? "");
   const [grooveStatsApi, setGrooveStatsApi] = useState(account?.grooveStatsApi ?? "");
   const [profilePicture, setProfilePicture] = useState(account?.profilePicture ?? "");
   const [saving, setSaving] = useState(false);
@@ -28,7 +28,7 @@ export function useAccountInfoPage() {
   useEffect(() => {
     if (editingProfile) return;
     setPlayerName(account?.player?.playerName ?? "");
-    setNationality(account?.nationality ?? "");
+    setNationality(account?.player?.nationality ?? "");
     setGrooveStatsApi(account?.grooveStatsApi ?? "");
     setProfilePicture(account?.profilePicture ?? "");
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,7 +67,7 @@ export function useAccountInfoPage() {
   function cancelEdit() {
     setEditingProfile(false);
     setPlayerName(account?.player?.playerName ?? "");
-    setNationality(account?.nationality ?? "");
+    setNationality(account?.player?.nationality ?? "");
     setGrooveStatsApi(account?.grooveStatsApi ?? "");
   }
 

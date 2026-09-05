@@ -9,7 +9,6 @@ export function accountProfile(account: Account): AccountProfileDto {
     return {
         id: account.id,
         username: account.username,
-        nationality: account.nationality,
         grooveStatsApi: account.grooveStatsApi,
         profilePicture: account.profilePicture,
         player: account.player ?? null,

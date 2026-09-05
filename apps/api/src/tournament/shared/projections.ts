@@ -18,6 +18,7 @@ export function toPlayerRefDto(player: Player): PlayerRefDto {
     return {
         id: player.id,
         playerName: player.playerName,
+        nationality: player.nationality ?? '',
     };
 }
 
