@@ -7,6 +7,7 @@ function entrant(entrantId: number, averagePercentage: number | null = 90): Plac
         playerId: entrantId,
         playerName: `Player ${entrantId}`,
         status: 'active',
+        nationality: 'IT',
         seedNum: entrantId,
         points: 0,
         songsPlayed: 2,
@@ -153,6 +154,30 @@ describe('resolveDivisionPlacements', () => {
         );
 
         expect(result.complete).toBe(false);
+    });
+
+    it('names each step of the run by how far it sat from the end', () => {
+        const result = resolveDivisionPlacements(
+            division(
+                [
+                    match(101, 200, [[1], [2]]),
+                    match(102, 200, [[3], [4]]),
+                    match(103, 200, [[1], [3]]),
+                    pool(200, []),
+                ],
+                [edge(101, 103), edge(102, 103)],
+                [entrant(1), entrant(2), entrant(3), entrant(4)],
+            ),
+        );
+
+        const champion = result.rows.find((row) => row.entrantId === 1);
+        expect(champion?.run).toEqual([
+            { label: 'SF', name: 'Match 101', won: true },
+            { label: 'F', name: 'Match 103', won: true },
+        ]);
+
+        const beatenInTheSemi = result.rows.find((row) => row.entrantId === 4);
+        expect(beatenInTheSemi?.run).toEqual([{ label: 'SF', name: 'Match 102', won: false }]);
     });
 
     it('answers a graph whose rules close a loop instead of never answering', () => {

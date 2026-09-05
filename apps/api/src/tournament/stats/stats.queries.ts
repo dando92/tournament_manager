@@ -83,7 +83,7 @@ const ADVANCEMENT_RULES_OF_DIVISIONS = `
 const ENTRANTS_OF_DIVISIONS = `
     SELECT      e."id" AS "entrantId", e."divisionId" AS "divisionId", e."name" AS "entrantName",
                 e."status" AS "status", e."seedNum" AS "seedNum",
-                pl."id" AS "playerId", pl."playerName" AS "playerName"
+                pl."id" AS "playerId", pl."playerName" AS "playerName", pl."nationality" AS "nationality"
     FROM        "entrant" e
     LEFT JOIN   "entrant_participants_participant" ep ON ep."entrantId" = e."id"
     LEFT JOIN   "participant" p ON p."id" = ep."participantId"
@@ -138,7 +138,13 @@ const SONGS_OF_TOURNAMENT = `
                 COUNT(sc."id") FILTER (WHERE sc."isFailed")::int             AS "failedCount",
                 AVG(sc."percentage") FILTER (WHERE NOT sc."isFailed")        AS "averagePercentage",
                 MAX(sc."percentage") FILTER (WHERE NOT sc."isFailed")        AS "bestPercentage",
-                STDDEV_SAMP(sc."percentage") FILTER (WHERE NOT sc."isFailed") AS "percentageSpread"
+                STDDEV_SAMP(sc."percentage") FILTER (WHERE NOT sc."isFailed") AS "percentageSpread",
+                COUNT(sc."id") FILTER (WHERE sc."isFailed")::int                                        AS "failed",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 100)::int              AS "quad",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 96 AND sc."percentage" < 100)::int AS "star",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 89 AND sc."percentage" < 96)::int  AS "s",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 80 AND sc."percentage" < 89)::int  AS "a",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" < 80)::int                AS "b"
     FROM        "song" s
     JOIN        "round" r ON r."songId" = s."id"
     JOIN        "match" m ON m."id" = r."matchId"
@@ -158,9 +164,17 @@ const PLAYERS_OF_TOURNAMENT = `
                 pl."playerName"                                             AS "playerName",
                 COALESCE(SUM(st."points"), 0)::int                           AS "points",
                 COUNT(*) FILTER (WHERE r."songId" IS NOT NULL)::int          AS "songsPlayed",
+                pl."nationality"                                            AS "nationality",
                 COUNT(sc."id") FILTER (WHERE sc."isFailed")::int             AS "failedCount",
                 AVG(sc."percentage") FILTER (WHERE NOT sc."isFailed")        AS "averagePercentage",
-                MAX(sc."percentage") FILTER (WHERE NOT sc."isFailed")        AS "bestPercentage"
+                MAX(sc."percentage") FILTER (WHERE NOT sc."isFailed")        AS "bestPercentage",
+                STDDEV_SAMP(sc."percentage") FILTER (WHERE NOT sc."isFailed") AS "percentageSpread",
+                COUNT(sc."id") FILTER (WHERE sc."isFailed")::int                                        AS "failed",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 100)::int              AS "quad",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 96 AND sc."percentage" < 100)::int AS "star",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 89 AND sc."percentage" < 96)::int  AS "s",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" >= 80 AND sc."percentage" < 89)::int  AS "a",
+                COUNT(sc."id") FILTER (WHERE NOT sc."isFailed" AND sc."percentage" < 80)::int                AS "b"
     FROM        "standing" st
     JOIN        "round" r ON r."id" = st."roundId"
     JOIN        "match" m ON m."id" = r."matchId"
@@ -188,13 +202,41 @@ const MATCH_RECORDS_OF_TOURNAMENT = `
     GROUP BY    1
 `;
 
+/** The one run a player is proudest of, and what it was on. */
+const BEST_RUNS_OF_TOURNAMENT = `
+    SELECT DISTINCT ON (st."playerId")
+                st."playerId"    AS "playerId",
+                sc."percentage"  AS "percentage",
+                s."title"        AS "songTitle"
+    FROM        "standing" st
+    JOIN        "score" sc ON sc."id" = st."scoreId" AND NOT sc."isFailed"
+    JOIN        "song" s ON s."id" = sc."songId"
+    JOIN        "round" r ON r."id" = st."roundId"
+    JOIN        "match" m ON m."id" = r."matchId"
+    JOIN        "phase_group" pg ON pg."id" = m."phaseGroupId"
+    JOIN        "phase" ph ON ph."id" = pg."phaseId"
+    JOIN        "division" d ON d."id" = ph."divisionId"
+    WHERE       d."tournamentId" = $1
+    ORDER BY    st."playerId", sc."percentage" DESC, s."id"
+`;
+
 type DivisionRow = { divisionId: number; divisionName: string };
+type GradeMixRow = { quad: number; star: number; s: number; a: number; b: number; failed: number };
 type MatchRow = { divisionId: number; matchId: number; name: string; phaseGroupId: number; decided: boolean; playerPoints: MatchResultEntryDto[] | null };
 type PoolRow = { divisionId: number; phaseGroupId: number; name: string };
 type MatchEntrantRow = { divisionId: number; matchId: number; entrantId: number };
 type PoolSeatRow = { divisionId: number; phaseGroupId: number; entrantId: number };
 type RuleRow = { divisionId: number; sourceKind: AdvancementCompetitionKind; sourceId: number; targetKind: AdvancementCompetitionKind; targetId: number };
-type EntrantRow = { entrantId: number; divisionId: number; entrantName: string; status: EntrantStatus; seedNum: number | null; playerId: number | null; playerName: string | null };
+type EntrantRow = {
+    entrantId: number;
+    divisionId: number;
+    entrantName: string;
+    status: EntrantStatus;
+    seedNum: number | null;
+    playerId: number | null;
+    playerName: string | null;
+    nationality: string | null;
+};
 type TotalsRow = { entrantId: number; points: number; songsPlayed: number; averagePercentage: string | null };
 type SongRow = {
     songId: number;
@@ -208,17 +250,24 @@ type SongRow = {
     averagePercentage: string | null;
     bestPercentage: string | null;
     percentageSpread: string | null;
-};
+} & GradeMixRow;
 type PlayerRow = {
     playerId: number;
     playerName: string;
+    nationality: string | null;
     points: number;
     songsPlayed: number;
     failedCount: number;
     averagePercentage: string | null;
     bestPercentage: string | null;
-};
+    percentageSpread: string | null;
+} & GradeMixRow;
 type MatchRecordRow = { playerId: number; matchesPlayed: number; matchesWon: number };
+type BestRunRow = { playerId: number; percentage: string; songTitle: string };
+
+function gradeMix(row: GradeMixRow) {
+    return { quad: row.quad, star: row.star, s: row.s, a: row.a, b: row.b, failed: row.failed };
+}
 
 /** Postgres answers a numeric aggregate as a string, so every one of them is read through here. */
 function decimal(value: string | null | undefined): number | null {
@@ -280,27 +329,34 @@ export class StatsQueries {
             averagePercentage: decimal(row.averagePercentage),
             bestPercentage: decimal(row.bestPercentage),
             percentageSpread: decimal(row.percentageSpread),
+            grades: gradeMix(row),
         }));
     }
 
     async playersForTournament(tournamentId: number): Promise<PlayerStatsRowDto[]> {
-        const [players, records] = await Promise.all([
+        const [players, records, bestRuns] = await Promise.all([
             this.dataSource.query(PLAYERS_OF_TOURNAMENT, [tournamentId]) as Promise<PlayerRow[]>,
             this.dataSource.query(MATCH_RECORDS_OF_TOURNAMENT, [tournamentId]) as Promise<MatchRecordRow[]>,
+            this.dataSource.query(BEST_RUNS_OF_TOURNAMENT, [tournamentId]) as Promise<BestRunRow[]>,
         ]);
         const recordsByPlayer = new Map(records.map((row) => [row.playerId, row]));
+        const bestByPlayer = new Map(bestRuns.map((row) => [row.playerId, row]));
 
         return players
             .map((row) => ({
                 playerId: row.playerId,
                 playerName: row.playerName,
+                nationality: row.nationality ?? '',
                 points: row.points,
                 songsPlayed: row.songsPlayed,
                 failedCount: row.failedCount,
                 averagePercentage: decimal(row.averagePercentage),
                 bestPercentage: decimal(row.bestPercentage),
+                bestSongTitle: bestByPlayer.get(row.playerId)?.songTitle ?? null,
+                percentageSpread: decimal(row.percentageSpread),
                 matchesPlayed: recordsByPlayer.get(row.playerId)?.matchesPlayed ?? 0,
                 matchesWon: recordsByPlayer.get(row.playerId)?.matchesWon ?? 0,
+                grades: gradeMix(row),
             }))
             .sort((left, right) => right.points - left.points || left.playerName.localeCompare(right.playerName) || left.playerId - right.playerId);
     }
@@ -393,6 +449,7 @@ function assembleDivision(division: DivisionRow, totals: Map<number, TotalsRow>,
                 playerId: row.playerId,
                 playerName: row.playerName,
                 status: row.status,
+                nationality: row.nationality ?? '',
                 seedNum: row.seedNum,
                 points: total?.points ?? 0,
                 songsPlayed: total?.songsPlayed ?? 0,

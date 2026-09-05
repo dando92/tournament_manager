@@ -1,4 +1,10 @@
-import type { AdvancementCompetitionKind, DivisionPlacementRowDto, DivisionPlacementsDto, EntrantStatus } from '@tournament-manager/contracts';
+import type {
+    AdvancementCompetitionKind,
+    DivisionPlacementRowDto,
+    DivisionPlacementsDto,
+    EntrantStatus,
+    PlacementRunStepDto,
+} from '@tournament-manager/contracts';
 
 /**
  * One competition of a division, as the advancement graph sees it.
@@ -31,6 +37,7 @@ export type PlacementEntrant = {
     playerId: number | null;
     playerName: string | null;
     status: EntrantStatus;
+    nationality: string;
     seedNum: number | null;
     points: number;
     songsPlayed: number;
@@ -54,7 +61,7 @@ type ExitNode = {
     placement: number;
 };
 
-type Exit = ExitNode & { entrant: PlacementEntrant };
+type Exit = ExitNode & { entrant: PlacementEntrant; run: PlacementRunStepDto[] };
 
 /**
  * The order a division finished in, read back off its advancement graph.
@@ -212,28 +219,59 @@ function measureDepths(nodes: PlacementCompetition[], outgoing: Map<NodeKey, Set
  * rather than inventing a position for them.
  */
 function collectExits(entrants: PlacementEntrant[], graph: Graph): Exit[] {
-    const byEntrant = new Map<number, ExitNode>();
+    const byEntrant = new Map<number, ExitNode[]>();
 
     for (const node of graph.nodes) {
         const depth = graph.depths.get(keyOf(node)) ?? 0;
         const placements = new Map(node.placements.map((entry) => [entry.entrantId, entry.placement]));
 
         for (const entrantId of node.entrantIds) {
-            const candidate = { node, depth, placement: placements.get(entrantId) ?? node.entrantIds.length + 1 };
-            const held = byEntrant.get(entrantId);
-            if (!held || isCloserToTheEnd(candidate, held)) {
-                byEntrant.set(entrantId, candidate);
-            }
+            const stop = { node, depth, placement: placements.get(entrantId) ?? node.entrantIds.length + 1 };
+            byEntrant.set(entrantId, [...(byEntrant.get(entrantId) ?? []), stop]);
         }
     }
 
     return entrants
         .map((entrant) => {
-            const exit = byEntrant.get(entrant.entrantId);
+            const stops = byEntrant.get(entrant.entrantId);
+            if (!stops || stops.length === 0) {
+                return null;
+            }
 
-            return exit ? { ...exit, entrant } : null;
+            const exit = stops.reduce((held, candidate) => (isCloserToTheEnd(candidate, held) ? candidate : held));
+
+            return { ...exit, entrant, run: runOf(stops) };
         })
         .filter((exit): exit is Exit => exit !== null);
+}
+
+/**
+ * The competitions somebody played, in the order they played them.
+ *
+ * Furthest from the end first, which is the order they happened in. The label is
+ * read off the distance rather than the name, so it says the same thing whatever
+ * the matches were called: the last competition is the final, the one feeding it
+ * the semi-final, then the quarter-final, and anything deeper is named by the
+ * size of the round it stands in.
+ */
+function runOf(stops: ExitNode[]): PlacementRunStepDto[] {
+    return [...stops]
+        .sort((left, right) => right.depth - left.depth || left.node.id - right.node.id)
+        .map((stop) => ({ label: roundLabel(stop.depth), name: stop.node.name, won: stop.placement === 1 }));
+}
+
+function roundLabel(depth: number): string {
+    if (depth === 0) {
+        return 'F';
+    }
+    if (depth === 1) {
+        return 'SF';
+    }
+    if (depth === 2) {
+        return 'QF';
+    }
+
+    return `R${2 ** (depth + 1)}`;
 }
 
 function isCloserToTheEnd(candidate: ExitNode, held: ExitNode): boolean {
@@ -276,6 +314,7 @@ function bandRows(exits: Exit[]): DivisionPlacementRowDto[] {
                 playerId: exit.entrant.playerId,
                 playerName: exit.entrant.playerName,
                 status: exit.entrant.status,
+                nationality: exit.entrant.nationality,
                 seedNum: exit.entrant.seedNum,
                 placement: index + 1,
                 sharedThrough: end,
@@ -285,6 +324,7 @@ function bandRows(exits: Exit[]): DivisionPlacementRowDto[] {
                 points: exit.entrant.points,
                 songsPlayed: exit.entrant.songsPlayed,
                 averagePercentage: exit.entrant.averagePercentage,
+                run: exit.run,
             });
         }
 
