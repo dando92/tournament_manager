@@ -1,5 +1,5 @@
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
-import { DivisionPlacementsDto } from '@tournament-manager/contracts';
+import { DivisionPlacementsDto, PlayerStatsRowDto, SongStatsRowDto } from '@tournament-manager/contracts';
 
 import { StatsQueries } from '@tournament/stats/stats.queries';
 import { TournamentQueries } from '@tournament/management/tournament.queries';
@@ -30,5 +30,19 @@ export class TournamentStatsController {
         await this.assertExists(Number(id));
 
         return this.stats.placementsForTournament(Number(id));
+    }
+
+    @Get(':id/stats/songs')
+    async songs(@Param('id') id: number): Promise<SongStatsRowDto[]> {
+        await this.assertExists(Number(id));
+
+        return this.stats.songsForTournament(Number(id));
+    }
+
+    @Get(':id/stats/players')
+    async players(@Param('id') id: number): Promise<PlayerStatsRowDto[]> {
+        await this.assertExists(Number(id));
+
+        return this.stats.playersForTournament(Number(id));
     }
 }

@@ -74,15 +74,3 @@ export type PlayerStatsRowDto = {
     matchesPlayed: number;
     matchesWon: number;
 };
-
-export type TournamentStatsSummaryDto = {
-    divisions: number;
-    completedDivisions: number;
-    entrants: number;
-    matches: number;
-    completedMatches: number;
-    songsInPool: number;
-    runsRecorded: number;
-    failedRuns: number;
-    averagePercentage: number | null;
-};
