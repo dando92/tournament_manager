@@ -64,11 +64,11 @@ export class AccountCommands {
 
     async updateProfile(accountId: string, input: AccountProfileInput): Promise<AccountProfileDto> {
         const account = await this.store.loadWithPlayer(accountId);
-        if (input.nationality !== undefined) account.nationality = input.nationality;
         if (input.grooveStatsApi !== undefined) account.grooveStatsApi = input.grooveStatsApi;
         if (input.profilePicture !== undefined) account.profilePicture = input.profilePicture;
-        if (input.playerName !== undefined && account.player) {
-            account.player.playerName = input.playerName;
+        if (account.player) {
+            if (input.playerName !== undefined) account.player.playerName = input.playerName;
+            if (input.nationality !== undefined) account.player.nationality = input.nationality.toUpperCase();
             await this.store.savePlayer(account.player);
         }
 

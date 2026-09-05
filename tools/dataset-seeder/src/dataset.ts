@@ -13,7 +13,7 @@ import { Random } from './random';
  * because the two reference each other.
  */
 export const TABLES: Array<{ table: string; columns: string[] }> = [
-    { table: 'player', columns: ['id', 'playerName'] },
+    { table: 'player', columns: ['id', 'playerName', 'nationality'] },
     { table: 'setup', columns: ['id', 'name', 'cabinetName', 'position'] },
     {
         table: 'tournament',
@@ -104,7 +104,7 @@ export type Dataset = {
  * of the field cannot come apart.
  */
 export function poolSize(profile: Profile): number {
-    const perTournament = profile.divisions * profile.entrantsPerDivision;
+    const perTournament = profile.divisions * profile.entrantsPerDivision + profile.completedDivisions * COMPLETED_DIVISION_ENTRANTS;
     const closedEntrants = profile.divisionsPerClosedTournament * profile.entrantsPerClosedDivision;
 
     return Math.max(Math.ceil(perTournament * 0.8), Math.ceil(perTournament * profile.tournaments * 0.4), closedEntrants, 2);
@@ -128,6 +128,13 @@ const INTENT_MIX: ReadonlyArray<readonly [MatchIntent, number]> = [
     ['open_empty', 20],
 ];
 
+/** A power of two, so the finished bracket has no bye to explain. */
+const COMPLETED_DIVISION_ENTRANTS = 8;
+
+/* ISO 3166-1 alpha-2, with the empty string among them because a walk-up
+   competitor has nobody to ask and the interface has to hold up without one. */
+const NATIONALITIES = ['IT', 'JP', 'US', 'GB', 'DE', 'FR', 'BR', 'SE', 'NL', 'CA', 'AU', 'ES', '', ''];
+
 const SONG_GROUPS = ['In The Groove', 'Fraxtil', 'Tachyon', 'Gpop', 'Cirque du Sordid', 'Waixing', 'Digital Dance'];
 const CHART_DIFFICULTIES = ['Novice', 'Easy', 'Medium', 'Hard', 'Expert'];
 const DIVISION_NAMES = ['Open', 'Amateur', 'Novice', 'Advanced', 'Expert', 'Rookie', 'Veteran', 'Wild'];
@@ -145,7 +152,8 @@ type PlannedStanding = { playerId: number; points: number; score: { percentage: 
 /** A round on a song, or — when the song is null — the hand-scored one. */
 type PlannedRound = { songId: number | null; standings: PlannedStanding[] };
 
-type PlannedMatch = { matchId: number; intent: MatchIntent; hasRounds: boolean };
+/** `order` is the players of a committed result, best first, and is empty otherwise. */
+type PlannedMatch = { matchId: number; intent: MatchIntent; hasRounds: boolean; order: number[] };
 
 /**
  * Builds a whole database in memory, then hands it over to be written.
@@ -230,7 +238,7 @@ export class DatasetBuilder {
         for (let index = 0; index < count; index += 1) {
             const id = this.ids.player();
             ids.push(id);
-            this.rows.player.push([id, `Player ${String(id).padStart(5, '0')}`]);
+            this.rows.player.push([id, `Player ${String(id).padStart(5, '0')}`, this.random.pick(NATIONALITIES)]);
         }
 
         return ids;
@@ -319,6 +327,10 @@ export class DatasetBuilder {
             planned.push(...this.buildCompetition(division.divisionId, division.seats, songs));
         }
 
+        for (let index = 0; index < this.profile.completedDivisions; index += 1) {
+            planned.push(...this.buildCompletedDivision(tournamentId, index, players, participants, songs, seatOffset));
+        }
+
         this.buildSchedules(tournamentId, planned, allowRunning);
     }
 
@@ -396,10 +408,11 @@ export class DatasetBuilder {
         participants: Map<number, number>,
         entrantCount: number,
         seatOffset = 0,
+        divisionName?: string,
     ): { divisionId: number; seats: EntrantSeat[] } {
         const divisionId = this.ids.division();
         const name = DIVISION_NAMES[divisionIndex % DIVISION_NAMES.length];
-        this.rows.division.push([divisionId, `${name} ${Math.floor(divisionIndex / DIVISION_NAMES.length) + 1}`, tournamentId]);
+        this.rows.division.push([divisionId, divisionName ?? `${name} ${Math.floor(divisionIndex / DIVISION_NAMES.length) + 1}`, tournamentId]);
 
         const seats: EntrantSeat[] = [];
         for (let index = 0; index < entrantCount; index += 1) {
@@ -417,21 +430,27 @@ export class DatasetBuilder {
     /**
      * The phases, pools, matches and advancement of one division.
      *
-     * Every pool chains its matches — the winner of one seats the next — and its
-     * last match feeds a pool of the following phase. Those rules are not
-     * decoration: whether a tied match is merely tied or is blocked on a
+     * Every pool chains its matches — the winner of one seats the next — and the
+     * last match of each pool feeds a pool of the following phase. Those rules
+     * are not decoration: whether a tied match is merely tied or is blocked on a
      * tiebreak depends on where its placements would send people, so a dataset
-     * without advancement can never hold a `tiebreak_required` match.
+     * without advancement can never hold a `tiebreak_required` match. Sending a
+     * pool's last match into that same pool, which is what this did before, is a
+     * loop rather than a phase, and a reader that walks the rules cannot tell
+     * how far from the end anything sits.
      */
     private buildCompetition(divisionId: number, seats: EntrantSeat[], songs: number[]): PlannedMatch[] {
         const planned: PlannedMatch[] = [];
-        let previousPools: number[] | null = null;
+        let previousExits: number[] = [];
 
         for (let phaseIndex = 0; phaseIndex < this.profile.phasesPerDivision; phaseIndex += 1) {
             const phaseId = this.ids.phase();
             this.rows.phase.push([phaseId, phaseIndex === 0 ? 'Pools' : `Phase ${phaseIndex + 1}`, divisionId]);
 
+            const hasLaterPhase = phaseIndex < this.profile.phasesPerDivision - 1;
             const pools: number[] = [];
+            const exits: number[] = [];
+
             for (let poolIndex = 0; poolIndex < this.profile.poolsPerPhase; poolIndex += 1) {
                 const phaseGroupId = this.ids.phase_group();
                 const identifier = String.fromCharCode(65 + (poolIndex % 26));
@@ -447,9 +466,82 @@ export class DatasetBuilder {
 
                 const poolSeats = this.poolSeats(seats, poolIndex);
                 this.seatPool(phaseGroupId, poolSeats);
-                planned.push(...this.buildPoolMatches(phaseGroupId, identifier, poolSeats, songs, poolIndex, previousPools));
+                const poolMatches = this.buildPoolMatches(phaseGroupId, identifier, poolSeats, songs, hasLaterPhase);
+                planned.push(...poolMatches);
+                if (poolMatches.length > 0) {
+                    exits.push(poolMatches[poolMatches.length - 1].matchId);
+                }
             }
-            previousPools = pools;
+
+            previousExits.forEach((matchId, index) => {
+                this.addRule(matchId, 1, 'phase_group', pools[index % pools.length], index + 1);
+            });
+            previousExits = exits;
+        }
+
+        return planned;
+    }
+
+    /**
+     * A division that has been played to the end.
+     *
+     * The rest of a run is a tournament at midday, which is what the write path
+     * is measured on and what leaves a final order impossible to read. This one
+     * is the other case: a single-elimination bracket where every match is
+     * committed, so the advancement rules lead all the way to a competition
+     * nothing leaves and a placement can be counted back off them.
+     *
+     * The bracket is built one round at a time, because who plays the next match
+     * is whoever the last one placed first — the same order the application
+     * itself would follow, rather than a winner decided here and a result
+     * written to match.
+     */
+    private buildCompletedDivision(
+        tournamentId: number,
+        index: number,
+        players: number[],
+        participants: Map<number, number>,
+        songs: number[],
+        seatOffset: number,
+    ): PlannedMatch[] {
+        const suffix = this.profile.completedDivisions > 1 ? ` ${index + 1}` : '';
+        const division = this.buildDivision(
+            tournamentId,
+            this.profile.divisions + index,
+            players,
+            participants,
+            COMPLETED_DIVISION_ENTRANTS,
+            seatOffset + index * COMPLETED_DIVISION_ENTRANTS,
+            `Finished Bracket${suffix}`,
+        );
+
+        const phaseId = this.ids.phase();
+        this.rows.phase.push([phaseId, 'Bracket', division.divisionId]);
+        const phaseGroupId = this.ids.phase_group();
+        this.rows.phase_group.push([phaseGroupId, 'Main Bracket', 'A', 'single_elimination', 'completed', phaseId]);
+        this.seatPool(phaseGroupId, division.seats);
+
+        const planned: PlannedMatch[] = [];
+        let contenders = bracketSeedOrder(division.seats.length).map((seat) => division.seats[seat]);
+        let previousRound: number[] = [];
+
+        while (contenders.length > 1) {
+            const size = contenders.length;
+            const round: Array<{ match: PlannedMatch; winner: EntrantSeat }> = [];
+
+            for (let pair = 0; pair < size / 2; pair += 1) {
+                const seats = [contenders[pair * 2], contenders[pair * 2 + 1]];
+                const match = this.buildMatch(phaseGroupId, bracketMatchName(size, pair), 'completed', seats, songs);
+                round.push({ match, winner: seats.find((seat) => seat.playerId === match.order[0]) ?? seats[0] });
+            }
+
+            previousRound.forEach((matchId, source) => {
+                this.addRule(matchId, 1, 'match', round[Math.floor(source / 2)].match.matchId, (source % 2) + 1);
+            });
+
+            planned.push(...round.map((entry) => entry.match));
+            contenders = round.map((entry) => entry.winner);
+            previousRound = round.map((entry) => entry.match.matchId);
         }
 
         return planned;
@@ -479,14 +571,7 @@ export class DatasetBuilder {
         });
     }
 
-    private buildPoolMatches(
-        phaseGroupId: number,
-        identifier: string,
-        seats: EntrantSeat[],
-        songs: number[],
-        poolIndex: number,
-        previousPools: number[] | null,
-    ): PlannedMatch[] {
+    private buildPoolMatches(phaseGroupId: number, identifier: string, seats: EntrantSeat[], songs: number[], hasLaterPhase: boolean): PlannedMatch[] {
         const planned: PlannedMatch[] = [];
         const last = this.profile.matchesPerPool - 1;
 
@@ -499,7 +584,7 @@ export class DatasetBuilder {
              * instead. Writing `tiebreak_required` there would be a state the
              * aggregate does not agree with.
              */
-            const hasOutgoingRule = index < last || previousPools !== null;
+            const hasOutgoingRule = index < last || hasLaterPhase;
             const drawn = this.random.weighted(INTENT_MIX);
             const intent = drawn === 'tiebreak_required' && !hasOutgoingRule ? 'ready' : drawn;
             const size = intent === 'tiebreak_required' ? 2 : this.random.weighted([[2, 70] as const, [3, 25] as const, [4, 5] as const]);
@@ -510,9 +595,6 @@ export class DatasetBuilder {
 
         for (let index = 0; index < planned.length - 1; index += 1) {
             this.addRule(planned[index].matchId, 1, 'match', planned[index + 1].matchId, 1);
-        }
-        if (planned.length > 0 && previousPools) {
-            this.addRule(planned[planned.length - 1].matchId, 1, 'phase_group', phaseGroupId, poolIndex + 1);
         }
 
         return planned;
@@ -530,11 +612,12 @@ export class DatasetBuilder {
         const scoringSystem: ScoringSystemType =
             intent !== 'tiebreak_required' && seats.length === 2 && this.random.chance(0.08) ? 'RoundWinner' : 'PlacementPointsWithFailZero';
         const rounds = this.planRounds(intent, seats, songs, scoringSystem);
+        const entries = intent === 'completed' ? this.resultEntries(rounds) : [];
         let matchResultId: number | null = null;
 
         if (intent === 'completed') {
             matchResultId = this.ids.match_result();
-            this.rows.match_result.push([matchResultId, JSON.stringify(this.resultEntries(rounds))]);
+            this.rows.match_result.push([matchResultId, JSON.stringify(entries)]);
         }
 
         const row: unknown[] = [matchId, name, null, null, scoringSystem, false, this.stateOf(intent), matchResultId, phaseGroupId];
@@ -548,7 +631,7 @@ export class DatasetBuilder {
             this.writeOpenTiebreak(matchId, seats, songs, rounds);
         }
 
-        return { matchId, intent, hasRounds: rounds.length > 0 };
+        return { matchId, intent, hasRounds: rounds.length > 0, order: entries.map((entry) => entry.playerId) };
     }
 
     /** The column the aggregate would have written for this intent. */
@@ -855,4 +938,34 @@ export class DatasetBuilder {
             row[5] = true;
         }
     }
+}
+
+/**
+ * Standard bracket seeding: the top seed and the bottom seed meet first, and the
+ * two halves cannot meet before the final. Built by folding the order in half
+ * repeatedly, which is the same construction a printed bracket follows.
+ */
+function bracketSeedOrder(size: number): number[] {
+    let order = [0];
+
+    while (order.length < size) {
+        const round = order.length * 2;
+        order = order.flatMap((seed) => [seed, round - 1 - seed]);
+    }
+
+    return order;
+}
+
+function bracketMatchName(size: number, index: number): string {
+    if (size === 2) {
+        return 'Final';
+    }
+    if (size === 4) {
+        return `Semi-final ${index + 1}`;
+    }
+    if (size === 8) {
+        return `Quarter-final ${index + 1}`;
+    }
+
+    return `Round of ${size} match ${index + 1}`;
 }

@@ -15,8 +15,9 @@ type PlayerRow = PlayerRefDto;
  * the frontend typed it as this projection anyway.
  */
 const ALL_PLAYERS = `
-    SELECT   pl."id"         AS "id",
-             pl."playerName" AS "playerName"
+    SELECT   pl."id"          AS "id",
+             pl."playerName"  AS "playerName",
+             pl."nationality" AS "nationality"
     FROM     "player" pl
     ORDER BY LOWER(pl."playerName"), pl."id"
 `;

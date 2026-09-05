@@ -22,6 +22,8 @@ export type Profile = {
     entrantsPerClosedDivision: number;
     /** The shape of each tournament under way. */
     divisions: number;
+    /** Divisions played to the end, so a final placement can be read off them. */
+    completedDivisions: number;
     entrantsPerDivision: number;
     phasesPerDivision: number;
     poolsPerPhase: number;
@@ -42,6 +44,7 @@ const PROFILES: Record<ProfileName, Profile> = {
         divisionsPerClosedTournament: 0,
         entrantsPerClosedDivision: 0,
         divisions: 8,
+        completedDivisions: 1,
         entrantsPerDivision: 25,
         phasesPerDivision: 2,
         poolsPerPhase: 4,
@@ -60,6 +63,7 @@ const PROFILES: Record<ProfileName, Profile> = {
         divisionsPerClosedTournament: 8,
         entrantsPerClosedDivision: 45,
         divisions: 4,
+        completedDivisions: 1,
         entrantsPerDivision: 20,
         phasesPerDivision: 2,
         poolsPerPhase: 3,
@@ -78,6 +82,7 @@ const PROFILES: Record<ProfileName, Profile> = {
         divisionsPerClosedTournament: 0,
         entrantsPerClosedDivision: 0,
         divisions: 40,
+        completedDivisions: 1,
         entrantsPerDivision: 50,
         phasesPerDivision: 3,
         poolsPerPhase: 8,
@@ -106,6 +111,9 @@ Usage: npm run seed:dataset -- [options]
   --tournaments <number>           How many tournaments are under way, each
                                    with the profile's full structure, matches
                                    and boards. Default: the profile's own.
+  --completed <number>             How many divisions of each tournament are
+                                   played to the end, as a single-elimination
+                                   bracket. Default: the profile's own.
   --scale <number>                 Multiplies the structural counts. Default: 1.
   --into <id|last>                 Add the profile's divisions, matches and
                                    boards to a tournament that already exists
@@ -148,8 +156,13 @@ export function parseOptions(argv: string[]): Options | null {
         throw new Error(`--tournaments must be a positive whole number, got "${value(argv, 'tournaments')}".`);
     }
 
+    const completed = Number(value(argv, 'completed') ?? PROFILES[profileName].completedDivisions);
+    if (!Number.isInteger(completed) || completed < 0) {
+        throw new Error(`--completed must be a whole number, got "${value(argv, 'completed')}".`);
+    }
+
     return {
-        profile: { ...scaled(PROFILES[profileName], scale), tournaments },
+        profile: { ...scaled(PROFILES[profileName], scale), tournaments, completedDivisions: completed },
         seed: Number(value(argv, 'seed') ?? 20260904),
         reset: argv.includes('--reset'),
         tournamentName: value(argv, 'name') ?? `Dataset ${profileName}`,

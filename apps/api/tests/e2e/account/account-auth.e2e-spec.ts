@@ -68,10 +68,9 @@ describe('Account and authentication (e2e)', () => {
     expect(registration.body).toEqual({
       id: accountId,
       username: credentials.username.toLowerCase(),
-      nationality: '',
       grooveStatsApi: '',
       profilePicture: '',
-      player: { id: expect.any(Number), playerName: credentials.playerName },
+      player: { id: expect.any(Number), playerName: credentials.playerName, nationality: '' },
     });
     expect(registration.body).not.toHaveProperty('password');
 
@@ -120,8 +119,7 @@ describe('Account and authentication (e2e)', () => {
       .expect(({ body }) =>
         expect(body).toMatchObject({
           id: accountId,
-          nationality: 'IT',
-          player: { playerName: 'Updated Admin' },
+          player: { playerName: 'Updated Admin', nationality: 'IT' },
         }),
       );
   });

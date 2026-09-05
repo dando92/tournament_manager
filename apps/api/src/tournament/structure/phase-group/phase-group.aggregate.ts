@@ -1,5 +1,7 @@
 import { Entrant, Phase, PhaseGroup, PhaseGroupEntrant, PhaseGroupState } from '@tournament-manager/persistence';
 
+import { poolTotals } from '@tournament/structure/phase-group/pool-totals';
+
 /** Where a pool sits, and therefore where the events it produces are routed. */
 export type PhaseGroupAddress = {
     tournamentId: number;
@@ -117,21 +119,20 @@ export class PhaseGroupAggregate {
      * it. This is the order the rules that leave the pool read placements from.
      */
     get placements(): Entrant[] {
-        const pointsByEntrantId = new Map<number, number>();
         const entrantsById = new Map<number, Entrant>();
-
-        for (const match of this.phaseGroup.matches ?? []) {
+        const matches = (this.phaseGroup.matches ?? []).map((match) => {
             const pointsByPlayerId = new Map((match.matchResult?.playerPoints ?? []).map((entry) => [entry.playerId, entry.points]));
-            for (const entrant of match.entrants ?? []) {
-                const playerId = entrant.participants?.[0]?.player?.id;
-                entrantsById.set(entrant.id, entrant);
-                pointsByEntrantId.set(entrant.id, (pointsByEntrantId.get(entrant.id) ?? 0) + (pointsByPlayerId.get(playerId) ?? 0));
-            }
-        }
 
-        return Array.from(entrantsById.values()).sort((left, right) =>
-            (pointsByEntrantId.get(right.id) ?? 0) - (pointsByEntrantId.get(left.id) ?? 0) || left.id - right.id,
-        );
+            return (match.entrants ?? []).map((entrant) => {
+                entrantsById.set(entrant.id, entrant);
+
+                return { entrantId: entrant.id, points: pointsByPlayerId.get(entrant.participants?.[0]?.player?.id) ?? 0 };
+            });
+        });
+
+        return poolTotals(matches)
+            .map((total) => entrantsById.get(total.entrantId))
+            .filter((entrant): entrant is Entrant => Boolean(entrant));
     }
 
     describe(details: PhaseGroupDetails): void {

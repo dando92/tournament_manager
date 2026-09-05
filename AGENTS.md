@@ -86,6 +86,7 @@ How the system works, and what was decided:
 - `Design.md` — Design system and design decisions
 - `Schedule.md` — Schedules: lifecycle, runner, eligibility, persistence, timing, API surface, and the two pages that read them
 - `Scoring.md` — Rounds, standings and scores, the scoring strategies, and the deferred mixed-round design
+- `Stats.md` — The statistics page: how a final placement is read off the advancement graph, and what each section measures
 - `Tiebreaks.md` — Match tiebreak calculation, placement resolution, and responsive presentation
 - `AdvancementRuleEditor.md` — Advancement rule editor and deferred quick-rule mode
 - `SyncStart.md` — SyncStart protocol package and session ownership
@@ -93,6 +94,7 @@ How the system works, and what was decided:
 - `mockups/schedule-restructure/` — Approved reference views behind the schedule board and Control Room
 - `mockups/structure-builder/` — Approved reference views behind the Structure page
 - `mockups/page-notice/` — Approved reference views behind the page notice slot and the five destinations a message can have
+- `mockups/stats-page/` — Proposed views for the statistics page: two directions on how much colour it may carry, and what each would cost
 
 Operations:
 
@@ -104,6 +106,7 @@ Operations:
 Open work:
 
 - `FunctionalQuestions.md` — The functional backlog: deferred questions, and the answered ones with the decision that closed them
+- `SongCatalogue.md` — Approved plan: splitting the one song entity into pack, song and chart, with a global catalogue and a per-tournament pool
 - `PerformanceReadiness.md` — Active plan: write path, live-update fan-out, load measurement, and the schema change to make before production
 - `LobbyManagerSeparation.md` — Lobby manager and community event hub integration: design intent, nothing implemented
 

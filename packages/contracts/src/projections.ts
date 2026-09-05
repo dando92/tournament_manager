@@ -27,9 +27,11 @@ export type CreatedResourceDto = {
 };
 
 /** A player as somebody a row belongs to: enough to name them, nothing more. */
+/** `nationality` is ISO 3166-1 alpha-2, or empty where nobody has said. */
 export type PlayerRefDto = {
     id: number;
     playerName: string;
+    nationality: string;
 };
 
 export type ParticipantDto = {

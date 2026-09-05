@@ -13,7 +13,7 @@ const PARTICIPANTS_OF_TOURNAMENT = `
     SELECT  pa."id"     AS "id",
             to_json(pa."roles") AS "roles",
             pa."status" AS "status",
-            json_build_object('id', pl."id", 'playerName', pl."playerName") AS "player"
+            json_build_object('id', pl."id", 'playerName', pl."playerName", 'nationality', pl."nationality") AS "player"
     FROM    "participant" pa
     JOIN    "player" pl ON pl."id" = pa."playerId"
     WHERE   pa."tournamentId" = $1
@@ -25,6 +25,7 @@ type ImportPreviewRow = {
     name: string;
     playerId: number | null;
     playerName: string | null;
+    nationality: string | null;
     alreadyParticipant: boolean;
 };
 
@@ -48,6 +49,7 @@ const IMPORT_PREVIEW_OF_NAMES = `
     SELECT  r."name"             AS "name",
             matched."id"         AS "playerId",
             matched."playerName" AS "playerName",
+            matched."nationality" AS "nationality",
             EXISTS (
                 SELECT  1
                 FROM    "participant" pa
@@ -191,6 +193,6 @@ export class ParticipantQueries {
     private toPlayerRef(row: ImportPreviewRow): PlayerRefDto | null {
         if (row.playerId === null || row.playerName === null) return null;
 
-        return { id: row.playerId, playerName: row.playerName };
+        return { id: row.playerId, playerName: row.playerName, nationality: row.nationality ?? '' };
     }
 }

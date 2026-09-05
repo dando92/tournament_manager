@@ -32,9 +32,6 @@ export class Account {
     @Column({ default: false })
     isTournamentCreator: boolean;
 
-    @Column({ default: "" })
-    nationality: string;
-
     @Column({ type: 'text', default: "" })
     profilePicture: string;
 

@@ -1,39 +1,10 @@
 import { useAccountInfoPage } from "@/features/auth/model/useAccountInfoPage";
 import Select from "@/shared/components/ui/Select";
+import { COUNTRIES, countryName } from "@/shared/lib/countries";
 import { btnPrimary } from "@/styles/buttonStyles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faPen, faCamera } from "@fortawesome/free-solid-svg-icons";
 
-const NATIONALITIES = [
-  "Afghan", "Albanian", "Algerian", "Andorran", "Angolan", "Antiguan", "Argentine", "Armenian",
-  "Australian", "Austrian", "Azerbaijani", "Bahamian", "Bahraini", "Bangladeshi", "Barbadian",
-  "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian",
-  "Botswanan", "Brazilian", "Bruneian", "Bulgarian", "Burkinabé", "Burundian", "Cabo Verdean",
-  "Cambodian", "Cameroonian", "Canadian", "Central African", "Chadian", "Chilean", "Chinese",
-  "Colombian", "Comorian", "Congolese", "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
-  "Danish", "Djiboutian", "Dominican", "Dutch", "Ecuadorian", "Egyptian", "Emirati",
-  "Equatorial Guinean", "Eritrean", "Estonian", "Eswatini", "Ethiopian", "Fijian", "Finnish",
-  "French", "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek", "Grenadian",
-  "Guatemalan", "Guinean", "Guinea-Bissauan", "Guyanese", "Haitian", "Honduran", "Hungarian",
-  "Icelandic", "Indian", "Indonesian", "Iranian", "Iraqi", "Irish", "Israeli", "Italian",
-  "Ivorian", "Jamaican", "Japanese", "Jordanian", "Kazakhstani", "Kenyan", "Kiribati",
-  "Korean", "Kosovar", "Kuwaiti", "Kyrgyz", "Laotian", "Latvian", "Lebanese", "Lesotho",
-  "Liberian", "Libyan", "Liechtensteiner", "Lithuanian", "Luxembourgish", "Malagasy",
-  "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese", "Marshallese", "Mauritanian",
-  "Mauritian", "Mexican", "Micronesian", "Moldovan", "Monacan", "Mongolian", "Montenegrin",
-  "Moroccan", "Mozambican", "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan",
-  "Nigerian", "Nigerien", "North Korean", "North Macedonian", "Norwegian", "Omani",
-  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean", "Paraguayan",
-  "Peruvian", "Filipino", "Polish", "Portuguese", "Qatari", "Romanian", "Russian", "Rwandan",
-  "Saint Kitts and Nevis", "Saint Lucian", "Saint Vincentian", "Samoan", "San Marinese",
-  "São Toméan", "Saudi", "Senegalese", "Serbian", "Seychellois", "Sierra Leonean",
-  "Singaporean", "Slovak", "Slovenian", "Solomon Islander", "Somali", "South African",
-  "South Sudanese", "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss",
-  "Syrian", "Taiwanese", "Tajik", "Tanzanian", "Thai", "Timorese", "Togolese", "Tongan",
-  "Trinidadian", "Tunisian", "Turkish", "Turkmen", "Tuvaluan", "Ugandan", "Ukrainian",
-  "Uruguayan", "Uzbek", "Vanuatuan", "Venezuelan", "Vietnamese", "Yemeni", "Zambian",
-  "Zimbabwean",
-];
 
 function compressImage(file: File, maxSize: number): Promise<string> {
   return new Promise((resolve) => {
@@ -164,7 +135,7 @@ export default function AccountInfoPage() {
                 <Select
                   value={nationality}
                   onChange={setNationality}
-                  options={[{ value: "", label: "— Select nationality —" }, ...NATIONALITIES.map((n) => ({ value: n, label: n }))]}
+                  options={[{ value: "", label: "— Select nationality —" }, ...COUNTRIES.map((country) => ({ value: country.code, label: country.name }))]}
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -203,7 +174,7 @@ export default function AccountInfoPage() {
                   )}
                 </p>
                 <p className="text-sm text-ui-text-mute">
-                  {account.nationality || (
+                  {account.player?.nationality ? countryName(account.player.nationality) : (
                     <button
                       onClick={() => setEditingProfile(true)}
                       className="text-ui-text-mute italic hover:text-ui-text-soft hover:underline"

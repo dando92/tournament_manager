@@ -16,7 +16,7 @@ import {
 import type { MatchState } from '@tournament-manager/persistence';
 import type { MatchResultStateDto } from '@tournament-manager/contracts';
 import type { ScoringSystemProvider, ScoringSystemType } from '@tournament-manager/scoring';
-import { resolvePlacements, TiebreakPlacementInput } from '@match/placement.resolver';
+import { PlacementPointEntry, resolvePlacements, TiebreakPlacementInput } from '@match/placement.resolver';
 
 /** Where a match sits, and therefore where the events it produces are routed. */
 export type MatchAddress = {
@@ -580,7 +580,7 @@ export class MatchAggregate {
         );
     }
 
-    private calculatePoints(): Array<{ playerId: number; points: number }> | null {
+    private calculatePoints(): PlacementPointEntry[] | null {
         const playerIds = this.singlesPlayerIds();
         if (playerIds.length === 0 || this.rounds.length === 0) return null;
 
@@ -600,9 +600,34 @@ export class MatchAggregate {
 
                 return total + (standing?.points ?? 0);
             }, 0),
+            averagePercentage: this.averagePercentageOf(playerId),
         }));
 
         return playerPoints;
+    }
+
+    /**
+     * What somebody averaged over the songs of this match, or nothing.
+     *
+     * A failed run is left out rather than counted as zero: it says the song beat
+     * them, not that they played it badly. A hand-scored round has no run behind
+     * it at all, so a match scored entirely by hand averages nothing — and so
+     * does one somebody failed throughout, which is the same answer for the same
+     * reason.
+     */
+    private averagePercentageOf(playerId: number): number | null {
+        const percentages = this.rounds
+            .flatMap((round) => round.standings ?? [])
+            .filter((standing) => standing.player?.id === playerId)
+            .filter(isPlayed)
+            .filter((standing) => !standing.score.isFailed)
+            .map((standing) => Number(standing.score.percentage));
+
+        if (percentages.length === 0) {
+            return null;
+        }
+
+        return percentages.reduce((total, percentage) => total + percentage, 0) / percentages.length;
     }
 
     private tiebreakPlacementInputs(): TiebreakPlacementInput[] {
