@@ -1,51 +1,92 @@
-import type { SongStatsRowDto } from '@tournament-manager/contracts';
+import type { SongStatsRowDto } from "@tournament-manager/contracts";
 
-import { decimal, percentage, share } from '@/features/stats/model/statsFormat';
+import { meterColor } from "@/features/song/model/chartDifficultyPresentation";
+import { percentage, share } from "@/features/stats/model/statsFormat";
+import GradeMark from "@/features/stats/ui/GradeMark";
+import GradeMixBar from "@/features/stats/ui/GradeMixBar";
+import PackBanner from "@/features/stats/ui/PackBanner";
 
 /**
- * How each song of the pool was actually played.
+ * Every song of the pool, under the pack it came from.
  *
- * `Spread` is the deviation of the runs that cleared, and it is the column that
- * says whether a song did any work: a low spread is a song everybody passed
- * alike, which decided nothing however hard it was.
+ * The pack is the section and its banner is the header, so the art appears once
+ * instead of on every row and what is underneath stays a table you can read
+ * down. The mix bar says where the runs on that song landed, which is the
+ * difference between a song that was hard and one that was merely long.
  */
 export default function SongStatsTable({ rows }: { rows: SongStatsRowDto[] }) {
-    return (
-        <div className="overflow-x-auto rounded border border-ui-border">
-            <table className="w-full min-w-[44rem] text-sm">
-                <thead className="bg-ui-raised text-xs uppercase tracking-wide text-ui-text-mute">
-                    <tr>
-                        <th className="px-3 py-2 text-left font-medium">Song</th>
-                        <th className="px-3 py-2 text-right font-medium">Meter</th>
-                        <th className="px-3 py-2 text-right font-medium">Runs</th>
-                        <th className="px-3 py-2 text-right font-medium">Players</th>
-                        <th className="px-3 py-2 text-right font-medium">Average</th>
-                        <th className="px-3 py-2 text-right font-medium">Best</th>
-                        <th className="px-3 py-2 text-right font-medium">Failed</th>
-                        <th className="px-3 py-2 text-right font-medium">Spread</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row) => (
-                        <tr key={row.songId} className="border-t border-ui-separator bg-ui-row">
-                            <td className="px-3 py-2">
-                                <span className="text-ui-text">{row.title}</span>
-                                <span className="ml-2 text-xs text-ui-text-mute">{row.group}</span>
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{row.difficulty}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{row.playedCount}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{row.playerCount}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{percentage(row.averagePercentage)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{percentage(row.bestPercentage)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">
-                                {row.failedCount}
-                                <span className="ml-1 text-xs text-ui-text-mute">{share(row.failedCount, row.playedCount)}</span>
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{decimal(row.percentageSpread)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
+  const packs = groupByPack(rows);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {packs.map((pack) => (
+        <section key={pack.name} className="overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
+          <PackBanner pack={pack.name} summary={summaryOf(pack.songs)} />
+          <div className="flex items-center gap-3 bg-ui-raised px-4 py-2 text-[9.5px] font-bold uppercase tracking-wide text-ui-text-mute">
+            <span className="w-[26px]" />
+            <span className="flex-grow">Song</span>
+            <span className="w-52">Where the runs landed</span>
+            <span className="w-16 text-right">Runs</span>
+            <span className="w-20 text-right">Failed</span>
+            <span className="w-32 text-right">Average</span>
+          </div>
+          {pack.songs.map((song) => (
+            <div key={song.songId} className="flex items-center gap-3 border-t border-ui-separator px-4 py-2.5">
+              <span className={`inline-flex h-[23px] w-[26px] shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white ${meterColor(song.difficulty)}`}>
+                {song.difficulty}
+              </span>
+              <span className="min-w-0 flex-grow truncate">
+                <span className="text-[13.5px] font-bold text-ui-text">{song.title}</span>
+                {song.artist ? <span className="ml-2 text-xs text-ui-text-mute">{song.artist}</span> : null}
+              </span>
+              <span className="w-52">
+                <GradeMixBar grades={song.grades} label={song.title} />
+              </span>
+              <span className="w-16 text-right text-xs tabular-nums text-ui-text-soft">{song.playedCount}</span>
+              <span className="w-20 text-right text-xs tabular-nums">
+                {song.failedCount === 0 ? (
+                  <span className="text-ui-text-mute">—</span>
+                ) : (
+                  <span className="font-bold text-score-failed">{share(song.failedCount, song.playedCount)}</span>
+                )}
+              </span>
+              <span className="flex w-32 items-center justify-end gap-2">
+                <span className="text-[13.5px] font-semibold tabular-nums text-ui-text">{percentage(song.averagePercentage)}</span>
+                <GradeMark percentage={song.averagePercentage} />
+              </span>
+            </div>
+          ))}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+type Pack = { name: string; songs: SongStatsRowDto[] };
+
+/** Packs in the order their busiest song put them, songs by meter inside one. */
+function groupByPack(rows: SongStatsRowDto[]): Pack[] {
+  const packs = new Map<string, SongStatsRowDto[]>();
+
+  for (const row of rows) {
+    const name = row.group || "Unfiled";
+    packs.set(name, [...(packs.get(name) ?? []), row]);
+  }
+
+  return [...packs.entries()]
+    .map(([name, songs]) => ({ name, songs: [...songs].sort((left, right) => left.difficulty - right.difficulty || left.title.localeCompare(right.title)) }))
+    .sort((left, right) => runsOf(right.songs) - runsOf(left.songs) || left.name.localeCompare(right.name));
+}
+
+function runsOf(songs: SongStatsRowDto[]): number {
+  return songs.reduce((total, song) => total + song.playedCount, 0);
+}
+
+function summaryOf(songs: SongStatsRowDto[]): string {
+  const runs = runsOf(songs);
+  const cleared = songs.flatMap((song) => (song.averagePercentage === null ? [] : [{ average: song.averagePercentage, weight: song.playedCount - song.failedCount }]));
+  const weight = cleared.reduce((total, song) => total + song.weight, 0);
+  const average = weight === 0 ? null : cleared.reduce((total, song) => total + song.average * song.weight, 0) / weight;
+
+  return `${songs.length} song${songs.length === 1 ? "" : "s"} · ${runs} run${runs === 1 ? "" : "s"}${average === null ? "" : ` · ${average.toFixed(1)}% average`}`;
 }

@@ -48,6 +48,13 @@
   --score-4: 107 33 168;
   --score-failed: 153 27 27;
 
+  /* Medals. Decorative identity for the top three of a finished division, never
+     a state — the same category as the tournament banner gradients, and
+     namespaced so nobody harmonises them into the semantic palette. */
+  --medal-gold: 176 138 20;
+  --medal-silver: 122 131 141;
+  --medal-bronze: 154 98 55;
+
   /* Shadow. Defined per theme rather than inherited, so elevation is a decision
      in both: a soft cool shadow on light, a deep black one on dark where the
      borders do most of the separating anyway. */
@@ -100,6 +107,9 @@
     --score-3: 95 178 232;
     --score-4: 185 140 236;
     --score-failed: 238 107 99;
+    --medal-gold: 217 179 65;
+    --medal-silver: 174 182 191;
+    --medal-bronze: 197 138 92;
 
     --ui-shadow: 6 11 14;
     --ui-shadow-alpha: 0.22;
@@ -137,6 +147,9 @@
   --score-3: 95 178 232;
   --score-4: 185 140 236;
   --score-failed: 238 107 99;
+  --medal-gold: 217 179 65;
+  --medal-silver: 174 182 191;
+  --medal-bronze: 197 138 92;
 
   --ui-shadow: 6 11 14;
   --ui-shadow-alpha: 0.22;

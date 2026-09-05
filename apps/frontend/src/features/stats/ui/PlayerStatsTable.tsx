@@ -1,48 +1,80 @@
-import type { PlayerStatsRowDto } from '@tournament-manager/contracts';
+import type { PlayerStatsRowDto } from "@tournament-manager/contracts";
 
-import { percentage, share } from '@/features/stats/model/statsFormat';
+import { decimal, percentage, share } from "@/features/stats/model/statsFormat";
+import Flag from "@/features/stats/ui/Flag";
+import GradeMark from "@/features/stats/ui/GradeMark";
+import GradeMixBar, { GradeMixLegend } from "@/features/stats/ui/GradeMixBar";
 
 /**
  * What each player did across the whole tournament.
  *
  * The average and the best are taken over the runs that cleared, so the fail
  * count is read beside them rather than folded into them: a low average and a
- * high fail rate are two different ways to have a hard day.
+ * high fail rate are two different ways to have a hard day. The mix bar is what
+ * neither of those columns can say — whether the average is a steady one or the
+ * middle of a wide swing.
  */
 export default function PlayerStatsTable({ rows }: { rows: PlayerStatsRowDto[] }) {
-    return (
-        <div className="overflow-x-auto rounded border border-ui-border">
-            <table className="w-full min-w-[42rem] text-sm">
-                <thead className="bg-ui-raised text-xs uppercase tracking-wide text-ui-text-mute">
-                    <tr>
-                        <th className="px-3 py-2 text-left font-medium">Player</th>
-                        <th className="px-3 py-2 text-right font-medium">Points</th>
-                        <th className="px-3 py-2 text-right font-medium">Songs</th>
-                        <th className="px-3 py-2 text-right font-medium">Average</th>
-                        <th className="px-3 py-2 text-right font-medium">Best</th>
-                        <th className="px-3 py-2 text-right font-medium">Failed</th>
-                        <th className="px-3 py-2 text-right font-medium">Matches won</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row) => (
-                        <tr key={row.playerId} className="border-t border-ui-separator bg-ui-row">
-                            <td className="px-3 py-2 text-ui-text">{row.playerName}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{row.points}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{row.songsPlayed}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{percentage(row.averagePercentage)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">{percentage(row.bestPercentage)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">
-                                {row.failedCount}
-                                <span className="ml-1 text-xs text-ui-text-mute">{share(row.failedCount, row.songsPlayed)}</span>
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums text-ui-text-soft">
-                                {row.matchesWon} / {row.matchesPlayed}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
+  return (
+    <div className="flex flex-col gap-2">
+      <GradeMixLegend />
+      <div className="overflow-x-auto rounded-xl border border-ui-border">
+        <table className="w-full min-w-[52rem] text-sm">
+          <thead className="bg-ui-raised text-[10px] uppercase tracking-wide text-ui-text-mute">
+            <tr>
+              <th className="w-12 px-3 py-2.5 text-left font-medium">#</th>
+              <th className="px-3 py-2.5 text-left font-medium">Player</th>
+              <th className="w-52 px-3 py-2.5 text-left font-medium">Grade mix</th>
+              <th className="w-20 px-3 py-2.5 text-right font-medium">Points</th>
+              <th className="w-16 px-3 py-2.5 text-right font-medium">Runs</th>
+              <th className="w-32 px-3 py-2.5 text-right font-medium">Average</th>
+              <th className="w-32 px-3 py-2.5 text-right font-medium">Best</th>
+              <th className="w-20 px-3 py-2.5 text-right font-medium">Spread</th>
+              <th className="w-24 px-3 py-2.5 text-right font-medium">Failed</th>
+              <th className="w-24 px-3 py-2.5 text-right font-medium">Matches</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.playerId} className="border-t border-ui-separator bg-ui-row">
+                <td className="px-3 py-2.5 font-extrabold tabular-nums text-ui-text">{index + 1}</td>
+                <td className="px-3 py-2.5">
+                  <span className="flex items-center gap-2.5">
+                    <Flag nationality={row.nationality} />
+                    <span className="font-bold text-ui-text">{row.playerName}</span>
+                  </span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <GradeMixBar grades={row.grades} label={row.playerName} />
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.points}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{row.songsPlayed}</td>
+                <td className="px-3 py-2.5">
+                  <span className="flex items-center justify-end gap-2">
+                    <span className="font-semibold tabular-nums text-ui-text">{percentage(row.averagePercentage)}</span>
+                    <GradeMark percentage={row.averagePercentage} />
+                  </span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className="flex items-center justify-end gap-2" title={row.bestSongTitle ?? undefined}>
+                    <span className="font-semibold tabular-nums text-ui-text-soft">{percentage(row.bestPercentage)}</span>
+                    <GradeMark percentage={row.bestPercentage} />
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">{decimal(row.percentageSpread)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">
+                  {row.failedCount}
+                  <span className="ml-1 text-xs text-ui-text-mute">{share(row.failedCount, row.songsPlayed)}</span>
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-ui-text-soft">
+                  {row.matchesWon} / {row.matchesPlayed}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-ui-text-mute">A player with no linked account has no nationality — the empty square is the absence, not a guess.</p>
+    </div>
+  );
 }

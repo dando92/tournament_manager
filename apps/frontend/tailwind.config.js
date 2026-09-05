@@ -48,6 +48,16 @@ export default {
           failed: "rgb(var(--state-failed) / <alpha-value>)",
         },
         /**
+         * Medals. Decorative identity for the top three of a finished
+         * division: they say who somebody was, not what anything is doing.
+         * Kept beside the difficulty ramp and outside the semantic palette.
+         */
+        medal: {
+          gold: "rgb(var(--medal-gold) / <alpha-value>)",
+          silver: "rgb(var(--medal-silver) / <alpha-value>)",
+          bronze: "rgb(var(--medal-bronze) / <alpha-value>)",
+        },
+        /**
          * Difficulty scale. An ordinal domain scale for song difficulty, kept
          * outside the semantic palette on purpose: these hues rank a value,
          * they do not report a state.
